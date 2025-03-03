@@ -21,8 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ServiceWizard, type TVInstallation } from "@/components/ui/service-wizard"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ServiceWizard, type TVInstallation } from "@/components/ui/service-wizard";
 import { PriceCalculator } from "@/components/ui/price-calculator";
 
 // Time slots available (9 AM to 4 PM)
@@ -248,8 +248,8 @@ export default function Booking() {
                                     )}
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-lg">
-                                  <DialogHeader>
+                                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                                  <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
                                     <DialogTitle>Configure Your TV Installation</DialogTitle>
                                   </DialogHeader>
                                   <ServiceWizard
