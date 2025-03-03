@@ -212,6 +212,13 @@ export default function Booking() {
                                 {...field}
                                 autoComplete="name"
                                 aria-label="Full name"
+                                onInput={(e) => {
+                                  // Capitalize first letter of each word
+                                  const input = e.currentTarget;
+                                  const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
+                                  input.value = value;
+                                  field.onChange(value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -234,6 +241,13 @@ export default function Booking() {
                                 {...field}
                                 autoComplete="email"
                                 aria-label="Email address"
+                                onInput={(e) => {
+                                  // Convert email to lowercase
+                                  const input = e.currentTarget;
+                                  const value = input.value.toLowerCase();
+                                  input.value = value;
+                                  field.onChange(value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -258,7 +272,7 @@ export default function Booking() {
                                 aria-label="Phone number"
                                 pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
                                 onInput={(e) => {
-                                  // Format phone number as user types
+                                  // Format phone number as XXX-XXX-XXXX
                                   const input = e.currentTarget;
                                   const value = input.value.replace(/\D/g, '');
                                   if (value.length <= 10) {
@@ -287,7 +301,14 @@ export default function Booking() {
                                 placeholder="Street address"
                                 {...field}
                                 autoComplete="street-address"
-                                aria-label="Street address" 
+                                aria-label="Street address"
+                                onInput={(e) => {
+                                  // Capitalize first letter of each word
+                                  const input = e.currentTarget;
+                                  const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
+                                  input.value = value;
+                                  field.onChange(value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -331,6 +352,13 @@ export default function Booking() {
                                   {...field}
                                   autoComplete="address-level2"
                                   aria-label="City"
+                                  onInput={(e) => {
+                                    // Capitalize first letter of each word
+                                    const input = e.currentTarget;
+                                    const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
+                                    input.value = value;
+                                    field.onChange(value);
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -349,6 +377,14 @@ export default function Booking() {
                                   {...field}
                                   autoComplete="address-level1"
                                   aria-label="State"
+                                  maxLength={2}
+                                  onInput={(e) => {
+                                    // Convert state to uppercase and limit to 2 chars
+                                    const input = e.currentTarget;
+                                    const value = input.value.toUpperCase().slice(0, 2);
+                                    input.value = value;
+                                    field.onChange(value);
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -372,6 +408,14 @@ export default function Booking() {
                                 autoComplete="postal-code"
                                 aria-label="ZIP code"
                                 pattern="[0-9]{5}"
+                                maxLength={5}
+                                onInput={(e) => {
+                                  // Only allow numbers and limit to 5 digits
+                                  const input = e.currentTarget;
+                                  const value = input.value.replace(/\D/g, '').slice(0, 5);
+                                  input.value = value;
+                                  field.onChange(value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
