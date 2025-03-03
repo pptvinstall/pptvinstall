@@ -30,6 +30,8 @@ import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { ServiceWizard } from "@/components/ui/service-wizard"
+import { PriceCalculator } from "@/components/ui/price-calculator";
+import type { ServiceOptions } from "@/lib/pricing";
 
 const serviceTypes = {
   "Basic TV Mounting": {
@@ -84,6 +86,9 @@ export default function Booking() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
   const [showServiceWizard, setShowServiceWizard] = React.useState(false);
+  const [pricingOptions, setPricingOptions] = React.useState<Partial<ServiceOptions>>({});
+  const [totalPrice, setTotalPrice] = React.useState(0);
+  const [depositAmount, setDepositAmount] = React.useState(0);
 
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings/date', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''],
@@ -153,6 +158,17 @@ export default function Booking() {
       });
     }
   });
+
+  const handleServiceSelect = (service: string) => {
+    form.setValue("serviceType", service);
+    setPricingOptions(prev => ({
+      ...prev,
+      tvSize: service.includes("65") ? 'large' : 'small',
+      location: service.includes("Fireplace") ? 'fireplace' : 'ceiling',
+      wireConcealment: service.includes("Premium"),
+    }));
+    setShowServiceWizard(false);
+  };
 
   return (
     <div className="py-12">
@@ -483,10 +499,7 @@ export default function Booking() {
                                 </DialogTrigger>
                                 <DialogContent className="max-w-lg">
                                   <ServiceWizard
-                                    onServiceSelect={(service) => {
-                                      field.onChange(service);
-                                      setShowServiceWizard(false);
-                                    }}
+                                    onServiceSelect={handleServiceSelect}
                                     onClose={() => setShowServiceWizard(false)}
                                   />
                                 </DialogContent>
@@ -506,7 +519,7 @@ export default function Booking() {
                                           ? "border-primary bg-primary/5"
                                           : "border-border hover:border-primary/50"
                                       }`}
-                                      onClick={() => field.onChange(type)}
+                                      onClick={() => handleServiceSelect(type)}
                                     >
                                       <div className="flex justify-between items-start">
                                         <div>
@@ -552,6 +565,18 @@ export default function Booking() {
                           </FormItem>
                         )}
                       />
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <div className="mt-6">
+                        <PriceCalculator
+                          options={pricingOptions}
+                          onUpdate={(total, deposit) => {
+                            setTotalPrice(total);
+                            setDepositAmount(deposit);
+                          }}
+                        />
+                      </div>
                     </motion.div>
 
                     <motion.div
