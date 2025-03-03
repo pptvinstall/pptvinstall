@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ServiceWizard, type TVInstallation } from "@/components/ui/service-wizard"
 import { PriceCalculator } from "@/components/ui/price-calculator";
 
@@ -249,6 +249,9 @@ export default function Booking() {
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-lg">
+                                  <DialogHeader>
+                                    <DialogTitle>Configure Your TV Installation</DialogTitle>
+                                  </DialogHeader>
                                   <ServiceWizard
                                     onServiceSelect={handleServiceSelect}
                                     onClose={() => setShowServiceWizard(false)}
