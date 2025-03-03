@@ -1,10 +1,8 @@
-import { users, type User, type InsertUser } from "@shared/schema";
-import { type ContactMessage, type InsertContactMessage, type Booking, type InsertBooking } from "@shared/schema";
+import { bookings, contactMessages, type Booking, type InsertBooking, type ContactMessage, type InsertContactMessage } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
   // Contact Messages
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
   getContactMessage(id: number): Promise<ContactMessage | undefined>;
@@ -16,80 +14,49 @@ export interface IStorage {
   getBookingsByDate(date: string): Promise<Booking[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private contactMessages: Map<number, ContactMessage>;
-  private bookings: Map<number, Booking>;
-  currentId: number;
-  private currentContactId: number;
-  private currentBookingId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.contactMessages = new Map();
-    this.bookings = new Map();
-    this.currentId = 1;
-    this.currentContactId = 1;
-    this.currentBookingId = 1;
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-
+export class DatabaseStorage implements IStorage {
   async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
-    const id = this.currentContactId++;
-    const newMessage: ContactMessage = {
-      ...message,
-      id,
-      createdAt: new Date()
-    };
-    this.contactMessages.set(id, newMessage);
+    const [newMessage] = await db
+      .insert(contactMessages)
+      .values(message)
+      .returning();
     return newMessage;
   }
 
   async getContactMessage(id: number): Promise<ContactMessage | undefined> {
-    return this.contactMessages.get(id);
+    const [message] = await db
+      .select()
+      .from(contactMessages)
+      .where(eq(contactMessages.id, id));
+    return message;
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
-    const id = this.currentBookingId++;
-    const newBooking: Booking = {
-      ...booking,
-      id,
-      createdAt: new Date()
-    };
-    this.bookings.set(id, newBooking);
+    const [newBooking] = await db
+      .insert(bookings)
+      .values(booking)
+      .returning();
     return newBooking;
   }
 
   async getBooking(id: number): Promise<Booking | undefined> {
-    return this.bookings.get(id);
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, id));
+    return booking;
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    return Array.from(this.bookings.values());
+    return db.select().from(bookings);
   }
 
   async getBookingsByDate(date: string): Promise<Booking[]> {
-    const bookings = Array.from(this.bookings.values());
-    return bookings.filter(booking => 
-      booking.preferredDate.startsWith(date)
-    );
+    return db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.preferredDate, date));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
