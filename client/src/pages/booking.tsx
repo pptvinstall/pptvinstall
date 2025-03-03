@@ -248,13 +248,15 @@ export default function Booking() {
                                     )}
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-lg max-h-[80vh] p-0">
-                                  <div className="overflow-y-auto h-full py-6 px-6">
-                                    <h2 className="text-lg font-semibold mb-6">Configure Your TV Installation</h2>
-                                    <ServiceWizard
-                                      onServiceSelect={handleServiceSelect}
-                                      onClose={() => setShowServiceWizard(false)}
-                                    />
+                                <DialogContent className="max-w-lg">
+                                  <div className="max-h-[calc(85vh-2rem)] overflow-y-auto">
+                                    <div className="p-6 space-y-6">
+                                      <h2 className="text-lg font-semibold">Configure Your TV Installation</h2>
+                                      <ServiceWizard
+                                        onServiceSelect={handleServiceSelect}
+                                        onClose={() => setShowServiceWizard(false)}
+                                      />
+                                    </div>
                                   </div>
                                 </DialogContent>
                               </Dialog>

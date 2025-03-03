@@ -189,7 +189,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         Add Another TV
       </Button>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between pt-4">
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
