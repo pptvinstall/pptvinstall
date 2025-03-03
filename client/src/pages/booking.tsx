@@ -18,48 +18,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { ServiceWizard } from "@/components/ui/service-wizard"
+import { ServiceWizard, type TVInstallation } from "@/components/ui/service-wizard"
 import { PriceCalculator } from "@/components/ui/price-calculator";
-import type { ServiceOptions } from "@/lib/pricing";
 
-interface TVInstallation {
-  size: 'small' | 'large';
-  location: 'ceiling' | 'fireplace' | 'other';
-  mountType: 'none' | 'premium' | 'standard';
-}
-
-const serviceTypes = {
-  "Basic TV Mounting": {
-    title: "Basic TV Mounting",
-    description: "Perfect for standard wall mounting of TVs up to 65″. Includes bracket and cable management.",
-    price: "$149",
-    deposit: "$50"
-  },
-  "Premium Installation": {
-    title: "Premium Installation",
-    description: "Ideal for large TVs (65″+), fireplace mounting, or complex installations. Includes premium bracket and in-wall cable concealment.",
-    price: "$249",
-    deposit: "$75"
-  },
-  "Custom Solution": {
-    title: "Custom Solution",
-    description: "For unique mounting situations requiring special equipment or custom solutions. Price varies based on requirements.",
-    price: "Custom Quote",
-    deposit: "$100"
-  }
-};
-
+// Time slots available (9 AM to 4 PM)
 const timeSlots = [
   "09:00 AM",
   "10:00 AM",
@@ -92,11 +58,9 @@ export default function Booking() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
   const [showServiceWizard, setShowServiceWizard] = React.useState(false);
-  const [pricingOptions, setPricingOptions] = React.useState<Partial<ServiceOptions>>({});
-  const [totalPrice, setTotalPrice] = React.useState(0);
-  const [depositAmount, setDepositAmount] = React.useState(0);
-  const [installations, setInstallations] = React.useState<TVInstallation[]>([]); // Added state for installations
+  const [installations, setInstallations] = React.useState<TVInstallation[]>([]);
 
+  // Fetch existing bookings for selected date
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings/date', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''],
     queryFn: async () => {
@@ -156,6 +120,7 @@ export default function Booking() {
       form.reset();
       setSelectedDate(undefined);
       setSelectedTime(undefined);
+      setInstallations([]);
     },
     onError: () => {
       toast({
@@ -166,23 +131,12 @@ export default function Booking() {
     }
   });
 
-  const handleServiceSelect = (installations: TVInstallation[]) => {
-    form.setValue("serviceType", installations.map(i =>
+  const handleServiceSelect = (selectedInstallations: TVInstallation[]) => {
+    setInstallations(selectedInstallations);
+    form.setValue("serviceType", selectedInstallations.map(i =>
       `${i.size === 'large' ? '56"+ ' : 'Under 55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
     ).join(", "));
-
-    setPricingOptions({
-      tvSize: installations[0].size,
-      location: installations[0].location,
-      mountType: installations[0].mountType,
-      additionalTvs: installations.length - 1,
-      wireConcealment: false,
-      soundbar: 'none',
-      shelves: 0,
-      distance: 0
-    });
     setShowServiceWizard(false);
-    setInstallations(installations); //Update installations state
   };
 
   return (
@@ -273,6 +227,55 @@ export default function Booking() {
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
+                        name="serviceType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Service Type</FormLabel>
+                            <div className="space-y-4">
+                              <Dialog open={showServiceWizard} onOpenChange={setShowServiceWizard}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left"
+                                    type="button"
+                                  >
+                                    {field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        Configure your TV installation
+                                      </span>
+                                    )}
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-lg">
+                                  <ServiceWizard
+                                    onServiceSelect={handleServiceSelect}
+                                    onClose={() => setShowServiceWizard(false)}
+                                  />
+                                </DialogContent>
+                              </Dialog>
+
+                              {installations.length > 0 && (
+                                <div className="mt-6">
+                                  <PriceCalculator
+                                    installations={installations}
+                                    distance={0}
+                                    onUpdate={(total, deposit) => {
+                                      // Store total and deposit if needed
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
                         name="name"
                         render={({ field }) => (
                           <FormItem>
@@ -296,100 +299,127 @@ export default function Booking() {
                         )}
                       />
                     </motion.div>
-
-                    {/* ...rest of the form fields... */}
-
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
-                        name="serviceType"
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Service Type</FormLabel>
-                            <div className="space-y-4">
-                              <Dialog open={showServiceWizard} onOpenChange={setShowServiceWizard}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full justify-start text-left"
-                                    type="button"
-                                  >
-                                    {field.value ? (
-                                      <span>{field.value}</span>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        Not sure? Let us help you choose
-                                      </span>
-                                    )}
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-lg">
-                                  <ServiceWizard
-                                    onServiceSelect={handleServiceSelect}
-                                    onClose={() => setShowServiceWizard(false)}
-                                  />
-                                </DialogContent>
-                              </Dialog>
-
-                              <div className="grid gap-4">
-                                {Object.entries(serviceTypes).map(([type, details]) => (
-                                  <motion.div
-                                    key={type}
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.99 }}
-                                  >
-                                    <button
-                                      type="button"
-                                      className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
-                                        field.value === type
-                                          ? "border-primary bg-primary/5"
-                                          : "border-border hover:border-primary/50"
-                                      }`}
-                                      onClick={() => handleServiceSelect([
-                                        {size: type.includes("65") ? 'large' : 'small', location: type.includes("Fireplace") ? 'fireplace' : 'ceiling', mountType: type.includes("Premium") ? 'premium' : 'standard'}
-                                      ])}
-                                    >
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <h3 className="font-medium">{details.title}</h3>
-                                          <p className="text-sm text-muted-foreground mt-1">
-                                            {details.description}
-                                          </p>
-                                        </div>
-                                        <div className="text-right">
-                                          <div className="font-medium">{details.price}</div>
-                                          <div className="text-sm text-muted-foreground">
-                                            {details.deposit} deposit
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </button>
-                                  </motion.div>
-                                ))}
-                              </div>
-                              <FormMessage />
-                            </div>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Your email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="Your phone number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="streetAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Street address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="addressLine2"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address Line 2 (optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Apartment, suite, etc." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="City" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="State" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="zipCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Zip Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Zip code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes (optional)</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Add any additional notes" {...field} />
+                            </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
 
-                    {/* ...rest of the form fields... */}
-
-                    <motion.div variants={formItemVariants}>
-                      <div className="mt-6">
-                        <PriceCalculator
-                          installations={installations}
-                          distance={0}
-                          onUpdate={(total, deposit) => {
-                            setTotalPrice(total);
-                            setDepositAmount(deposit);
-                          }}
-                        />
-                      </div>
-                    </motion.div>
-
-                    {/* ...rest of the form fields... */}
 
                     <motion.div
                       variants={formItemVariants}
@@ -399,7 +429,7 @@ export default function Booking() {
                       <Button
                         type="submit"
                         className="w-full"
-                        disabled={mutation.isPending || !selectedDate || !selectedTime}
+                        disabled={mutation.isPending || !selectedDate || !selectedTime || installations.length === 0}
                       >
                         {mutation.isPending ? (
                           <motion.div

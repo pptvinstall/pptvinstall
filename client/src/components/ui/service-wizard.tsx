@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Button } from "./button"
 import { Card, CardContent } from "./card"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Plus, Minus } from "lucide-react"
 
 export type TVInstallation = {
@@ -9,16 +9,6 @@ export type TVInstallation = {
   location: 'standard' | 'fireplace' | 'ceiling';
   mountType: 'fixed' | 'tilt' | 'fullMotion' | 'none';
 };
-
-export type ServiceQuestion = {
-  id: string;
-  question: string;
-  options: {
-    text: string;
-    nextId?: string;
-    service?: string;
-  }[];
-}
 
 interface ServiceWizardProps {
   onServiceSelect: (installations: TVInstallation[]) => void;
@@ -84,7 +74,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       variant={installation.size === 'small' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { size: 'small' })}
                     >
-                      Under 55"
+                      32" - 55"
                     </Button>
                     <Button
                       variant={installation.size === 'large' ? 'default' : 'outline'}
@@ -103,18 +93,21 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       onClick={() => updateInstallation(index, { location: 'standard' })}
                     >
                       Standard Wall
+                      <span className="text-xs block">$100</span>
                     </Button>
                     <Button
                       variant={installation.location === 'fireplace' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { location: 'fireplace' })}
                     >
                       Above Fireplace
+                      <span className="text-xs block">+$100</span>
                     </Button>
                     <Button
                       variant={installation.location === 'ceiling' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { location: 'ceiling' })}
                     >
-                      Ceiling
+                      Ceiling Mount
+                      <span className="text-xs block">$175</span>
                     </Button>
                   </div>
                 </div>
@@ -126,25 +119,35 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       variant={installation.mountType === 'fixed' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { mountType: 'fixed' })}
                     >
-                      Fixed ({installation.size === 'small' ? '$40' : '$60'})
+                      Fixed Mount
+                      <span className="text-xs block">
+                        {installation.size === 'small' ? '$40' : '$60'}
+                      </span>
                     </Button>
                     <Button
                       variant={installation.mountType === 'tilt' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { mountType: 'tilt' })}
                     >
-                      Tilt ({installation.size === 'small' ? '$50' : '$70'})
+                      Tilt Mount
+                      <span className="text-xs block">
+                        {installation.size === 'small' ? '$50' : '$70'}
+                      </span>
                     </Button>
                     <Button
                       variant={installation.mountType === 'fullMotion' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { mountType: 'fullMotion' })}
                     >
-                      Full Motion ({installation.size === 'small' ? '$80' : '$100'})
+                      Full Motion
+                      <span className="text-xs block">
+                        {installation.size === 'small' ? '$80' : '$100'}
+                      </span>
                     </Button>
                     <Button
                       variant={installation.mountType === 'none' ? 'default' : 'outline'}
                       onClick={() => updateInstallation(index, { mountType: 'none' })}
                     >
                       No Mount
+                      <span className="text-xs block">Customer Provided</span>
                     </Button>
                   </div>
                 </div>
