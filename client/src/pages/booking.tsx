@@ -137,17 +137,26 @@ export default function Booking() {
     setInstallations(services.tvs);
     setSmartHomeInstallations(services.smartHome);
 
-    const serviceDescription = [
-      ...services.tvs.map(i =>
-        `${i.size === 'large' ? '56"+ ' : '32"-55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
-      ),
-      ...services.smartHome.map(i =>
-        `${i.type === 'doorbell' ? 'Smart Doorbell' : i.type === 'floodlight' ? 'Floodlight' : 'Smart Camera'} Installation${i.quantity > 1 ? ` (${i.quantity})` : ''}`
-      )
-    ].join(", ");
+    const tvServices = services.tvs.map(i =>
+      `TV Mount (${i.size === 'large' ? '56"+' : '32"-55"'}${i.mountType !== 'none' ? `, ${i.mountType}` : ''})`
+    );
 
-    form.setValue("serviceType", serviceDescription);
+    const smartHomeServices = services.smartHome.map(i => {
+      const base = i.type === 'doorbell' ? 'Smart Doorbell' :
+                  i.type === 'floodlight' ? 'Floodlight' :
+                  'Smart Camera';
+      return `${base}${i.quantity > 1 ? ` (${i.quantity})` : ''}`;
+    });
+
+    const allServices = [...tvServices, ...smartHomeServices];
+    form.setValue("serviceType", allServices.join(' • '));
     setShowServiceWizard(false);
+  };
+
+  const resetServices = () => {
+    setInstallations([]);
+    setSmartHomeInstallations([]);
+    form.setValue("serviceType", "");
   };
 
   return (
@@ -235,7 +244,20 @@ export default function Booking() {
                         name="serviceType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Service Type</FormLabel>
+                            <div className="flex justify-between items-center mb-2">
+                              <FormLabel>Service Type</FormLabel>
+                              {field.value && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={resetServices}
+                                  className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                >
+                                  Start Over
+                                </Button>
+                              )}
+                            </div>
                             <div className="space-y-4">
                               <Dialog open={showServiceWizard} onOpenChange={setShowServiceWizard}>
                                 <DialogTrigger asChild>
@@ -245,7 +267,7 @@ export default function Booking() {
                                     type="button"
                                   >
                                     {field.value ? (
-                                      <span>{field.value}</span>
+                                      <span className="line-clamp-2">{field.value}</span>
                                     ) : (
                                       <span className="text-muted-foreground">
                                         Configure your installation
@@ -256,7 +278,19 @@ export default function Booking() {
                                 <DialogContent className="max-w-lg">
                                   <div className="max-h-[calc(85vh-2rem)] overflow-y-auto">
                                     <div className="p-6 space-y-6">
-                                      <h2 className="text-lg font-semibold">Configure Your Installation</h2>
+                                      <div className="flex justify-between items-center">
+                                        <h2 className="text-lg font-semibold">Configure Your Installation</h2>
+                                        {(installations.length > 0 || smartHomeInstallations.length > 0) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={resetServices}
+                                            className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                          >
+                                            Start Over
+                                          </Button>
+                                        )}
+                                      </div>
                                       <ServiceWizard
                                         onServiceSelect={handleServiceSelect}
                                         onClose={() => setShowServiceWizard(false)}
@@ -471,7 +505,7 @@ export default function Booking() {
                           mutation.isPending ||
                           !selectedDate ||
                           !selectedTime ||
-                          (installations.length === 0 && smartHomeInstallations.length === 0) // Changed to allow either type
+                          (installations.length === 0 && smartHomeInstallations.length === 0) 
                         }
                       >
                         {mutation.isPending ? (
