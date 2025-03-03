@@ -22,8 +22,9 @@ import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ServiceWizard, type TVInstallation } from "@/components/ui/service-wizard";
+import { ServiceWizard, type TVInstallation, type SmartHomeInstallation } from "@/components/ui/service-wizard";
 import { PriceCalculator } from "@/components/ui/price-calculator";
+
 
 // Time slots available (9 AM to 4 PM)
 const timeSlots = [
@@ -59,6 +60,7 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
   const [showServiceWizard, setShowServiceWizard] = React.useState(false);
   const [installations, setInstallations] = React.useState<TVInstallation[]>([]);
+  const [smartHomeInstallations, setSmartHomeInstallations] = React.useState<SmartHomeInstallation[]>([]);
 
   // Fetch existing bookings for selected date
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -121,6 +123,7 @@ export default function Booking() {
       setSelectedDate(undefined);
       setSelectedTime(undefined);
       setInstallations([]);
+      setSmartHomeInstallations([]);
     },
     onError: () => {
       toast({
@@ -131,11 +134,20 @@ export default function Booking() {
     }
   });
 
-  const handleServiceSelect = (selectedInstallations: TVInstallation[]) => {
-    setInstallations(selectedInstallations);
-    form.setValue("serviceType", selectedInstallations.map(i =>
-      `${i.size === 'large' ? '56"+ ' : 'Under 55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
-    ).join(", "));
+  const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
+    setInstallations(services.tvs);
+    setSmartHomeInstallations(services.smartHome);
+
+    const serviceDescription = [
+      ...services.tvs.map(i =>
+        `${i.size === 'large' ? '56"+ ' : 'Under 55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
+      ),
+      ...services.smartHome.map(i =>
+        `${i.type === 'doorbell' ? 'Smart Doorbell' : i.type === 'floodlight' ? 'Floodlight' : 'Smart Camera'} Installation${i.quantity > 1 ? ` (${i.quantity})` : ''}`
+      )
+    ].join(", ");
+
+    form.setValue("serviceType", serviceDescription);
     setShowServiceWizard(false);
   };
 
@@ -243,7 +255,7 @@ export default function Booking() {
                                       <span>{field.value}</span>
                                     ) : (
                                       <span className="text-muted-foreground">
-                                        Configure your TV installation
+                                        Configure your installation
                                       </span>
                                     )}
                                   </Button>
@@ -251,7 +263,7 @@ export default function Booking() {
                                 <DialogContent className="max-w-lg">
                                   <div className="max-h-[calc(85vh-2rem)] overflow-y-auto">
                                     <div className="p-6 space-y-6">
-                                      <h2 className="text-lg font-semibold">Configure Your TV Installation</h2>
+                                      <h2 className="text-lg font-semibold">Configure Your Installation</h2>
                                       <ServiceWizard
                                         onServiceSelect={handleServiceSelect}
                                         onClose={() => setShowServiceWizard(false)}
@@ -261,10 +273,11 @@ export default function Booking() {
                                 </DialogContent>
                               </Dialog>
 
-                              {installations.length > 0 && (
+                              {installations.length > 0 || smartHomeInstallations.length > 0 && (
                                 <div className="mt-6">
                                   <PriceCalculator
-                                    installations={installations}
+                                    tvs={installations}
+                                    smartHome={smartHomeInstallations}
                                     distance={0}
                                     onUpdate={(total, deposit) => {
                                       // Store total and deposit if needed
@@ -434,7 +447,7 @@ export default function Booking() {
                       <Button
                         type="submit"
                         className="w-full"
-                        disabled={mutation.isPending || !selectedDate || !selectedTime || installations.length === 0}
+                        disabled={mutation.isPending || !selectedDate || !selectedTime || installations.length === 0 || smartHomeInstallations.length ===0}
                       >
                         {mutation.isPending ? (
                           <motion.div

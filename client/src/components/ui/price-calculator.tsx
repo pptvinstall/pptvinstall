@@ -2,47 +2,98 @@ import * as React from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
-import { calculatePrice } from "@/lib/pricing"
-import type { TVInstallation } from "./service-wizard"
+import type { TVInstallation, SmartHomeInstallation } from "./service-wizard"
 
 interface PriceCalculatorProps {
-  installations: TVInstallation[];
+  tvs: TVInstallation[];
+  smartHome: SmartHomeInstallation[];
   distance: number;
   onUpdate?: (total: number, deposit: number) => void;
 }
 
-export function PriceCalculator({ installations, distance, onUpdate }: PriceCalculatorProps) {
+export function PriceCalculator({ tvs, smartHome, distance, onUpdate }: PriceCalculatorProps) {
   const pricing = React.useMemo(() => {
-    const items = installations.map((installation, index) => {
-      const basePrice = installation.location === 'standard' ? 100 :
-                       installation.location === 'fireplace' ? 200 :
-                       installation.location === 'ceiling' ? 175 : 0;
+    const items = [
+      // TV Installations
+      ...tvs.map((installation, index) => {
+        const basePrice = installation.location === 'standard' ? 100 :
+                         installation.location === 'fireplace' ? 200 :
+                         installation.location === 'ceiling' ? 175 : 0;
 
-      const mountPrice = installation.mountType === 'fixed' ? (installation.size === 'small' ? 40 : 60) :
-                        installation.mountType === 'tilt' ? (installation.size === 'small' ? 50 : 70) :
-                        installation.mountType === 'fullMotion' ? (installation.size === 'small' ? 80 : 100) : 0;
+        const mountPrice = installation.mountType === 'fixed' ? (installation.size === 'small' ? 40 : 60) :
+                          installation.mountType === 'tilt' ? (installation.size === 'small' ? 50 : 70) :
+                          installation.mountType === 'fullMotion' ? (installation.size === 'small' ? 80 : 100) : 0;
 
-      return {
-        description: `TV ${index + 1} (${installation.size === 'small' ? 'Under 55"' : '56" or larger'})`,
-        location: installation.location,
-        basePrice,
-        mountPrice,
-      };
-    });
+        return {
+          description: `TV ${index + 1} (${installation.size === 'small' ? '32"-55"' : '56" or larger'})`,
+          items: [
+            {
+              label: `Base Installation (${installation.location})`,
+              price: basePrice
+            },
+            ...(mountPrice > 0 ? [{
+              label: `${installation.mountType} Mount`,
+              price: mountPrice
+            }] : [])
+          ]
+        };
+      }),
 
-    const multiTvDiscount = installations.length > 1 ? (installations.length - 1) * 10 : 0;
-    const multiMountDiscount = installations.filter(i => i.mountType !== 'none').length > 1 ? 
-      (installations.filter(i => i.mountType !== 'none').length - 1) * 5 : 0;
+      // Smart Home Installations
+      ...smartHome.map((installation) => {
+        const basePrice = installation.type === 'doorbell' ? 75 :
+                         installation.type === 'floodlight' ? 100 : 75;
 
+        const items = [{
+          label: `Base Installation (${installation.quantity} unit${installation.quantity > 1 ? 's' : ''})`,
+          price: basePrice * installation.quantity
+        }];
+
+        if (installation.type === 'doorbell' && installation.brickInstallation) {
+          items.push({
+            label: 'Brick Installation',
+            price: 10 * installation.quantity
+          });
+        }
+
+        if (installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8) {
+          const additionalHeight = installation.mountHeight - 8;
+          const additionalFee = Math.ceil(additionalHeight / 4) * 25;
+          items.push({
+            label: `Height Fee (${installation.mountHeight}ft)`,
+            price: additionalFee * installation.quantity
+          });
+        }
+
+        return {
+          description: installation.type === 'doorbell' ? 'Smart Doorbell' :
+                      installation.type === 'floodlight' ? 'Floodlight' :
+                      'Smart Camera',
+          items
+        };
+      })
+    ];
+
+    // Calculate multi-TV discounts
+    const multiTvDiscount = tvs.length > 1 ? (tvs.length - 1) * 10 : 0;
+    const multiMountDiscount = tvs.filter(i => i.mountType !== 'none').length > 1 ? 
+      (tvs.filter(i => i.mountType !== 'none').length - 1) * 5 : 0;
+
+    // Calculate travel fee
     const travelFee = distance > 20 ? (distance - 20) * 1 : 0;
 
-    const subtotal = items.reduce((sum, item) => sum + item.basePrice + item.mountPrice, 0);
+    // Calculate subtotal
+    const subtotal = items.reduce((sum, group) => 
+      sum + group.items.reduce((groupSum, item) => groupSum + item.price, 0)
+    , 0);
+
+    // Calculate total with discounts and fees
     const total = subtotal - multiTvDiscount - multiMountDiscount + travelFee;
 
     // Calculate deposit based on complexity
-    const hasFireplace = installations.some(i => i.location === 'fireplace');
-    const hasLargeTV = installations.some(i => i.size === 'large');
-    const deposit = hasFireplace || hasLargeTV ? 75 : 20;
+    const hasFireplace = tvs.some(i => i.location === 'fireplace');
+    const hasLargeTV = tvs.some(i => i.size === 'large');
+    const deposit = hasFireplace || hasLargeTV || tvs.length > 1 || smartHome.length > 0 ? 75 : 20;
 
     return {
       items,
@@ -52,7 +103,7 @@ export function PriceCalculator({ installations, distance, onUpdate }: PriceCalc
       total,
       deposit
     };
-  }, [installations, distance]);
+  }, [tvs, smartHome, distance]);
 
   React.useEffect(() => {
     onUpdate?.(pricing.total, pricing.deposit);
@@ -69,20 +120,16 @@ export function PriceCalculator({ installations, distance, onUpdate }: PriceCalc
           animate={{ opacity: 1 }}
           className="space-y-4"
         >
-          {pricing.items.map((item, index) => (
+          {pricing.items.map((group, index) => (
             <div key={index} className="space-y-2">
-              <div className="font-medium">{item.description}</div>
+              <div className="font-medium">{group.description}</div>
               <div className="pl-4 space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Base Installation ({item.location})</span>
-                  <span>${item.basePrice}</span>
-                </div>
-                {item.mountPrice > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span>TV Mount</span>
-                    <span>${item.mountPrice}</span>
+                {group.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className="flex justify-between text-sm">
+                    <span>{item.label}</span>
+                    <span>${item.price}</span>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           ))}
