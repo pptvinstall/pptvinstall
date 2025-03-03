@@ -10,6 +10,7 @@ import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 import { format } from "date-fns"
+import { useLocation } from "wouter";
 
 const steps = [
   "Choose Services",
@@ -31,6 +32,7 @@ export function BookingWizard({
   existingBookings = [],
   isLoadingBookings = false
 }: BookingWizardProps) {
+  const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [tvInstallations, setTvInstallations] = useState<TVInstallation[]>([]);
   const [smartHomeInstallations, setSmartHomeInstallations] = useState<SmartHomeInstallation[]>([]);
@@ -86,25 +88,23 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
-    // Create a condensed service description that fits within 50 characters
     const numTVs = tvInstallations.length;
     const numSmartDevices = smartHomeInstallations.length;
 
-    let serviceDescription = "";
-    if (numTVs > 0) {
-      serviceDescription += `${numTVs} TV${numTVs > 1 ? 's' : ''}`;
-    }
-    if (numSmartDevices > 0) {
-      if (serviceDescription) serviceDescription += " + ";
-      serviceDescription += `${numSmartDevices} Smart Device${numSmartDevices > 1 ? 's' : ''}`;
-    }
+    const serviceDescription = numTVs > 0 ? `${numTVs} TV${numTVs > 1 ? 's' : ''}` : '';
+    serviceDescription += numSmartDevices > 0 ? 
+      (serviceDescription ? ' + ' : '') + `${numSmartDevices} Smart Device${numSmartDevices > 1 ? 's' : ''}` : '';
 
-    onSubmit({
+    const bookingData = {
       ...formData,
       serviceType: serviceDescription,
       preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
       preferredTime: selectedTime
-    });
+    };
+
+    onSubmit(bookingData);
+    sessionStorage.setItem("bookingConfirmed", "true");
+    setLocation("/booking-confirmation");
   };
 
   return (

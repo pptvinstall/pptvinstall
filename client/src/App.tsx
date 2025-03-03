@@ -8,6 +8,7 @@ import Footer from "@/components/footer";
 import Home from "@/pages/home";
 import Services from "@/pages/services";
 import Booking from "@/pages/booking";
+import BookingConfirmation from "@/pages/booking-confirmation";
 import Contact from "@/pages/contact";
 import FAQ from "@/pages/faq";
 import Dashboard from "@/pages/dashboard";
@@ -34,6 +35,7 @@ function Router() {
             <Route path="/" component={() => <PageWrapper><Home /></PageWrapper>} />
             <Route path="/services" component={() => <PageWrapper><Services /></PageWrapper>} />
             <Route path="/booking" component={() => <PageWrapper><Booking /></PageWrapper>} />
+            <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmation /></PageWrapper>} />
             <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
             <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
             <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
