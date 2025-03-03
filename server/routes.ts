@@ -43,6 +43,22 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   return { services, price: totalPrice };
 }
 
+function generateICalendarEvent(dateTime: Date, duration: number, summary: string, description: string, location: string): string {
+  const start = dateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const end = new Date(dateTime.getTime() + duration * 60000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${summary}
+DESCRIPTION:${description}
+LOCATION:${location}
+END:VEVENT
+END:VCALENDAR`;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bookings", async (req, res) => {
     try {
@@ -110,6 +126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse services and calculate price
       const { services, price } = parseServiceType(data.serviceType);
 
+      // Generate calendar event
+      const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
+      const eventDescription = `Installation appointment for: ${services.join(', ')}`;
+      const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
+      const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
+
       const htmlTemplate = `
         <!DOCTYPE html>
         <html>
@@ -170,6 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <div class="section">
               <div class="section-title">Appointment</div>
               <div class="detail-row">${formattedDate} at ${formattedTime}</div>
+              <div class="detail-row note">📅 Add to calendar: Check attachment or click "Add to Calendar" in your email client</div>
             </div>
 
             <div class="section">
@@ -189,24 +212,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <div class="section">
               <div class="section-title">Price Breakdown</div>
               ${services.map(service => {
-                let servicePrice = service.includes('TV') ? 100 :
-                                service.includes('Doorbell') ? 75 :
-                                service.includes('Floodlight') ? 100 : 75;
-                return `
+                const isTV = service.includes('TV');
+                const isDoorbell = service.includes('Doorbell');
+                const isFloodlight = service.includes('Floodlight');
+                const isCamera = service.includes('Camera');
+                const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
+
+                let basePrice = isTV ? 100 :
+                              isFloodlight ? 100 : 75;
+
+                let html = `
                   <div class="price-row">
-                    <span>• ${service}</span>
-                    <span>${formatPrice(servicePrice)}</span>
+                    <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
+                    <span>${formatPrice(basePrice * quantity)}</span>
                   </div>`;
+
+                // Add any additional fees
+                if (isDoorbell) {
+                  html += `
+                    <div class="price-row">
+                      <span>• Brick Installation (if needed)</span>
+                      <span>+${formatPrice(10)}</span>
+                    </div>`;
+                }
+                if (isCamera) {
+                  html += `
+                    <div class="price-row">
+                      <span>• Height Fee (per 4ft above 8ft)</span>
+                      <span>+${formatPrice(25)}</span>
+                    </div>`;
+                }
+                if (isTV) {
+                  html += `
+                    <div class="price-row">
+                      <span>• Mount Options</span>
+                      <span>From +${formatPrice(40)}</span>
+                    </div>`;
+                }
+
+                return html;
               }).join('')}
 
               <div class="price-row total-row">
-                <span>Total</span>
+                <span>Estimated Total</span>
                 <span>${formatPrice(price)}</span>
               </div>
               <div class="price-row">
                 <span>Required Deposit</span>
                 <span>${formatPrice(75)}</span>
               </div>
+              <div class="note">* Final price may vary based on specific requirements and additional services selected during installation.</div>
             </div>
 
             ${data.notes ? `
@@ -262,14 +317,33 @@ ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} 
 Price Breakdown
 -------------
 ${services.map(service => {
-  const servicePrice = service.includes('TV') ? 100 :
-                      service.includes('Doorbell') ? 75 :
-                      service.includes('Floodlight') ? 100 : 75;
-  return `• ${service}: ${formatPrice(servicePrice)}`;
-}).join('\n')}
+  const isTV = service.includes('TV');
+  const isDoorbell = service.includes('Doorbell');
+  const isFloodlight = service.includes('Floodlight');
+  const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
 
-Total: ${formatPrice(price)}
+  let basePrice = isTV ? 100 :
+                isFloodlight ? 100 : 75;
+
+  let breakdown = `• Base Installation (${quantity} unit${quantity > 1 ? 's' : ''}): ${formatPrice(basePrice * quantity)}`;
+
+  if (isDoorbell) {
+    breakdown += '\n  + Brick Installation (if needed): +$10';
+  }
+  if (service.includes('Camera')) {
+    breakdown += '\n  + Height Fee (per 4ft above 8ft): +$25';
+  }
+  if (isTV) {
+    breakdown += '\n  + Mount Options: From +$40';
+  }
+
+  return breakdown;
+}).join('\n\n')}
+
+Estimated Total: ${formatPrice(price)}
 Required Deposit: ${formatPrice(75)}
+
+* Final price may vary based on specific requirements and additional services selected during installation.
 
 ${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
 
@@ -284,7 +358,12 @@ Questions?
 Call us at (555) 123-4567 or reply to this email.
 
 Thank you for choosing Picture Perfect TV Install!`,
-        html: htmlTemplate
+        html: htmlTemplate,
+        icalEvent: {
+          filename: 'installation-appointment.ics',
+          method: 'REQUEST',
+          content: iCalEvent
+        }
       });
 
       res.json(booking);
