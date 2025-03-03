@@ -74,6 +74,11 @@ export default function Booking() {
       name: "",
       email: "",
       phone: "",
+      streetAddress: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      zipCode: "",
       serviceType: "",
       preferredDate: "",
       notes: ""
@@ -202,7 +207,12 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your name" {...field} />
+                              <Input 
+                                placeholder="Your name" 
+                                {...field}
+                                autoComplete="name"
+                                aria-label="Full name"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -218,7 +228,13 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="Your email" {...field} />
+                              <Input 
+                                type="email" 
+                                placeholder="Your email" 
+                                {...field}
+                                autoComplete="email"
+                                aria-label="Email address"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -234,7 +250,129 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Phone</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your phone number" {...field} />
+                              <Input 
+                                placeholder="Your phone number" 
+                                {...field}
+                                type="tel"
+                                autoComplete="tel"
+                                aria-label="Phone number"
+                                pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                                onInput={(e) => {
+                                  // Format phone number as user types
+                                  const input = e.currentTarget;
+                                  const value = input.value.replace(/\D/g, '');
+                                  if (value.length <= 10) {
+                                    const formatted = value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+                                    input.value = formatted;
+                                    field.onChange(formatted);
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="streetAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Street address"
+                                {...field}
+                                autoComplete="street-address"
+                                aria-label="Street address" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="addressLine2"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Apartment, suite, etc. (optional)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Apartment, suite, etc. (optional)"
+                                {...field}
+                                autoComplete="address-line2"
+                                aria-label="Apartment or suite number"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="City"
+                                  {...field}
+                                  autoComplete="address-level2"
+                                  aria-label="City"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="state"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>State</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="State"
+                                  {...field}
+                                  autoComplete="address-level1"
+                                  aria-label="State"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={formItemVariants}>
+                      <FormField
+                        control={form.control}
+                        name="zipCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ZIP Code</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="ZIP code"
+                                {...field}
+                                autoComplete="postal-code"
+                                aria-label="ZIP code"
+                                pattern="[0-9]{5}"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
