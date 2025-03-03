@@ -12,8 +12,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+function formatPrice(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add new GET endpoint for fetching all bookings
   app.get("/api/bookings", async (req, res) => {
     try {
       const bookings = await storage.getAllBookings();
@@ -24,7 +30,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add endpoint for getting bookings by date
   app.get("/api/bookings/date/:date", async (req, res) => {
     try {
       const { date } = req.params;
@@ -41,7 +46,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = contactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(data);
 
-      // Send email notification
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
         to: process.env.ADMIN_EMAIL || "admin@example.com",
@@ -79,45 +83,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hour12: true
       });
 
+      // Calculate the estimated total
+      let estimatedTotal = 0;
+      const services = data.serviceType.split(' + ');
+      const tvCount = parseInt(services[0]?.match(/\d+/)?.[0] || '0');
+      const smartDeviceCount = parseInt(services[1]?.match(/\d+/)?.[0] || '0');
+
+      estimatedTotal += tvCount * 100; // Base TV mounting price
+      estimatedTotal += smartDeviceCount * 75; // Base smart device price
+
       // Send booking confirmation with enhanced template
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
         to: data.email,
-        subject: "📺 Your TV Mounting Appointment is Confirmed - Picture Perfect TV Install",
+        subject: "📺 Your Installation Appointment is Confirmed!",
         text: `
 Dear ${data.name},
 
-Thank you for choosing Picture Perfect TV Install! We're excited to help you achieve the perfect TV setup. Here are your booking details:
+Thank you for choosing Picture Perfect TV Install! We're excited to help you transform your space. Here are your booking details:
 
 📅 Appointment Details
 ------------------
 Date: ${formattedDate}
 Time: ${formattedTime}
-Service Type: ${data.serviceType}
-Contact Phone: ${data.phone}
+
+🛠️ Services Booked
+---------------
+${data.serviceType}
+Estimated Total: ${formatPrice(estimatedTotal)}*
+* Final pricing may vary based on specific requirements and additional services selected during installation.
+
+📍 Installation Address
+------------------
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+
+📱 Contact Information
+------------------
+Phone: ${data.phone}
+Email: ${data.email}
 
 ${data.notes ? `📝 Your Notes\n${data.notes}\n\n` : ''}
 
 ⚡ Next Steps
 -----------
-1. We'll review your booking and contact you within 24 hours to confirm the exact appointment time
-2. Our technician will call you on the day of service when they're on the way
-3. Please ensure easy access to power outlets and clear the mounting area
+1. Our team will review your booking and contact you within 24 hours to:
+   - Confirm exact appointment time
+   - Discuss any specific mounting requirements
+   - Answer any questions you may have
 
-🛠️ Preparation Tips
-----------------
-- Clear the area where you want the TV mounted
-- Have your TV and any mounting brackets available
-- Make note of any special requirements or concerns
+2. Before Installation Day:
+   - Clear the mounting area
+   - Ensure easy access to power outlets
+   - Have your TV and any existing mounting brackets available
+
+🔧 On Installation Day:
+------------------
+- Our technician will call when they're on the way
+- We'll arrive within your scheduled time slot
+- We'll review the installation plan with you before starting
+- We accept payment after the installation is complete
 
 ⚠️ Need to Reschedule?
 -------------------
-No problem! Simply call us at (555) 123-4567 or reply to this email at least 24 hours before your appointment.
+No problem! Simply:
+- Call us at (555) 123-4567
+- Or reply to this email
+Please give at least 24 hours notice.
 
-We look forward to providing you with a professional TV mounting experience!
+❓ Questions?
+----------
+Reply to this email or call us anytime at (555) 123-4567. We're here to help!
 
 Best regards,
 The Picture Perfect TV Install Team
+
+P.S. Don't forget to save our number (555) 123-4567 for easy access!
         `
       });
 
