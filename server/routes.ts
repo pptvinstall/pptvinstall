@@ -24,6 +24,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add endpoint for getting bookings by date
+  app.get("/api/bookings/date/:date", async (req, res) => {
+    try {
+      const { date } = req.params;
+      const bookings = await storage.getBookingsByDate(date);
+      res.json(bookings);
+    } catch (error) {
+      console.error('Error fetching bookings by date:', error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
   app.post("/api/contact", async (req, res) => {
     try {
       const data = contactMessageSchema.parse(req.body);

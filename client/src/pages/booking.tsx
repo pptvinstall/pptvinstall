@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import React from 'react';
@@ -35,7 +35,7 @@ const serviceTypes = [
   "Custom Solution"
 ];
 
-// Sample time slots - in a real app, these would come from your backend
+// Business hours time slots
 const timeSlots = [
   "09:00 AM",
   "10:00 AM",
@@ -68,6 +68,28 @@ export default function Booking() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
 
+  // Fetch bookings for selected date
+  const { data: existingBookings, isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['/api/bookings/date', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''],
+    queryFn: async () => {
+      if (!selectedDate) return [];
+      const response = await apiRequest(
+        "GET", 
+        `/api/bookings/date/${format(selectedDate, 'yyyy-MM-dd')}`
+      );
+      return response as any[];
+    },
+    enabled: !!selectedDate
+  });
+
+  // Check if a time slot is available
+  const isTimeSlotAvailable = (time: string) => {
+    if (!existingBookings) return true;
+    return !existingBookings.some(booking => 
+      booking.preferredDate.includes(time)
+    );
+  };
+
   const form = useForm<InsertBooking>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -89,6 +111,8 @@ export default function Booking() {
   React.useEffect(() => {
     if (selectedDate) {
       form.setValue('preferredDate', format(selectedDate, 'yyyy-MM-dd'));
+      // Reset time selection when date changes
+      setSelectedTime(undefined);
     }
   }, [selectedDate, form]);
 
@@ -170,16 +194,21 @@ export default function Booking() {
                       className="space-y-2"
                     >
                       <h3 className="font-medium">Available Time Slots</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {timeSlots.map((time) => (
-                          <TimeSlot
-                            key={time}
-                            time={time}
-                            selected={selectedTime === time}
-                            onClick={() => setSelectedTime(time)}
-                          />
-                        ))}
-                      </div>
+                      {isLoadingBookings ? (
+                        <div className="text-center py-4">Loading availability...</div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {timeSlots.map((time) => (
+                            <TimeSlot
+                              key={time}
+                              time={time}
+                              available={isTimeSlotAvailable(time)}
+                              selected={selectedTime === time}
+                              onClick={() => isTimeSlotAvailable(time) && setSelectedTime(time)}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </div>

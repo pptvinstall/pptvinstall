@@ -13,6 +13,7 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   getBooking(id: number): Promise<Booking | undefined>;
   getAllBookings(): Promise<Booking[]>;
+  getBookingsByDate(date: string): Promise<Booking[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -81,6 +82,13 @@ export class MemStorage implements IStorage {
 
   async getAllBookings(): Promise<Booking[]> {
     return Array.from(this.bookings.values());
+  }
+
+  async getBookingsByDate(date: string): Promise<Booking[]> {
+    const bookings = Array.from(this.bookings.values());
+    return bookings.filter(booking => 
+      booking.preferredDate.startsWith(date)
+    );
   }
 }
 
