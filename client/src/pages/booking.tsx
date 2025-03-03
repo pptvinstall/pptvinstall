@@ -32,7 +32,7 @@ const serviceTypes = [
 
 export default function Booking() {
   const { toast } = useToast();
-  
+
   const form = useForm<InsertBooking>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -41,7 +41,7 @@ export default function Booking() {
       phone: "",
       serviceType: "",
       preferredDate: "",
-      notes: ""
+      notes: "" // Ensure this is initialized as empty string, not null
     }
   });
 
@@ -97,7 +97,7 @@ export default function Booking() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -111,7 +111,7 @@ export default function Booking() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="phone"
@@ -125,7 +125,7 @@ export default function Booking() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="serviceType"
@@ -150,7 +150,7 @@ export default function Booking() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="preferredDate"
@@ -164,7 +164,7 @@ export default function Booking() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="notes"
@@ -176,13 +176,14 @@ export default function Booking() {
                             placeholder="Any special requirements or details about your TV mounting needs"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ''} // Ensure value is always a string
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <Button 
                     type="submit" 
                     className="w-full"
