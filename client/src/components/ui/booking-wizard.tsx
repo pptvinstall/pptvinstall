@@ -1,9 +1,10 @@
 import * as React from "react"
+import { useState } from "react";
 import { motion } from "framer-motion"
 import { Calendar } from "./calendar"
 import { TimeSlot } from "./time-slot"
 import { Button } from "./button"
-import { Card } from "./card"
+import { Card, CardContent } from "./card"
 import { ServiceWizard, type TVInstallation, type SmartHomeInstallation } from "./service-wizard"
 import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
@@ -30,12 +31,12 @@ export function BookingWizard({
   existingBookings = [],
   isLoadingBookings = false
 }: BookingWizardProps) {
-  const [currentStep, setCurrentStep] = React.useState(0);
-  const [tvInstallations, setTvInstallations] = React.useState<TVInstallation[]>([]);
-  const [smartHomeInstallations, setSmartHomeInstallations] = React.useState<SmartHomeInstallation[]>([]);
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
-  const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
-  const [formData, setFormData] = React.useState({
+  const [currentStep, setCurrentStep] = useState(0);
+  const [tvInstallations, setTvInstallations] = useState<TVInstallation[]>([]);
+  const [smartHomeInstallations, setSmartHomeInstallations] = useState<SmartHomeInstallation[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
@@ -58,11 +59,12 @@ export function BookingWizard({
     "04:00 PM",
   ];
 
-  const isTimeSlotAvailable = React.useCallback((time: string) => {
+  const isTimeSlotAvailable = (time: string) => {
+    if (!selectedDate) return false;
     return !existingBookings.some(booking =>
       booking?.preferredDate?.includes(time)
     );
-  }, [existingBookings]);
+  };
 
   const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
     setTvInstallations(services.tvs);
@@ -84,14 +86,18 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
-    const serviceDescription = [
-      ...tvInstallations.map(i =>
-        `${i.size === 'large' ? '56"+' : '32"-55"'} TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
-      ),
-      ...smartHomeInstallations.map(i =>
-        `${i.type === 'doorbell' ? 'Smart Doorbell' : i.type === 'floodlight' ? 'Floodlight' : 'Smart Camera'} Installation${i.quantity > 1 ? ` (${i.quantity})` : ''}`
-      )
-    ].join(" • ");
+    // Create a condensed service description that fits within 50 characters
+    const numTVs = tvInstallations.length;
+    const numSmartDevices = smartHomeInstallations.length;
+
+    let serviceDescription = "";
+    if (numTVs > 0) {
+      serviceDescription += `${numTVs} TV${numTVs > 1 ? 's' : ''}`;
+    }
+    if (numSmartDevices > 0) {
+      if (serviceDescription) serviceDescription += " + ";
+      serviceDescription += `${numSmartDevices} Smart Device${numSmartDevices > 1 ? 's' : ''}`;
+    }
 
     onSubmit({
       ...formData,
@@ -350,7 +356,7 @@ export function BookingWizard({
             >
               Previous
             </Button>
-            
+
             {currentStep < steps.length - 1 ? (
               <Button
                 onClick={() => setCurrentStep((prev) => prev + 1)}
