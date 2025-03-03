@@ -48,21 +48,42 @@ export function BookingWizard({
     notes: ""
   });
 
-  // Time slots available (9 AM to 4 PM)
-  const timeSlots = [
-    "09:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "01:00 PM",
-    "02:00 PM",
-    "03:00 PM",
-    "04:00 PM",
-  ];
+  // Generate time slots based on day of week
+  const getTimeSlots = (date: Date | undefined) => {
+    if (!date) return [];
+
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6; // 0 is Sunday, 6 is Saturday
+
+    if (isWeekend) {
+      // Weekend slots: 11 AM to 7 PM
+      return [
+        "11:00 AM",
+        "12:00 PM",
+        "1:00 PM",
+        "2:00 PM",
+        "3:00 PM",
+        "4:00 PM",
+        "5:00 PM",
+        "6:00 PM"
+      ];
+    } else {
+      // Weekday slots: 6:30 PM to 10:30 PM
+      return [
+        "6:30 PM",
+        "7:30 PM",
+        "8:30 PM",
+        "9:30 PM"
+      ];
+    }
+  };
+
+  const timeSlots = getTimeSlots(selectedDate);
 
   const isTimeSlotAvailable = (time: string) => {
     if (!selectedDate) return false;
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
     return !existingBookings.some(booking =>
-      booking?.preferredDate?.includes(time)
+      booking.preferredDate === dateString && booking.preferredTime === time
     );
   };
 
@@ -147,16 +168,15 @@ export function BookingWizard({
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setSelectedTime(undefined); // Reset time when date changes
+                }}
                 className="rounded-md border"
                 disabled={(date) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return (
-                    date < today ||
-                    date.getDay() === 0 ||
-                    date.getDay() === 6
-                  );
+                  return date < today;
                 }}
               />
 
