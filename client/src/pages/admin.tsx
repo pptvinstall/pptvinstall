@@ -13,12 +13,22 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Booking } from "@shared/schema";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const { toast } = useToast();
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -52,6 +62,31 @@ export default function AdminDashboard() {
       toast({
         title: "Login failed",
         description: "Invalid password",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateBookingMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Booking> }) => {
+      const response = await apiRequest("PUT", `/api/bookings/${id}`, data);
+      if (!response.ok) {
+        throw new Error('Failed to update booking');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      setSelectedBooking(null);
+      toast({
+        title: "Booking updated",
+        description: "The booking has been successfully updated.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update failed",
+        description: "Failed to update the booking. Please try again.",
         variant: "destructive"
       });
     }
@@ -101,7 +136,7 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div>Loading bookings...</div>
+            <div className="text-center py-8">Loading bookings...</div>
           ) : (
             <Table>
               <TableHeader>
@@ -111,6 +146,7 @@ export default function AdminDashboard() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Service</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Address</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -124,11 +160,28 @@ export default function AdminDashboard() {
                     <TableCell>{booking.name}</TableCell>
                     <TableCell>{booking.serviceType}</TableCell>
                     <TableCell>
-                      {booking.phone}<br/>
-                      {booking.email}
+                      <div className="space-y-1">
+                        <p>{booking.phone}</p>
+                        <p className="text-sm text-gray-500">{booking.email}</p>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm">
+                      <div className="space-y-1">
+                        <p>{booking.streetAddress}</p>
+                        {booking.addressLine2 && (
+                          <p>{booking.addressLine2}</p>
+                        )}
+                        <p className="text-sm text-gray-500">
+                          {booking.city}, {booking.state} {booking.zipCode}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedBooking(booking)}
+                      >
                         Edit
                       </Button>
                     </TableCell>
@@ -139,6 +192,114 @@ export default function AdminDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <Drawer open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Edit Booking</DrawerTitle>
+            <DrawerDescription>
+              Update the booking details below
+            </DrawerDescription>
+          </DrawerHeader>
+          {selectedBooking && (
+            <div className="px-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Customer Name</label>
+                  <Input
+                    value={selectedBooking.name}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        name: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    value={selectedBooking.email}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        email: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Phone</label>
+                  <Input
+                    value={selectedBooking.phone}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        phone: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Service Type</label>
+                  <Input
+                    value={selectedBooking.serviceType}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        serviceType: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Preferred Date</label>
+                  <Input
+                    type="date"
+                    value={selectedBooking.preferredDate}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        preferredDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Preferred Time</label>
+                  <Input
+                    value={selectedBooking.preferredTime}
+                    onChange={(e) =>
+                      setSelectedBooking({
+                        ...selectedBooking,
+                        preferredTime: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DrawerFooter>
+            <Button
+              disabled={updateBookingMutation.isPending}
+              onClick={() => {
+                if (selectedBooking) {
+                  updateBookingMutation.mutate({
+                    id: selectedBooking.id,
+                    data: selectedBooking,
+                  });
+                }
+              }}
+            >
+              {updateBookingMutation.isPending ? "Saving..." : "Save changes"}
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
