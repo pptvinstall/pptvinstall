@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Table,
@@ -12,32 +12,54 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Booking } from "@shared/schema";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  
+  const { toast } = useToast();
+
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["/api/bookings"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/bookings");
-      return response as Booking[];
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+      return response.json() as Promise<Booking[]>;
     },
     enabled: isAuthenticated
   });
 
+  const loginMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const response = await apiRequest("POST", "/api/admin/login", { password });
+      if (!response.ok) {
+        throw new Error('Invalid password');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsAuthenticated(true);
+      toast({
+        title: "Login successful",
+        description: "Welcome to the admin dashboard",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Login failed",
+        description: "Invalid password",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await apiRequest("POST", "/api/admin/login", { password });
-      if (response.success) {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error("Login failed");
-    }
+    loginMutation.mutate(password);
   };
 
   if (!isAuthenticated) {
@@ -55,8 +77,12 @@ export default function AdminDashboard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <Button type="submit" className="w-full">
-                Login
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending ? "Logging in..." : "Login"}
               </Button>
             </form>
           </CardContent>
@@ -68,7 +94,7 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-      
+
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Recent Bookings</CardTitle>
