@@ -19,6 +19,30 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
+function parseServiceType(serviceType: string): { services: string[], price: number } {
+  const parts = serviceType.split(' + ');
+  let totalPrice = 0;
+  const services = [];
+
+  for (const part of parts) {
+    if (part.includes('TV')) {
+      const count = parseInt(part.match(/\d+/)?.[0] || '1');
+      services.push(`TV Installation (${count} unit${count > 1 ? 's' : ''})`);
+      totalPrice += count * 100; // Base price for TV mounting
+    }
+    if (part.includes('Smart')) {
+      const count = parseInt(part.match(/\d+/)?.[0] || '1');
+      const type = part.includes('Doorbell') ? 'Smart Doorbell' :
+                  part.includes('Floodlight') ? 'Floodlight' :
+                  'Smart Camera';
+      services.push(`${type} (${count} unit${count > 1 ? 's' : ''})`);
+      totalPrice += count * (type === 'Floodlight' ? 100 : 75);
+    }
+  }
+
+  return { services, price: totalPrice };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bookings", async (req, res) => {
     try {
@@ -69,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = bookingSchema.parse(req.body);
       const booking = await storage.createBooking(data);
 
-      // Format date and time for better readability
+      // Parse appointment date and time
       const dateTime = new Date(data.preferredDate);
       const formattedDate = dateTime.toLocaleDateString('en-US', {
         weekday: 'long',
@@ -83,82 +107,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hour12: true
       });
 
-      // Calculate the estimated total
-      let estimatedTotal = 0;
-      const services = data.serviceType.split(' + ');
-      const tvCount = parseInt(services[0]?.match(/\d+/)?.[0] || '0');
-      const smartDeviceCount = parseInt(services[1]?.match(/\d+/)?.[0] || '0');
+      // Parse services and calculate price
+      const { services, price } = parseServiceType(data.serviceType);
 
-      estimatedTotal += tvCount * 100; // Base TV mounting price
-      estimatedTotal += smartDeviceCount * 75; // Base smart device price
-
-      // Send booking confirmation with enhanced template
+      // Send booking confirmation with formatted template
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
         to: data.email,
-        subject: "📺 Your Installation Appointment is Confirmed!",
+        subject: "Your Installation Booking Confirmation",
         text: `
-Dear ${data.name},
+Selected Services
+----------------
+${services.map(service => `• ${service}`).join('\n')}
 
-Thank you for choosing Picture Perfect TV Install! We're excited to help you transform your space. Here are your booking details:
+Appointment
+----------
+${formattedDate} at ${formattedTime}
 
-📅 Appointment Details
-------------------
-Date: ${formattedDate}
-Time: ${formattedTime}
+Contact Information
+-----------------
+${data.name}
+${data.email}
+${data.phone}
 
-🛠️ Services Booked
----------------
-${data.serviceType}
-Estimated Total: ${formatPrice(estimatedTotal)}*
-* Final pricing may vary based on specific requirements and additional services selected during installation.
-
-📍 Installation Address
+Installation Address
 ------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-📱 Contact Information
-------------------
-Phone: ${data.phone}
-Email: ${data.email}
+Price Breakdown
+-------------
+Base Installation: ${formatPrice(price)}
+${services.map(service => {
+  if (service.includes('TV')) {
+    return `• TV Mount Installation: ${formatPrice(100)}`;
+  } else if (service.includes('Doorbell')) {
+    return `• Smart Doorbell Installation: ${formatPrice(75)}`;
+  } else if (service.includes('Floodlight')) {
+    return `• Floodlight Installation: ${formatPrice(100)}`;
+  } else if (service.includes('Camera')) {
+    return `• Smart Camera Installation: ${formatPrice(75)}`;
+  }
+}).join('\n')}
 
-${data.notes ? `📝 Your Notes\n${data.notes}\n\n` : ''}
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
 
-⚡ Next Steps
------------
-1. Our team will review your booking and contact you within 24 hours to:
-   - Confirm exact appointment time
-   - Discuss any specific mounting requirements
-   - Answer any questions you may have
+Additional Notes
+--------------
+${data.notes || 'No additional notes provided'}
 
-2. Before Installation Day:
-   - Clear the mounting area
-   - Ensure easy access to power outlets
-   - Have your TV and any existing mounting brackets available
+Next Steps
+---------
+1. Our team will contact you within 24 hours to confirm your appointment
+2. Please ensure the installation area is clear and accessible
+3. Have your devices ready for installation
 
-🔧 On Installation Day:
-------------------
-- Our technician will call when they're on the way
-- We'll arrive within your scheduled time slot
-- We'll review the installation plan with you before starting
-- We accept payment after the installation is complete
+Questions?
+---------
+Call us at (555) 123-4567 or reply to this email.
 
-⚠️ Need to Reschedule?
--------------------
-No problem! Simply:
-- Call us at (555) 123-4567
-- Or reply to this email
-Please give at least 24 hours notice.
-
-❓ Questions?
-----------
-Reply to this email or call us anytime at (555) 123-4567. We're here to help!
-
-Best regards,
-The Picture Perfect TV Install Team
-
-P.S. Don't forget to save our number (555) 123-4567 for easy access!
+Thank you for choosing Picture Perfect TV Install!
         `
       });
 
