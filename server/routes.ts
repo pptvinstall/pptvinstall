@@ -13,6 +13,17 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add new GET endpoint for fetching all bookings
+  app.get("/api/bookings", async (req, res) => {
+    try {
+      const bookings = await storage.getAllBookings();
+      res.json(bookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
   app.post("/api/contact", async (req, res) => {
     try {
       const data = contactMessageSchema.parse(req.body);

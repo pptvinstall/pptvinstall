@@ -12,6 +12,7 @@ export interface IStorage {
   // Bookings
   createBooking(booking: InsertBooking): Promise<Booking>;
   getBooking(id: number): Promise<Booking | undefined>;
+  getAllBookings(): Promise<Booking[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -76,6 +77,10 @@ export class MemStorage implements IStorage {
 
   async getBooking(id: number): Promise<Booking | undefined> {
     return this.bookings.get(id);
+  }
+
+  async getAllBookings(): Promise<Booking[]> {
+    return Array.from(this.bookings.values());
   }
 }
 
