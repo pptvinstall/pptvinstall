@@ -8,10 +8,10 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-lg mb-4">Picture Perfect TV Install</h3>
             <p className="text-gray-600">
-              Professional TV mounting services for your home or business.
+              Professional TV mounting and smart home installation services in Metro Atlanta and surrounding areas.
             </p>
           </div>
-          
+
           <div>
             <h3 className="font-bold text-lg mb-4">Quick Links</h3>
             <div className="flex flex-col gap-2">
@@ -29,17 +29,17 @@ export default function Footer() {
               </Link>
             </div>
           </div>
-          
+
           <div>
             <h3 className="font-bold text-lg mb-4">Contact Info</h3>
             <div className="flex flex-col gap-2 text-gray-600">
-              <p>Phone: (123) 456-7890</p>
-              <p>Email: info@perfecttvinstall.com</p>
+              <p>Phone: 404-702-4748</p>
+              <p>Email: pptvinstall@gmail.com</p>
               <p>Hours: Mon-Sat 9am-6pm</p>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-8 pt-8 border-t text-center text-gray-600">
           <p>© {new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.</p>
         </div>

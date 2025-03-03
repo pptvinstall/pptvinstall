@@ -69,7 +69,7 @@ export default function Contact() {
               </CardHeader>
               <CardContent>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} 
+                  <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
                         className="space-y-4">
                     <FormField
                       control={form.control}
@@ -120,7 +120,7 @@ export default function Contact() {
                         <FormItem>
                           <FormLabel>Message</FormLabel>
                           <FormControl>
-                            <Textarea 
+                            <Textarea
                               placeholder="How can we help you?"
                               className="min-h-[100px]"
                               {...field}
@@ -131,8 +131,8 @@ export default function Contact() {
                       )}
                     />
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full"
                       disabled={mutation.isPending}
                     >
@@ -174,7 +174,7 @@ export default function Contact() {
                     <MapPin className="h-8 w-8 text-primary" />
                     <div>
                       <h3 className="font-bold">Service Area</h3>
-                      <p className="text-gray-600">Greater metropolitan area</p>
+                      <p className="text-gray-600">Metro Atlanta and surrounding areas</p>
                     </div>
                   </div>
                 </CardContent>
