@@ -28,14 +28,30 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { ServiceWizard } from "@/components/ui/service-wizard"
 
-const serviceTypes = [
-  "Basic TV Mounting",
-  "Premium Installation",
-  "Custom Solution"
-];
+const serviceTypes = {
+  "Basic TV Mounting": {
+    title: "Basic TV Mounting",
+    description: "Perfect for standard wall mounting of TVs up to 65″. Includes bracket and cable management.",
+    price: "$149",
+    deposit: "$50"
+  },
+  "Premium Installation": {
+    title: "Premium Installation",
+    description: "Ideal for large TVs (65″+), fireplace mounting, or complex installations. Includes premium bracket and in-wall cable concealment.",
+    price: "$249",
+    deposit: "$75"
+  },
+  "Custom Solution": {
+    title: "Custom Solution",
+    description: "For unique mounting situations requiring special equipment or custom solutions. Price varies based on requirements.",
+    price: "Custom Quote",
+    deposit: "$100"
+  }
+};
 
-// Business hours time slots
 const timeSlots = [
   "09:00 AM",
   "10:00 AM",
@@ -48,8 +64,8 @@ const timeSlots = [
 
 const formVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: {
       duration: 0.5,
@@ -67,25 +83,23 @@ export default function Booking() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
+  const [showServiceWizard, setShowServiceWizard] = React.useState(false);
 
-  // Fetch bookings for selected date
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings/date', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''],
     queryFn: async () => {
       if (!selectedDate) return [];
       const response = await apiRequest(
-        "GET", 
+        "GET",
         `/api/bookings/date/${format(selectedDate, 'yyyy-MM-dd')}`
       );
-      // Ensure we return an array, even if empty
       return Array.isArray(response) ? response : [];
     },
     enabled: !!selectedDate
   });
 
-  // Check if a time slot is available
   const isTimeSlotAvailable = React.useCallback((time: string) => {
-    return !existingBookings.some(booking => 
+    return !existingBookings.some(booking =>
       booking?.preferredDate?.includes(time)
     );
   }, [existingBookings]);
@@ -107,11 +121,9 @@ export default function Booking() {
     }
   });
 
-  // Update the form's date field when calendar selection changes
   React.useEffect(() => {
     if (selectedDate) {
       form.setValue('preferredDate', format(selectedDate, 'yyyy-MM-dd'));
-      // Reset time selection when date changes
       setSelectedTime(undefined);
     }
   }, [selectedDate, form]);
@@ -145,13 +157,13 @@ export default function Booking() {
   return (
     <div className="py-12">
       <div className="container mx-auto px-4">
-        <motion.div 
+        <motion.div
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -176,7 +188,6 @@ export default function Booking() {
                     onSelect={setSelectedDate}
                     className="rounded-md border"
                     disabled={(date) => {
-                      // Disable past dates and weekends
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
                       return (
@@ -221,7 +232,7 @@ export default function Booking() {
               </CardHeader>
               <CardContent>
                 <Form {...form}>
-                  <motion.form 
+                  <motion.form
                     onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
                     className="space-y-4"
                     variants={formVariants}
@@ -236,13 +247,12 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Name</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Your name" 
+                              <Input
+                                placeholder="Your name"
                                 {...field}
                                 autoComplete="name"
                                 aria-label="Full name"
                                 onInput={(e) => {
-                                  // Capitalize first letter of each word
                                   const input = e.currentTarget;
                                   const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
                                   input.value = value;
@@ -264,14 +274,13 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="email" 
-                                placeholder="Your email" 
+                              <Input
+                                type="email"
+                                placeholder="Your email"
                                 {...field}
                                 autoComplete="email"
                                 aria-label="Email address"
                                 onInput={(e) => {
-                                  // Convert email to lowercase
                                   const input = e.currentTarget;
                                   const value = input.value.toLowerCase();
                                   input.value = value;
@@ -293,15 +302,14 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Phone</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Your phone number" 
+                              <Input
+                                placeholder="Your phone number"
                                 {...field}
                                 type="tel"
                                 autoComplete="tel"
                                 aria-label="Phone number"
                                 pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
                                 onInput={(e) => {
-                                  // Format phone number as XXX-XXX-XXXX
                                   const input = e.currentTarget;
                                   const value = input.value.replace(/\D/g, '');
                                   if (value.length <= 10) {
@@ -326,13 +334,12 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Street Address</FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 placeholder="Street address"
                                 {...field}
                                 autoComplete="street-address"
                                 aria-label="Street address"
                                 onInput={(e) => {
-                                  // Capitalize first letter of each word
                                   const input = e.currentTarget;
                                   const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
                                   input.value = value;
@@ -354,7 +361,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Apartment, suite, etc. (optional)</FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 placeholder="Apartment, suite, etc. (optional)"
                                 {...field}
                                 autoComplete="address-line2"
@@ -376,13 +383,12 @@ export default function Booking() {
                             <FormItem>
                               <FormLabel>City</FormLabel>
                               <FormControl>
-                                <Input 
+                                <Input
                                   placeholder="City"
                                   {...field}
                                   autoComplete="address-level2"
                                   aria-label="City"
                                   onInput={(e) => {
-                                    // Capitalize first letter of each word
                                     const input = e.currentTarget;
                                     const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
                                     input.value = value;
@@ -401,14 +407,13 @@ export default function Booking() {
                             <FormItem>
                               <FormLabel>State</FormLabel>
                               <FormControl>
-                                <Input 
+                                <Input
                                   placeholder="State"
                                   {...field}
                                   autoComplete="address-level1"
                                   aria-label="State"
                                   maxLength={2}
                                   onInput={(e) => {
-                                    // Convert state to uppercase and limit to 2 chars
                                     const input = e.currentTarget;
                                     const value = input.value.toUpperCase().slice(0, 2);
                                     input.value = value;
@@ -431,7 +436,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>ZIP Code</FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 placeholder="ZIP code"
                                 {...field}
                                 autoComplete="postal-code"
@@ -439,7 +444,6 @@ export default function Booking() {
                                 pattern="[0-9]{5}"
                                 maxLength={5}
                                 onInput={(e) => {
-                                  // Only allow numbers and limit to 5 digits
                                   const input = e.currentTarget;
                                   const value = input.value.replace(/\D/g, '').slice(0, 5);
                                   input.value = value;
@@ -460,21 +464,70 @@ export default function Booking() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Service Type</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a service" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {serviceTypes.map((type) => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
-                                  </SelectItem>
+                            <div className="space-y-4">
+                              <Dialog open={showServiceWizard} onOpenChange={setShowServiceWizard}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left"
+                                    type="button"
+                                  >
+                                    {field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        Not sure? Let us help you choose
+                                      </span>
+                                    )}
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-lg">
+                                  <ServiceWizard
+                                    onServiceSelect={(service) => {
+                                      field.onChange(service);
+                                      setShowServiceWizard(false);
+                                    }}
+                                    onClose={() => setShowServiceWizard(false)}
+                                  />
+                                </DialogContent>
+                              </Dialog>
+
+                              <div className="grid gap-4">
+                                {Object.entries(serviceTypes).map(([type, details]) => (
+                                  <motion.div
+                                    key={type}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                  >
+                                    <button
+                                      type="button"
+                                      className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${
+                                        field.value === type
+                                          ? "border-primary bg-primary/5"
+                                          : "border-border hover:border-primary/50"
+                                      }`}
+                                      onClick={() => field.onChange(type)}
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <h3 className="font-medium">{details.title}</h3>
+                                          <p className="text-sm text-muted-foreground mt-1">
+                                            {details.description}
+                                          </p>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="font-medium">{details.price}</div>
+                                          <div className="text-sm text-muted-foreground">
+                                            {details.deposit} deposit
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  </motion.div>
                                 ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
+                              </div>
+                              <FormMessage />
+                            </div>
                           </FormItem>
                         )}
                       />
@@ -488,11 +541,11 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Additional Notes</FormLabel>
                             <FormControl>
-                              <Textarea 
+                              <Textarea
                                 placeholder="Any special requirements or details about your TV mounting needs"
                                 className="min-h-[100px]"
                                 {...field}
-                                value={field.value || ''} 
+                                value={field.value || ''}
                               />
                             </FormControl>
                             <FormMessage />
@@ -501,13 +554,13 @@ export default function Booking() {
                       />
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       variants={formItemVariants}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="w-full"
                         disabled={mutation.isPending || !selectedDate || !selectedTime}
                       >
