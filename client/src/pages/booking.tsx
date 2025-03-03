@@ -471,7 +471,7 @@ export default function Booking() {
                           mutation.isPending ||
                           !selectedDate ||
                           !selectedTime ||
-                          (installations.length === 0 && smartHomeInstallations.length === 0)
+                          (installations.length === 0 && smartHomeInstallations.length === 0) // Changed to allow either type
                         }
                       >
                         {mutation.isPending ? (
