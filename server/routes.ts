@@ -42,6 +42,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = bookingSchema.parse(req.body);
       const booking = await storage.createBooking(data);
 
+      // Format date and time for better readability
+      const dateTime = new Date(data.preferredDate);
+      const formattedDate = dateTime.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const formattedTime = dateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      });
+
       // Send booking confirmation with enhanced template
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
@@ -54,7 +68,8 @@ Thank you for choosing Picture Perfect TV Install! We're excited to help you ach
 
 📅 Appointment Details
 ------------------
-Date: ${data.preferredDate}
+Date: ${formattedDate}
+Time: ${formattedTime}
 Service Type: ${data.serviceType}
 Contact Phone: ${data.phone}
 
@@ -85,6 +100,7 @@ The Picture Perfect TV Install Team
 
       res.json(booking);
     } catch (error) {
+      console.error('Booking error:', error);
       res.status(400).json({ error: "Invalid booking data" });
     }
   });
