@@ -20,7 +20,7 @@ import { Phone, Mail, MapPin } from "lucide-react";
 
 export default function Contact() {
   const { toast } = useToast();
-  
+
   const form = useForm<InsertContactMessage>({
     resolver: zodResolver(contactMessageSchema),
     defaultValues: {
@@ -84,7 +84,7 @@ export default function Contact() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="email"
@@ -98,7 +98,7 @@ export default function Contact() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="phone"
@@ -112,7 +112,7 @@ export default function Contact() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="message"
@@ -130,7 +130,7 @@ export default function Contact() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <Button 
                       type="submit" 
                       className="w-full"
@@ -150,7 +150,7 @@ export default function Contact() {
                     <Phone className="h-8 w-8 text-primary" />
                     <div>
                       <h3 className="font-bold">Phone</h3>
-                      <p className="text-gray-600">(123) 456-7890</p>
+                      <p className="text-gray-600">404-702-4748</p>
                     </div>
                   </div>
                 </CardContent>
@@ -162,7 +162,7 @@ export default function Contact() {
                     <Mail className="h-8 w-8 text-primary" />
                     <div>
                       <h3 className="font-bold">Email</h3>
-                      <p className="text-gray-600">info@perfecttvinstall.com</p>
+                      <p className="text-gray-600">pptvinstall@gmail.com</p>
                     </div>
                   </div>
                 </CardContent>

@@ -7,7 +7,7 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.GMAIL_USER || "default@gmail.com",
+    user: "pptvinstall@gmail.com",
     pass: process.env.GMAIL_PASS || "default_pass"
   }
 });
@@ -280,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             <div class="section">
               <div class="section-title">Questions?</div>
-              <div class="detail-row">Call us at (555) 123-4567 or reply to this email.</div>
+              <div class="detail-row">Call us at 404-702-4748 or reply to this email.</div>
             </div>
 
             <div class="note">Thank you for choosing Picture Perfect TV Install!</div>
@@ -355,7 +355,7 @@ Next Steps
 
 Questions?
 ---------
-Call us at (555) 123-4567 or reply to this email.
+Call us at 404-702-4748 or reply to this email.
 
 Thank you for choosing Picture Perfect TV Install!`,
         html: htmlTemplate,

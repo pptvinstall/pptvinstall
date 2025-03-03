@@ -53,7 +53,7 @@ export default function BookingConfirmation() {
               </div>
 
               <p className="text-sm text-gray-500 mb-6">
-                Have questions? Contact us at (555) 123-4567
+                Have questions? Contact us at 404-702-4748 or pptvinstall@gmail.com
               </p>
 
               <Link href="/">
