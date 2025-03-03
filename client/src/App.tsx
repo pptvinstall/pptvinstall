@@ -12,6 +12,7 @@ import BookingConfirmation from "@/pages/booking-confirmation";
 import Contact from "@/pages/contact";
 import FAQ from "@/pages/faq";
 import Dashboard from "@/pages/dashboard";
+import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -39,6 +40,7 @@ function Router() {
             <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
             <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
             <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
+            <Route path="/admin" component={() => <PageWrapper><Admin /></PageWrapper>} />
             <Route component={() => <PageWrapper><NotFound /></PageWrapper>} />
           </Switch>
         </AnimatePresence>

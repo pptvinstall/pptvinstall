@@ -379,6 +379,29 @@ Thank you for choosing Picture Perfect TV Install!`,
     }
   });
 
+  app.post("/api/admin/login", (req, res) => {
+    const { password } = req.body;
+
+    // We'll need to set up this environment variable
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (password === adminPassword) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false });
+    }
+  });
+
+  app.put("/api/bookings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.updateBooking(parseInt(id), req.body);
+      res.json(booking);
+    } catch (error) {
+      res.status(400).json({ error: "Failed to update booking" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
