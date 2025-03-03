@@ -35,7 +35,8 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-gray-600">
               <p>Phone: 404-702-4748</p>
               <p>Email: pptvinstall@gmail.com</p>
-              <p>Hours: Mon-Sat 9am-6pm</p>
+              <p>Hours: Mon-Fri 6:30PM-10:30PM</p>
+              <p className="ml-11">Sat-Sun 11AM-7PM</p>
             </div>
           </div>
         </div>

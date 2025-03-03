@@ -281,6 +281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <div class="section">
               <div class="section-title">Questions?</div>
               <div class="detail-row">Call us at 404-702-4748 or reply to this email.</div>
+              <div class="detail-row">Business Hours:</div>
+              <div class="detail-row">Mon-Fri: 6:30PM-10:30PM</div>
+              <div class="detail-row">Sat-Sun: 11AM-7PM</div>
             </div>
 
             <div class="note">Thank you for choosing Picture Perfect TV Install!</div>
@@ -356,6 +359,9 @@ Next Steps
 Questions?
 ---------
 Call us at 404-702-4748 or reply to this email.
+Business Hours:
+Mon-Fri: 6:30PM-10:30PM
+Sat-Sun: 11AM-7PM
 
 Thank you for choosing Picture Perfect TV Install!`,
         html: htmlTemplate,
