@@ -7,7 +7,7 @@ import React from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { TimeSlot } from "@/components/ui/time-slot";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -24,7 +24,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ServiceWizard, type TVInstallation, type SmartHomeInstallation } from "@/components/ui/service-wizard";
 import { PriceCalculator } from "@/components/ui/price-calculator";
-
 
 // Time slots available (9 AM to 4 PM)
 const timeSlots = [
@@ -140,7 +139,7 @@ export default function Booking() {
 
     const serviceDescription = [
       ...services.tvs.map(i =>
-        `${i.size === 'large' ? '56"+ ' : 'Under 55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
+        `${i.size === 'large' ? '56"+ ' : '32"-55" '}TV - ${i.location} Mount${i.mountType !== 'none' ? ` with ${i.mountType} Mount` : ''}`
       ),
       ...services.smartHome.map(i =>
         `${i.type === 'doorbell' ? 'Smart Doorbell' : i.type === 'floodlight' ? 'Floodlight' : 'Smart Camera'} Installation${i.quantity > 1 ? ` (${i.quantity})` : ''}`
@@ -168,16 +167,13 @@ export default function Booking() {
           >
             <h1 className="text-4xl font-bold mb-4">Book Your Installation</h1>
             <p className="text-xl text-gray-600">
-              Schedule your TV mounting service
+              Schedule your TV mounting or smart home installation service
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Select Date & Time</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   <Calendar
                     mode="single"
@@ -224,10 +220,7 @@ export default function Booking() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Your Details</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <Form {...form}>
                   <motion.form
                     onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
@@ -273,7 +266,7 @@ export default function Booking() {
                                 </DialogContent>
                               </Dialog>
 
-                              {installations.length > 0 || smartHomeInstallations.length > 0 && (
+                              {(installations.length > 0 || smartHomeInstallations.length > 0) && (
                                 <div className="mt-6">
                                   <PriceCalculator
                                     tvs={installations}
@@ -286,6 +279,7 @@ export default function Booking() {
                                 </div>
                               )}
                             </div>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -303,13 +297,6 @@ export default function Booking() {
                                 placeholder="Your name"
                                 {...field}
                                 autoComplete="name"
-                                aria-label="Full name"
-                                onInput={(e) => {
-                                  const input = e.currentTarget;
-                                  const value = input.value.replace(/\b\w/g, l => l.toUpperCase());
-                                  input.value = value;
-                                  field.onChange(value);
-                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -317,6 +304,7 @@ export default function Booking() {
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -325,13 +313,18 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="Your email" {...field} />
+                              <Input
+                                type="email"
+                                placeholder="Your email"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -340,13 +333,18 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Phone</FormLabel>
                             <FormControl>
-                              <Input type="tel" placeholder="Your phone number" {...field} />
+                              <Input
+                                type="tel"
+                                placeholder="Your phone number"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -355,13 +353,17 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Street Address</FormLabel>
                             <FormControl>
-                              <Input placeholder="Street address" {...field} />
+                              <Input
+                                placeholder="Street address"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -370,13 +372,17 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Address Line 2 (optional)</FormLabel>
                             <FormControl>
-                              <Input placeholder="Apartment, suite, etc." {...field} />
+                              <Input
+                                placeholder="Apartment, suite, etc."
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -385,13 +391,17 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>City</FormLabel>
                             <FormControl>
-                              <Input placeholder="City" {...field} />
+                              <Input
+                                placeholder="City"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -400,13 +410,17 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>State</FormLabel>
                             <FormControl>
-                              <Input placeholder="State" {...field} />
+                              <Input
+                                placeholder="State"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -415,13 +429,17 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Zip Code</FormLabel>
                             <FormControl>
-                              <Input placeholder="Zip code" {...field} />
+                              <Input
+                                placeholder="Zip code"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
+
                     <motion.div variants={formItemVariants}>
                       <FormField
                         control={form.control}
@@ -430,14 +448,16 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Notes (optional)</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Add any additional notes" {...field} />
+                              <Textarea
+                                placeholder="Add any additional notes"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </motion.div>
-
 
                     <motion.div
                       variants={formItemVariants}
@@ -447,7 +467,12 @@ export default function Booking() {
                       <Button
                         type="submit"
                         className="w-full"
-                        disabled={mutation.isPending || !selectedDate || !selectedTime || installations.length === 0 || smartHomeInstallations.length ===0}
+                        disabled={
+                          mutation.isPending ||
+                          !selectedDate ||
+                          !selectedTime ||
+                          (installations.length === 0 && smartHomeInstallations.length === 0)
+                        }
                       >
                         {mutation.isPending ? (
                           <motion.div
