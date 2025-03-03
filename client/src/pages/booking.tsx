@@ -69,7 +69,7 @@ export default function Booking() {
   const [selectedTime, setSelectedTime] = React.useState<string | undefined>(undefined);
 
   // Fetch bookings for selected date
-  const { data: existingBookings, isLoading: isLoadingBookings } = useQuery({
+  const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings/date', selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''],
     queryFn: async () => {
       if (!selectedDate) return [];
@@ -77,18 +77,18 @@ export default function Booking() {
         "GET", 
         `/api/bookings/date/${format(selectedDate, 'yyyy-MM-dd')}`
       );
-      return response as any[];
+      // Ensure we return an array, even if empty
+      return Array.isArray(response) ? response : [];
     },
     enabled: !!selectedDate
   });
 
   // Check if a time slot is available
-  const isTimeSlotAvailable = (time: string) => {
-    if (!existingBookings) return true;
+  const isTimeSlotAvailable = React.useCallback((time: string) => {
     return !existingBookings.some(booking => 
-      booking.preferredDate.includes(time)
+      booking?.preferredDate?.includes(time)
     );
-  };
+  }, [existingBookings]);
 
   const form = useForm<InsertBooking>({
     resolver: zodResolver(bookingSchema),
