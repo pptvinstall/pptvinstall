@@ -20,28 +20,28 @@ export const pricing = {
       large: 100,
     }
   },
-
+  
   electrical: {
     outletInstallation: 100,
   },
-
+  
   additionalServices: {
     soundbarBasic: 50,
     soundbarConcealed: 75,
     shelfInstallation: 50,
   },
-
+  
   discounts: {
     multiTvLabor: 10, // Per additional TV
     multiTvMount: 5, // Per additional mount
   },
-
+  
   deposit: {
     basic: 20,
     premium: 75,
     custom: 100,
   },
-
+  
   travel: {
     freeRadius: 20, // miles
     ratePerMile: 1,

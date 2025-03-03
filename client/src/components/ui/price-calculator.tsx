@@ -2,26 +2,57 @@ import * as React from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
-import { calculatePrice, type ServiceOptions } from "@/lib/pricing"
+import { calculatePrice } from "@/lib/pricing"
+import type { TVInstallation } from "./service-wizard"
 
 interface PriceCalculatorProps {
-  options: Partial<ServiceOptions>;
+  installations: TVInstallation[];
+  distance: number;
   onUpdate?: (total: number, deposit: number) => void;
 }
 
-export function PriceCalculator({ options, onUpdate }: PriceCalculatorProps) {
-  const defaultOptions: ServiceOptions = {
-    tvSize: 'small',
-    mountType: 'none',
-    location: 'standard',
-    wireConcealment: false,
-    additionalTvs: 0,
-    soundbar: 'none',
-    shelves: 0,
-    distance: 0,
-  };
+export function PriceCalculator({ installations, distance, onUpdate }: PriceCalculatorProps) {
+  const pricing = React.useMemo(() => {
+    const items = installations.map((installation, index) => {
+      const basePrice = installation.location === 'standard' ? 100 :
+                       installation.location === 'fireplace' ? 200 :
+                       installation.location === 'ceiling' ? 175 : 0;
 
-  const pricing = calculatePrice({ ...defaultOptions, ...options });
+      const mountPrice = installation.mountType === 'fixed' ? (installation.size === 'small' ? 40 : 60) :
+                        installation.mountType === 'tilt' ? (installation.size === 'small' ? 50 : 70) :
+                        installation.mountType === 'fullMotion' ? (installation.size === 'small' ? 80 : 100) : 0;
+
+      return {
+        description: `TV ${index + 1} (${installation.size === 'small' ? 'Under 55"' : '56" or larger'})`,
+        location: installation.location,
+        basePrice,
+        mountPrice,
+      };
+    });
+
+    const multiTvDiscount = installations.length > 1 ? (installations.length - 1) * 10 : 0;
+    const multiMountDiscount = installations.filter(i => i.mountType !== 'none').length > 1 ? 
+      (installations.filter(i => i.mountType !== 'none').length - 1) * 5 : 0;
+
+    const travelFee = distance > 20 ? (distance - 20) * 1 : 0;
+
+    const subtotal = items.reduce((sum, item) => sum + item.basePrice + item.mountPrice, 0);
+    const total = subtotal - multiTvDiscount - multiMountDiscount + travelFee;
+
+    // Calculate deposit based on complexity
+    const hasFireplace = installations.some(i => i.location === 'fireplace');
+    const hasLargeTV = installations.some(i => i.size === 'large');
+    const deposit = hasFireplace || hasLargeTV ? 75 : 20;
+
+    return {
+      items,
+      multiTvDiscount,
+      multiMountDiscount,
+      travelFee,
+      total,
+      deposit
+    };
+  }, [installations, distance]);
 
   React.useEffect(() => {
     onUpdate?.(pricing.total, pricing.deposit);
@@ -38,48 +69,54 @@ export function PriceCalculator({ options, onUpdate }: PriceCalculatorProps) {
           animate={{ opacity: 1 }}
           className="space-y-4"
         >
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Base Installation</span>
-              <span>${pricing.basePrice}</span>
+          {pricing.items.map((item, index) => (
+            <div key={index} className="space-y-2">
+              <div className="font-medium">{item.description}</div>
+              <div className="pl-4 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Base Installation ({item.location})</span>
+                  <span>${item.basePrice}</span>
+                </div>
+                {item.mountPrice > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>TV Mount</span>
+                    <span>${item.mountPrice}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            {pricing.mountPrice > 0 && (
-              <div className="flex justify-between">
-                <span>TV Mount</span>
-                <span>${pricing.mountPrice}</span>
-              </div>
-            )}
-            
-            {pricing.additionalServices > 0 && (
-              <div className="flex justify-between">
-                <span>Additional Services</span>
-                <span>${pricing.additionalServices}</span>
-              </div>
-            )}
-            
-            {pricing.discounts > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Multi-TV Discount</span>
-                <span>-${pricing.discounts}</span>
-              </div>
-            )}
-            
-            {pricing.travelFee > 0 && (
-              <div className="flex justify-between">
-                <span>Travel Fee</span>
-                <span>${pricing.travelFee}</span>
-              </div>
-            )}
-          </div>
+          ))}
 
           <Separator />
-          
+
+          {pricing.multiTvDiscount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Multi-TV Discount</span>
+              <span>-${pricing.multiTvDiscount}</span>
+            </div>
+          )}
+
+          {pricing.multiMountDiscount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Multi-Mount Discount</span>
+              <span>-${pricing.multiMountDiscount}</span>
+            </div>
+          )}
+
+          {pricing.travelFee > 0 && (
+            <div className="flex justify-between">
+              <span>Travel Fee ({distance} miles)</span>
+              <span>${pricing.travelFee}</span>
+            </div>
+          )}
+
+          <Separator />
+
           <div className="flex justify-between font-bold">
             <span>Total</span>
             <span>${pricing.total}</span>
           </div>
-          
+
           <div className="mt-4 bg-muted/50 p-4 rounded-lg">
             <div className="text-sm">
               <div className="flex justify-between">
