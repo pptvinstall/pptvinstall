@@ -110,7 +110,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse services and calculate price
       const { services, price } = parseServiceType(data.serviceType);
 
-      // Send booking confirmation with formatted template
+      const htmlTemplate = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+            }
+            .container {
+              padding: 20px;
+            }
+            .section {
+              margin-bottom: 20px;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 20px;
+            }
+            .section:last-child {
+              border-bottom: none;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #2563eb;
+            }
+            .detail-row {
+              margin-bottom: 5px;
+            }
+            .price-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 5px;
+            }
+            .total-row {
+              font-weight: bold;
+              border-top: 2px solid #eee;
+              padding-top: 10px;
+              margin-top: 10px;
+            }
+            .note {
+              font-size: 14px;
+              color: #666;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="section">
+              <div class="section-title">Selected Services</div>
+              ${services.map(service => `<div class="detail-row">• ${service}</div>`).join('')}
+            </div>
+
+            <div class="section">
+              <div class="section-title">Appointment</div>
+              <div class="detail-row">${formattedDate} at ${formattedTime}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Contact Information</div>
+              <div class="detail-row">${data.name}</div>
+              <div class="detail-row">${data.email}</div>
+              <div class="detail-row">${data.phone}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Installation Address</div>
+              <div class="detail-row">${data.streetAddress}</div>
+              ${data.addressLine2 ? `<div class="detail-row">${data.addressLine2}</div>` : ''}
+              <div class="detail-row">${data.city}, ${data.state} ${data.zipCode}</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Price Breakdown</div>
+              ${services.map(service => {
+                let servicePrice = service.includes('TV') ? 100 :
+                                service.includes('Doorbell') ? 75 :
+                                service.includes('Floodlight') ? 100 : 75;
+                return `
+                  <div class="price-row">
+                    <span>• ${service}</span>
+                    <span>${formatPrice(servicePrice)}</span>
+                  </div>`;
+              }).join('')}
+
+              <div class="price-row total-row">
+                <span>Total</span>
+                <span>${formatPrice(price)}</span>
+              </div>
+              <div class="price-row">
+                <span>Required Deposit</span>
+                <span>${formatPrice(75)}</span>
+              </div>
+            </div>
+
+            ${data.notes ? `
+            <div class="section">
+              <div class="section-title">Additional Notes</div>
+              <div class="detail-row">${data.notes}</div>
+            </div>
+            ` : ''}
+
+            <div class="section">
+              <div class="section-title">Next Steps</div>
+              <div class="detail-row">1. Our team will contact you within 24 hours to confirm your appointment</div>
+              <div class="detail-row">2. Please ensure the installation area is clear and accessible</div>
+              <div class="detail-row">3. Have your devices ready for installation</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Questions?</div>
+              <div class="detail-row">Call us at (555) 123-4567 or reply to this email.</div>
+            </div>
+
+            <div class="note">Thank you for choosing Picture Perfect TV Install!</div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Send booking confirmation
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
         to: data.email,
@@ -137,25 +261,17 @@ ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} 
 
 Price Breakdown
 -------------
-Base Installation: ${formatPrice(price)}
 ${services.map(service => {
-  if (service.includes('TV')) {
-    return `• TV Mount Installation: ${formatPrice(100)}`;
-  } else if (service.includes('Doorbell')) {
-    return `• Smart Doorbell Installation: ${formatPrice(75)}`;
-  } else if (service.includes('Floodlight')) {
-    return `• Floodlight Installation: ${formatPrice(100)}`;
-  } else if (service.includes('Camera')) {
-    return `• Smart Camera Installation: ${formatPrice(75)}`;
-  }
+  const servicePrice = service.includes('TV') ? 100 :
+                      service.includes('Doorbell') ? 75 :
+                      service.includes('Floodlight') ? 100 : 75;
+  return `• ${service}: ${formatPrice(servicePrice)}`;
 }).join('\n')}
 
 Total: ${formatPrice(price)}
 Required Deposit: ${formatPrice(75)}
 
-Additional Notes
---------------
-${data.notes || 'No additional notes provided'}
+${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
 
 Next Steps
 ---------
@@ -167,8 +283,8 @@ Questions?
 ---------
 Call us at (555) 123-4567 or reply to this email.
 
-Thank you for choosing Picture Perfect TV Install!
-        `
+Thank you for choosing Picture Perfect TV Install!`,
+        html: htmlTemplate
       });
 
       res.json(booking);
