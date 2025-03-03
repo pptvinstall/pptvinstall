@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -30,6 +31,23 @@ const serviceTypes = [
   "Custom Solution"
 ];
 
+const formVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.5,
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const formItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 }
+};
+
 export default function Booking() {
   const { toast } = useToast();
 
@@ -41,7 +59,7 @@ export default function Booking() {
       phone: "",
       serviceType: "",
       preferredDate: "",
-      notes: "" // Ensure this is initialized as empty string, not null
+      notes: "" 
     }
   });
 
@@ -68,13 +86,23 @@ export default function Booking() {
   return (
     <div className="py-12">
       <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-12">
+        <motion.div 
+          className="max-w-2xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <h1 className="text-4xl font-bold mb-4">Book Your Installation</h1>
             <p className="text-xl text-gray-600">
               Schedule your TV mounting service
             </p>
-          </div>
+          </motion.div>
 
           <Card>
             <CardHeader>
@@ -82,120 +110,153 @@ export default function Booking() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} 
-                      className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Your email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="serviceType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Service Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                <motion.form 
+                  onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+                  className="space-y-4"
+                  variants={formVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a service" />
-                            </SelectTrigger>
+                            <Input placeholder="Your name" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {serviceTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
 
-                  <FormField
-                    control={form.control}
-                    name="preferredDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preferred Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Your email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
 
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Any special requirements or details about your TV mounting needs"
-                            className="min-h-[100px]"
-                            {...field}
-                            value={field.value || ''} // Ensure value is always a string
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={mutation.isPending}
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="serviceType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Service Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a service" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {serviceTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
+
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="preferredDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
+
+                  <motion.div variants={formItemVariants}>
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Additional Notes</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Any special requirements or details about your TV mounting needs"
+                              className="min-h-[100px]"
+                              {...field}
+                              value={field.value || ''} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
+
+                  <motion.div 
+                    variants={formItemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    {mutation.isPending ? "Submitting..." : "Book Now"}
-                  </Button>
-                </form>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={mutation.isPending}
+                    >
+                      {mutation.isPending ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          Submitting...
+                        </motion.div>
+                      ) : (
+                        "Book Now"
+                      )}
+                    </Button>
+                  </motion.div>
+                </motion.form>
               </Form>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
