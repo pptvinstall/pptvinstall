@@ -1,0 +1,44 @@
+Alright, here’s the perfect Replit prompt to generate exactly what you need. This will guide Replit to create a fully functional site with an integrated backend while keeping it lightweight and optimized.
+
+Replit Project Prompt:
+
+“Create a lightweight, fast-loading website for a TV mounting service called Picture Perfect TV Install. The site should be clean, professional, and optimized for performance with a minimal file size. It must include a simple frontend (HTML, CSS, JavaScript) and a lightweight backend (Flask for Python or Express for Node.js) to handle contact forms and email sending.”
+
+Tech Stack:
+	•	Frontend: HTML, CSS, JavaScript (or Astro for a minimal framework).
+	•	Backend: Python (Flask) or JavaScript (Node.js with Express).
+	•	Hosting: Deployable via Replit Hosting or Netlify.
+	•	Email System: Google SMTP to send customer emails directly from the backend.
+	•	Booking System: Embed Wix Bookings, Calendly, or Google Forms inside the Booking page.
+	•	Payment Handling: Embed Stripe/PayPal for deposit payments if possible.
+
+Required Pages & Features
+	1.	Home Page (Simple intro, CTA buttons)
+	2.	Services Page (List of TV mounting services)
+	3.	Booking Page (Embedded booking system, styled to match UI)
+	4.	Contact Page
+	•	Google SMTP integration for email inquiries (handled in the backend).
+	•	A “Call Now” button that triggers the phone dialer.
+	5.	FAQ Page (Collapsible Q&A for common customer questions)
+
+Backend Features (Must Be Integrated, Not External)
+
+✅ Google SMTP: Backend should handle email sending directly via Google SMTP.
+✅ Booking System: Embedded booking styled to match the website (Wix, Calendly, or Google Forms).
+✅ Payment Integration (if possible): Embed Stripe/PayPal deposit in the booking process.
+✅ Security & Performance: Keep everything lightweight & fast, with minimal dependencies.
+
+Development Priorities
+	•	All backend functions (email, booking, payments) should be embedded & styled to match the UI.
+	•	If full embedding isn’t possible, the frontend should be designed to wrap around external tools.
+	•	Prioritize performance (fast loading, minimal JavaScript & CSS).
+	•	Ensure mobile responsiveness for all pages.
+	•	Deploy via Replit Hosting (or Netlify if needed).
+
+Next Steps
+	1.	Create a new Replit project (Flask or Express).
+	2.	Set up the frontend & ensure booking embeds properly.
+	3.	Code the backend for Google SMTP email sending.
+	4.	Test functionality, then deploy to Replit or Netlify.
+
+This will give you a fully functional website that doesn’t just look good but also works perfectly with email and booking fully integrated. Let me know when you start on Replit, and we’ll refine as needed! 🚀
