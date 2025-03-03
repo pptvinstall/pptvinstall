@@ -1,0 +1,55 @@
+Replit Debugging & Upgrade Prompt for Picture Perfect TV Install
+
+Issue: The website is currently set up to send emails via Google SMTP, but booking is failing when trying to submit an appointment. Additionally, we want to upgrade and optimize the site where it makes sense.
+
+Prompt to Fix Booking & Improve Site
+
+*“Fix the booking system failure on the Picture Perfect TV Install website. Ensure that when a user submits a booking request, it successfully processes without errors. The booking system should be fully functional and seamlessly integrated into the website’s UI.
+
+While fixing the booking issue, also make the following improvements to enhance functionality and user experience:*
+
+1. Fix Booking System
+
+✅ Diagnose and fix the booking submission failure.
+✅ Ensure the booking system processes requests correctly and provides confirmation feedback to users.
+✅ If the issue is related to an API or form validation, debug and correct it while keeping the UI consistent.
+✅ If Wix Bookings, Calendly, or Google Forms is used, ensure that submissions are properly recorded and confirmed.
+
+2. Improve Google SMTP Email Functionality
+
+✅ Confirm that emails are sending successfully after booking submissions.
+✅ If possible, format confirmation emails to include booking details.
+✅ Ensure email error handling—if an email fails, display a message to the user instead of just failing silently.
+
+3. Optimize Mobile & UI Experience
+
+✅ Improve mobile responsiveness for a seamless booking experience.
+✅ Ensure the buttons and forms are aligned properly and easy to use.
+✅ Speed up page load times by optimizing scripts and assets.
+
+4. Enhance Payment Integration (If Not Already Added)
+
+✅ If not already implemented, allow users to pay a deposit through Stripe or PayPal during booking.
+✅ Ensure deposit payments are linked to confirmed bookings and users receive confirmation.
+
+5. Additional Upgrades (If Possible)
+
+✅ Improve site navigation for better UX flow (e.g., add a “Back to Home” button on all pages).
+✅ Add success and error messages for booking confirmations.
+✅ Ensure the website is properly deployed on Replit Hosting with smooth user interactions.
+
+Development Priorities
+	1.	Fix the booking system first—ensure it works correctly before making upgrades.
+	2.	Confirm that emails send properly and display errors if they fail.
+	3.	Make UI/UX improvements that enhance the user experience.
+	4.	If Stripe/PayPal deposits aren’t working yet, add integration for deposits.
+	5.	Deploy updates and test to confirm all fixes and enhancements.
+
+Next Steps
+	1.	Paste this prompt into Replit and let it debug and upgrade the site.
+	2.	Test the booking system again after the fix.
+	3.	Check if confirmation emails are sending correctly.
+	4.	Verify UI improvements and overall performance.
+	5.	Deploy updated version and confirm everything works smoothly.
+
+This should get everything fixed and upgraded while keeping the site lightweight, user-friendly, and fully functional. 🚀 Let me know how it goes!
