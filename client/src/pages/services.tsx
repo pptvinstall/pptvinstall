@@ -14,7 +14,9 @@ const tvServices = [
       "Level installation",
       "Basic cable management",
       "Mount options available",
-      "Hardware included"
+      "Hardware included",
+      "+$50 for masonry walls",
+      "+$100 for outlet relocation"
     ],
     icon: Monitor
   },
@@ -27,7 +29,9 @@ const tvServices = [
       "Cable concealment",
       "All mount types available",
       "Hardware included",
-      "Proper angle optimization"
+      "Proper angle optimization",
+      "+$50 for masonry walls",
+      "Contact for outlet options"
     ],
     icon: Tv
   },
@@ -40,7 +44,9 @@ const tvServices = [
       "All TV sizes supported",
       "Tilt/swivel options",
       "Cable management",
-      "Perfect for corners"
+      "Perfect for corners",
+      "+$50 for masonry surfaces",
+      "+$100 for outlet relocation"
     ],
     icon: Cable
   }
@@ -106,20 +112,25 @@ export default function Services() {
               {tvServices.map((service) => (
                 <Card key={service.title} className="relative">
                   <CardHeader>
-                    <service.icon className="h-12 w-12 text-primary mb-4" />
+                    <service.icon className="h-12 w-12 text-brand-blue-500 mb-4" />
                     <CardTitle className="text-2xl">{service.title}</CardTitle>
-                    <p className="text-xl font-bold text-primary">{service.price}</p>
+                    <p className="text-xl font-bold text-brand-blue-500">{service.price}</p>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 mb-4">{service.description}</p>
                     <ul className="space-y-2">
                       {service.features.map((feature) => (
                         <li key={feature} className="flex items-center">
-                          <Package className="h-4 w-4 text-primary mr-2" />
+                          <Package className="h-4 w-4 text-brand-blue-500 mr-2" />
                           {feature}
                         </li>
                       ))}
                     </ul>
+                    {service.title === "Above Fireplace" && (
+                      <div className="mt-4 p-3 bg-brand-blue-50 rounded-lg text-sm text-gray-700">
+                        Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote, or schedule an in-person estimate.
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -134,16 +145,16 @@ export default function Services() {
               {smartHomeServices.map((service) => (
                 <Card key={service.title}>
                   <CardHeader>
-                    <service.icon className="h-12 w-12 text-primary mb-4" />
+                    <service.icon className="h-12 w-12 text-brand-blue-500 mb-4" />
                     <CardTitle className="text-2xl">{service.title}</CardTitle>
-                    <p className="text-xl font-bold text-primary">{service.price}</p>
+                    <p className="text-xl font-bold text-brand-blue-500">{service.price}</p>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 mb-4">{service.description}</p>
                     <ul className="space-y-2">
                       {service.features.map((feature) => (
                         <li key={feature} className="flex items-center">
-                          <Package className="h-4 w-4 text-primary mr-2" />
+                          <Package className="h-4 w-4 text-brand-blue-500 mr-2" />
                           {feature}
                         </li>
                       ))}
