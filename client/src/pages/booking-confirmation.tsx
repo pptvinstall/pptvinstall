@@ -10,56 +10,45 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const bookingId = searchParams.get('id');
+  const [error, setError] = useState<string | null>(null);
 
-  // Get booking ID either from URL or session storage
-  const searchParams = new URLSearchParams(location?.split('?')[1] || "");
-  const bookingId = searchParams.get('id') || '';
+  console.log("Current URL:", window.location.href);
+  console.log("Current booking ID:", bookingId);
 
-  // Check if we have details in sessionStorage
-  const bookingConfirmed = sessionStorage.getItem("bookingConfirmed") === "true";
-  const storedDetails = sessionStorage.getItem("bookingDetails");
-  const storedBookingDetails = storedDetails ? JSON.parse(storedDetails) : null;
-
-  // Function to clear session storage after displaying
-  useEffect(() => {
-    if (bookingConfirmed) {
-      // Clear after 1 minute to prevent issues with page refreshes
-      const timer = setTimeout(() => {
-        sessionStorage.removeItem("bookingConfirmed");
-        sessionStorage.removeItem("bookingDetails");
-      }, 60000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [bookingConfirmed]);
-
-  const { data: booking, isLoading, error } = useQuery({
+  const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
-      if (!bookingId) return storedBookingDetails;
+      if (!bookingId) {
+        throw new Error('No booking ID provided');
+      }
+
       try {
-        console.log("Fetching booking details for ID:", bookingId); // Add logging
+        console.log("Fetching booking details for ID:", bookingId);
         const response = await apiRequest("GET", `/api/bookings/${bookingId}`);
 
         if (!response.ok) {
-          throw new Error('Failed to fetch booking details');
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Error response:", errorData);
+          throw new Error(errorData.error || 'Failed to fetch booking details');
         }
 
         const data = await response.json();
-        console.log("Received booking data:", data); // Add logging
+        console.log("Received booking data:", data);
         return data;
       } catch (err) {
         console.error('Error fetching booking:', err);
-        setError('Failed to load booking details. Please contact support.');
+        setError(err instanceof Error ? err.message : 'Failed to load booking details');
         throw err;
       }
     },
-    enabled: !!bookingId || bookingConfirmed, // Run query if bookingId exists or bookingConfirmed is true
+    enabled: !!bookingId,
     retry: 3,
     retryDelay: 1000
   });
 
-  // Format price
+  // Format price helper
   const formatPrice = (amount: number | string) => {
     if (!amount) return '$0.00';
     const price = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -96,7 +85,7 @@ export default function BookingConfirmation() {
     );
   }
 
-  // Parse detailed services
+  // Parse service details
   let parsedServices;
   try {
     parsedServices = typeof booking.detailedServices === 'string'
