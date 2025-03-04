@@ -362,20 +362,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         // Prepare the booking data with all required fields
-      const bookingData = {
-        ...data,
-        detailedServices: JSON.stringify({
-          services,
-          serviceBreakdown
-        }),
-        totalPrice: price.toString(),
-        appointmentTime: formattedTime
-      };
+        const bookingData = {
+          ...data,
+          detailedServices: JSON.stringify({
+            services,
+            serviceBreakdown
+          }),
+          totalPrice: price.toString(),
+          appointmentTime: formattedTime
+        };
       
-      console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
+        console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
       
-      // Create the booking in the database with all fields
-      const booking = await storage.createBooking(bookingData);
+        // Create the booking in the database with all fields
+        const booking = await storage.createBooking(bookingData);
 
         // Generate calendar event
         const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
@@ -631,7 +631,8 @@ Note: Deposit is required to secure your booking and will be deducted from the t
         zipCode: req.body.zipCode,
         serviceType: req.body.serviceType,
         preferredDate: req.body.preferredDate,
-        notes: req.body.notes
+        notes: req.body.notes,
+        status: req.body.status // Add status field for booking updates
       });
 
       res.json(updatedBooking);
@@ -692,8 +693,6 @@ Note: Deposit is required to secure your booking and will be deducted from the t
       res.status(400).json({ error: "Failed to cancel booking" });
     }
   });
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
