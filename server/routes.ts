@@ -260,6 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update the /api/bookings/:id route to include all necessary fields
   app.get("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -269,25 +270,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
 
-      // Ensure the response has all expected fields for the frontend
+      // Parse the detailedServices to ensure it's valid JSON
+      let detailedServicesObj = null;
+      try {
+        detailedServicesObj = booking.detailedServices ? JSON.parse(booking.detailedServices) : null;
+      } catch (e) {
+        console.error('Error parsing detailedServices:', e);
+      }
+
+      // Create an enhanced booking object with all required fields
       const enhancedBooking = {
         ...booking,
-        // Provide defaults for potentially missing fields
-        detailedServices: booking.detailedServices || JSON.stringify({
-          services: [booking.serviceType],
-          serviceBreakdown: [{
-            title: booking.serviceType,
-            items: [{ label: 'Service', price: 75 }]
-          }]
-        }),
-        totalPrice: booking.totalPrice || "75",
-        appointmentTime: booking.appointmentTime || new Date(booking.preferredDate).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: true
-        })
+        detailedServices: booking.detailedServices,
+        totalPrice: booking.totalPrice || "0",
+        status: booking.status || 'pending'
       };
 
+      console.log("Sending booking details:", JSON.stringify(enhancedBooking, null, 2));
       res.json(enhancedBooking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
