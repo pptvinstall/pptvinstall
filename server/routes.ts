@@ -46,23 +46,16 @@ function parseServiceType(serviceType: string): { services: string[], price: num
                        part.toLowerCase().includes('tilt') ? 'Tilt Mount' :
                        part.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
 
-      // Create detailed service description
-      let serviceDescription = `TV ${count} (${isLarge ? '56" or larger' : '32"-55"'})`;
-      if (hasFireplace) serviceDescription += ' - Above Fireplace Installation';
-      if (hasOutlet) serviceDescription += ' with Outlet Relocation';
-      if (mountType !== 'Standard Mount') serviceDescription += ` with ${mountType}`;
+      // Create service title
+      const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
+      services.push(title);
 
-      services.push(serviceDescription);
-
-      serviceBreakdown.push({
-        title: serviceDescription,
-        items: [
-          {
-            label: 'Base Installation (standard)',
-            price: 100
-          }
-        ]
-      });
+      const items = [
+        {
+          label: 'Base Installation (standard)',
+          price: 100
+        }
+      ];
 
       // Add mount pricing if specified
       if (mountType !== 'Standard Mount') {
@@ -72,7 +65,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
           (mountType === 'Fixed Mount' ? 40 : 
            mountType === 'Tilt Mount' ? 50 : 80);
 
-        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+        items.push({
           label: mountType,
           price: mountPrice
         });
@@ -80,22 +73,23 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       }
 
       if (hasOutlet) {
-        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+        items.push({
           label: 'Outlet Relocation',
           price: 100
         });
         totalPrice += 100;
       }
 
+      serviceBreakdown.push({ title, items });
       totalPrice += 100; // Base installation
     }
 
     if (part.includes('Floodlight')) {
-      const serviceDescription = 'Floodlight Camera Installation';
-      services.push(serviceDescription);
+      const title = 'Floodlight';
+      services.push(title);
 
       serviceBreakdown.push({
-        title: serviceDescription,
+        title,
         items: [
           {
             label: 'Base Installation (1 unit)',
@@ -106,42 +100,36 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100;
     }
 
-    if (part.includes('Camera')) {
+    if (part.includes('Smart Camera') && !part.includes('Floodlight')) {
       const heightMatch = part.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-      let serviceDescription = 'Smart Camera Installation';
+      const title = 'Smart Camera';
+      services.push(title);
+
+      const items = [
+        {
+          label: 'Base Installation (1 unit)',
+          price: 75
+        }
+      ];
+
       if (mountHeight > 8) {
-        serviceDescription += ` at ${mountHeight}ft height`;
-      }
-
-      services.push(serviceDescription);
-
-      const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
-
-      serviceBreakdown.push({
-        title: serviceDescription,
-        items: [
-          {
-            label: 'Base Installation (1 unit)',
-            price: 75
-          }
-        ]
-      });
-
-      if (heightFee > 0) {
-        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+        const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
+        items.push({
           label: `Height Installation Fee (${mountHeight}ft)`,
           price: heightFee
         });
         totalPrice += heightFee;
       }
 
+      serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
   }
 
   // Apply multi-TV discount if applicable
   if (tvCount > 1) {
+    services.push('Multi-TV Discount');
     serviceBreakdown.push({
       title: 'Multi-TV Discount',
       items: [
@@ -251,20 +239,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate calendar event with detailed description
       const eventSummary = `TV Installation - Picture Perfect`;
       const eventDescription = `
-Installation Details:
-${services.map(service => `• ${service}`).join('\n')}
-
-Price Breakdown:
+Selected Services:
 ${serviceBreakdown.map(section => 
-  `${section.title}:
-${section.items.map(item => `  - ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+  `${section.title}
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total Price: ${formatPrice(price)}
-Deposit Required: ${formatPrice(75)}
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
 
-Location: ${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}
-Contact: ${data.phone}
+Installation Address:
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+
+Contact Information:
+${data.name}
+${data.phone}
+${data.email}
 
 Installation Notes:
 ${data.notes || 'No additional notes'}
@@ -273,7 +264,7 @@ Business Hours:
 Mon-Fri: 6:30PM-10:30PM
 Sat-Sun: 11AM-7PM
 
-Contact: 404-702-4748`;
+Questions? Call 404-702-4748`;
 
       const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
@@ -409,11 +400,22 @@ Contact: 404-702-4748`;
         text: `
 Selected Services
 ----------------
-${services.join('\n')}
+${serviceBreakdown.map(section => 
+  `${section.title}
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+).join('\n\n')}
+
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
 
 Appointment
 ----------
 ${formattedDate} at ${formattedTime}
+
+Installation Address
+------------------
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
 Contact Information
 -----------------
@@ -421,25 +423,9 @@ ${data.name}
 ${data.email}
 ${data.phone}
 
-Installation Address
-------------------
-${data.streetAddress}
-${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+${data.notes ? `Additional Notes\n--------------\n${data.notes}\n` : ''}
 
-Price Breakdown
--------------
-${serviceBreakdown.map(section => `
-${section.title}
-${section.items.map(item => 
-  `${item.label}: ${formatPrice(item.price)}`
-).join('\n')}`
-).join('\n\n')}
-
-Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
-
-Note: Deposit is required to secure your booking and will be deducted from the total amount.
-`,
+Note: Deposit is required to secure your booking and will be deducted from the total amount.`,
         html: htmlTemplate,
         icalEvent: {
           filename: 'installation-appointment.ics',
