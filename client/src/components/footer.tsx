@@ -16,16 +16,16 @@ export default function Footer() {
             <h3 className="font-bold text-xl mb-4 text-blue-700">Quick Links</h3>
             <div className="flex flex-col gap-3">
               <Link href="/services">
-                <a className="text-gray-600 hover:text-blue-600 transition-colors">Services</a>
+                <span className="text-gray-600 hover:text-blue-600 transition-colors cursor-pointer">Services</span>
               </Link>
               <Link href="/booking">
-                <a className="text-gray-600 hover:text-blue-600 transition-colors">Book Now</a>
+                <span className="text-gray-600 hover:text-blue-600 transition-colors cursor-pointer">Book Now</span>
               </Link>
               <Link href="/contact">
-                <a className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
+                <span className="text-gray-600 hover:text-blue-600 transition-colors cursor-pointer">Contact</span>
               </Link>
               <Link href="/faq">
-                <a className="text-gray-600 hover:text-blue-600 transition-colors">FAQ</a>
+                <span className="text-gray-600 hover:text-blue-600 transition-colors cursor-pointer">FAQ</span>
               </Link>
             </div>
           </div>

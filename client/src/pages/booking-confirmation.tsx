@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +14,8 @@ export default function BookingConfirmation() {
   const bookingId = searchParams.get('id');
   const [error, setError] = useState<string | null>(null);
 
+  console.log("Current booking ID:", bookingId); // Add logging
+
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
@@ -22,25 +24,30 @@ export default function BookingConfirmation() {
       }
 
       try {
+        console.log("Fetching booking details for ID:", bookingId); // Add logging
         const response = await apiRequest("GET", `/api/bookings/${bookingId}`);
+
         if (!response.ok) {
           throw new Error('Failed to fetch booking details');
         }
+
         const data = await response.json();
-        console.log("Loaded booking data:", data);
+        console.log("Received booking data:", data); // Add logging
         return data;
       } catch (err) {
-        setError('Failed to load booking details. Please contact support.');
         console.error('Error fetching booking:', err);
+        setError('Failed to load booking details. Please contact support.');
         throw err;
       }
     },
+    enabled: !!bookingId, // Only run query if bookingId exists
     retry: 3,
     retryDelay: 1000
   });
 
   // Format price
   const formatPrice = (amount: number | string) => {
+    if (!amount) return '$0.00';
     const price = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -187,7 +194,7 @@ export default function BookingConfirmation() {
                 </div>
               )}
 
-              {/* Customer details section */}
+              {/* Customer details */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Customer Details</h3>
                 <div className="grid gap-2">
