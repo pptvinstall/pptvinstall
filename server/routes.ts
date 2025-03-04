@@ -3,6 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { contactMessageSchema, bookingSchema } from "@shared/schema";
 import nodemailer from "nodemailer";
+import { 
+  SMART_DEVICE_PRICES, 
+  SERVICE_NOTES, 
+  calculateMultiDeviceDiscount,
+  formatPrice,
+  type ServiceBreakdown,
+  type PriceItem 
+} from "@shared/pricing";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -19,7 +27,11 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, note?:string, isDiscount?:boolean}[]}[] } {
+function parseServiceType(serviceType: string): { 
+  services: string[], 
+  price: number, 
+  serviceBreakdown: ServiceBreakdown[] 
+} {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
@@ -38,7 +50,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
 
-    // Handle Smart Device 1, 2, 3 individually
+    // Handle Smart Device installations
     if (trimmedPart.match(/Smart Device (\d+)/)) {
       const deviceNumber = trimmedPart.match(/Smart Device (\d+)/)[1];
       const title = `Smart Device ${deviceNumber} Installation`;
@@ -49,11 +61,11 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         items: [
           {
             label: `Smart Device ${deviceNumber} Installation`,
-            price: 75
+            price: SMART_DEVICE_PRICES.DOORBELL.BASE
           }
         ]
       });
-      totalPrice += 75;
+      totalPrice += SMART_DEVICE_PRICES.DOORBELL.BASE;
     }
 
     // Handle Smart Doorbell
@@ -62,24 +74,24 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       const title = "Smart Doorbell Installation";
       services.push(title);
 
-      const items = [
+      const items: PriceItem[] = [
         {
           label: 'Smart Doorbell Installation',
-          price: 75,
-          note: 'Please ensure device is charged if wireless'
+          price: SMART_DEVICE_PRICES.DOORBELL.BASE,
+          note: SERVICE_NOTES.DOORBELL
         }
       ];
 
       if (hasBrick) {
         items.push({
           label: 'Brick Surface Installation Fee',
-          price: 10
+          price: SMART_DEVICE_PRICES.DOORBELL.BRICK_SURFACE
         });
-        totalPrice += 10;
+        totalPrice += SMART_DEVICE_PRICES.DOORBELL.BRICK_SURFACE;
       }
 
       serviceBreakdown.push({ title, items });
-      totalPrice += 75;
+      totalPrice += SMART_DEVICE_PRICES.DOORBELL.BASE;
     }
 
     // Handle Floodlight Camera
@@ -92,12 +104,12 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         items: [
           {
             label: 'Floodlight Camera Installation',
-            price: 125,
-            note: 'Wireless or existing wiring required'
+            price: SMART_DEVICE_PRICES.FLOODLIGHT.BASE,
+            note: SERVICE_NOTES.FLOODLIGHT
           }
         ]
       });
-      totalPrice += 125;
+      totalPrice += SMART_DEVICE_PRICES.FLOODLIGHT.BASE;
     }
 
     // Handle Smart Camera
@@ -109,30 +121,30 @@ function parseServiceType(serviceType: string): { services: string[], price: num
 
       services.push(title + description);
 
-      const items = [
+      const items: PriceItem[] = [
         {
           label: 'Smart Camera Installation',
-          price: 75
+          price: SMART_DEVICE_PRICES.CAMERA.BASE
         }
       ];
 
       if (mountHeight > 8) {
         items.push({
           label: `Height Installation Fee (${mountHeight}ft)`,
-          price: 25,
-          note: 'Additional fee for installations above 8ft'
+          price: SMART_DEVICE_PRICES.CAMERA.HEIGHT_FEE,
+          note: SERVICE_NOTES.CAMERA_HEIGHT
         });
-        totalPrice += 25;
+        totalPrice += SMART_DEVICE_PRICES.CAMERA.HEIGHT_FEE;
       }
 
       serviceBreakdown.push({ title: title + description, items });
-      totalPrice += 75;
+      totalPrice += SMART_DEVICE_PRICES.CAMERA.BASE;
     }
   }
 
   // Apply multi-device discount if applicable
   if (deviceCount > 1) {
-    const discountAmount = (deviceCount - 1) * 10;
+    const discountAmount = calculateMultiDeviceDiscount(deviceCount);
     services.push('Multi-Device Installation Discount');
     serviceBreakdown.push({
       title: 'Multi-Device Installation Discount',
