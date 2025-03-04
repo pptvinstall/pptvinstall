@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
@@ -11,7 +10,6 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
-  // Extract the ID from the URL using URLSearchParams
   const searchParams = new URLSearchParams(location?.split('?')[1] || "");
   const bookingId = searchParams.get('id');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +31,9 @@ export default function BookingConfirmation() {
         if (!response.ok) {
           throw new Error('Failed to fetch booking details');
         }
-        return response.json();
+        const data = await response.json();
+        console.log("Loaded booking data:", data); // Add logging
+        return data;
       } catch (err) {
         setError('Failed to load booking details. Please contact support.');
         console.error('Error fetching booking:', err);
@@ -43,13 +43,6 @@ export default function BookingConfirmation() {
     retry: 3,
     retryDelay: 1000
   });
-
-  useEffect(() => {
-    // Log data for debugging
-    if (booking) {
-      console.log("Loaded booking data:", booking);
-    }
-  }, [booking]);
 
   // Handle loading state
   if (isLoading) {
@@ -82,16 +75,14 @@ export default function BookingConfirmation() {
     );
   }
 
-  let detailedServicesObj;
+  // Parse detailed services
+  let detailedServices;
   try {
-    detailedServicesObj = booking.detailedServices 
-      ? (typeof booking.detailedServices === 'string' 
-          ? JSON.parse(booking.detailedServices) 
-          : booking.detailedServices)
-      : null;
+    detailedServices = booking.detailedServices ? JSON.parse(booking.detailedServices) : null;
+    console.log("Parsed detailed services:", detailedServices); // Add logging
   } catch (e) {
     console.error("Error parsing detailed services:", e);
-    detailedServicesObj = null;
+    detailedServices = null;
   }
 
   return (
@@ -112,7 +103,7 @@ export default function BookingConfirmation() {
               We've received your booking and will be in touch shortly.
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="pt-6">
             <div className="grid gap-6">
               {/* Booking details section */}
@@ -121,7 +112,7 @@ export default function BookingConfirmation() {
                 <div className="grid gap-2">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Booking ID:</span>
-                    <span className="font-medium">{booking.id || "Pending"}</span>
+                    <span className="font-medium">{booking.id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Service Type:</span>
@@ -140,13 +131,7 @@ export default function BookingConfirmation() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Appointment Time:</span>
-                    <span className="font-medium">
-                      {booking.appointmentTime || new Date(booking.preferredDate).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        hour12: true
-                      })}
-                    </span>
+                    <span className="font-medium">{booking.preferredTime}</span>
                   </div>
                   {booking.totalPrice && (
                     <div className="flex justify-between">
@@ -158,16 +143,16 @@ export default function BookingConfirmation() {
                   )}
                 </div>
               </div>
-              
+
               {/* Services breakdown */}
-              {detailedServicesObj && (
+              {detailedServices && (
                 <div className="mt-4">
-                  <h3 className="text-lg font-semibold mb-3">Services</h3>
-                  {detailedServicesObj.serviceBreakdown && detailedServicesObj.serviceBreakdown.map((section, i) => (
+                  <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
+                  {detailedServices.serviceBreakdown && detailedServices.serviceBreakdown.map((section: any, i: number) => (
                     <div key={i} className="mb-4 pb-4 border-b last:border-0">
                       <h4 className="font-medium text-blue-700 mb-2">{section.title}</h4>
                       <ul className="pl-5 space-y-1">
-                        {section.items && section.items.map((item, j) => (
+                        {section.items && section.items.map((item: any, j: number) => (
                           <li key={j} className="flex justify-between">
                             <span className={item.isDiscount ? "text-green-600" : ""}>{item.label}</span>
                             <span className={item.isDiscount ? "text-green-600 font-medium" : "font-medium"}>
@@ -180,7 +165,7 @@ export default function BookingConfirmation() {
                   ))}
                 </div>
               )}
-              
+
               {/* Customer details section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Customer Details</h3>
@@ -199,7 +184,7 @@ export default function BookingConfirmation() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Installation Address */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Installation Address</h3>
@@ -213,11 +198,13 @@ export default function BookingConfirmation() {
                     </div>
                   )}
                   <div>
-                    <span className="font-medium">{booking.city}, {booking.state} {booking.zipCode}</span>
+                    <span className="font-medium">
+                      {booking.city}, {booking.state} {booking.zipCode}
+                    </span>
                   </div>
                 </div>
               </div>
-              
+
               {/* Notes */}
               {booking.notes && (
                 <div>
@@ -225,7 +212,7 @@ export default function BookingConfirmation() {
                   <p className="text-gray-700">{booking.notes}</p>
                 </div>
               )}
-              
+
               <div className="flex flex-col items-center mt-6 pt-6 border-t">
                 <p className="text-gray-500 mb-6 text-center">
                   A confirmation email has been sent to your email address with all the details.
