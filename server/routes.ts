@@ -38,6 +38,24 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
 
+    // Handle Smart Device 1, 2, 3 individually
+    if (trimmedPart.match(/Smart Device (\d+)/)) {
+      const deviceNumber = trimmedPart.match(/Smart Device (\d+)/)[1];
+      const title = `Smart Device ${deviceNumber} Installation`;
+      services.push(title);
+
+      serviceBreakdown.push({
+        title,
+        items: [
+          {
+            label: `Smart Device ${deviceNumber} Installation`,
+            price: 75
+          }
+        ]
+      });
+      totalPrice += 75;
+    }
+
     // Handle Smart Doorbell
     if (trimmedPart.includes('Smart Doorbell')) {
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
@@ -129,6 +147,8 @@ function parseServiceType(serviceType: string): { services: string[], price: num
     totalPrice -= discountAmount;
   }
 
+  console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
+  console.log("Total price:", totalPrice);
   return { services, price: totalPrice, serviceBreakdown };
 }
 
