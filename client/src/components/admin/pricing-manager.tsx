@@ -7,12 +7,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { PricingConfig, PricingRule } from "@shared/schema";
+import type { PricingConfig } from "@shared/schema";
 
 export function PricingManager() {
   const { toast } = useToast();
   const [editingPrice, setEditingPrice] = useState<PricingConfig | null>(null);
-  const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
 
   // Fetch current pricing configuration
   const { data: prices = [], isLoading: pricesLoading } = useQuery({
@@ -27,27 +26,11 @@ export function PricingManager() {
     }
   });
 
-  // Fetch pricing rules
-  const { data: rules = [], isLoading: rulesLoading } = useQuery({
-    queryKey: ['/api/admin/pricing/rules'],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/admin/pricing/rules");
-      if (!response.ok) {
-        throw new Error('Failed to fetch rules');
-      }
-      const data = await response.json();
-      return data as PricingRule[];
-    }
-  });
-
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async (data: Partial<PricingConfig>) => {
       console.log("Updating price with data:", data);
-      const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, {
-        ...data,
-        basePrice: data.basePrice?.toString()
-      });
+      const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, data);
       if (!response.ok) {
         throw new Error('Failed to update price');
       }
@@ -96,7 +79,7 @@ export function PricingManager() {
     }
   };
 
-  if (pricesLoading || rulesLoading) {
+  if (pricesLoading) {
     return <LoadingSpinner />;
   }
 
@@ -118,7 +101,7 @@ export function PricingManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prices?.map((price) => (
+              {prices.map((price) => (
                 <TableRow key={price.id}>
                   <TableCell>{price.serviceType}</TableCell>
                   <TableCell>
@@ -142,32 +125,34 @@ export function PricingManager() {
                   </TableCell>
                   <TableCell>{price.serviceNotes}</TableCell>
                   <TableCell className="text-right">
-                    {editingPrice?.id === price.id ? (
-                      <div className="space-x-2">
+                    <div className="space-x-2">
+                      {editingPrice?.id === price.id ? (
+                        <div className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingPrice(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handlePriceSave}
+                            disabled={updatePriceMutation.isPending}
+                          >
+                            {updatePriceMutation.isPending ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setEditingPrice(null)}
+                          onClick={() => handlePriceEdit(price)}
                         >
-                          Cancel
+                          Edit
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={handlePriceSave}
-                          disabled={updatePriceMutation.isPending}
-                        >
-                          {updatePriceMutation.isPending ? "Saving..." : "Save"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePriceEdit(price)}
-                      >
-                        Edit
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
