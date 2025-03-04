@@ -296,6 +296,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       const data = bookingSchema.parse(req.body);
+      
+      // Ensure we're storing and using the full date with time
+      if (!data.preferredDate) {
+        return res.status(400).json({
+          error: "Missing required field",
+          details: "Appointment date and time is required"
+        });
+      }
+      
+      // Create the booking in the database
       const booking = await storage.createBooking(data);
 
       // Parse appointment date and time
@@ -312,8 +322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hour12: true
       });
 
-      // Parse services and calculate price
+      // Parse services and calculate price - ensure all services are included
+      console.log("Parsing service type:", data.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
+      console.log("Parsed services:", services);
+      console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
 
       // Generate calendar event with detailed description
       const eventSummary = `Picture Perfect TV & Smart Home Installation`;

@@ -25,22 +25,25 @@ export default function Booking() {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
-      await apiRequest("POST", "/api/booking", data);
+      return (await apiRequest("POST", "/api/booking", data)).json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Booking Submitted",
-        description: "We'll contact you to confirm your appointment.",
-      });
-      // Set the confirmation flag and redirect
+    onSuccess: (response, variables) => {
+      // Store both confirmation flag and booking details in session storage
       sessionStorage.setItem("bookingConfirmed", "true");
+      sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
+
       setLocation("/booking-confirmation");
-    },
-    onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to submit booking. Please try again.",
-        variant: "destructive"
+        title: "Booking successful!",
+        description: "You will receive a confirmation email shortly.",
+      });
+    },
+    onError: (error) => {
+      console.error("Booking error:", error);
+      toast({
+        title: "Booking failed",
+        description: "There was an error processing your booking.",
+        variant: "destructive",
       });
     }
   });

@@ -56,6 +56,12 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+    //More detailed error logging
+    console.error("Error handling middleware caught error:", err);
+    if (err instanceof Error) {
+      console.error("Error details:", err.message);
+      console.error("Stack trace:", err.stack);
+    }
     throw err;
   });
 
