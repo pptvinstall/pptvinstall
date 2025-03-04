@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { ArrowRight, Monitor, Shield, Star, Wrench, CheckCircle } from "lucide-react";
+import { ImageGallery } from "@/components/image-gallery";
 
 export default function Home() {
   return (
@@ -74,36 +75,7 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-b from-white to-blue-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Recent Installations</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* These would be replaced with actual installation photos */}
-            <Card className="overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                <Monitor className="h-16 w-16 text-blue-600" />
-              </div>
-              <CardContent className="p-4">
-                <p className="font-semibold">Above Fireplace Mount</p>
-                <p className="text-sm text-gray-600">Custom installation with concealed wiring</p>
-              </CardContent>
-            </Card>
-            <Card className="overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                <Monitor className="h-16 w-16 text-blue-600" />
-              </div>
-              <CardContent className="p-4">
-                <p className="font-semibold">Corner TV Installation</p>
-                <p className="text-sm text-gray-600">Perfect viewing angle with clean cable management</p>
-              </CardContent>
-            </Card>
-            <Card className="overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                <Monitor className="h-16 w-16 text-blue-600" />
-              </div>
-              <CardContent className="p-4">
-                <p className="font-semibold">Smart Home Setup</p>
-                <p className="text-sm text-gray-600">Integrated TV and smart device installation</p>
-              </CardContent>
-            </Card>
-          </div>
+          <ImageGallery />
         </div>
       </section>
 
