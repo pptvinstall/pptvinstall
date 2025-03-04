@@ -42,7 +42,15 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       const isLarge = part.toLowerCase().includes('56"') || part.toLowerCase().includes('larger');
       const hasOutlet = part.toLowerCase().includes('outlet');
       const hasFireplace = part.toLowerCase().includes('fireplace');
-      const serviceDescription = `TV ${count} (${isLarge ? '56" or larger' : '32"-55"'})${hasFireplace ? ' - Above Fireplace' : ''}`;
+      const mountType = part.toLowerCase().includes('fixed') ? 'Fixed Mount' :
+                       part.toLowerCase().includes('tilt') ? 'Tilt Mount' :
+                       part.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
+
+      // Create detailed service description
+      let serviceDescription = `TV ${count} (${isLarge ? '56" or larger' : '32"-55"'})`;
+      if (hasFireplace) serviceDescription += ' - Above Fireplace Installation';
+      if (hasOutlet) serviceDescription += ' with Outlet Relocation';
+      if (mountType !== 'Standard Mount') serviceDescription += ` with ${mountType}`;
 
       services.push(serviceDescription);
 
@@ -56,6 +64,21 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         ]
       });
 
+      // Add mount pricing if specified
+      if (mountType !== 'Standard Mount') {
+        const mountPrice = isLarge ? 
+          (mountType === 'Fixed Mount' ? 60 : 
+           mountType === 'Tilt Mount' ? 70 : 100) :
+          (mountType === 'Fixed Mount' ? 40 : 
+           mountType === 'Tilt Mount' ? 50 : 80);
+
+        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+          label: mountType,
+          price: mountPrice
+        });
+        totalPrice += mountPrice;
+      }
+
       if (hasOutlet) {
         serviceBreakdown[serviceBreakdown.length - 1].items.push({
           label: 'Outlet Relocation',
@@ -68,7 +91,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
     }
 
     if (part.includes('Floodlight')) {
-      const serviceDescription = 'Floodlight Camera';
+      const serviceDescription = 'Floodlight Camera Installation';
       services.push(serviceDescription);
 
       serviceBreakdown.push({
@@ -82,6 +105,39 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       });
       totalPrice += 100;
     }
+
+    if (part.includes('Camera')) {
+      const heightMatch = part.match(/height-(\d+)/);
+      const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
+      let serviceDescription = 'Smart Camera Installation';
+      if (mountHeight > 8) {
+        serviceDescription += ` at ${mountHeight}ft height`;
+      }
+
+      services.push(serviceDescription);
+
+      const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
+
+      serviceBreakdown.push({
+        title: serviceDescription,
+        items: [
+          {
+            label: 'Base Installation (1 unit)',
+            price: 75
+          }
+        ]
+      });
+
+      if (heightFee > 0) {
+        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+          label: `Height Installation Fee (${mountHeight}ft)`,
+          price: heightFee
+        });
+        totalPrice += heightFee;
+      }
+
+      totalPrice += 75;
+    }
   }
 
   // Apply multi-TV discount if applicable
@@ -90,7 +146,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       title: 'Multi-TV Discount',
       items: [
         {
-          label: 'Multi-TV Discount',
+          label: 'Multi-TV Installation Discount',
           price: -10,
           isDiscount: true
         }
@@ -106,13 +162,20 @@ function generateICalendarEvent(dateTime: Date, duration: number, summary: strin
   const start = dateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const end = new Date(dateTime.getTime() + duration * 60000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
+  // Format description for calendar
+  const formattedDescription = description
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\\n');
+
   return `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 DTSTART:${start}
 DTEND:${end}
 SUMMARY:${summary}
-DESCRIPTION:${description}
+DESCRIPTION:${formattedDescription}
 LOCATION:${location}
 END:VEVENT
 END:VCALENDAR`;
@@ -189,7 +252,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const eventSummary = `TV Installation - Picture Perfect`;
       const eventDescription = `
 Installation Details:
-${services.join('\n')}
+${services.map(service => `• ${service}`).join('\n')}
+
+Price Breakdown:
+${serviceBreakdown.map(section => 
+  `${section.title}:
+${section.items.map(item => `  - ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+).join('\n\n')}
 
 Total Price: ${formatPrice(price)}
 Deposit Required: ${formatPrice(75)}
@@ -198,7 +267,13 @@ Location: ${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}
 Contact: ${data.phone}
 
 Installation Notes:
-${data.notes || 'No additional notes'}`;
+${data.notes || 'No additional notes'}
+
+Business Hours:
+Mon-Fri: 6:30PM-10:30PM
+Sat-Sun: 11AM-7PM
+
+Contact: 404-702-4748`;
 
       const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
