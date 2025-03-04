@@ -24,13 +24,18 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   let totalPrice = 0;
   const services = [];
   const serviceBreakdown = [];
-  let tvCount = 0;
+  let deviceCount = 0; // Track total devices for multi-device discount
 
-  // First pass to count TVs for multi-TV discount
+  // First pass to count total devices for discount
   serviceParts.forEach(part => {
     if (part.includes('TV')) {
       const tvMatch = part.match(/(\d+)\s*TV/);
-      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
+      deviceCount += tvMatch ? parseInt(tvMatch[1]) : 1;
+    } else if (part.match(/(\d+)\s*Smart/i)) {
+      const count = parseInt(part.match(/(\d+)/)[1]);
+      deviceCount += count;
+    } else if (part.includes('Doorbell') || part.includes('Floodlight') || part.includes('Camera')) {
+      deviceCount += 1;
     }
   });
 
@@ -41,24 +46,23 @@ function parseServiceType(serviceType: string): { services: string[], price: num
     if (trimmedPart.match(/(\d+)\s*Smart/i)) {
       const count = parseInt(trimmedPart.match(/(\d+)/)[1]);
 
-      // Create a parent section for smart devices
-      const smartDevicesSection = {
-        title: "Smart Home Installation",
-        items: [
-          {
-            label: `Smart Device Installation (${count} ${count === 1 ? 'unit' : 'units'})`,
-            price: 75 * count
-          },
-          {
-            label: 'Service Fee',
-            price: 25 * count
-          }
-        ]
-      };
+      // Create individual entries for each smart device
+      for (let i = 0; i < count; i++) {
+        const basePrice = 75; // Base price per smart device
+        const title = `Smart Device ${i + 1} Installation`;
 
-      services.push(`Smart Device Installation (${count} ${count === 1 ? 'unit' : 'units'})`);
-      serviceBreakdown.push(smartDevicesSection);
-      totalPrice += (75 + 25) * count; // Base price + service fee per unit
+        services.push(title);
+        serviceBreakdown.push({
+          title,
+          items: [
+            {
+              label: 'Smart Device Installation',
+              price: basePrice
+            }
+          ]
+        });
+        totalPrice += basePrice;
+      }
     }
 
     // Handle Smart Doorbell as a separate category
@@ -95,12 +99,12 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         title,
         items: [
           {
-            label: 'Floodlight Camera Base Installation',
-            price: 100
+            label: 'Floodlight Camera Installation',
+            price: 125
           }
         ]
       });
-      totalPrice += 100;
+      totalPrice += 125;
     }
 
     // Handle Smart Camera as a separate category
@@ -120,12 +124,11 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       ];
 
       if (mountHeight > 8) {
-        const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
         items.push({
           label: `Height Installation Fee (${mountHeight}ft)`,
-          price: heightFee
+          price: 25
         });
-        totalPrice += heightFee;
+        totalPrice += 25;
       }
 
       serviceBreakdown.push({
@@ -134,86 +137,23 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       });
       totalPrice += 75;
     }
-
-    // Handle TV installations
-    if (trimmedPart.includes('TV')) {
-      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
-      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
-      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
-      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
-      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
-      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
-                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
-                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
-
-      for (let i = 0; i < count; i++) {
-        const title = `TV Installation ${i + 1}`;
-        let description = `${isLarge ? '56" or larger' : '32"-55"'}`;
-        if (hasFireplace) description += ' - Above Fireplace';
-        if (mountType !== 'Standard Mount') description += ` with ${mountType}`;
-
-        services.push(`${title} (${description})`);
-
-        const items = [
-          {
-            label: 'TV Mounting Base Installation',
-            price: 100
-          }
-        ];
-
-        if (mountType !== 'Standard Mount') {
-          const mountPrice = isLarge ? 
-            (mountType === 'Fixed Mount' ? 60 : 
-             mountType === 'Tilt Mount' ? 70 : 100) :
-            (mountType === 'Fixed Mount' ? 40 : 
-             mountType === 'Tilt Mount' ? 50 : 80);
-
-          items.push({
-            label: `${mountType} Installation`,
-            price: mountPrice
-          });
-          totalPrice += mountPrice;
-        }
-
-        if (hasOutlet) {
-          items.push({
-            label: 'Outlet Relocation Service',
-            price: 100
-          });
-          totalPrice += 100;
-        }
-
-        if (hasFireplace) {
-          items.push({
-            label: 'Fireplace Mounting Fee',
-            price: 50
-          });
-          totalPrice += 50;
-        }
-
-        serviceBreakdown.push({
-          title: `${title} (${description})`,
-          items
-        });
-        totalPrice += 100;
-      }
-    }
   }
 
-  // Apply multi-TV discount if applicable
-  if (tvCount > 1) {
-    services.push('Multi-TV Installation Discount');
+  // Apply multi-device discount if applicable
+  if (deviceCount > 1) {
+    const discountAmount = (deviceCount - 1) * 10;
+    services.push('Multi-Device Installation Discount');
     serviceBreakdown.push({
-      title: 'Multi-TV Installation Discount',
+      title: 'Multi-Device Installation Discount',
       items: [
         {
-          label: `Discount for ${tvCount} TVs`,
-          price: -10,
+          label: `Discount for ${deviceCount} devices`,
+          price: -discountAmount,
           isDiscount: true
         }
       ]
     });
-    totalPrice -= 10;
+    totalPrice -= discountAmount;
   }
 
   return { services, price: totalPrice, serviceBreakdown };
@@ -401,11 +341,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return the created booking
       res.json(booking);
-      
+
     } catch (error) {
       console.error('Booking error:', error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      
+
       // More descriptive error response
       res.status(400).json({
         error: "Failed to process booking",
