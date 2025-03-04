@@ -19,7 +19,7 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
+function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, note?:string, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
@@ -28,11 +28,9 @@ function parseServiceType(serviceType: string): { services: string[], price: num
 
   // First pass to count total devices for discount
   serviceParts.forEach(part => {
-    if (part.includes('Smart Doorbell')) {
-      deviceCount += 1;
-    } else if (part.includes('Floodlight')) {
-      deviceCount += 1;
-    } else if (part.includes('Camera')) {
+    const trimmedPart = part.trim();
+    if (trimmedPart.includes('Smart Device') || trimmedPart.includes('Doorbell') || 
+        trimmedPart.includes('Floodlight') || trimmedPart.includes('Camera')) {
       deviceCount += 1;
     }
   });
@@ -44,11 +42,11 @@ function parseServiceType(serviceType: string): { services: string[], price: num
     if (trimmedPart.includes('Smart Doorbell')) {
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       const title = "Smart Doorbell Installation";
-      services.push(title + (hasBrick ? ' (Brick Surface)' : ''));
+      services.push(title);
 
       const items = [
         {
-          label: 'Smart Doorbell Base Installation',
+          label: 'Smart Doorbell Installation',
           price: 75,
           note: 'Please ensure device is charged if wireless'
         }
@@ -95,7 +93,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
 
       const items = [
         {
-          label: 'Smart Camera Base Installation',
+          label: 'Smart Camera Installation',
           price: 75
         }
       ];
@@ -103,15 +101,13 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       if (mountHeight > 8) {
         items.push({
           label: `Height Installation Fee (${mountHeight}ft)`,
-          price: 25
+          price: 25,
+          note: 'Additional fee for installations above 8ft'
         });
         totalPrice += 25;
       }
 
-      serviceBreakdown.push({
-        title: title + description,
-        items
-      });
+      serviceBreakdown.push({ title: title + description, items });
       totalPrice += 75;
     }
   }
