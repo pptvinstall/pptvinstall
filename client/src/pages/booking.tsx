@@ -25,14 +25,17 @@ export default function Booking() {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
-      return (await apiRequest("POST", "/api/booking", data)).json();
+      const response = await apiRequest("POST", "/api/booking", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create booking');
+      }
+      return response.json();
     },
-    onSuccess: (response, variables) => {
-      // Store both confirmation flag and booking details in session storage
-      sessionStorage.setItem("bookingConfirmed", "true");
-      sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
+    onSuccess: (response) => {
+      // Redirect to confirmation page with booking ID
+      setLocation(`/booking-confirmation?id=${response.id}`);
 
-      setLocation("/booking-confirmation");
       toast({
         title: "Booking successful!",
         description: "You will receive a confirmation email shortly.",
@@ -42,7 +45,7 @@ export default function Booking() {
       console.error("Booking error:", error);
       toast({
         title: "Booking failed",
-        description: "There was an error processing your booking.",
+        description: error instanceof Error ? error.message : "There was an error processing your booking.",
         variant: "destructive",
       });
     }
