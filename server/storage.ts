@@ -12,7 +12,7 @@ export interface IStorage {
   getBooking(id: number): Promise<Booking | undefined>;
   getAllBookings(): Promise<Booking[]>;
   getBookingsByDate(date: string): Promise<Booking[]>;
-  updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking>;
+  updateBooking(id: number, booking: Partial<Booking>): Promise<Booking>;
   deleteBooking(id: number): Promise<void>;
 }
 
@@ -60,13 +60,28 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.preferredDate, date));
   }
 
-  async updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking> {
-    const [updatedBooking] = await db
-      .update(bookings)
-      .set(booking)
-      .where(eq(bookings.id, id))
-      .returning();
-    return updatedBooking;
+  async updateBooking(id: number, booking: Partial<Booking>): Promise<Booking> {
+    try {
+      const [updatedBooking] = await db
+        .update(bookings)
+        .set({
+          ...booking,
+          // Ensure these fields aren't accidentally overwritten
+          id: undefined,
+          createdAt: undefined
+        })
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (!updatedBooking) {
+        throw new Error('Booking not found');
+      }
+
+      return updatedBooking;
+    } catch (error) {
+      console.error('Error updating booking in storage:', error);
+      throw error;
+    }
   }
 
   async deleteBooking(id: number): Promise<void> {

@@ -472,9 +472,33 @@ Making your installation dreams a reality.`;
   app.put("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const booking = await storage.updateBooking(parseInt(id), req.body);
-      res.json(booking);
+      // Convert id to number and sanitize the update data
+      const bookingId = parseInt(id);
+
+      // Get existing booking first
+      const existingBooking = await storage.getBooking(bookingId);
+      if (!existingBooking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Update the booking with the new data
+      const updatedBooking = await storage.updateBooking(bookingId, {
+        name: req.body.name,
+        email: req.body.email,
+        phone: req.body.phone,
+        streetAddress: req.body.streetAddress,
+        addressLine2: req.body.addressLine2,
+        city: req.body.city,
+        state: req.body.state,
+        zipCode: req.body.zipCode,
+        serviceType: req.body.serviceType,
+        preferredDate: req.body.preferredDate,
+        notes: req.body.notes
+      });
+
+      res.json(updatedBooking);
     } catch (error) {
+      console.error('Error updating booking:', error);
       res.status(400).json({ error: "Failed to update booking" });
     }
   });
