@@ -1,6 +1,7 @@
 import { bookings, type Booking, type InsertBooking } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { bookingHistory, type BookingHistory } from "@shared/schema"; // Added import for bookingHistory schema
 
 export class Storage {
   async getAllBookings(): Promise<Booking[]> {
@@ -83,6 +84,24 @@ export class Storage {
   async updateBooking(id: number, booking: Partial<Booking>): Promise<Booking | null> {
     try {
       console.log(`Updating booking ${id} with:`, JSON.stringify(booking, null, 2));
+
+      // Get the current state first
+      const currentBooking = await this.getBooking(id);
+      if (!currentBooking) {
+        console.error(`No booking found with ID ${id}`);
+        return null;
+      }
+
+      // Create the history record first
+      await db.insert(bookingHistory).values({
+        bookingId: id,
+        previousState: currentBooking,
+        newState: { ...currentBooking, ...booking },
+        changeType: 'update',
+        changedBy: 'admin' // You might want to pass this in from the request
+      });
+
+      // Then update the booking
       const [updatedBooking] = await db
         .update(bookings)
         .set({
@@ -92,11 +111,6 @@ export class Storage {
         })
         .where(eq(bookings.id, id))
         .returning();
-
-      if (!updatedBooking) {
-        console.error(`No booking found with ID ${id}`);
-        return null;
-      }
 
       console.log(`Successfully updated booking ${id}`);
       return updatedBooking;
@@ -113,6 +127,24 @@ export class Storage {
       console.log(`Successfully deleted booking ${id}`);
     } catch (error) {
       console.error("Error deleting booking:", error);
+      throw error;
+    }
+  }
+
+  // Add method to get booking history
+  async getBookingHistory(bookingId: number): Promise<BookingHistory[]> {
+    try {
+      console.log(`Fetching history for booking ${bookingId}`);
+      const history = await db
+        .select()
+        .from(bookingHistory)
+        .where(eq(bookingHistory.bookingId, bookingId))
+        .orderBy(desc(bookingHistory.changedAt));
+
+      console.log(`Retrieved ${history.length} history records`);
+      return history;
+    } catch (error) {
+      console.error("Error fetching booking history:", error);
       throw error;
     }
   }

@@ -1,6 +1,28 @@
-import { pgTable, text, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, varchar, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Add booking history table
+export const bookingHistory = pgTable("booking_history", {
+  id: serial("id").primaryKey(),
+  bookingId: integer("booking_id").notNull(),
+  changedAt: timestamp("changed_at").defaultNow(),
+  changedBy: varchar("changed_by", { length: 100 }),
+  previousState: jsonb("previous_state"),
+  newState: jsonb("new_state"),
+  changeType: varchar("change_type", { length: 50 }).notNull(), // 'update', 'status_change', etc.
+  notes: text("notes")
+});
+
+// Create the insert schema for booking history
+export const bookingHistorySchema = createInsertSchema(bookingHistory).omit({
+  id: true,
+  changedAt: true
+});
+
+// Export types
+export type BookingHistory = typeof bookingHistory.$inferSelect;
+export type InsertBookingHistory = z.infer<typeof bookingHistorySchema>;
 
 export const contactMessages = pgTable("contact_messages", {
   id: serial("id").primaryKey(),

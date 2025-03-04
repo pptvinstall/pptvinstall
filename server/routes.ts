@@ -597,6 +597,7 @@ Questions? Call 404-702-4748`;
   }
 
 
+
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
 
@@ -613,7 +614,6 @@ Questions? Call 404-702-4748`;
   app.put("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      // Convert id to number and sanitize the update data
       const bookingId = parseInt(id);
 
       // Get existing booking first
@@ -634,9 +634,122 @@ Questions? Call 404-702-4748`;
         zipCode: req.body.zipCode,
         serviceType: req.body.serviceType,
         preferredDate: req.body.preferredDate,
+        preferredTime: req.body.preferredTime,
         notes: req.body.notes,
-        status: req.body.status // Add status field for booking updates
+        status: req.body.status
       });
+
+      if (updatedBooking) {
+        // Send email notification about the changes
+        const changes = [];
+        if (existingBooking.preferredDate !== updatedBooking.preferredDate) {
+          changes.push(`Date: ${new Date(existingBooking.preferredDate).toLocaleDateString()} → ${new Date(updatedBooking.preferredDate).toLocaleDateString()}`);
+        }
+        if (existingBooking.preferredTime !== updatedBooking.preferredTime) {
+          changes.push(`Time: ${existingBooking.preferredTime} → ${updatedBooking.preferredTime}`);
+        }
+        if (existingBooking.serviceType !== updatedBooking.serviceType) {
+          changes.push(`Services: ${existingBooking.serviceType} → ${updatedBooking.serviceType}`);
+        }
+
+        const emailTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .section {
+      margin-bottom: 24px;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #111;
+    }
+    .change-item {
+      background: #f0f9ff;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 1px solid #bfdbfe;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 20px;
+      margin: 8px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .accept {
+      background: #22c55e;
+      color: white;
+    }
+    .modify {
+      background: #3b82f6;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <div class="section-title">Booking Update Notification</div>
+    <p>Your booking has been updated with the following changes:</p>
+    ${changes.map(change => `<div class="change-item">${change}</div>`).join('')}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Updated Appointment Details</div>
+    <div>Date: ${new Date(updatedBooking.preferredDate).toLocaleDateString()}</div>
+    <div>Time: ${updatedBooking.preferredTime}</div>
+    <div>Services: ${updatedBooking.serviceType}</div>
+    <div style="margin-top: 16px;">
+      <strong>Installation Address:</strong><br>
+      ${updatedBooking.streetAddress}<br>
+      ${updatedBooking.addressLine2 ? updatedBooking.addressLine2 + '<br>' : ''}
+      ${updatedBooking.city}, ${updatedBooking.state} ${updatedBooking.zipCode}
+    </div>
+  </div>
+
+  <div class="section" style="text-align: center;">
+    <p>Please review these changes and let us know if they work for you:</p>
+    <a href="${process.env.SITE_URL}/booking/accept/${updatedBooking.id}" class="button accept">Accept Changes</a>
+    <a href="${process.env.SITE_URL}/booking/modify/${updatedBooking.id}" class="button modify">Modify Booking</a>
+  </div>
+
+  <div class="section" style="background: #f8f9fa;">
+    <div style="text-align: center; color: #64748b;">
+      <div style="font-weight: 600; margin-bottom: 8px;">Questions?</div>
+      <div>Call us at 404-702-4748</div>
+      <div style="margin-top: 8px;">
+        Business Hours:<br>
+        Monday-Friday: 6:30PM-10:30PM<br>
+        Saturday-Sunday: 11AM-7PM
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+        await transporter.sendMail({
+          from: process.env.GMAIL_USER,
+          to: updatedBooking.email,
+          subject: "Your Booking Has Been Updated - Picture Perfect TV Install",
+          html: emailTemplate
+        });
+      }
 
       res.json(updatedBooking);
     } catch (error) {
@@ -696,6 +809,76 @@ Questions? Call 404-702-4748`;
       res.status(400).json({ error: "Failed to cancel booking" });
     }
   });
+  // Add new revenue tracking endpoints
+  app.get("/api/analytics/revenue", async (req, res) => {
+    try {
+      const allBookings = await storage.getAllBookings();
+
+      // Calculate revenue by month and year
+      const revenueByMonth = {};
+      const revenueByYear = {};
+
+      allBookings.forEach(booking => {
+        if (booking.status === 'active' && booking.totalPrice) {
+          const date = new Date(booking.preferredDate);
+          const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+          const year = date.getFullYear().toString();
+
+          const price = parseFloat(booking.totalPrice);
+          if (!isNaN(price)) {
+            revenueByMonth[month] = (revenueByMonth[month] || 0) + price;
+            revenueByYear[year] = (revenueByYear[year] || 0) + price;
+          }
+        }
+      });
+
+      // Calculate total revenue
+      const totalRevenue = Object.values(revenueByMonth).reduce((sum, val) => sum + val, 0);
+
+      // Get current month's revenue
+      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+      const currentMonthRevenue = revenueByMonth[currentMonth] || 0;
+
+      // Get current year's revenue
+      const currentYear = new Date().getFullYear().toString();
+      const currentYearRevenue = revenueByYear[currentYear] || 0;
+
+      res.json({
+        totalRevenue,
+        currentMonthRevenue,
+        currentYearRevenue,
+        revenueByMonth,
+        revenueByYear
+      });
+    } catch (error) {
+      console.error('Error fetching revenue analytics:', error);
+      res.status(500).json({ error: "Failed to fetch revenue analytics" });
+    }
+  });
+
+  // Add endpoint to get booking history
+  app.get("/api/bookings/:id/history", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.getBooking(parseInt(id));
+
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Get booking history (status changes, updates, etc.)
+      const history = await storage.getBookingHistory(parseInt(id));
+
+      res.json({
+        booking,
+        history
+      });
+    } catch (error) {
+      console.error('Error fetching booking history:', error);
+      res.status(500).json({ error: "Failed to fetch booking history" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
