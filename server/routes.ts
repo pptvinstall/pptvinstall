@@ -19,10 +19,96 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-function parseServiceType(serviceType: string): { services: string[], price: number } {
+function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
+  let tvCount = 0;
+
+  // First pass to count TVs for multi-TV discount
+  serviceParts.forEach(part => {
+    if (part.includes('TV')) {
+      const tvMatch = part.match(/(\d+)\s*TV/);
+      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
+    }
+  });
+
+  const serviceBreakdown = [];
+
+  for (const part of serviceParts) {
+    if (part.includes('TV')) {
+      const tvMatch = part.match(/(\d+)\s*TV/);
+      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
+      const isLarge = part.toLowerCase().includes('56"') || part.toLowerCase().includes('larger');
+
+      serviceBreakdown.push({
+        title: `TV ${serviceBreakdown.length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`,
+        items: [
+          {
+            label: 'Base Installation (standard)',
+            price: 100
+          }
+        ]
+      });
+
+      if (part.includes('fixed')) {
+        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+          label: 'Fixed Mount',
+          price: isLarge ? 60 : 40
+        });
+      }
+
+      if (part.includes('outlet')) {
+        serviceBreakdown[serviceBreakdown.length - 1].items.push({
+          label: 'Outlet Relocation',
+          price: 100
+        });
+      }
+
+      totalPrice += 100; // Base installation
+    }
+
+    if (part.includes('Smart Camera')) {
+      serviceBreakdown.push({
+        title: 'Smart Camera',
+        items: [
+          {
+            label: 'Base Installation (1 unit)',
+            price: 75
+          }
+        ]
+      });
+      totalPrice += 75;
+    }
+
+    if (part.includes('Floodlight')) {
+      serviceBreakdown.push({
+        title: 'Floodlight',
+        items: [
+          {
+            label: 'Base Installation (1 unit)',
+            price: 100
+          }
+        ]
+      });
+      totalPrice += 100;
+    }
+  }
+
+  // Apply multi-TV discount if applicable
+  if (tvCount > 1) {
+    serviceBreakdown.push({
+      title: 'Multi-TV Discount',
+      items: [
+        {
+          label: 'Multi-TV Discount',
+          price: -10,
+          isDiscount: true
+        }
+      ]
+    });
+    totalPrice -= 10;
+  }
 
   for (const part of serviceParts) {
     if (part.includes('TV')) {
@@ -87,7 +173,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
     }
   }
 
-  return { services, price: totalPrice };
+  return { services, price: totalPrice, serviceBreakdown };
 }
 
 function generateICalendarEvent(dateTime: Date, duration: number, summary: string, description: string, location: string): string {
@@ -171,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Parse services and calculate price
-      const { services, price } = parseServiceType(data.serviceType);
+      const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
 
       // Generate calendar event
       const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
@@ -185,214 +271,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       line-height: 1.6;
       color: #333;
       max-width: 600px;
       margin: 0 auto;
-    }
-    .container {
       padding: 20px;
     }
     .section {
-      margin-bottom: 20px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 20px;
-    }
-    .section:last-child {
-      border-bottom: none;
+      margin-bottom: 24px;
     }
     .section-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 10px;
-      color: #2563eb;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #111;
     }
-    .detail-row {
-      margin-bottom: 5px;
+    .subsection {
+      margin-bottom: 16px;
+    }
+    .subsection-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 8px;
     }
     .price-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 5px;
-      padding: 4px 0;
+      margin-bottom: 8px;
+      padding-left: 16px;
     }
-    .subtotal-row {
-      font-weight: 500;
-      border-top: 1px dashed #eee;
-      padding-top: 8px;
-      margin-top: 8px;
+    .price {
+      font-variant-numeric: tabular-nums;
     }
     .total-row {
-      font-weight: bold;
+      font-weight: 600;
+      font-size: 18px;
+      margin-top: 16px;
+      padding-top: 16px;
       border-top: 2px solid #eee;
-      padding-top: 10px;
-      margin-top: 10px;
     }
-    .note {
-      font-size: 14px;
+    .deposit-note {
+      margin-top: 16px;
       color: #666;
+      font-size: 14px;
       font-style: italic;
-      background-color: #f5f7ff;
-      padding: 8px;
-      border-radius: 4px;
-      margin-top: 8px;
     }
-    .highlight {
-      color: #2563eb;
-    }
-    .alert {
-      background-color: #fff3f3;
-      color: #e11d48;
-      padding: 8px;
-      border-radius: 4px;
-      margin-top: 8px;
+    .discount {
+      color: #22c55e;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="section">
-      <div class="section-title">Selected Services</div>
-      ${services.map(service => `<div class="detail-row">• ${service}</div>`).join('')}
-    </div>
+  <div class="section">
+    <div class="section-title">Selected Services</div>
+    ${services.map(service => `<div>${service}</div>`).join('')}
+  </div>
 
-    <div class="section">
-      <div class="section-title">Appointment Details</div>
-      <div class="detail-row">Date: ${formattedDate}</div>
-      <div class="detail-row">Time: ${formattedTime}</div>
-      <div class="detail-row note">📅 Add to calendar: Check attachment or click "Add to Calendar" in your email client</div>
-    </div>
+  <div class="section">
+    <div class="section-title">Appointment</div>
+    <div>${formattedDate} at ${formattedTime}</div>
+  </div>
 
-    <div class="section">
-      <div class="section-title">Contact Information</div>
-      <div class="detail-row">Name: ${data.name}</div>
-      <div class="detail-row">Email: ${data.email}</div>
-      <div class="detail-row">Phone: ${data.phone}</div>
-    </div>
+  <div class="section">
+    <div class="section-title">Contact Information</div>
+    <div>${data.name}</div>
+    <div>${data.email}</div>
+    <div>${data.phone}</div>
+  </div>
 
-    <div class="section">
-      <div class="section-title">Installation Address</div>
-      <div class="detail-row">${data.streetAddress}</div>
-      ${data.addressLine2 ? `<div class="detail-row">${data.addressLine2}</div>` : ''}
-      <div class="detail-row">${data.city}, ${data.state} ${data.zipCode}</div>
-    </div>
+  <div class="section">
+    <div class="section-title">Installation Address</div>
+    <div>${data.streetAddress}</div>
+    ${data.addressLine2 ? `<div>${data.addressLine2}</div>` : ''}
+    <div>${data.city}, ${data.state} ${data.zipCode}</div>
+  </div>
 
-    <div class="section">
-      <div class="section-title">Detailed Price Breakdown</div>
-      ${services.map(service => {
-        const isTV = service.includes('TV');
-        const isDoorbell = service.includes('Doorbell');
-        const isFloodlight = service.includes('Floodlight');
-        const isCamera = service.includes('Camera');
-        const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
-
-        let basePrice = isTV ? 100 :
-                     isFloodlight ? 100 : 75;
-
-        let html = `
-          <div class="service-block">
-            <div class="price-row">
-              <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
-              <span>${formatPrice(basePrice * quantity)}</span>
-            </div>`;
-
-        if (isTV) {
-          html += `
-            <div class="note">
-              Mount Options (select during installation):<br>
-              • Fixed Mount: ${formatPrice(40)} (32"-55") / ${formatPrice(60)} (56"+)<br>
-              • Tilt Mount: ${formatPrice(50)} (32"-55") / ${formatPrice(70)} (56"+)<br>
-              • Full-Motion Mount: ${formatPrice(80)} (32"-55") / ${formatPrice(100)} (56"+)
-            </div>`;
-
-          if (service.includes('non-drywall')) {
-            html += `
-              <div class="price-row">
-                <span>• Non-Drywall Installation (brick/concrete/stone)</span>
-                <span>+${formatPrice(50)}</span>
-              </div>`;
-          }
-
-          if (service.includes('outlet') && !service.includes('fireplace')) {
-            html += `
-              <div class="price-row">
-                <span>• Outlet Relocation</span>
-                <span>+${formatPrice(100)}</span>
-              </div>`;
-          }
-
-          if (service.includes('fireplace')) {
-            html += `
-              <div class="alert">
-                Note: For outlet relocation with fireplace installations, please provide photos of your fireplace and nearby outlets for a custom quote.
-              </div>`;
-          }
-        }
-
-        if (isDoorbell) {
-          html += `
-            <div class="price-row">
-              <span>• Brick Installation (if needed)</span>
-              <span>+${formatPrice(10)}</span>
-            </div>`;
-        }
-
-        if (isCamera) {
-          html += `
-            <div class="price-row">
-              <span>• Height Fee (per 4ft above 8ft)</span>
-              <span>+${formatPrice(25)}</span>
-            </div>`;
-        }
-
-        return html + '</div>';
-      }).join('<div class="separator" style="margin: 12px 0;"></div>')}
-
-      <div class="price-row total-row">
-        <span>Estimated Total</span>
-        <span>${formatPrice(price)}</span>
+  <div class="section">
+    <div class="section-title">Price Breakdown</div>
+    ${serviceBreakdown.map(section => `
+      <div class="subsection">
+        <div class="subsection-title">${section.title}</div>
+        ${section.items.map(item => `
+          <div class="price-row">
+            <span>${item.label}</span>
+            <span class="price${item.isDiscount ? ' discount' : ''}">${formatPrice(item.price)}</span>
+          </div>
+        `).join('')}
       </div>
-      <div class="price-row highlight">
-        <span>Required Deposit</span>
-        <span>${formatPrice(75)}</span>
-      </div>
-      <div class="note">
-        * Final price may vary based on mount selection and additional services required during installation.<br>
-        * The deposit amount will be deducted from the total cost.
-      </div>
+    `).join('')}
+
+    <div class="price-row total-row">
+      <span>Total</span>
+      <span class="price">${formatPrice(price)}</span>
     </div>
 
-    ${data.notes ? `
-    <div class="section">
-      <div class="section-title">Additional Notes</div>
-      <div class="detail-row">${data.notes}</div>
-    </div>
-    ` : ''}
-
-    <div class="section">
-      <div class="section-title">Next Steps</div>
-      <div class="detail-row">1. Our team will contact you within 24 hours to confirm your appointment</div>
-      <div class="detail-row">2. Please ensure the installation area is clear and accessible</div>
-      <div class="detail-row">3. Have your devices ready for installation</div>
-      ${data.serviceType.includes('fireplace') ? `
-      <div class="alert">
-        Important: For fireplace installations, please have photos ready of your fireplace and nearby outlets to help us prepare for your installation.
-      </div>
-      ` : ''}
+    <div class="price-row">
+      <span>Required Deposit</span>
+      <span class="price">${formatPrice(75)}</span>
     </div>
 
-    <div class="section">
-      <div class="section-title">Questions?</div>
-      <div class="detail-row">Call us at 404-702-4748 or reply to this email.</div>
-      <div class="detail-row">Business Hours:</div>
-      <div class="detail-row">Mon-Fri: 6:30PM-10:30PM</div>
-      <div class="detail-row">Sat-Sun: 11AM-7PM</div>
-    </div>
-
-    <div class="note" style="text-align: center; margin-top: 20px;">
-      Thank you for choosing Picture Perfect TV Install!<br>
-      Making your installation dreams a reality.
+    <div class="deposit-note">
+      Deposit is required to secure your booking and will be deducted from the total amount.
     </div>
   </div>
 </body>
@@ -402,86 +382,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const textEmail = `
 Selected Services
 ----------------
-${services.map(service => `• ${service}`).join('\n')}
+${services.join('\n')}
 
-Appointment Details
------------------
-Date: ${formattedDate}
-Time: ${formattedTime}
+Appointment
+----------
+${formattedDate} at ${formattedTime}
 
 Contact Information
 -----------------
-Name: ${data.name}
-Email: ${data.email}
-Phone: ${data.phone}
+${data.name}
+${data.email}
+${data.phone}
 
 Installation Address
 ------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Detailed Price Breakdown
-----------------------
-${services.map(service => {
-  const isTV = service.includes('TV');
-  const isDoorbell = service.includes('Doorbell');
-  const isFloodlight = service.includes('Floodlight');
-  const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
+Price Breakdown
+-------------
+${serviceBreakdown.map(section => `
+${section.title}
+${section.items.map(item => 
+  `${item.label}: ${formatPrice(item.price)}`
+).join('\n')}`
+).join('\n\n')}
 
-  let basePrice = isTV ? 100 :
-                isFloodlight ? 100 : 75;
-
-  let breakdown = `• Base Installation (${quantity} unit${quantity > 1 ? 's' : ''}): ${formatPrice(basePrice * quantity)}`;
-
-  if (isTV) {
-    breakdown += '\nMount Options (prices vary by TV size):\n';
-    breakdown += '  - Fixed Mount: $40 (32"-55") / $60 (56"+)\n';
-    breakdown += '  - Tilt Mount: $50 (32"-55") / $70 (56"+)\n';
-    breakdown += '  - Full-Motion Mount: $80 (32"-55") / $100 (56"+)';
-
-    if (service.includes('non-drywall')) {
-      breakdown += '\n  + Non-Drywall Installation Fee: +$50';
-    }
-    if (service.includes('outlet')) {
-      breakdown += '\n  + Outlet Relocation: +$100';
-    }
-  }
-
-  if (isDoorbell) {
-    breakdown += '\n  + Brick Installation (if needed): +$10';
-  }
-  if (service.includes('Camera')) {
-    breakdown += '\n  + Height Fee (per 4ft above 8ft): +$25';
-  }
-
-  return breakdown;
-}).join('\n\n')}
-
-Estimated Total: ${formatPrice(price)}
+Total: ${formatPrice(price)}
 Required Deposit: ${formatPrice(75)}
 
-* Final price may vary based on specific requirements and additional services selected during installation.
-* The deposit amount will be deducted from the total cost.
-
-${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
-
-Next Steps
----------
-1. Our team will contact you within 24 hours to confirm your appointment
-2. Please ensure the installation area is clear and accessible
-3. Have your devices ready for installation
-${data.serviceType.includes('fireplace') ? '\nImportant: For fireplace installations, please have photos ready of your fireplace and nearby outlets.\n' : ''}
-
-Questions?
----------
-Call us at 404-702-4748 or reply to this email.
-
-Business Hours:
-Mon-Fri: 6:30PM-10:30PM
-Sat-Sun: 11AM-7PM
-
-Thank you for choosing Picture Perfect TV Install!
-Making your installation dreams a reality.`;
+Note: Deposit is required to secure your booking and will be deducted from the total amount.
+`;
 
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
