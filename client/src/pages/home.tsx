@@ -10,6 +10,13 @@ export default function Home() {
       <section className="bg-gradient-to-b from-gray-50 to-white py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
+            <div className="mb-8">
+              <img
+                src="/assets/IMG_0032.jpeg"
+                alt="Picture Perfect TV Install Logo"
+                className="mx-auto h-32 object-contain"
+              />
+            </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Professional TV Mounting Done Right
             </h1>
