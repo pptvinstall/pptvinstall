@@ -2,8 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { ArrowRight, Monitor, Shield, Star, Wrench, CheckCircle } from "lucide-react";
-import { ImageGallery } from "@/components/image-gallery";
-import { AutoSlideshow } from "@/components/auto-slideshow";
 
 export default function Home() {
   return (
@@ -35,10 +33,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Auto Slideshow */}
-      <section className="pb-20">
-        <div className="container mx-auto px-4">
-          <AutoSlideshow />
+      {/* Showcase Image */}
+      <section className="relative">
+        <div className="w-full aspect-[21/9] overflow-hidden">
+          <img
+            src="/assets/IMG_4282.jpeg"
+            alt="TV Installation Showcase"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
         </div>
       </section>
 
@@ -78,7 +81,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
 
       {/* Testimonials */}
       <section className="py-20">
