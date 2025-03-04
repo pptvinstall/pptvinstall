@@ -46,7 +46,7 @@ export default function BookingConfirmation() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-24 px-4 flex justify-center">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -60,17 +60,24 @@ export default function BookingConfirmation() {
           </CardHeader>
           <CardContent>
             <p className="text-red-500">{error || "Unable to load booking details."}</p>
-            <Button asChild className="mt-6">
-              <Link href="/booking">
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Return to Booking
-              </Link>
+            <Button className="mt-6" onClick={() => window.location.href = "/booking"}>
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Return to Booking
             </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  // Format price
+  const formatPrice = (amount: number | string) => {
+    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  };
 
   // Parse detailed services
   let parsedServices;
@@ -83,15 +90,6 @@ export default function BookingConfirmation() {
     console.error("Error parsing detailed services:", e);
     parsedServices = null;
   }
-
-  // Format price
-  const formatPrice = (amount: number | string) => {
-    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -245,16 +243,12 @@ export default function BookingConfirmation() {
                   A confirmation email has been sent to your email address with all the details.
                 </p>
                 <div className="space-y-3 w-full sm:w-auto sm:space-y-0 sm:flex sm:space-x-4">
-                  <Button asChild variant="outline" className="w-full sm:w-auto">
-                    <Link href="/">
-                      <ChevronLeft className="mr-2 h-4 w-4" />
-                      Return to Home
-                    </Link>
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => window.location.href = "/"}>
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Return to Home
                   </Button>
-                  <Button asChild className="w-full sm:w-auto">
-                    <Link href="/contact">
-                      Contact Us
-                    </Link>
+                  <Button className="w-full sm:w-auto" onClick={() => window.location.href = "/contact"}>
+                    Contact Us
                   </Button>
                 </div>
               </div>
