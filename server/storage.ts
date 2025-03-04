@@ -2,61 +2,60 @@ import { bookings, contactMessages, type Booking, type InsertBooking, type Conta
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
-export interface IStorage {
-  // Contact Messages
-  createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
-  getContactMessage(id: number): Promise<ContactMessage | undefined>;
-
-  // Bookings
-  createBooking(booking: InsertBooking): Promise<Booking>;
-  getBooking(id: number): Promise<Booking | undefined>;
-  getAllBookings(): Promise<Booking[]>;
-  getBookingsByDate(date: string): Promise<Booking[]>;
-  updateBooking(id: number, booking: Partial<Booking>): Promise<Booking>;
-  deleteBooking(id: number): Promise<void>;
-}
-
-export class DatabaseStorage implements IStorage {
-  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
-    const [newMessage] = await db
-      .insert(contactMessages)
-      .values(message)
-      .returning();
-    return newMessage;
+export class Storage {
+  async getAllBookings(): Promise<Booking[]> {
+    try {
+      const result = await db.select().from(bookings);
+      return result;
+    } catch (error) {
+      console.error("Error fetching all bookings:", error);
+      throw error;
+    }
   }
 
-  async getContactMessage(id: number): Promise<ContactMessage | undefined> {
-    const [message] = await db
-      .select()
-      .from(contactMessages)
-      .where(eq(contactMessages.id, id));
-    return message;
+  async getBookingsByDate(date: string): Promise<Booking[]> {
+    try {
+      // Simple date comparison for now - might need refinement
+      const result = await db.select().from(bookings).where(
+        eq(bookings.preferredDate, date)
+      );
+      return result;
+    } catch (error) {
+      console.error("Error fetching bookings by date:", error);
+      throw error;
+    }
+  }
+
+  async getBooking(id: number): Promise<Booking | null> {
+    try {
+      const [result] = await db.select().from(bookings).where(
+        eq(bookings.id, id)
+      );
+      return result || null;
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+      throw error;
+    }
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
     try {
-      // Filter out properties that might not exist in the database
-      const safeBooking = {
-        name: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        streetAddress: booking.streetAddress,
-        addressLine2: booking.addressLine2,
-        city: booking.city,
-        state: booking.state,
-        zipCode: booking.zipCode,
-        serviceType: booking.serviceType,
-        preferredDate: booking.preferredDate,
-        notes: booking.notes,
-        // Only include these if supported by current DB schema
-        ...(this.checkColumnExists('bookings', 'detailedServices') ? { detailedServices: booking.detailedServices } : {}),
-        ...(this.checkColumnExists('bookings', 'totalPrice') ? { totalPrice: booking.totalPrice } : {}),
-        ...(this.checkColumnExists('bookings', 'appointmentTime') ? { appointmentTime: booking.appointmentTime } : {})
-      };
-      
+      // Only include the basic fields that we know exist in the database schema
       const [newBooking] = await db
         .insert(bookings)
-        .values(safeBooking)
+        .values({
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+          streetAddress: booking.streetAddress,
+          addressLine2: booking.addressLine2,
+          city: booking.city,
+          state: booking.state,
+          zipCode: booking.zipCode,
+          serviceType: booking.serviceType,
+          preferredDate: booking.preferredDate,
+          notes: booking.notes
+        })
         .returning();
       return newBooking;
     } catch (error) {
@@ -64,65 +63,42 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
-  // Helper method to check if a column exists (simplified implementation)
-  private columnExistsCache: Record<string, Set<string>> = {};
-  
-  private checkColumnExists(table: string, column: string): boolean {
-    // For now, let's return false for the problematic columns
-    // This is a temporary solution until schema is properly migrated
-    const problematicColumns = ['detailedServices', 'totalPrice', 'appointmentTime'];
-    return !problematicColumns.includes(column);
-  }
 
-  async getBooking(id: number): Promise<Booking | undefined> {
-    const [booking] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, id));
-    return booking;
-  }
-
-  async getAllBookings(): Promise<Booking[]> {
-    return db.select().from(bookings);
-  }
-
-  async getBookingsByDate(date: string): Promise<Booking[]> {
-    return db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.preferredDate, date));
-  }
-
-  async updateBooking(id: number, booking: Partial<Booking>): Promise<Booking> {
+  async updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking | null> {
     try {
       const [updatedBooking] = await db
         .update(bookings)
-        .set({
-          ...booking,
-          // Ensure these fields aren't accidentally overwritten
-          id: undefined,
-          createdAt: undefined
-        })
+        .set(booking)
         .where(eq(bookings.id, id))
         .returning();
-
-      if (!updatedBooking) {
-        throw new Error('Booking not found');
-      }
-
-      return updatedBooking;
+      return updatedBooking || null;
     } catch (error) {
-      console.error('Error updating booking in storage:', error);
+      console.error("Error updating booking:", error);
       throw error;
     }
   }
 
   async deleteBooking(id: number): Promise<void> {
-    await db
-      .delete(bookings)
-      .where(eq(bookings.id, id));
+    try {
+      await db.delete(bookings).where(eq(bookings.id, id));
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+      throw error;
+    }
+  }
+
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    try {
+      const [newMessage] = await db
+        .insert(contactMessages)
+        .values(message)
+        .returning();
+      return newMessage;
+    } catch (error) {
+      console.error("Error creating contact message:", error);
+      throw error;
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new Storage();

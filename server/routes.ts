@@ -38,7 +38,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   for (const part of serviceParts) {
     // Trim the part to ensure consistent detection
     const trimmedPart = part.trim();
-    
+
     if (trimmedPart.includes('TV')) {
       const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
@@ -94,20 +94,20 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       serviceBreakdown.push({ title, items });
       totalPrice += 100; // Base installation
     }
-    
+
     // Smart Home Services parsing - note the use of trimmedPart
     else if (trimmedPart.includes('Smart Doorbell')) {
       const title = 'Smart Doorbell';
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       services.push(title);
-      
+
       const items = [
         {
           label: 'Base Installation (1 unit)',
           price: 75
         }
       ];
-      
+
       if (hasBrick) {
         items.push({
           label: 'Brick Installation',
@@ -115,7 +115,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         });
         totalPrice += 10;
       }
-      
+
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
@@ -162,14 +162,14 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
-    
+
     // Handle "Smart Home Services" general selection
     else if (trimmedPart.toLowerCase().includes('smart home service') || 
              trimmedPart.toLowerCase().includes('smart home installation')) {
       // This catches any smart home services that weren't caught by specific categories
       const title = 'Smart Home Installation';
       services.push(title);
-      
+
       serviceBreakdown.push({
         title,
         items: [
@@ -261,16 +261,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch bookings" });
     }
   });
-  
+
   app.get("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const booking = await storage.getBooking(parseInt(id));
-      
+
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
-      
+
       // Ensure the response has all expected fields for the frontend
       const enhancedBooking = {
         ...booking,
@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hour12: true
         })
       };
-      
+
       res.json(enhancedBooking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
@@ -329,9 +329,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceType: req.body.serviceType,
         preferredDate: req.body.preferredDate
       }));
-      
+
       const data = bookingSchema.parse(req.body);
-      
+
       // Ensure we're storing and using the full date with time
       if (!data.preferredDate) {
         return res.status(400).json({
@@ -339,7 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           details: "Appointment date and time is required"
         });
       }
-      
+
       // Parse appointment date and time
       const dateTime = new Date(data.preferredDate);
       const formattedDate = dateTime.toLocaleDateString('en-US', {
@@ -353,20 +353,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minute: 'numeric',
         hour12: true
       });
-      
+
       // Parse services and calculate price - ensure all services are included
       console.log("Parsing service type:", data.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
-      
+
       // Store basic booking data first, then try to add enhanced data if supported
       try {
         // Start with the base data that we know exists in the schema
         const bookingData = {
           ...data
         };
-        
+
         // Log what we're about to store
         console.log("Creating booking with data:", JSON.stringify({
           name: bookingData.name,
@@ -374,10 +374,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           serviceType: bookingData.serviceType,
           preferredDate: bookingData.preferredDate
         }));
-        
+
         // Create the booking in the database
         const booking = await storage.createBooking(bookingData);
-        
+
         // Even if we can't store the enhanced data in the DB, we can still return it
         // for the confirmation email and response
         booking.detailedServices = JSON.stringify({
@@ -436,9 +436,9 @@ Questions? Call 404-702-4748`;
 
       // We already created the booking above, so we don't need to create it again.
       // The booking variable is already defined earlier in this function.
-      
+
       // The HTML template uses the booking object that was created earlier
-      
+
       const htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -624,7 +624,7 @@ Questions? Call 404-702-4748`;
     </div>
     <div class="booking-id">Booking ID: ${booking.id}</div>
   </div>
-  
+
   <div class="section">
     <div class="section-title">Selected Services</div>
     <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -691,7 +691,7 @@ Questions? Call 404-702-4748`;
     <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">${data.notes}</div>
   </div>
   ` : ''}
-  
+
   <div class="section">
     <div class="section-title">What's Next?</div>
     <ul style="padding-left: 20px;">
@@ -707,7 +707,7 @@ Questions? Call 404-702-4748`;
       </a>
     </p>
   </div>
-  
+
   <div class="footer">
     <p><strong>Business Hours:</strong><br>Monday-Friday: 6:30PM-10:30PM<br>Saturday-Sunday: 11AM-7PM</p>
     <p>Questions? Contact us at 404-702-4748 or pptvinstall@gmail.com</p>
@@ -791,12 +791,12 @@ Saturday-Sunday: 11AM-7PM
       console.error('Booking error:', error);
       // Provide more detailed error information
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      
+
       // Check if it's a database schema error
       if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
         console.error('Database schema error. Please run migrations to update the schema.');
       }
-      
+
       res.status(400).json({ 
         error: "Invalid booking data", 
         details: process.env.NODE_ENV === 'development' ? errorMessage : "Server encountered an error processing your booking."
@@ -897,7 +897,7 @@ Saturday-Sunday: 11AM-7PM
       }
 
       res.json(booking);
-    } catch (error) {
+        } catch (error) {
       console.error('Error cancelling booking:', error);
       res.status(400).json({ error: "Failed to cancel booking" });
     }

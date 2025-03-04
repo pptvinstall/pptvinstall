@@ -14,7 +14,7 @@ export default function BookingConfirmation() {
   const searchParams = new URLSearchParams(location.split("?")[1] || "");
   const bookingId = searchParams.get('id');
 
-  const { data: booking, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       if (!bookingId) return null;
@@ -29,22 +29,27 @@ export default function BookingConfirmation() {
   });
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="container mx-auto py-24 px-4">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
-  if (error || !booking) {
+  if (error || !data) {
     return (
-      <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
-        <h1 className="text-3xl font-bold mb-4">Error Loading Booking Details</h1>
-        <p className="mb-6">We encountered an issue retrieving your booking information.</p>
-        <Link to="/" className="inline-flex items-center">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Return to Homepage
+      <div className="container mx-auto py-24 px-4 text-center">
+        <h1 className="text-3xl font-bold text-red-600 mb-4">Booking Not Found</h1>
+        <p className="text-lg mb-8">Sorry, we couldn't find your booking. Please check your booking ID and try again.</p>
+        <Link to="/book-now" className="inline-block bg-brand-blue-500 text-white py-3 px-6 rounded-lg font-medium">
+          Book a New Appointment
         </Link>
       </div>
     );
   }
 
+  // Create a safe booking object with all the expected properties
+  const booking = data;
   // Handle missing fields gracefully
   const serviceType = booking.serviceType || "N/A";
   const preferredDate = booking.preferredDate || "N/A";
