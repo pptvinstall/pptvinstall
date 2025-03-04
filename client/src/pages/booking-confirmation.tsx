@@ -36,6 +36,22 @@ export default function BookingConfirmation() {
 
         const data = await response.json();
         console.log("Received booking data:", data);
+
+        // Format the date correctly
+        if (data.preferredDate) {
+          const date = new Date(data.preferredDate);
+          // Check if the date is valid before formatting
+          if (!isNaN(date.getTime())) {
+            data.formattedDate = date.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          } else {
+            data.formattedDate = data.preferredDate;
+          }
+        }
         return data;
       } catch (err) {
         console.error('Error fetching booking:', err);
@@ -134,7 +150,7 @@ export default function BookingConfirmation() {
                   <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Appointment Date:</span>
                     <span className="font-medium">
-                      {new Date(booking.preferredDate).toLocaleDateString('en-US', {
+                      {booking.formattedDate || new Date(booking.preferredDate).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
@@ -160,32 +176,26 @@ export default function BookingConfirmation() {
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
                   {parsedServices.map((section: any, i: number) => (
-                    <div key={i} className="mb-6 last:mb-0">
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <h4 className="font-medium text-blue-700 mb-3">{section.title || "Service Item"}</h4>
-                        <div className="space-y-2">
-                          {section.items && section.items.map((item: any, j: number) => (
-                            <div key={j} className="flex justify-between text-sm">
-                              <span className={item.isDiscount ? "text-green-600" : ""}>
-                                {item.label}
-                                {item.note && (
-                                  <span className="ml-1 text-gray-400 text-xs">(Note: {item.note})</span>
-                                )}
-                              </span>
-                              <span className={item.isDiscount ? "text-green-600 font-medium" : "font-medium"}>
-                                {formatPrice(item.price)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                    <div key={i} className="mb-6 last:mb-0 bg-gray-50 p-4 rounded-md space-y-4">
+                        <div className="font-medium text-indigo-700 mb-2">{section.title || "Service Item"}</div>
+                        {section.items && section.items.map((item: any, j: number) => (
+                          <div key={j} className="flex justify-between py-1 px-2">
+                            <span className={item.isDiscount ? "text-green-600" : ""}>
+                              {item.label}
+                              {item.note && (
+                                <span className="ml-1 text-gray-400 text-xs">(Note: {item.note})</span>
+                              )}
+                            </span>
+                            <span className={`font-medium ${item.isDiscount ? "text-green-600" : ""}`}>
+                              {item.isDiscount ? "-" : ""}${Math.abs(item.price).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   ))}
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <div className="flex justify-between font-semibold text-lg">
-                      <span>Total Amount:</span>
-                      <span>{formatPrice(booking.totalPrice)}</span>
-                    </div>
+                  <div className="mt-4 flex justify-between py-3 bg-indigo-50 px-4 rounded-md font-medium">
+                    <span>Total</span>
+                    <span className="text-green-600">{formatPrice(booking.totalPrice)}</span>
                   </div>
                 </div>
               ) : (
