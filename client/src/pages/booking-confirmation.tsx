@@ -11,7 +11,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 export default function BookingConfirmation() {
   const [location] = useLocation();
   // Extract the ID from the URL using URLSearchParams
-  const searchParams = new URLSearchParams(location.split("?")[1] || "");
+  const searchParams = new URLSearchParams(location.search.substring(1) || ""); //Fixed search param extraction
   const bookingId = searchParams.get('id');
 
   const { data, isLoading, error } = useQuery({
