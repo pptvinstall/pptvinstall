@@ -824,6 +824,66 @@ Questions? Call 404-702-4748`;
     }
   });
 
+  // Add new pricing admin routes
+  app.get("/api/admin/pricing", async (req, res) => {
+    try {
+      const prices = await storage.getAllPrices();
+      res.json(prices);
+    } catch (error) {
+      console.error('Error fetching prices:', error);
+      res.status(500).json({ error: "Failed to fetch pricing configuration" });
+    }
+  });
+
+  app.get("/api/admin/pricing/rules", async (req, res) => {
+    try {
+      const rules = await storage.getAllPricingRules();
+      res.json(rules);
+    } catch (error) {
+      console.error('Error fetching pricing rules:', error);
+      res.status(500).json({ error: "Failed to fetch pricing rules" });
+    }
+  });
+
+  app.put("/api/admin/pricing/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const priceId = parseInt(id);
+
+      // Get current price for history
+      const currentPrice = await storage.getPrice(priceId);
+
+      // Update price
+      const updatedPrice = await storage.updatePrice(priceId, req.body);
+
+      // Record price change in history
+      await storage.createPriceHistory({
+        serviceType: currentPrice.serviceType,
+        previousPrice: currentPrice.basePrice,
+        newPrice: req.body.basePrice,
+        changedBy: req.body.updatedBy,
+        notes: req.body.notes
+      });
+
+      res.json(updatedPrice);
+    } catch (error) {
+      console.error('Error updating price:', error);
+      res.status(400).json({ error: "Failed to update price" });
+    }
+  });
+
+  app.put("/api/admin/pricing/rules/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ruleId = parseInt(id);
+      const updatedRule = await storage.updatePricingRule(ruleId, req.body);
+      res.json(updatedRule);
+    } catch (error) {
+      console.error('Error updating pricing rule:', error);
+      res.status(400).json({ error: "Failed to update pricing rule" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
