@@ -260,33 +260,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update the /api/bookings/:id route to include all necessary fields
   app.get("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      console.log(`Fetching booking details for ID: ${id}`);
+
       const booking = await storage.getBooking(parseInt(id));
+      console.log("Raw booking data from database:", booking);
 
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
 
-      // Parse the detailedServices to ensure it's valid JSON
-      let detailedServicesObj = null;
-      try {
-        detailedServicesObj = booking.detailedServices ? JSON.parse(booking.detailedServices) : null;
-      } catch (e) {
-        console.error('Error parsing detailedServices:', e);
-      }
+      // Parse service type to get fresh calculation
+      const { services, price, serviceBreakdown } = parseServiceType(booking.serviceType);
 
       // Create an enhanced booking object with all required fields
       const enhancedBooking = {
         ...booking,
-        detailedServices: booking.detailedServices,
-        totalPrice: booking.totalPrice || "0",
-        status: booking.status || 'pending'
+        id: booking.id, // Explicitly include ID
+        detailedServices: JSON.stringify({
+          services,
+          serviceBreakdown
+        }),
+        totalPrice: price.toString(),
+        status: booking.status || 'active'
       };
 
-      console.log("Sending booking details:", JSON.stringify(enhancedBooking, null, 2));
+      console.log("Enhanced booking details:", JSON.stringify(enhancedBooking, null, 2));
       res.json(enhancedBooking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
