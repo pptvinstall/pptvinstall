@@ -24,17 +24,15 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   let totalPrice = 0;
   const services = [];
   const serviceBreakdown = [];
-  let deviceCount = 0; // Track total devices for multi-device discount
+  let deviceCount = 0;
 
   // First pass to count total devices for discount
   serviceParts.forEach(part => {
-    if (part.includes('TV')) {
-      const tvMatch = part.match(/(\d+)\s*TV/);
-      deviceCount += tvMatch ? parseInt(tvMatch[1]) : 1;
-    } else if (part.match(/(\d+)\s*Smart/i)) {
-      const count = parseInt(part.match(/(\d+)/)[1]);
-      deviceCount += count;
-    } else if (part.includes('Doorbell') || part.includes('Floodlight') || part.includes('Camera')) {
+    if (part.includes('Smart Doorbell')) {
+      deviceCount += 1;
+    } else if (part.includes('Floodlight')) {
+      deviceCount += 1;
+    } else if (part.includes('Camera')) {
       deviceCount += 1;
     }
   });
@@ -42,31 +40,8 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
 
-    // Handle Smart Home Devices with specific subcategories
-    if (trimmedPart.match(/(\d+)\s*Smart/i)) {
-      const count = parseInt(trimmedPart.match(/(\d+)/)[1]);
-
-      // Create individual entries for each smart device
-      for (let i = 0; i < count; i++) {
-        const basePrice = 75; // Base price per smart device
-        const title = `Smart Device ${i + 1} Installation`;
-
-        services.push(title);
-        serviceBreakdown.push({
-          title,
-          items: [
-            {
-              label: 'Smart Device Installation',
-              price: basePrice
-            }
-          ]
-        });
-        totalPrice += basePrice;
-      }
-    }
-
-    // Handle Smart Doorbell as a separate category
-    if (trimmedPart.includes('Doorbell')) {
+    // Handle Smart Doorbell
+    if (trimmedPart.includes('Smart Doorbell')) {
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       const title = "Smart Doorbell Installation";
       services.push(title + (hasBrick ? ' (Brick Surface)' : ''));
@@ -74,7 +49,8 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       const items = [
         {
           label: 'Smart Doorbell Base Installation',
-          price: 75
+          price: 75,
+          note: 'Please ensure device is charged if wireless'
         }
       ];
 
@@ -90,7 +66,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75;
     }
 
-    // Handle Floodlight Camera as a separate category
+    // Handle Floodlight Camera
     if (trimmedPart.includes('Floodlight')) {
       const title = "Floodlight Camera Installation";
       services.push(title);
@@ -100,14 +76,15 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         items: [
           {
             label: 'Floodlight Camera Installation',
-            price: 125
+            price: 125,
+            note: 'Wireless or existing wiring required'
           }
         ]
       });
       totalPrice += 125;
     }
 
-    // Handle Smart Camera as a separate category
+    // Handle Smart Camera
     if (trimmedPart.includes('Camera') && !trimmedPart.includes('Floodlight')) {
       const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
