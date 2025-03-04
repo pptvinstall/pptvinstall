@@ -91,9 +91,34 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       serviceBreakdown.push({ title, items });
       totalPrice += 100; // Base installation
     }
+    
+    // Smart Home Services parsing
+    if (part.includes('Smart Doorbell')) {
+      const title = 'Smart Doorbell';
+      const hasBrick = part.toLowerCase().includes('brick');
+      services.push(title);
+      
+      const items = [
+        {
+          label: 'Base Installation (1 unit)',
+          price: 75
+        }
+      ];
+      
+      if (hasBrick) {
+        items.push({
+          label: 'Brick Installation',
+          price: 10
+        });
+        totalPrice += 10;
+      }
+      
+      serviceBreakdown.push({ title, items });
+      totalPrice += 75;
+    }
 
     if (part.includes('Floodlight')) {
-      const title = 'Floodlight';
+      const title = 'Smart Floodlight';
       services.push(title);
 
       serviceBreakdown.push({
@@ -245,29 +270,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
 
       // Generate calendar event with detailed description
-      const eventSummary = `TV Installation - Picture Perfect`;
+      const eventSummary = `Picture Perfect TV & Smart Home Installation`;
       const eventDescription = `
-Selected Services:
+APPOINTMENT DETAILS
+------------------
+Date: ${formattedDate}
+Time: ${formattedTime}
+
+SELECTED SERVICES
+----------------
 ${serviceBreakdown.map(section => 
   `${section.title}
 ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatPrice(price)}
+TOTAL: ${formatPrice(price)}
 
-Installation Address:
+INSTALLATION ADDRESS
+------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Contact Information:
-${data.name}
-${data.phone}
-${data.email}
+CONTACT INFORMATION
+-----------------
+Name: ${data.name}
+Phone: ${data.phone}
+Email: ${data.email}
 
-Installation Notes:
-${data.notes || 'No additional notes'}
+PREPARATION INSTRUCTIONS
+----------------------
+- Please ensure the installation area is clear of obstacles
+- Have your TV and other equipment ready
+- Make sure power outlets are accessible
+- Our technician will call before arrival to confirm details
 
-Business Hours:
+${data.notes ? `CUSTOMER NOTES\n-------------\n${data.notes}\n\n` : ''}
+
+BUSINESS HOURS
+------------
 Mon-Fri: 6:30PM-10:30PM
 Sat-Sun: 11AM-7PM
 
@@ -292,27 +332,45 @@ Questions? Call 404-702-4748`;
     .header {
       text-align: center;
       margin-bottom: 30px;
+      background: linear-gradient(to right, #2563eb, #1e40af);
+      padding: 20px;
+      border-radius: 10px;
+      color: white;
     }
     .logo {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: bold;
-      color: #2563eb;
       margin-bottom: 10px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
     }
     .tagline {
       font-style: italic;
-      color: #666;
+      opacity: 0.9;
     }
     .section {
-      margin-bottom: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-radius: 10px;
+      padding: 20px;
+      background: #fff;
     }
     .section-title {
       font-size: 20px;
       font-weight: 600;
       margin-bottom: 16px;
       color: #111;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      position: relative;
+    }
+    .section-title:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -2px;
+      width: 40px;
+      height: 2px;
+      background: #2563eb;
     }
     .subsection {
       margin-bottom: 16px;
@@ -320,6 +378,10 @@ Questions? Call 404-702-4748`;
       padding: 16px;
       border-radius: 8px;
       border-left: 3px solid #2563eb;
+      transition: transform 0.2s;
+    }
+    .subsection:hover {
+      transform: translateX(3px);
     }
     .subsection-title {
       font-size: 16px;
@@ -341,8 +403,10 @@ Questions? Call 404-702-4748`;
       font-weight: 600;
       font-size: 18px;
       margin-top: 16px;
-      padding-top: 16px;
+      padding: 16px;
       border-top: 2px solid #eee;
+      background: #f0f9ff;
+      border-radius: 8px;
     }
     .payment-note {
       margin-top: 16px;
@@ -352,6 +416,7 @@ Questions? Call 404-702-4748`;
       background: #f0f9ff;
       padding: 12px;
       border-radius: 6px;
+      border: 1px dashed #2563eb;
     }
     .discount {
       color: #22c55e;
@@ -360,6 +425,9 @@ Questions? Call 404-702-4748`;
       display: grid;
       grid-template-columns: 150px 1fr;
       gap: 8px;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
     }
     .info-label {
       font-weight: 500;
@@ -385,6 +453,20 @@ Questions? Call 404-702-4748`;
       text-decoration: none;
       border-radius: 6px;
       font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .cta-button:hover {
+      background-color: #1e40af;
+    }
+    .appointment-time {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e6f0ff 100%);
+      border-radius: 10px;
+      margin: 16px 0;
+      font-weight: 600;
+      border: 1px solid #d0e3ff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
   </style>
 </head>
@@ -397,9 +479,12 @@ Questions? Call 404-702-4748`;
   <div class="section">
     <div class="section-title">Booking Confirmation</div>
     <p>Thank you for choosing Picture Perfect TV Install. Your booking has been confirmed for:</p>
-    <div style="text-align: center; padding: 16px; background: #f0f9ff; border-radius: 8px; margin: 16px 0;">
+    <div class="appointment-time">
       <div style="font-size: 18px; font-weight: 600;">${formattedDate}</div>
       <div style="font-size: 18px; font-weight: 600;">${formattedTime}</div>
+      <div style="margin-top: 8px; font-size: 14px; color: #4b5563;">
+        Our technician will confirm this time with you before arrival
+      </div>
     </div>
   </div>
   

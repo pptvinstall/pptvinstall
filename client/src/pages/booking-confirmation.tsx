@@ -42,15 +42,41 @@ export default function BookingConfirmation() {
                 Thank you for choosing Picture Perfect TV Install. We'll be in touch within 24 hours to confirm your appointment details.
               </p>
 
-              <div className="space-y-4 text-left mb-8">
-                <h2 className="font-semibold text-lg">What's Next?</h2>
-                <ul className="space-y-2 text-gray-600">
-                  <li>✓ Check your email for booking confirmation</li>
-                  <li>✓ Our team will review your requirements</li>
-                  <li>✓ We'll call you to confirm appointment details</li>
-                  <li>✓ Prepare the installation area</li>
-                  <li>✓ Payment will be collected at the time of installation</li>
-                </ul>
+              <div className="mt-6 space-y-4">
+                <div className="bg-brand-blue-50 rounded-xl p-4 border border-brand-blue-100">
+                  <h2 className="text-lg font-medium text-brand-blue-800 mb-2">Installation Details</h2>
+                  <div className="space-y-1 text-sm">
+                    <p className="text-brand-blue-700 font-medium">We've sent a detailed confirmation to your email with:</p>
+                    <ul className="list-disc pl-5 text-gray-700 space-y-1">
+                      <li>Complete price breakdown</li>
+                      <li>Service details</li>
+                      <li>Calendar invite for your appointment</li>
+                    </ul>
+                    <p className="mt-2 text-gray-600 italic">Please check your inbox (and spam folder if needed)</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <h2 className="text-lg font-medium">Next Steps</h2>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Our team will review your requirements</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>We'll call you to confirm appointment details</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Prepare the installation area by removing any obstacles</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">✓</span>
+                      <span>Payment will be collected at the time of installation</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
               <p className="text-sm text-gray-500 mb-6">
