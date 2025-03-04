@@ -12,7 +12,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="mb-8">
               <img
-                src="/attached_assets/IMG_0032.jpeg"
+                src="/images/logo.jpeg"
                 alt="Picture Perfect TV Install Logo"
                 className="mx-auto w-48 h-auto object-contain"
               />
@@ -44,7 +44,7 @@ export default function Home() {
       <section className="relative">
         <div className="w-full">
           <img
-            src="/assets/IMG_4282.jpeg"
+            src="/images/showcase.jpeg"
             alt="TV Installation Showcase"
             className="w-full"
           />
