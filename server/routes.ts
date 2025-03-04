@@ -327,32 +327,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.body.name,
         email: req.body.email,
         serviceType: req.body.serviceType,
-        preferredDate: req.body.preferredDate
-      }));
+        preferredDate: req.body.preferredDate,
+        preferredTime: req.body.preferredTime
+      }, null, 2));
 
       const data = bookingSchema.parse(req.body);
-
-      // Ensure we have a valid date
-      if (!data.preferredDate) {
-        return res.status(400).json({
-          error: "Missing required field",
-          details: "Appointment date and time is required"
-        });
-      }
-
-      // Parse appointment date and time
-      const dateTime = new Date(data.preferredDate);
-      const formattedDate = dateTime.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      const formattedTime = dateTime.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-      });
 
       // Parse services and calculate price
       console.log("Parsing service type:", data.serviceType);
@@ -360,61 +339,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
 
+      // Create the booking data object
+      const bookingData = {
+        ...data,
+        detailedServices: JSON.stringify({
+          services,
+          serviceBreakdown
+        }),
+        totalPrice: price.toString()
+      };
+
+      console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
+
       try {
-        // Prepare the booking data with all required fields
-        const bookingData = {
-          ...data,
-          detailedServices: JSON.stringify({
-            services,
-            serviceBreakdown
-          }),
-          totalPrice: price.toString(),
-          appointmentTime: formattedTime
-        };
-      
-        console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
-      
-        // Create the booking in the database with all fields
+        // Create the booking in the database
         const booking = await storage.createBooking(bookingData);
+        console.log("Booking created successfully:", booking.id);
 
-        // Generate calendar event
-        const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
-        const eventDescription = `
-Selected Services:
-${serviceBreakdown.map(section => 
-`${section.title}
-${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
-).join('\n\n')}
-
-Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
-
-Installation Address:
-${data.streetAddress}
-${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
-
-Contact Information:
-${data.name}
-${data.phone}
-${data.email}
-
-${data.notes ? `Installation Notes:\n${data.notes}\n\n` : ''}
-
-Business Hours:
-Mon-Fri: 6:30PM-10:30PM
-Sat-Sun: 11AM-7PM
-
-Questions? Call 404-702-4748`;
-
-        const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
-        const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
+        // Format date for email
+        const formattedDate = new Date(data.preferredDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
 
         // Send confirmation email
-        await transporter.sendMail({
+        const emailResult = await transporter.sendMail({
           from: process.env.GMAIL_USER,
           to: data.email,
           subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
-          text: `
+          text: generateEmailText(data, services, serviceBreakdown, price, formattedDate, data.preferredTime),
+          html: generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, data.preferredTime),
+          icalEvent: {
+            filename: 'installation-appointment.ics',
+            method: 'REQUEST',
+            content: generateCalendarEvent(data, services, serviceBreakdown, price)
+          }
+        });
+
+        console.log("Confirmation email sent:", emailResult.messageId);
+
+        res.json(booking);
+      } catch (error) {
+        console.error('Error creating booking:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      res.status(400).json({ 
+        error: "Invalid booking data", 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : "Failed to create booking"
+      });
+    }
+  });
+
+  function generateEmailText(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
+    return `
 Selected Services
 ----------------
 ${serviceBreakdown.map(section => 
@@ -427,7 +410,7 @@ Required Deposit: ${formatPrice(75)}
 
 Appointment
 ----------
-${formattedDate} at ${formattedTime}
+${formattedDate} at ${preferredTime}
 
 Installation Address
 ------------------
@@ -443,36 +426,10 @@ ${data.phone}
 ${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
 
 Note: Deposit is required to secure your booking and will be deducted from the total amount.
-`,
-          html: generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, formattedTime),
-          icalEvent: {
-            filename: 'installation-appointment.ics',
-            method: 'REQUEST',
-            content: iCalEvent
-          }
-        });
+`;
+  }
 
-        res.json(booking);
-      } catch (error) {
-        console.error('Error creating booking:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
-        console.error('Database schema error. Please run migrations to update the schema.');
-      }
-
-      res.status(400).json({ 
-        error: "Invalid booking data", 
-        details: process.env.NODE_ENV === 'development' ? errorMessage : "Server encountered an error processing your booking."
-      });
-    }
-  });
-
-  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, formattedTime) {
+  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
     return `
 <!DOCTYPE html>
 <html>
@@ -567,7 +524,7 @@ Note: Deposit is required to secure your booking and will be deducted from the t
 
   <div class="section">
     <div class="section-title">Appointment</div>
-    <div>${formattedDate} at ${formattedTime}</div>
+    <div>${formattedDate} at ${preferredTime}</div>
   </div>
 
   <div class="section">
@@ -593,6 +550,40 @@ Note: Deposit is required to secure your booking and will be deducted from the t
 </body>
 </html>`;
   }
+
+  function generateCalendarEvent(data, services, serviceBreakdown, price) {
+    const dateTime = new Date(data.preferredDate);
+    const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
+    const eventDescription = `
+Selected Services:
+${serviceBreakdown.map(section => 
+`${section.title}
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+).join('\n\n')}
+
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
+
+Installation Address:
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+
+Contact Information:
+${data.name}
+${data.phone}
+${data.email}
+
+${data.notes ? `Installation Notes:\n${data.notes}\n\n` : ''}
+
+Business Hours:
+Mon-Fri: 6:30PM-10:30PM
+Sat-Sun: 11AM-7PM
+
+Questions? Call 404-702-4748`;
+    const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
+    return generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
+  }
+
 
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
