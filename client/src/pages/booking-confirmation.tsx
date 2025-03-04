@@ -10,19 +10,33 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
+
+  // Get booking ID either from URL or session storage
   const searchParams = new URLSearchParams(location?.split('?')[1] || "");
-  const bookingId = searchParams.get('id');
-  const [error, setError] = useState<string | null>(null);
+  const bookingId = searchParams.get('id') || '';
 
-  console.log("Current booking ID:", bookingId); // Add logging
+  // Check if we have details in sessionStorage
+  const bookingConfirmed = sessionStorage.getItem("bookingConfirmed") === "true";
+  const storedDetails = sessionStorage.getItem("bookingDetails");
+  const storedBookingDetails = storedDetails ? JSON.parse(storedDetails) : null;
 
-  const { data: booking, isLoading } = useQuery({
+  // Function to clear session storage after displaying
+  useEffect(() => {
+    if (bookingConfirmed) {
+      // Clear after 1 minute to prevent issues with page refreshes
+      const timer = setTimeout(() => {
+        sessionStorage.removeItem("bookingConfirmed");
+        sessionStorage.removeItem("bookingDetails");
+      }, 60000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [bookingConfirmed]);
+
+  const { data: booking, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
-      if (!bookingId) {
-        throw new Error('No booking ID provided');
-      }
-
+      if (!bookingId) return storedBookingDetails;
       try {
         console.log("Fetching booking details for ID:", bookingId); // Add logging
         const response = await apiRequest("GET", `/api/bookings/${bookingId}`);
@@ -40,7 +54,7 @@ export default function BookingConfirmation() {
         throw err;
       }
     },
-    enabled: !!bookingId, // Only run query if bookingId exists
+    enabled: !!bookingId || bookingConfirmed, // Run query if bookingId exists or bookingConfirmed is true
     retry: 3,
     retryDelay: 1000
   });
@@ -85,8 +99,8 @@ export default function BookingConfirmation() {
   // Parse detailed services
   let parsedServices;
   try {
-    parsedServices = typeof booking.detailedServices === 'string' 
-      ? JSON.parse(booking.detailedServices) 
+    parsedServices = typeof booking.detailedServices === 'string'
+      ? JSON.parse(booking.detailedServices)
       : booking.detailedServices;
     console.log("Parsed services:", parsedServices);
   } catch (e) {
@@ -170,8 +184,8 @@ export default function BookingConfirmation() {
                                 {item.label}
                               </span>
                               <span className={
-                                item.isDiscount 
-                                  ? "text-green-600 font-medium" 
+                                item.isDiscount
+                                  ? "text-green-600 font-medium"
                                   : "font-medium"
                               }>
                                 {formatPrice(item.price)}

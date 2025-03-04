@@ -18,6 +18,20 @@ app.use(compression({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} started`);
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode} - ${duration}ms`);
+  });
+
+  next();
+});
+
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -58,23 +72,23 @@ app.use((req, res, next) => {
     // Enhanced error logging with request context
     console.error(`[ERROR] ${new Date().toISOString()} - ${req.method} ${req.url}`);
     console.error(`Status: ${status}, Message: ${message}`);
-    
+
     if (req.body) {
       console.error("Request body:", JSON.stringify(req.body, null, 2));
     }
-    
+
     if (err instanceof Error) {
       console.error("Error details:", err.message);
       console.error("Stack trace:", err.stack);
     }
-    
+
     // Send error response to client with helpful information
     res.status(status).json({ 
       message,
       error: process.env.NODE_ENV === 'production' ? 'An error occurred processing your request' : err.message,
       requestId: req.headers['x-request-id'] || Date.now().toString()
     });
-    
+
     // Don't throw the error again, as it was already handled
   });
 
@@ -96,5 +110,6 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
   });
 })();

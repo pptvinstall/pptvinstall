@@ -332,6 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         preferredTime: req.body.preferredTime
       }, null, 2));
 
+      // Validate the request data
       const data = bookingSchema.parse(req.body);
 
       // Parse services and calculate price
@@ -340,34 +341,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
 
-      // Create the booking data object
+      // Prepare data for storage with defaults for status
       const bookingData = {
         ...data,
         detailedServices: JSON.stringify({
           services,
           serviceBreakdown
         }),
-        totalPrice: price.toString()
+        totalPrice: price.toString(),
+        status: 'active' // Default status
       };
 
       console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
 
+      // Create the booking in the database
+      let booking;
       try {
-        // Create the booking in the database
-        const booking = await storage.createBooking(bookingData);
+        booking = await storage.createBooking(bookingData);
         console.log("Booking created successfully:", booking.id);
-
-        // Format date for email
-        const formattedDate = new Date(data.preferredDate).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+      } catch (dbError) {
+        console.error('Database error creating booking:', dbError);
+        return res.status(500).json({
+          error: "Database error",
+          message: "Failed to create booking in database"
         });
+      }
 
-        // Send confirmation email
+      // Format date for email
+      const formattedDate = new Date(data.preferredDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      // Send confirmation email
+      try {
         const emailResult = await transporter.sendMail({
-          from: process.env.GMAIL_USER,
+          from: process.env.GMAIL_USER || "noreply@pictureperfecttvinstall.com",
           to: data.email,
           subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
           text: generateEmailText(data, services, serviceBreakdown, price, formattedDate, data.preferredTime),
@@ -378,21 +389,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             content: generateCalendarEvent(data, services, serviceBreakdown, price)
           }
         });
-
         console.log("Confirmation email sent:", emailResult.messageId);
-
-        res.json(booking);
-      } catch (error) {
-        console.error('Error creating booking:', error);
-        throw error;
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Don't fail the booking if email fails
       }
+
+      // Return the created booking
+      res.json(booking);
+      
     } catch (error) {
       console.error('Booking error:', error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
+      
+      // More descriptive error response
       res.status(400).json({
-        error: "Invalid booking data",
-        details: process.env.NODE_ENV === 'development' ? errorMessage : "Failed to create booking"
+        error: "Failed to process booking",
+        details: process.env.NODE_ENV === 'development' ? errorMessage : "Please check your booking information and try again"
       });
     }
   });

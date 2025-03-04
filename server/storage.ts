@@ -47,6 +47,16 @@ export class Storage {
     try {
       console.log("Creating new booking with data:", JSON.stringify(data, null, 2));
 
+      // Ensure totalPrice is properly formatted
+      if (data.totalPrice && typeof data.totalPrice === 'number') {
+        data.totalPrice = data.totalPrice.toString();
+      }
+
+      // Fix date format if needed
+      if (data.preferredDate && data.preferredDate instanceof Date) {
+        data.preferredDate = data.preferredDate.toISOString();
+      }
+
       // Create the booking with all required fields
       const [newBooking] = await db
         .insert(bookings)
@@ -76,8 +86,8 @@ export class Storage {
       console.log("Successfully created booking:", JSON.stringify(newBooking, null, 2));
       return newBooking;
     } catch (error) {
-      console.error("Error creating booking:", error);
-      throw error;
+      console.error('Error creating booking:', error);
+      throw new Error(`Failed to create booking: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
