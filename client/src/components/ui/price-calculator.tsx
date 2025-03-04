@@ -28,7 +28,7 @@ export function PriceCalculator({ tvs, smartHome, distance, onUpdate }: PriceCal
 
         if (installation.masonryWall) {
           additionalFees.push({
-            label: 'Masonry Wall Installation',
+            label: 'Non-Drywall Installation (brick/concrete/stone)',
             price: 50
           });
         }

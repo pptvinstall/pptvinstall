@@ -283,7 +283,11 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           updateTvInstallation(index, { masonryWall: checked })
                         }
                       />
-                      <Label>Masonry Wall Installation (+$50)</Label>
+                      <Label>Non-Drywall Installation (+$50)<br/>
+                        <span className="text-sm text-muted-foreground">
+                          Includes brick, concrete, stone, tile, or siding
+                        </span>
+                      </Label>
                     </div>
 
                     {installation.location !== 'fireplace' && (

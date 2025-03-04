@@ -15,7 +15,7 @@ const tvServices = [
       "Basic cable management",
       "Mount options available",
       "Hardware included",
-      "+$50 for masonry walls",
+      "+$50 for non-drywall surfaces (brick/concrete/stone)",
       "+$100 for outlet relocation"
     ],
     icon: Monitor
