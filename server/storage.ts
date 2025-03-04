@@ -1,7 +1,6 @@
-import { bookings, type Booking, type InsertBooking } from "@shared/schema";
+import { bookings, type Booking, type InsertBooking, pricingConfig, pricingRules, priceHistory, type PricingConfig, type PricingRule, type InsertPriceHistory } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
-import { bookingHistory, type BookingHistory } from "@shared/schema"; // Added import for bookingHistory schema
 
 export class Storage {
   async getAllBookings(): Promise<Booking[]> {
@@ -141,7 +140,6 @@ export class Storage {
     }
   }
 
-  // Add method to get booking history
   async getBookingHistory(bookingId: number): Promise<BookingHistory[]> {
     try {
       console.log(`Fetching history for booking ${bookingId}`);
@@ -155,6 +153,81 @@ export class Storage {
       return history;
     } catch (error) {
       console.error("Error fetching booking history:", error);
+      throw error;
+    }
+  }
+
+  async getAllPrices(): Promise<PricingConfig[]> {
+    try {
+      console.log("Fetching all pricing configurations");
+      const result = await db.select().from(pricingConfig).where(eq(pricingConfig.isActive, true));
+      console.log(`Retrieved ${result.length} pricing configurations`);
+      return result;
+    } catch (error) {
+      console.error("Error fetching pricing configurations:", error);
+      throw error;
+    }
+  }
+
+  async getPrice(id: number): Promise<PricingConfig | null> {
+    try {
+      console.log(`Fetching price config with ID: ${id}`);
+      const [result] = await db.select().from(pricingConfig).where(eq(pricingConfig.id, id));
+      return result || null;
+    } catch (error) {
+      console.error("Error fetching price config:", error);
+      throw error;
+    }
+  }
+
+  async updatePrice(id: number, data: Partial<PricingConfig>): Promise<PricingConfig> {
+    try {
+      console.log(`Updating price config ${id} with:`, data);
+      const [updated] = await db
+        .update(pricingConfig)
+        .set(data)
+        .where(eq(pricingConfig.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating price config:", error);
+      throw error;
+    }
+  }
+
+  async getAllPricingRules(): Promise<PricingRule[]> {
+    try {
+      console.log("Fetching all pricing rules");
+      const result = await db.select().from(pricingRules).where(eq(pricingRules.isActive, true));
+      console.log(`Retrieved ${result.length} pricing rules`);
+      return result;
+    } catch (error) {
+      console.error("Error fetching pricing rules:", error);
+      throw error;
+    }
+  }
+
+  async updatePricingRule(id: number, data: Partial<PricingRule>): Promise<PricingRule> {
+    try {
+      console.log(`Updating pricing rule ${id} with:`, data);
+      const [updated] = await db
+        .update(pricingRules)
+        .set(data)
+        .where(eq(pricingRules.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating pricing rule:", error);
+      throw error;
+    }
+  }
+
+  async createPriceHistory(data: InsertPriceHistory): Promise<void> {
+    try {
+      console.log("Recording price history:", data);
+      await db.insert(priceHistory).values(data);
+    } catch (error) {
+      console.error("Error recording price history:", error);
       throw error;
     }
   }
