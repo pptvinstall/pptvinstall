@@ -15,20 +15,26 @@ export function PricingManager() {
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
 
   // Fetch current pricing configuration
-  const { data: prices, isLoading: pricesLoading } = useQuery({
+  const { data: prices = [], isLoading: pricesLoading } = useQuery({
     queryKey: ['/api/admin/pricing'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/pricing");
+      if (!response.ok) {
+        throw new Error('Failed to fetch prices');
+      }
       const data = await response.json();
       return data as PricingConfig[];
     }
   });
 
   // Fetch pricing rules
-  const { data: rules, isLoading: rulesLoading } = useQuery({
+  const { data: rules = [], isLoading: rulesLoading } = useQuery({
     queryKey: ['/api/admin/pricing/rules'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/pricing/rules");
+      if (!response.ok) {
+        throw new Error('Failed to fetch rules');
+      }
       const data = await response.json();
       return data as PricingRule[];
     }
@@ -37,7 +43,10 @@ export function PricingManager() {
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async (data: Partial<PricingConfig>) => {
-      const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, data);
+      const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, {
+        ...data,
+        basePrice: data.basePrice?.toString()
+      });
       if (!response.ok) {
         throw new Error('Failed to update price');
       }
@@ -60,36 +69,6 @@ export function PricingManager() {
     }
   });
 
-  // Update rule mutation
-  const updateRuleMutation = useMutation({
-    mutationFn: async (data: Partial<PricingRule>) => {
-      const response = await apiRequest("PUT", `/api/admin/pricing/rules/${data.id}`, data);
-      if (!response.ok) {
-        throw new Error('Failed to update rule');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/pricing/rules'] });
-      toast({
-        title: "Rule updated",
-        description: "The pricing rule has been updated successfully.",
-      });
-      setEditingRule(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to update rule",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    }
-  });
-
-  if (pricesLoading || rulesLoading) {
-    return <LoadingSpinner />;
-  }
-
   const handlePriceEdit = (price: PricingConfig) => {
     setEditingPrice({
       ...price,
@@ -97,14 +76,24 @@ export function PricingManager() {
     });
   };
 
-  const handlePriceSave = () => {
+  const handlePriceChange = (value: string) => {
     if (editingPrice) {
-      updatePriceMutation.mutate({
+      setEditingPrice({
         ...editingPrice,
-        basePrice: editingPrice.basePrice.toString()
+        basePrice: parseFloat(value) || 0
       });
     }
   };
+
+  const handlePriceSave = () => {
+    if (editingPrice) {
+      updatePriceMutation.mutate(editingPrice);
+    }
+  };
+
+  if (pricesLoading || rulesLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="space-y-8">
@@ -131,14 +120,14 @@ export function PricingManager() {
                     {editingPrice?.id === price.id ? (
                       <Input
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={editingPrice.basePrice}
-                        onChange={(e) => setEditingPrice({
-                          ...editingPrice,
-                          basePrice: parseFloat(e.target.value)
-                        })}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        className="w-24"
                       />
                     ) : (
-                      `$${price.basePrice}`
+                      `$${parseFloat(price.basePrice.toString()).toFixed(2)}`
                     )}
                   </TableCell>
                   <TableCell>
@@ -181,7 +170,6 @@ export function PricingManager() {
           </Table>
         </CardContent>
       </Card>
-
       {/* Pricing Rules Section */}
       <Card>
         <CardHeader>
