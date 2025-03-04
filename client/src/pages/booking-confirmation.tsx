@@ -18,7 +18,6 @@ export default function BookingConfirmation() {
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       if (!bookingId) {
-        // Check if we have stored booking details from a recent submission
         const storedDetails = sessionStorage.getItem("bookingDetails");
         if (storedDetails) {
           return JSON.parse(storedDetails);
@@ -32,7 +31,7 @@ export default function BookingConfirmation() {
           throw new Error('Failed to fetch booking details');
         }
         const data = await response.json();
-        console.log("Loaded booking data:", data); // Add logging
+        console.log("Loaded booking data:", data);
         return data;
       } catch (err) {
         setError('Failed to load booking details. Please contact support.');
@@ -44,7 +43,6 @@ export default function BookingConfirmation() {
     retryDelay: 1000
   });
 
-  // Handle loading state
   if (isLoading) {
     return (
       <div className="container mx-auto py-24 px-4 flex justify-center">
@@ -53,7 +51,6 @@ export default function BookingConfirmation() {
     );
   }
 
-  // Handle error state
   if (error || !booking) {
     return (
       <div className="container mx-auto py-24 px-4">
@@ -76,14 +73,25 @@ export default function BookingConfirmation() {
   }
 
   // Parse detailed services
-  let detailedServices;
+  let parsedServices;
   try {
-    detailedServices = booking.detailedServices ? JSON.parse(booking.detailedServices) : null;
-    console.log("Parsed detailed services:", detailedServices); // Add logging
+    parsedServices = typeof booking.detailedServices === 'string' 
+      ? JSON.parse(booking.detailedServices) 
+      : booking.detailedServices;
+    console.log("Parsed services:", parsedServices);
   } catch (e) {
     console.error("Error parsing detailed services:", e);
-    detailedServices = null;
+    parsedServices = null;
   }
+
+  // Format price
+  const formatPrice = (amount: number | string) => {
+    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  };
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -110,15 +118,19 @@ export default function BookingConfirmation() {
               <div>
                 <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
                 <div className="grid gap-2">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Booking ID:</span>
                     <span className="font-medium">{booking.id}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Status:</span>
+                    <span className="font-medium capitalize">{booking.status}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Service Type:</span>
                     <span className="font-medium">{booking.serviceType}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Appointment Date:</span>
                     <span className="font-medium">
                       {new Date(booking.preferredDate).toLocaleDateString('en-US', {
@@ -129,40 +141,55 @@ export default function BookingConfirmation() {
                       })}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Appointment Time:</span>
                     <span className="font-medium">{booking.preferredTime}</span>
                   </div>
-                  {booking.totalPrice && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Estimated Total:</span>
-                      <span className="font-medium">
-                        ${parseFloat(booking.totalPrice).toFixed(2)}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Total Price:</span>
+                    <span className="font-medium text-green-600">
+                      {formatPrice(booking.totalPrice || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Services breakdown */}
-              {detailedServices && (
+              {parsedServices && parsedServices.serviceBreakdown && (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
-                  {detailedServices.serviceBreakdown && detailedServices.serviceBreakdown.map((section: any, i: number) => (
-                    <div key={i} className="mb-4 pb-4 border-b last:border-0">
-                      <h4 className="font-medium text-blue-700 mb-2">{section.title}</h4>
-                      <ul className="pl-5 space-y-1">
-                        {section.items && section.items.map((item: any, j: number) => (
-                          <li key={j} className="flex justify-between">
-                            <span className={item.isDiscount ? "text-green-600" : ""}>{item.label}</span>
-                            <span className={item.isDiscount ? "text-green-600 font-medium" : "font-medium"}>
-                              ${item.price.toFixed(2)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                  {parsedServices.serviceBreakdown.map((section: any, i: number) => (
+                    <div key={i} className="mb-6 last:mb-0">
+                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <h4 className="font-medium text-blue-700 mb-3">{section.title}</h4>
+                        <div className="space-y-2">
+                          {section.items && section.items.map((item: any, j: number) => (
+                            <div key={j} className="flex justify-between text-sm">
+                              <span className={item.isDiscount ? "text-green-600" : ""}>
+                                {item.label}
+                              </span>
+                              <span className={
+                                item.isDiscount 
+                                  ? "text-green-600 font-medium" 
+                                  : "font-medium"
+                              }>
+                                {formatPrice(item.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   ))}
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total Amount:</span>
+                      <span>{formatPrice(booking.totalPrice || 0)}</span>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      A deposit of {formatPrice(75)} is required to secure your booking
+                    </div>
+                  </div>
                 </div>
               )}
 
