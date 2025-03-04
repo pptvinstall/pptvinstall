@@ -18,11 +18,7 @@ export default function BookingConfirmation() {
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       if (!bookingId) {
-        const storedDetails = sessionStorage.getItem("bookingDetails");
-        if (storedDetails) {
-          return JSON.parse(storedDetails);
-        }
-        throw new Error('No booking ID provided and no stored booking details found');
+        throw new Error('No booking ID provided');
       }
 
       try {
@@ -36,12 +32,21 @@ export default function BookingConfirmation() {
       } catch (err) {
         setError('Failed to load booking details. Please contact support.');
         console.error('Error fetching booking:', err);
-        return null;
+        throw err;
       }
     },
     retry: 3,
     retryDelay: 1000
   });
+
+  // Format price
+  const formatPrice = (amount: number | string) => {
+    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  };
 
   if (isLoading) {
     return (
@@ -69,15 +74,6 @@ export default function BookingConfirmation() {
       </div>
     );
   }
-
-  // Format price
-  const formatPrice = (amount: number | string) => {
-    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
 
   // Parse detailed services
   let parsedServices;
@@ -146,7 +142,7 @@ export default function BookingConfirmation() {
                   <div className="flex justify-between border-b pb-2">
                     <span className="text-gray-500">Total Price:</span>
                     <span className="font-medium text-green-600">
-                      {formatPrice(booking.totalPrice || 0)}
+                      {formatPrice(booking.totalPrice)}
                     </span>
                   </div>
                 </div>
@@ -182,7 +178,7 @@ export default function BookingConfirmation() {
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total Amount:</span>
-                      <span>{formatPrice(booking.totalPrice || 0)}</span>
+                      <span>{formatPrice(booking.totalPrice)}</span>
                     </div>
                     <div className="mt-2 text-sm text-gray-600">
                       A deposit of {formatPrice(75)} is required to secure your booking

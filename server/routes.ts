@@ -272,13 +272,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
 
-      // Parse service type to get fresh calculation
+      // Parse service type to get service breakdown and pricing
+      console.log("Parsing service type:", booking.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(booking.serviceType);
+      console.log("Parsed services:", services);
+      console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
 
       // Create an enhanced booking object with all required fields
       const enhancedBooking = {
         ...booking,
-        id: booking.id, // Explicitly include ID
+        id: parseInt(id), // Explicitly include ID as a number
         detailedServices: JSON.stringify({
           services,
           serviceBreakdown
@@ -287,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: booking.status || 'active'
       };
 
-      console.log("Enhanced booking details:", JSON.stringify(enhancedBooking, null, 2));
+      console.log("Enhanced booking details being sent:", JSON.stringify(enhancedBooking, null, 2));
       res.json(enhancedBooking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);

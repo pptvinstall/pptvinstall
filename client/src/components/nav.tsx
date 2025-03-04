@@ -7,25 +7,25 @@ export default function Nav() {
     <nav className="border-b">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
-          <a className="text-2xl font-bold text-primary">
+          <span className="text-2xl font-bold text-primary cursor-pointer">
             Picture Perfect TV Install
-          </a>
+          </span>
         </Link>
-        
+
         <div className="hidden md:flex items-center gap-6">
           <Link href="/services">
-            <a className="hover:text-primary transition-colors">Services</a>
+            <span className="hover:text-primary transition-colors cursor-pointer">Services</span>
           </Link>
           <Link href="/booking">
-            <a className="hover:text-primary transition-colors">Book Now</a>
+            <span className="hover:text-primary transition-colors cursor-pointer">Book Now</span>
           </Link>
           <Link href="/contact">
-            <a className="hover:text-primary transition-colors">Contact</a>
+            <span className="hover:text-primary transition-colors cursor-pointer">Contact</span>
           </Link>
           <Link href="/faq">
-            <a className="hover:text-primary transition-colors">FAQ</a>
+            <span className="hover:text-primary transition-colors cursor-pointer">FAQ</span>
           </Link>
-          <Button onClick={() => window.location.href = "tel:1234567890"}>
+          <Button onClick={() => window.location.href = "tel:404-702-4748"}>
             <PhoneCall className="mr-2 h-4 w-4" />
             Call Now
           </Button>
