@@ -10,12 +10,15 @@ export default function Home() {
       <section className="bg-gradient-to-b from-gray-50 to-white py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="mb-8">
-              <img
-                src="/images/logo.jpeg"
-                alt="Picture Perfect TV Install Logo"
-                className="mx-auto w-48 h-auto object-contain"
-              />
+            <div className="mb-8 transform transition-all duration-700 hover:scale-105">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/50 rounded-xl"></div>
+                <img
+                  src="/images/logo.jpeg"
+                  alt="Picture Perfect TV Install Logo"
+                  className="mx-auto w-40 h-auto object-contain relative z-10"
+                />
+              </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Professional TV Mounting Done Right
