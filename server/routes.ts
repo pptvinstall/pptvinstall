@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const data = bookingSchema.parse(req.body);
 
-      // Ensure we're storing and using the full date with time
+      // Ensure we have a valid date
       if (!data.preferredDate) {
         return res.status(400).json({
           error: "Missing required field",
@@ -354,32 +354,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hour12: true
       });
 
-      // Parse services and calculate price - ensure all services are included
+      // Parse services and calculate price
       console.log("Parsing service type:", data.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
 
-      // Store basic booking data first, then try to add enhanced data if supported
       try {
-        // Start with the base data that we know exists in the schema
-        const bookingData = {
-          ...data
-        };
-
-        // Log what we're about to store
-        console.log("Creating booking with data:", JSON.stringify({
-          name: bookingData.name,
-          email: bookingData.email,
-          serviceType: bookingData.serviceType,
-          preferredDate: bookingData.preferredDate
-        }));
-
         // Create the booking in the database
-        const booking = await storage.createBooking(bookingData);
+        const booking = await storage.createBooking(data);
 
-        // Even if we can't store the enhanced data in the DB, we can still return it
-        // for the confirmation email and response
+        // Update with enhanced data
         booking.detailedServices = JSON.stringify({
           services,
           serviceBreakdown
@@ -387,59 +372,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         booking.totalPrice = price.toString();
         booking.appointmentTime = formattedTime;
 
-      // Generate calendar event with detailed description
-      const eventSummary = `Picture Perfect TV & Smart Home Installation`;
-      const eventDescription = `
-APPOINTMENT DETAILS
-------------------
-Date: ${formattedDate}
-Time: ${formattedTime}
-
-SELECTED SERVICES
-----------------
+        // Generate calendar event
+        const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
+        const eventDescription = `
+Selected Services:
 ${serviceBreakdown.map(section => 
-  `${section.title}
+`${section.title}
 ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-TOTAL: ${formatPrice(price)}
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
 
-INSTALLATION ADDRESS
-------------------
+Installation Address:
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-CONTACT INFORMATION
------------------
-Name: ${data.name}
-Phone: ${data.phone}
-Email: ${data.email}
+Contact Information:
+${data.name}
+${data.phone}
+${data.email}
 
-PREPARATION INSTRUCTIONS
-----------------------
-- Please ensure the installation area is clear of obstacles
-- Have your TV and other equipment ready
-- Make sure power outlets are accessible
-- Our technician will call before arrival to confirm details
+${data.notes ? `Installation Notes:\n${data.notes}\n\n` : ''}
 
-${data.notes ? `CUSTOMER NOTES\n-------------\n${data.notes}\n\n` : ''}
-
-BUSINESS HOURS
-------------
+Business Hours:
 Mon-Fri: 6:30PM-10:30PM
 Sat-Sun: 11AM-7PM
 
 Questions? Call 404-702-4748`;
 
-      const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
-      const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
+        const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
+        const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
 
-      // We already created the booking above, so we don't need to create it again.
-      // The booking variable is already defined earlier in this function.
+        // Send confirmation email
+        await transporter.sendMail({
+          from: process.env.GMAIL_USER,
+          to: data.email,
+          subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
+          text: `
+Selected Services
+----------------
+${serviceBreakdown.map(section => 
+`${section.title}
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+).join('\n\n')}
 
-      // The HTML template uses the booking object that was created earlier
+Total: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
 
-      const htmlTemplate = `
+Appointment
+----------
+${formattedDate} at ${formattedTime}
+
+Installation Address
+------------------
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+
+Contact Information
+-----------------
+${data.name}
+${data.email}
+${data.phone}
+
+${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
+
+Note: Deposit is required to secure your booking and will be deducted from the total amount.
+`,
+          html: generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, formattedTime),
+          icalEvent: {
+            filename: 'installation-appointment.ics',
+            method: 'REQUEST',
+            content: iCalEvent
+          }
+        });
+
+        res.json(booking);
+      } catch (error) {
+        console.error('Error creating booking:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+      if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
+        console.error('Database schema error. Please run migrations to update the schema.');
+      }
+
+      res.status(400).json({ 
+        error: "Invalid booking data", 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : "Server encountered an error processing your booking."
+      });
+    }
+  });
+
+  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, formattedTime) {
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -452,64 +481,25 @@ Questions? Call 404-702-4748`;
       margin: 0 auto;
       padding: 20px;
     }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      background: linear-gradient(to right, #2563eb, #1e40af);
-      padding: 20px;
-      border-radius: 10px;
-      color: white;
-    }
-    .logo {
-      font-size: 28px;
-      font-weight: bold;
-      margin-bottom: 10px;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    }
-    .tagline {
-      font-style: italic;
-      opacity: 0.9;
-    }
     .section {
-      margin-bottom: 30px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      border-radius: 10px;
-      padding: 20px;
-      background: #fff;
+      margin-bottom: 24px;
     }
     .section-title {
       font-size: 20px;
       font-weight: 600;
       margin-bottom: 16px;
       color: #111;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 10px;
-      position: relative;
-    }
-    .section-title:after {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: -2px;
-      width: 40px;
-      height: 2px;
-      background: #2563eb;
     }
     .subsection {
       margin-bottom: 16px;
       background: #f8f9fa;
       padding: 16px;
       border-radius: 8px;
-      border-left: 3px solid #2563eb;
-      transition: transform 0.2s;
-    }
-    .subsection:hover {
-      transform: translateX(3px);
     }
     .subsection-title {
       font-size: 16px;
       font-weight: 500;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: #2563eb;
     }
     .price-row {
@@ -520,148 +510,29 @@ Questions? Call 404-702-4748`;
     }
     .price {
       font-variant-numeric: tabular-nums;
-      font-weight: 500;
     }
     .total-row {
       font-weight: 600;
       font-size: 18px;
       margin-top: 16px;
       padding: 16px;
-      border-top: 2px solid #eee;
       background: #f0f9ff;
       border-radius: 8px;
     }
-    .payment-note {
+    .deposit-note {
       margin-top: 16px;
       color: #666;
       font-size: 14px;
       font-style: italic;
-      background: #f0f9ff;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px dashed #2563eb;
     }
     .discount {
       color: #22c55e;
     }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: 8px;
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 8px;
-    }
-    .info-label {
-      font-weight: 500;
-      color: #666;
-    }
-    .info-value {
-      color: #111;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #eee;
-      font-size: 14px;
-      color: #666;
-      text-align: center;
-    }
-    .cta-button {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 10px 20px;
-      background-color: #2563eb;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 500;
-      transition: background-color 0.2s;
-    }
-    .cta-button:hover {
-      background-color: #1e40af;
-    }
-    .appointment-time {
-      text-align: center;
-      padding: 20px;
-      background: linear-gradient(135deg, #f0f9ff 0%, #e6f0ff 100%);
-      border-radius: 10px;
-      margin: 16px 0;
-      font-weight: 600;
-      border: 1px solid #d0e3ff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .booking-id {
-      font-size: 14px;
-      text-align: center;
-      color: #666;
-      margin-top: 8px;
-    }
-    .service-item {
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      border-left: 3px solid #2563eb;
-    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">Picture Perfect TV Install</div>
-    <div class="tagline">Professional TV & Smart Home Installation</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Booking Confirmation</div>
-    <p>Thank you for choosing Picture Perfect TV Install. Your booking has been confirmed for:</p>
-    <div class="appointment-time">
-      <div style="font-size: 18px; font-weight: 600;">${formattedDate}</div>
-      <div style="font-size: 18px; font-weight: 600;">${formattedTime}</div>
-      <div style="margin-top: 8px; font-size: 14px; color: #4b5563;">
-        Our technician will confirm this time with you before arrival
-      </div>
-    </div>
-    <div class="booking-id">Booking ID: ${booking.id}</div>
-  </div>
-
   <div class="section">
     <div class="section-title">Selected Services</div>
-    <div style="display: flex; flex-direction: column; gap: 8px;">
-      ${services.length > 0 
-        ? services.map(service => `<div class="service-item">${service}</div>`).join('') 
-        : '<div style="padding: 8px; background: #f8f9fa; border-radius: 4px; color: #666;">No services selected</div>'}
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Installation Location</div>
-    <div class="info-grid">
-      <div class="info-label">Address:</div>
-      <div class="info-value">${data.streetAddress}</div>
-      ${data.addressLine2 ? `
-      <div class="info-label">Address Line 2:</div>
-      <div class="info-value">${data.addressLine2}</div>
-      ` : ''}
-      <div class="info-label">City/State/ZIP:</div>
-      <div class="info-value">${data.city}, ${data.state} ${data.zipCode}</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Your Information</div>
-    <div class="info-grid">
-      <div class="info-label">Name:</div>
-      <div class="info-value">${data.name}</div>
-      <div class="info-label">Email:</div>
-      <div class="info-value">${data.email}</div>
-      <div class="info-label">Phone:</div>
-      <div class="info-value">${data.phone}</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Detailed Price Breakdown</div>
     ${serviceBreakdown.map(section => `
       <div class="subsection">
         <div class="subsection-title">${section.title}</div>
@@ -674,135 +545,49 @@ Questions? Call 404-702-4748`;
       </div>
     `).join('')}
 
-    <div class="price-row total-row">
-      <span>Total Amount</span>
+    <div class="total-row price-row">
+      <span>Total</span>
       <span class="price">${formatPrice(price)}</span>
     </div>
 
-    <div class="payment-note">
-      <strong>Payment Information:</strong> The full amount of ${formatPrice(price)} will be due at the time of installation.
-      We accept cash, credit cards, Venmo, Cash App, and Zelle.
+    <div class="price-row">
+      <span>Required Deposit</span>
+      <span class="price">${formatPrice(75)}</span>
     </div>
+
+    <div class="deposit-note">
+      Deposit is required to secure your booking and will be deducted from the total amount.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Appointment</div>
+    <div>${formattedDate} at ${formattedTime}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Installation Address</div>
+    <div>${data.streetAddress}</div>
+    ${data.addressLine2 ? `<div>${data.addressLine2}</div>` : ''}
+    <div>${data.city}, ${data.state} ${data.zipCode}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contact Information</div>
+    <div>${data.name}</div>
+    <div>${data.email}</div>
+    <div>${data.phone}</div>
   </div>
 
   ${data.notes ? `
   <div class="section">
-    <div class="section-title">Your Notes</div>
-    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">${data.notes}</div>
+    <div class="section-title">Additional Notes</div>
+    <div>${data.notes}</div>
   </div>
   ` : ''}
-
-  <div class="section">
-    <div class="section-title">What's Next?</div>
-    <ul style="padding-left: 20px;">
-      <li>Our technician will call you before your appointment to confirm details.</li>
-      <li>Please ensure the installation area is accessible and cleared of obstructions.</li>
-      <li>Have all your equipment (TV, devices, mounts if provided by you) available on site.</li>
-      <li>Add this appointment to your calendar using the attached calendar invite.</li>
-    </ul>
-    <p style="margin-top: 16px;">
-      <strong>View your booking details online:</strong><br>
-      <a href="${process.env.SITE_URL || 'https://pictureperfecttv.repl.co'}/booking-confirmation?id=${booking.id}" style="color: #2563eb;">
-        Click here to view your booking confirmation
-      </a>
-    </p>
-  </div>
-
-  <div class="footer">
-    <p><strong>Business Hours:</strong><br>Monday-Friday: 6:30PM-10:30PM<br>Saturday-Sunday: 11AM-7PM</p>
-    <p>Questions? Contact us at 404-702-4748 or pptvinstall@gmail.com</p>
-    <p>© ${new Date().getFullYear()} Picture Perfect TV Install</p>
-  </div>
 </body>
 </html>`;
-
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: data.email,
-        subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
-        text: `PICTURE PERFECT TV INSTALL
-Professional TV & Smart Home Installation
-
-BOOKING CONFIRMATION
--------------------
-Thank you for choosing Picture Perfect TV Install!
-
-APPOINTMENT DATE & TIME
-----------------------
-${formattedDate} at ${formattedTime}
-
-SELECTED SERVICES
-----------------
-${services.join('\n')}
-
-DETAILED PRICE BREAKDOWN
------------------------
-${serviceBreakdown.map(section => 
-  `# ${section.title}
-${section.items.map(item => `  • ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
-).join('\n\n')}
-
-PAYMENT SUMMARY
---------------
-Total Amount: ${formatPrice(price)}
-
-IMPORTANT: Payment is due in full at the time of installation.
-We accept cash, credit cards, Venmo, Cash App, and Zelle.
-
-INSTALLATION LOCATION
--------------------
-${data.streetAddress}
-${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
-
-YOUR INFORMATION
---------------
-Name: ${data.name}
-Email: ${data.email}
-Phone: ${data.phone}
-
-${data.notes ? `YOUR NOTES\n---------\n${data.notes}\n\n` : ''}
-
-WHAT'S NEXT?
------------
-• Our technician will call you before your appointment to confirm details.
-• Please ensure the installation area is accessible and cleared of obstructions.
-• Have all your equipment (TV, devices, mounts if provided by you) available on site.
-• Add this appointment to your calendar using the attached calendar invite.
-
-QUESTIONS?
----------
-Contact us at 404-702-4748 or pptvinstall@gmail.com
-
-Business Hours:
-Monday-Friday: 6:30PM-10:30PM
-Saturday-Sunday: 11AM-7PM
-
-© ${new Date().getFullYear()} Picture Perfect TV Install`,
-        html: htmlTemplate,
-        icalEvent: {
-          filename: 'installation-appointment.ics',
-          method: 'REQUEST',
-          content: iCalEvent
-        }
-      });
-
-      res.json(booking);
-    } catch (error) {
-      console.error('Booking error:', error);
-      // Provide more detailed error information
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      // Check if it's a database schema error
-      if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
-        console.error('Database schema error. Please run migrations to update the schema.');
-      }
-
-      res.status(400).json({ 
-        error: "Invalid booking data", 
-        details: process.env.NODE_ENV === 'development' ? errorMessage : "Server encountered an error processing your booking."
-      });
-    }
-  });
+  }
 
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
