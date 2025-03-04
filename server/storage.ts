@@ -13,6 +13,7 @@ export interface IStorage {
   getAllBookings(): Promise<Booking[]>;
   getBookingsByDate(date: string): Promise<Booking[]>;
   updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking>;
+  deleteBooking(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -66,6 +67,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
     return updatedBooking;
+  }
+
+  async deleteBooking(id: number): Promise<void> {
+    await db
+      .delete(bookings)
+      .where(eq(bookings.id, id));
   }
 }
 
