@@ -180,18 +180,6 @@ export function PriceCalculator({ tvs, smartHome, distance, onUpdate }: PriceCal
             <span>Total</span>
             <span>${pricing.total}</span>
           </div>
-
-          <div className="mt-4 bg-muted/50 p-4 rounded-lg">
-            <div className="text-sm">
-              <div className="flex justify-between">
-                <span>Required Deposit</span>
-                <span>${pricing.deposit}</span>
-              </div>
-              <p className="text-muted-foreground mt-2">
-                Deposit is required to secure your booking and will be deducted from the total amount.
-              </p>
-            </div>
-          </div>
         </motion.div>
       </CardContent>
     </Card>

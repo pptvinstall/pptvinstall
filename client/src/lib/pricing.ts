@@ -123,7 +123,6 @@ export function calculatePrice(options: ServiceOptions): {
     additionalServices,
     travelFee,
     discounts,
-    deposit,
     total
   };
 }
