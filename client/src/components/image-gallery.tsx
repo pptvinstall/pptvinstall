@@ -12,37 +12,37 @@ const installations = [
     id: 1,
     title: "Above Fireplace Mount",
     description: "Clean installation with concealed wiring",
-    image: "/assets/IMG_1878.jpeg"
+    image: "/attached_assets/IMG_1878.jpeg"
   },
   {
     id: 2,
     title: "Custom TV Installation",
     description: "Perfect viewing angle setup",
-    image: "/assets/IMG_1876.jpeg"
+    image: "/attached_assets/IMG_1876.jpeg"
   },
   {
     id: 3,
     title: "Modern Living Room Setup",
     description: "Sleek and professional mounting",
-    image: "/assets/IMG_4282.jpeg"
+    image: "/attached_assets/IMG_4282.jpeg"
   },
   {
     id: 4,
     title: "Entertainment Center",
     description: "Complete home theater installation",
-    image: "/assets/IMG_1336.jpeg"
+    image: "/attached_assets/IMG_1336.jpeg"
   },
   {
     id: 5,
     title: "Smart Home Integration",
     description: "TV and smart device setup",
-    image: "/assets/IMG_1317.jpeg"
+    image: "/attached_assets/IMG_1317.jpeg"
   },
   {
     id: 6,
     title: "Premium Installation",
     description: "High-end mounting solution",
-    image: "/assets/IMG_1154.jpeg"
+    image: "/attached_assets/IMG_1154.jpeg"
   }
 ];
 
