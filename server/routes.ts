@@ -402,19 +402,10 @@ Questions? Call 404-702-4748`;
       const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
 
-      // Create booking object with enhanced data for database
-      const enhancedBookingData = {
-        ...data,
-        detailedServices: JSON.stringify({
-          services,
-          serviceBreakdown
-        }),
-        totalPrice: price.toString(),
-        appointmentTime: formattedTime
-      };
+      // We already created the booking above, so we don't need to create it again.
+      // The booking variable is already defined earlier in this function.
       
-      // Store the booking with all enhanced data
-      const booking = await storage.createBooking(enhancedBookingData);
+      // The HTML template uses the booking object that was created earlier
       
       const htmlTemplate = `
 <!DOCTYPE html>
