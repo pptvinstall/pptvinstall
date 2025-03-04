@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { PricingConfig, PricingRule } from "@shared/schema";
 
 export function PricingManager() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [editingPrice, setEditingPrice] = useState<PricingConfig | null>(null);
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null);
 
@@ -91,6 +90,22 @@ export function PricingManager() {
     return <LoadingSpinner />;
   }
 
+  const handlePriceEdit = (price: PricingConfig) => {
+    setEditingPrice({
+      ...price,
+      basePrice: parseFloat(price.basePrice.toString())
+    });
+  };
+
+  const handlePriceSave = () => {
+    if (editingPrice) {
+      updatePriceMutation.mutate({
+        ...editingPrice,
+        basePrice: editingPrice.basePrice.toString()
+      });
+    }
+  };
+
   return (
     <div className="space-y-8">
       <Card>
@@ -144,16 +159,17 @@ export function PricingManager() {
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => updatePriceMutation.mutate(editingPrice)}
+                          onClick={handlePriceSave}
+                          disabled={updatePriceMutation.isPending}
                         >
-                          Save
+                          {updatePriceMutation.isPending ? "Saving..." : "Save"}
                         </Button>
                       </div>
                     ) : (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setEditingPrice(price)}
+                        onClick={() => handlePriceEdit(price)}
                       >
                         Edit
                       </Button>
@@ -166,6 +182,7 @@ export function PricingManager() {
         </CardContent>
       </Card>
 
+      {/* Pricing Rules Section */}
       <Card>
         <CardHeader>
           <CardTitle>Pricing Rules</CardTitle>
@@ -220,8 +237,9 @@ export function PricingManager() {
                         <Button
                           size="sm"
                           onClick={() => updateRuleMutation.mutate(editingRule)}
+                          disabled={updateRuleMutation.isPending}
                         >
-                          Save
+                          {updateRuleMutation.isPending ? "Saving..." : "Save"}
                         </Button>
                       </div>
                     ) : (
