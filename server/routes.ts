@@ -41,9 +41,13 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
       const isLarge = part.toLowerCase().includes('56"') || part.toLowerCase().includes('larger');
       const hasOutlet = part.toLowerCase().includes('outlet');
+      const hasFireplace = part.toLowerCase().includes('fireplace');
+      const serviceDescription = `TV ${count} (${isLarge ? '56" or larger' : '32"-55"'})${hasFireplace ? ' - Above Fireplace' : ''}`;
+
+      services.push(serviceDescription);
 
       serviceBreakdown.push({
-        title: `TV ${serviceBreakdown.length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`,
+        title: serviceDescription,
         items: [
           {
             label: 'Base Installation (standard)',
@@ -57,15 +61,18 @@ function parseServiceType(serviceType: string): { services: string[], price: num
           label: 'Outlet Relocation',
           price: 100
         });
+        totalPrice += 100;
       }
 
       totalPrice += 100; // Base installation
-      if (hasOutlet) totalPrice += 100; // Outlet relocation
     }
 
     if (part.includes('Floodlight')) {
+      const serviceDescription = 'Floodlight Camera';
+      services.push(serviceDescription);
+
       serviceBreakdown.push({
-        title: 'Floodlight',
+        title: serviceDescription,
         items: [
           {
             label: 'Base Installation (1 unit)',
@@ -74,7 +81,6 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         ]
       });
       totalPrice += 100;
-      services.push('Floodlight Installation');
     }
   }
 
@@ -173,16 +179,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formattedTime = dateTime.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: 'numeric',
-        hour12: true,
-        second: 'numeric' // Added to show seconds for more precise time
+        hour12: true
       });
 
       // Parse services and calculate price
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
 
-      // Generate calendar event
-      const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
-      const eventDescription = `Installation appointment for: ${services.join(', ')}`;
+      // Generate calendar event with detailed description
+      const eventSummary = `TV Installation - Picture Perfect`;
+      const eventDescription = `
+Installation Details:
+${services.join('\n')}
+
+Total Price: ${formatPrice(price)}
+Deposit Required: ${formatPrice(75)}
+
+Location: ${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}
+Contact: ${data.phone}
+
+Installation Notes:
+${data.notes || 'No additional notes'}`;
+
       const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
 
@@ -210,11 +227,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     .subsection {
       margin-bottom: 16px;
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
     }
     .subsection-title {
       font-size: 16px;
       font-weight: 500;
       margin-bottom: 8px;
+      color: #2563eb;
     }
     .price-row {
       display: flex;
@@ -255,17 +276,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
 
   <div class="section">
-    <div class="section-title">Contact Information</div>
-    <div>${data.name}</div>
-    <div>${data.email}</div>
-    <div>${data.phone}</div>
-  </div>
-
-  <div class="section">
     <div class="section-title">Installation Address</div>
     <div>${data.streetAddress}</div>
     ${data.addressLine2 ? `<div>${data.addressLine2}</div>` : ''}
     <div>${data.city}, ${data.state} ${data.zipCode}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contact Information</div>
+    <div>${data.name}</div>
+    <div>${data.email}</div>
+    <div>${data.phone}</div>
   </div>
 
   <div class="section">
@@ -296,11 +317,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Deposit is required to secure your booking and will be deducted from the total amount.
     </div>
   </div>
-</body>
-</html>
-`;
 
-      const textEmail = `
+  ${data.notes ? `
+  <div class="section">
+    <div class="section-title">Additional Notes</div>
+    <div>${data.notes}</div>
+  </div>
+  ` : ''}
+</body>
+</html>`;
+
+      await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: data.email,
+        subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
+        text: `
 Selected Services
 ----------------
 ${services.join('\n')}
@@ -333,13 +364,7 @@ Total: ${formatPrice(price)}
 Required Deposit: ${formatPrice(75)}
 
 Note: Deposit is required to secure your booking and will be deducted from the total amount.
-`;
-
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: data.email,
-        subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
-        text: textEmail,
+`,
         html: htmlTemplate,
         icalEvent: {
           filename: 'installation-appointment.ics',
