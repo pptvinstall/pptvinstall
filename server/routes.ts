@@ -897,7 +897,7 @@ Saturday-Sunday: 11AM-7PM
       }
 
       res.json(booking);
-        } catch (error) {
+    } catch (error) {
       console.error('Error cancelling booking:', error);
       res.status(400).json({ error: "Failed to cancel booking" });
     }
