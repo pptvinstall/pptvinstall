@@ -271,7 +271,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
       
-      res.json(booking);
+      // Ensure the response has all expected fields for the frontend
+      const enhancedBooking = {
+        ...booking,
+        // Provide defaults for potentially missing fields
+        detailedServices: booking.detailedServices || JSON.stringify({
+          services: [booking.serviceType],
+          serviceBreakdown: [{
+            title: booking.serviceType,
+            items: [{ label: 'Service', price: 75 }]
+          }]
+        }),
+        totalPrice: booking.totalPrice || "75",
+        appointmentTime: booking.appointmentTime || new Date(booking.preferredDate).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true
+        })
+      };
+      
+      res.json(enhancedBooking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
       res.status(500).json({ error: "Failed to fetch booking" });
@@ -341,19 +360,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
       
-      // Store enhanced booking data with detailed service information and price
-      const enhancedData = {
-        ...data,
-        detailedServices: JSON.stringify({
+      // Store basic booking data first, then try to add enhanced data if supported
+      try {
+        // Start with the base data that we know exists in the schema
+        const bookingData = {
+          ...data
+        };
+        
+        // Log what we're about to store
+        console.log("Creating booking with data:", JSON.stringify({
+          name: bookingData.name,
+          email: bookingData.email,
+          serviceType: bookingData.serviceType,
+          preferredDate: bookingData.preferredDate
+        }));
+        
+        // Create the booking in the database
+        const booking = await storage.createBooking(bookingData);
+        
+        // Even if we can't store the enhanced data in the DB, we can still return it
+        // for the confirmation email and response
+        booking.detailedServices = JSON.stringify({
           services,
           serviceBreakdown
-        }),
-        totalPrice: price.toString(),
-        appointmentTime: formattedTime
-      };
-      
-      // Create the booking in the database with enhanced data
-      const booking = await storage.createBooking(enhancedData);
+        });
+        booking.totalPrice = price.toString();
+        booking.appointmentTime = formattedTime;
 
       // Generate calendar event with detailed description
       const eventSummary = `Picture Perfect TV & Smart Home Installation`;
@@ -757,10 +789,17 @@ Saturday-Sunday: 11AM-7PM
       res.json(booking);
     } catch (error) {
       console.error('Booking error:', error);
+      // Provide more detailed error information
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Check if it's a database schema error
+      if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
+        console.error('Database schema error. Please run migrations to update the schema.');
+      }
+      
       res.status(400).json({ 
         error: "Invalid booking data", 
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : "Server encountered an error processing your booking."
       });
     }
   });

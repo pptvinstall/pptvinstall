@@ -45,6 +45,18 @@ export default function BookingConfirmation() {
     );
   }
 
+  // Handle missing fields gracefully
+  const serviceType = booking.serviceType || "N/A";
+  const preferredDate = booking.preferredDate || "N/A";
+  const appointmentTime = booking.appointmentTime || "To be confirmed";
+  const streetAddress = booking.streetAddress || "N/A";
+  const city = booking.city || "N/A";
+  const state = booking.state || "N/A";
+  const zipCode = booking.zipCode || "N/A";
+  const email = booking.email || "N/A";
+  const name = booking.name || "Guest"; //Added default value for name
+
+
   // Rest of your component code that uses the booking data
   return (
     <div className="container max-w-4xl mx-auto py-12 px-4">
@@ -55,7 +67,7 @@ export default function BookingConfirmation() {
           </div>
           <CardTitle className="text-3xl">Booking Confirmed!</CardTitle>
           <CardDescription className="text-lg">
-            Thank you for booking with us, {booking.name}
+            Thank you for booking with us, {name}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,20 +76,20 @@ export default function BookingConfirmation() {
               <h3 className="font-medium">Booking Details:</h3>
               <div className="grid grid-cols-2 gap-1 text-sm">
                 <div className="text-muted-foreground">Service:</div>
-                <div>{booking.serviceType}</div>
+                <div>{serviceType}</div>
                 <div className="text-muted-foreground">Date:</div>
-                <div>{booking.preferredDate}</div>
+                <div>{preferredDate}</div>
                 <div className="text-muted-foreground">Time:</div>
-                <div>{booking.appointmentTime || "To be confirmed"}</div>
+                <div>{appointmentTime}</div>
                 <div className="text-muted-foreground">Address:</div>
-                <div>{booking.streetAddress}, {booking.city}, {booking.state} {booking.zipCode}</div>
+                <div>{streetAddress}, {city}, {state} {zipCode}</div>
               </div>
             </div>
             <div className="pt-4">
               <div className="grid gap-2">
                 <h3 className="font-medium">What happens next?</h3>
                 <p className="text-sm text-muted-foreground">
-                  We've sent a confirmation email to {booking.email} with all the details of your booking. 
+                  We've sent a confirmation email to {email} with all the details of your booking. 
                   Our team will contact you within 24 hours to confirm your appointment time.
                 </p>
               </div>
