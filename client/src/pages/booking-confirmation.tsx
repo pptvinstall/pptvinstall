@@ -173,8 +173,8 @@ export default function BookingConfirmation() {
                                 {item.label}
                               </span>
                               <span className={
-                                item.isDiscount
-                                  ? "text-green-600 font-medium"
+                                item.isDiscount 
+                                  ? "text-green-600 font-medium" 
                                   : "font-medium"
                               }>
                                 {formatPrice(item.price)}
@@ -189,9 +189,6 @@ export default function BookingConfirmation() {
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total Amount:</span>
                       <span>{formatPrice(booking.totalPrice)}</span>
-                    </div>
-                    <div className="mt-2 text-sm text-gray-600">
-                      A deposit of {formatPrice(75)} is required to secure your booking
                     </div>
                   </div>
                 </div>

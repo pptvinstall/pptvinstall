@@ -46,15 +46,19 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         title: "Smart Home Installation",
         items: [
           {
-            label: `Base Installation (${count} ${count === 1 ? 'unit' : 'units'})`,
+            label: `Smart Device Installation (${count} ${count === 1 ? 'unit' : 'units'})`,
             price: 75 * count
+          },
+          {
+            label: 'Service Fee',
+            price: 25 * count
           }
         ]
       };
 
       services.push(`Smart Device Installation (${count} ${count === 1 ? 'unit' : 'units'})`);
       serviceBreakdown.push(smartDevicesSection);
-      totalPrice += 75 * count;
+      totalPrice += (75 + 25) * count; // Base price + service fee per unit
     }
 
     // Handle Smart Doorbell as a separate category
@@ -420,7 +424,6 @@ ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join(
 ).join('\n\n')}
 
 Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
 
 Appointment
 ----------
@@ -440,8 +443,6 @@ ${data.phone}
 ${data.notes ? `Additional Notes
 --------------
 ${data.notes}\n\n` : ''}
-
-Note: Deposit is required to secure your booking and will be deducted from the total amount.
 `;
   }
 
@@ -501,16 +502,6 @@ Note: Deposit is required to secure your booking and will be deducted from the t
       border-radius: 8px;
       border: 1px solid #bfdbfe;
     }
-    .deposit-note {
-      margin-top: 16px;
-      color: #666;
-      font-size: 14px;
-      font-style: italic;
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px dashed #94a3b8;
-    }
   </style>
 </head>
 <body>
@@ -531,10 +522,6 @@ Note: Deposit is required to secure your booking and will be deducted from the t
     <div class="total-row price-row">
       <span>Total</span>
       <span>${formatPrice(price)}</span>
-    </div>
-
-    <div class="deposit-note">
-      A deposit of ${formatPrice(75)} is required to secure your booking and will be deducted from the total amount.
     </div>
   </div>
 
@@ -589,7 +576,6 @@ ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join(
 ).join('\n\n')}
 
 Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
 
 Installation Address:
 ${data.streetAddress}
@@ -850,7 +836,7 @@ Questions? Call 404-702-4748`;
       const totalRevenue = Object.values(revenueByMonth).reduce((sum, val) => sum + val, 0);
 
       // Get current month's revenue
-      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+      const currentMonth = new Date().toLocaleDateString('default', { month: 'long', year: 'numeric' });
       const currentMonthRevenue = revenueByMonth[currentMonth] || 0;
 
       // Get current year's revenue
