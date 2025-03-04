@@ -183,11 +183,28 @@ export class Storage {
   async updatePrice(id: number, data: Partial<PricingConfig>): Promise<PricingConfig> {
     try {
       console.log(`Updating price config ${id} with:`, data);
+
+      // Ensure basePrice is stored as a string
+      const updateData = {
+        ...data,
+        basePrice: data.basePrice?.toString(),
+        updatedAt: new Date(),
+        updatedBy: 'admin'
+      };
+
+      console.log("Prepared update data:", updateData);
+
       const [updated] = await db
         .update(pricingConfig)
-        .set(data)
+        .set(updateData)
         .where(eq(pricingConfig.id, id))
         .returning();
+
+      if (!updated) {
+        throw new Error(`Failed to update price config with ID ${id}`);
+      }
+
+      console.log("Successfully updated price:", updated);
       return updated;
     } catch (error) {
       console.error("Error updating price config:", error);

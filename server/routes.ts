@@ -869,9 +869,9 @@ Questions? Call 404-702-4748`;
       await storage.createPriceHistory({
         serviceType: currentPrice.serviceType,
         previousPrice: currentPrice.basePrice,
-        newPrice: req.body.basePrice,
-        changedBy: req.body.updatedBy || 'admin',
-        notes: req.body.notes || 'Price updated through admin panel'
+        newPrice: req.body.basePrice.toString(),
+        changedBy: 'admin',
+        notes: 'Price updated through admin panel'
       });
 
       console.log("Price updated successfully:", updatedPrice);
@@ -882,8 +882,7 @@ Questions? Call 404-702-4748`;
     }
   });
 
-  app.put("/api/admin/pricing/rules/:id", async (req, res) => {
-    try {
+  app.put("/api/admin/pricing/rules/:id", async (req, res) => {    try {
       const { id } = req.params;
       const ruleId = parseInt(id);
       const updatedRule = await storage.updatePricingRule(ruleId, req.body);

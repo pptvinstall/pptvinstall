@@ -13,8 +13,7 @@ export function PricingManager() {
   const { toast } = useToast();
   const [editingPrice, setEditingPrice] = useState<PricingConfig | null>(null);
 
-  // Fetch current pricing configuration
-  const { data: prices = [], isLoading: pricesLoading } = useQuery({
+  const { data: prices = [], isLoading } = useQuery({
     queryKey: ['/api/admin/pricing'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/pricing");
@@ -22,17 +21,21 @@ export function PricingManager() {
         throw new Error('Failed to fetch prices');
       }
       const data = await response.json();
+      console.log("Fetched prices:", data);
       return data as PricingConfig[];
     }
   });
 
-  // Update price mutation
   const updatePriceMutation = useMutation({
-    mutationFn: async (data: Partial<PricingConfig>) => {
-      console.log("Updating price with data:", data);
-      const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, data);
+    mutationFn: async (price: PricingConfig) => {
+      console.log("Sending price update:", price);
+      const response = await apiRequest("PUT", `/api/admin/pricing/${price.id}`, {
+        basePrice: price.basePrice,
+        updatedBy: 'admin'
+      });
       if (!response.ok) {
-        throw new Error('Failed to update price');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update price');
       }
       return response.json();
     },
@@ -40,34 +43,32 @@ export function PricingManager() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pricing'] });
       toast({
         title: "Price updated",
-        description: "The service price has been updated successfully.",
+        description: "The service price has been successfully updated.",
       });
       setEditingPrice(null);
     },
     onError: (error) => {
+      console.error("Price update error:", error);
       toast({
         title: "Failed to update price",
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   });
 
   const handlePriceEdit = (price: PricingConfig) => {
-    console.log("Editing price:", price);
-    setEditingPrice({
-      ...price,
-      basePrice: parseFloat(price.basePrice.toString())
-    });
+    console.log("Starting to edit price:", price);
+    setEditingPrice({ ...price });
   };
 
-  const handlePriceChange = (value: string) => {
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (editingPrice) {
-      const numericValue = parseFloat(value) || 0;
-      console.log("Changing price to:", numericValue);
+      const newPrice = parseFloat(e.target.value) || 0;
+      console.log("New price value:", newPrice);
       setEditingPrice({
         ...editingPrice,
-        basePrice: numericValue
+        basePrice: newPrice.toString()
       });
     }
   };
@@ -79,7 +80,7 @@ export function PricingManager() {
     }
   };
 
-  if (pricesLoading) {
+  if (isLoading) {
     return <LoadingSpinner />;
   }
 
@@ -111,11 +112,11 @@ export function PricingManager() {
                         min="0"
                         step="0.01"
                         value={editingPrice.basePrice}
-                        onChange={(e) => handlePriceChange(e.target.value)}
-                        className="w-24"
+                        onChange={handlePriceChange}
+                        className="w-32"
                       />
                     ) : (
-                      `$${parseFloat(price.basePrice.toString()).toFixed(2)}`
+                      `$${parseFloat(price.basePrice).toFixed(2)}`
                     )}
                   </TableCell>
                   <TableCell>
@@ -127,7 +128,7 @@ export function PricingManager() {
                   <TableCell className="text-right">
                     <div className="space-x-2">
                       {editingPrice?.id === price.id ? (
-                        <div className="space-x-2">
+                        <>
                           <Button
                             variant="outline"
                             size="sm"
@@ -142,7 +143,7 @@ export function PricingManager() {
                           >
                             {updatePriceMutation.isPending ? "Saving..." : "Save"}
                           </Button>
-                        </div>
+                        </>
                       ) : (
                         <Button
                           variant="outline"
