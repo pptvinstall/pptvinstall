@@ -85,16 +85,13 @@ export default function BookingConfirmation() {
     );
   }
 
-  // Parse service details
+  // Parse service details - improved error handling
   let parsedServices;
   try {
-    parsedServices = typeof booking.detailedServices === 'string'
-      ? JSON.parse(booking.detailedServices)
-      : booking.detailedServices;
-    console.log("Parsed services:", parsedServices);
+    parsedServices = Array.isArray(booking.detailedServices) ? booking.detailedServices : JSON.parse(booking.detailedServices || '[]');
   } catch (e) {
     console.error("Error parsing detailed services:", e);
-    parsedServices = null;
+    parsedServices = []; // Default to empty array if parsing fails
   }
 
   return (
@@ -158,25 +155,24 @@ export default function BookingConfirmation() {
                 </div>
               </div>
 
-              {/* Services breakdown */}
-              {parsedServices && parsedServices.serviceBreakdown && (
+              {/* Services breakdown - improved rendering */}
+              {parsedServices && parsedServices.length > 0 && (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
-                  {parsedServices.serviceBreakdown.map((section: any, i: number) => (
+                  {parsedServices.map((section: any, i: number) => (
                     <div key={i} className="mb-6 last:mb-0">
                       <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <h4 className="font-medium text-blue-700 mb-3">{section.title}</h4>
+                        <h4 className="font-medium text-blue-700 mb-3">{section.title || "Service Item"}</h4>
                         <div className="space-y-2">
                           {section.items && section.items.map((item: any, j: number) => (
                             <div key={j} className="flex justify-between text-sm">
                               <span className={item.isDiscount ? "text-green-600" : ""}>
                                 {item.label}
+                                {item.note && (
+                                  <span className="ml-1 text-gray-400 text-xs">(Note: {item.note})</span>
+                                )}
                               </span>
-                              <span className={
-                                item.isDiscount 
-                                  ? "text-green-600 font-medium" 
-                                  : "font-medium"
-                              }>
+                              <span className={item.isDiscount ? "text-green-600 font-medium" : "font-medium"}>
                                 {formatPrice(item.price)}
                               </span>
                             </div>
@@ -193,6 +189,7 @@ export default function BookingConfirmation() {
                   </div>
                 </div>
               )}
+
 
               {/* Customer details */}
               <div>
