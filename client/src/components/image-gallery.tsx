@@ -6,6 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const installations = [
   {
@@ -47,16 +49,32 @@ const installations = [
 ];
 
 export function ImageGallery() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === installations.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const previousImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? installations.length - 1 : prev - 1
+    );
+  };
 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {installations.map((install) => (
+        {installations.map((install, index) => (
           <Card 
             key={install.id} 
             className="overflow-hidden cursor-pointer transform hover:scale-105 transition-transform duration-200"
-            onClick={() => setSelectedImage(install.image)}
+            onClick={() => {
+              setCurrentImageIndex(index);
+              setIsOpen(true);
+            }}
           >
             <div className="aspect-video relative">
               <img
@@ -73,20 +91,50 @@ export function ImageGallery() {
         ))}
       </div>
 
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Installation Preview</DialogTitle>
+            <DialogTitle>
+              {installations[currentImageIndex].title}
+            </DialogTitle>
           </DialogHeader>
-          {selectedImage && (
+          <div className="relative">
             <div className="relative aspect-video">
               <img
-                src={selectedImage}
-                alt="Installation preview"
+                src={installations[currentImageIndex].image}
+                alt={installations[currentImageIndex].title}
                 className="object-contain w-full h-full"
               />
             </div>
-          )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                previousImage();
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              {currentImageIndex + 1} / {installations.length}
+            </div>
+          </div>
+          <p className="text-center text-gray-600 mt-2">
+            {installations[currentImageIndex].description}
+          </p>
         </DialogContent>
       </Dialog>
     </>
