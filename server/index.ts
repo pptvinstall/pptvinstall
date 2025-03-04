@@ -4,7 +4,17 @@ import { setupVite, serveStatic, log } from "./vite";
 import compression from 'compression';
 
 const app = express();
-app.use(compression()); // Add compression for better performance
+// Compress all responses for better performance
+app.use(compression({ 
+  level: 6, // Balance between compression speed and ratio
+  threshold: 0, // Compress all responses
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

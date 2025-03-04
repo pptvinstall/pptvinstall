@@ -10,12 +10,24 @@ export default function BookingConfirmation() {
 
   // Redirect to home if accessed directly without a booking
   useEffect(() => {
-    const hasBookingConfirmation = sessionStorage.getItem("bookingConfirmed");
-    if (!hasBookingConfirmation) {
-      setLocation("/");
+    try {
+      const hasBookingConfirmation = sessionStorage.getItem("bookingConfirmed");
+      if (!hasBookingConfirmation) {
+        setLocation("/");
+      }
+    } catch (error) {
+      console.error("Error checking booking confirmation:", error);
+      // Don't redirect if we can't check - this prevents blank screen
     }
-    // Clear the confirmation flag
-    return () => sessionStorage.removeItem("bookingConfirmed");
+    
+    // Clear the confirmation flag on component unmount
+    return () => {
+      try {
+        sessionStorage.removeItem("bookingConfirmed");
+      } catch (error) {
+        console.error("Error clearing booking confirmation:", error);
+      }
+    };
   }, [setLocation]);
 
   return (
@@ -49,10 +61,13 @@ export default function BookingConfirmation() {
                     <p className="text-brand-blue-700 font-medium">We've sent a detailed confirmation to your email with:</p>
                     <ul className="list-disc pl-5 text-gray-700 space-y-1">
                       <li>Complete price breakdown</li>
-                      <li>Service details</li>
+                      <li>Selected service details (including Smart Home services)</li>
                       <li>Calendar invite for your appointment</li>
                     </ul>
                     <p className="mt-2 text-gray-600 italic">Please check your inbox (and spam folder if needed)</p>
+                    <p className="mt-4 p-2 bg-yellow-50 text-yellow-700 rounded border border-yellow-200">
+                      <span className="font-semibold">Important:</span> Our technician will call you before your appointment to confirm all details.
+                    </p>
                   </div>
                 </div>
 

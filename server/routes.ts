@@ -36,15 +36,18 @@ function parseServiceType(serviceType: string): { services: string[], price: num
   const serviceBreakdown = [];
 
   for (const part of serviceParts) {
-    if (part.includes('TV')) {
-      const tvMatch = part.match(/(\d+)\s*TV/);
+    // Trim the part to ensure consistent detection
+    const trimmedPart = part.trim();
+    
+    if (trimmedPart.includes('TV')) {
+      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
-      const isLarge = part.toLowerCase().includes('56"') || part.toLowerCase().includes('larger');
-      const hasOutlet = part.toLowerCase().includes('outlet');
-      const hasFireplace = part.toLowerCase().includes('fireplace');
-      const mountType = part.toLowerCase().includes('fixed') ? 'Fixed Mount' :
-                       part.toLowerCase().includes('tilt') ? 'Tilt Mount' :
-                       part.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
+      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
+      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
+      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
+      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
+                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
+                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
 
       // Create service title
       const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
@@ -92,10 +95,10 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100; // Base installation
     }
     
-    // Smart Home Services parsing
-    if (part.includes('Smart Doorbell')) {
+    // Smart Home Services parsing - note the use of trimmedPart
+    else if (trimmedPart.includes('Smart Doorbell')) {
       const title = 'Smart Doorbell';
-      const hasBrick = part.toLowerCase().includes('brick');
+      const hasBrick = trimmedPart.toLowerCase().includes('brick');
       services.push(title);
       
       const items = [
@@ -117,7 +120,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75;
     }
 
-    if (part.includes('Floodlight') || part.toLowerCase().includes('smart floodlight')) {
+    else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
       const title = 'Smart Floodlight';
       services.push(title);
 
@@ -133,8 +136,9 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100;
     }
 
-    if ((part.includes('Smart Camera') || part.toLowerCase().includes('camera')) && !part.includes('Floodlight') && !part.toLowerCase().includes('floodlight')) {
-      const heightMatch = part.match(/height-(\d+)/);
+    else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
+             !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
+      const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
       const title = 'Smart Camera';
       services.push(title);
@@ -158,6 +162,25 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
+    
+    // Handle "Smart Home Services" general selection
+    else if (trimmedPart.toLowerCase().includes('smart home service') || 
+             trimmedPart.toLowerCase().includes('smart home installation')) {
+      // This catches any smart home services that weren't caught by specific categories
+      const title = 'Smart Home Installation';
+      services.push(title);
+      
+      serviceBreakdown.push({
+        title,
+        items: [
+          {
+            label: 'Smart Home Base Installation',
+            price: 75
+          }
+        ]
+      });
+      totalPrice += 75;
+    }
   }
 
   // Apply multi-TV discount if applicable
@@ -174,6 +197,21 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       ]
     });
     totalPrice -= 10;
+  }
+
+  // Make sure we have at least one service
+  if (services.length === 0) {
+    services.push('Standard Installation');
+    serviceBreakdown.push({
+      title: 'Standard Installation',
+      items: [
+        {
+          label: 'Base Service',
+          price: 75
+        }
+      ]
+    });
+    totalPrice += 75;
   }
 
   return { services, price: totalPrice, serviceBreakdown };
@@ -249,6 +287,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/booking", async (req, res) => {
     try {
+      // Log the incoming request
+      console.log("Received booking request:", JSON.stringify({
+        name: req.body.name,
+        email: req.body.email,
+        serviceType: req.body.serviceType,
+        preferredDate: req.body.preferredDate
+      }));
+      
       const data = bookingSchema.parse(req.body);
       const booking = await storage.createBooking(data);
 
