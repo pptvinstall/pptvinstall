@@ -156,7 +156,7 @@ export default function BookingConfirmation() {
               </div>
 
               {/* Services breakdown - improved rendering */}
-              {parsedServices && parsedServices.length > 0 && (
+              {parsedServices && parsedServices.length > 0 ? (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
                   {parsedServices.map((section: any, i: number) => (
@@ -185,6 +185,16 @@ export default function BookingConfirmation() {
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total Amount:</span>
                       <span>{formatPrice(booking.totalPrice)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span>{booking.serviceType}</span>
+                      <span className="font-medium">{formatPrice(booking.totalPrice)}</span>
                     </div>
                   </div>
                 </div>
