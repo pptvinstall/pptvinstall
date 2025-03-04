@@ -21,8 +21,11 @@ export const bookings = pgTable("bookings", {
   city: varchar("city", { length: 100 }).notNull(),
   state: varchar("state", { length: 2 }).notNull(),
   zipCode: varchar("zip_code", { length: 5 }).notNull(),
-  serviceType: varchar("service_type", { length: 50 }).notNull(),
+  serviceType: varchar("service_type", { length: 255 }).notNull(),
+  detailedServices: text("detailed_services"),  // JSON string of detailed services
+  totalPrice: varchar("total_price", { length: 20 }), // Store calculated price
   preferredDate: varchar("preferred_date", { length: 50 }).notNull(),
+  appointmentTime: varchar("appointment_time", { length: 20 }), // Store time separately
   notes: text("notes"),
   status: varchar("status", { length: 20 }).default('active'),
   cancellationReason: text("cancellation_reason"),

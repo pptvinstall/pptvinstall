@@ -1,149 +1,183 @@
 import { useEffect } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useSearchParams } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+
 
 export default function BookingConfirmation() {
   const [, setLocation] = useLocation();
+  const [params] = useSearchParams();
+  const bookingId = params.get('id');
+  const { data: booking, isLoading, error } = useQuery({
+    queryKey: ['booking', bookingId],
+    queryFn: async () => {
+      if (!bookingId) return null;
 
-  // Redirect to home if accessed directly without a booking
-  useEffect(() => {
-    try {
-      const hasBookingConfirmation = sessionStorage.getItem("bookingConfirmed");
-      if (!hasBookingConfirmation) {
-        setLocation("/");
+      const response = await fetch(`/api/bookings/${bookingId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch booking details');
       }
-    } catch (error) {
-      console.error("Error checking booking confirmation:", error);
-      // Don't redirect if we can't check - this prevents blank screen
+      return response.json();
+    },
+    enabled: !!bookingId
+  });
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Error Loading Booking Details</h1>
+        <p className="mb-6">We encountered an issue retrieving your booking information.</p>
+        <Link to="/" className="inline-flex items-center">
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Return to Homepage
+        </Link>
+      </div>
+    );
+  }
+
+  // Parse detailed services if available
+  let services = [];
+  let serviceBreakdown = [];
+  try {
+    if (booking.detailedServices) {
+      const detailedData = JSON.parse(booking.detailedServices);
+      services = detailedData.services || [];
+      serviceBreakdown = detailedData.serviceBreakdown || [];
     }
-    
-    // Clear the confirmation flag on component unmount
-    return () => {
-      try {
-        sessionStorage.removeItem("bookingConfirmed");
-      } catch (error) {
-        console.error("Error clearing booking confirmation:", error);
-      }
-    };
-  }, [setLocation]);
+  } catch (e) {
+    console.error("Error parsing detailed services:", e);
+    // Fallback to service type if detailed services can't be parsed
+    services = [booking.serviceType];
+  }
+
+  // Format date and handle time display
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return "Date not available";
+    }
+  };
+
+  // Use stored appointment time or extract from date
+  const getTime = () => {
+    if (booking.appointmentTime) {
+      return booking.appointmentTime;
+    }
+
+    try {
+      const date = new Date(booking.preferredDate);
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      });
+    } catch (e) {
+      return "Time not available";
+    }
+  };
+
+  // Format price from totalPrice field or default value
+  const getTotalPrice = () => {
+    if (booking.totalPrice) {
+      return `$${parseFloat(booking.totalPrice).toFixed(2)}`;
+    }
+    return "Price not available";
+  };
 
   return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <motion.div
-          className="max-w-2xl mx-auto text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          >
-            <CheckCircle2 className="w-20 h-20 text-primary mx-auto mb-6" />
-          </motion.div>
+    <div className="container max-w-4xl mx-auto py-12 px-4">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">Thank You for Booking!</h1>
+        <p className="text-xl">Your installation has been scheduled.</p>
+      </div>
 
-          <Card className="mb-8">
-            <CardContent className="pt-6">
-              <h1 className="text-3xl font-bold mb-4">Booking Confirmed!</h1>
-              <p className="text-gray-600 mb-6">
-                Thank you for choosing Picture Perfect TV Install. We'll be in touch within 24 hours to confirm your appointment details.
-              </p>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Booking Details</CardTitle>
+          <CardDescription>
+            A confirmation email has been sent to {booking.email}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6">
+            <div>
+              <h3 className="font-medium mb-2">Appointment</h3>
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="font-semibold">{formatDate(booking.preferredDate)}</div>
+                <div>{getTime()}</div>
+              </div>
+            </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="bg-brand-blue-50 rounded-xl p-4 border border-brand-blue-100">
-                  <h2 className="text-lg font-medium text-brand-blue-800 mb-2">Installation Details</h2>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-brand-blue-700 font-medium">We've sent a detailed confirmation to your email with:</p>
-                    <ul className="list-disc pl-5 text-gray-700 space-y-1">
-                      <li>Complete price breakdown</li>
-                      <li>Selected service details (including Smart Home services)</li>
-                      <li>Calendar invite for your appointment</li>
-                    </ul>
-                    <p className="mt-2 text-gray-600 italic">Please check your inbox (and spam folder if needed)</p>
-                    <p className="mt-4 p-2 bg-yellow-50 text-yellow-700 rounded border border-yellow-200">
-                      <span className="font-semibold">Important:</span> Our technician will call you before your appointment to confirm all details.
-                    </p>
+            <div>
+              <h3 className="font-medium mb-2">Service Details</h3>
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                {services.length > 0 ? (
+                  services.map((service, index) => (
+                    <div key={index} className="p-2 bg-background/50 rounded">
+                      {service}
+                    </div>
+                  ))
+                ) : (
+                  <div>{booking.serviceType}</div>
+                )}
+
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex justify-between font-semibold">
+                    <span>Total Price:</span>
+                    <span>{getTotalPrice()}</span>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Selected Services</h3>
-                  <div className="space-y-2">
-                    {booking?.serviceType.split(' + ').length > 0 
-                      ? booking?.serviceType.split(' + ').map((service, index) => (
-                        <div key={index} className="p-3 bg-muted rounded-md flex items-center">
-                          {service.toLowerCase().includes('tv') && (
-                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M20 6H4C2.89543 6 2 6.89543 2 8V16C2 17.1046 2.89543 18 4 18H20C21.1046 18 22 17.1046 22 16V8C22 6.89543 21.1046 6 20 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M8 21H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M12 18V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {(service.toLowerCase().includes('doorbell') || service.toLowerCase().includes('smart doorbell')) && (
-                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M17 13V7M17 7V1M17 7H11M17 7H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {(service.toLowerCase().includes('camera') && !service.toLowerCase().includes('floodlight')) && (
-                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M23 19V8C23 6.89543 22.1046 6 21 6H3C1.89543 6 1 6.89543 1 8V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          {(service.toLowerCase().includes('floodlight')) && (
-                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 3V5M5.64 5.64L7.05 7.05M18.36 5.64L16.95 7.05M12 21V18M4 13H2M22 13H20M6 13C6 9.68629 8.68629 7 12 7C15.3137 7 18 9.68629 18 13C18 14.6569 17.3284 16.1569 16.2426 17.2426L15 20H9L7.75736 17.2426C6.67157 16.1569 6 14.6569 6 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                          <span className="flex-1">{service}</span>
-                        </div>
-                      ))
-                      : <div className="p-3 bg-muted rounded-md text-muted-foreground">No services selected</div>
-                    }
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <h2 className="text-lg font-medium">Next Steps</h2>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Our team will review your requirements</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>We'll call you to confirm appointment details</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Prepare the installation area by removing any obstacles</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>Payment will be collected at the time of installation</span>
-                    </li>
-                  </ul>
                 </div>
               </div>
+            </div>
 
-              <p className="text-sm text-gray-500 mb-6">
-                Have questions? Contact us at 404-702-4748 or pptvinstall@gmail.com
-              </p>
+            <div>
+              <h3 className="font-medium mb-2">Installation Address</h3>
+              <div className="bg-muted p-4 rounded-lg">
+                <div>{booking.streetAddress}</div>
+                {booking.addressLine2 && <div>{booking.addressLine2}</div>}
+                <div>{booking.city}, {booking.state} {booking.zipCode}</div>
+              </div>
+            </div>
 
-              <Link href="/">
-                <Button className="w-full md:w-auto">
-                  Return to Homepage
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </motion.div>
+            <div>
+              <h3 className="font-medium mb-2">Contact Information</h3>
+              <div className="bg-muted p-4 rounded-lg">
+                <div>{booking.name}</div>
+                <div>{booking.email}</div>
+                <div>{booking.phone}</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-semibold">What Happens Next?</h2>
+        <p>
+          One of our installation specialists will contact you before your scheduled 
+          appointment to confirm the details. Please have your TV and other equipment 
+          ready on the day of installation.
+        </p>
+        <div className="pt-6">
+          <Link to="/" className="inline-flex items-center">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Return to Homepage
+          </Link>
+        </div>
       </div>
     </div>
   );

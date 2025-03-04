@@ -261,6 +261,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch bookings" });
     }
   });
+  
+  app.get("/api/bookings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.getBooking(parseInt(id));
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      console.error('Error fetching booking by ID:', error);
+      res.status(500).json({ error: "Failed to fetch booking" });
+    }
+  });
 
   app.post("/api/contact", async (req, res) => {
     try {
@@ -305,9 +321,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create the booking in the database
-      const booking = await storage.createBooking(data);
-
       // Parse appointment date and time
       const dateTime = new Date(data.preferredDate);
       const formattedDate = dateTime.toLocaleDateString('en-US', {
@@ -321,12 +334,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minute: 'numeric',
         hour12: true
       });
-
+      
       // Parse services and calculate price - ensure all services are included
       console.log("Parsing service type:", data.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
+      
+      // Store enhanced booking data with detailed service information and price
+      const enhancedData = {
+        ...data,
+        detailedServices: JSON.stringify({
+          services,
+          serviceBreakdown
+        }),
+        totalPrice: price.toString(),
+        appointmentTime: formattedTime
+      };
+      
+      // Create the booking in the database with enhanced data
+      const booking = await storage.createBooking(enhancedData);
 
       // Generate calendar event with detailed description
       const eventSummary = `Picture Perfect TV & Smart Home Installation`;
@@ -375,6 +402,20 @@ Questions? Call 404-702-4748`;
       const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
 
+      // Create booking object with enhanced data for database
+      const enhancedBookingData = {
+        ...data,
+        detailedServices: JSON.stringify({
+          services,
+          serviceBreakdown
+        }),
+        totalPrice: price.toString(),
+        appointmentTime: formattedTime
+      };
+      
+      // Store the booking with all enhanced data
+      const booking = await storage.createBooking(enhancedBookingData);
+      
       const htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -527,6 +568,19 @@ Questions? Call 404-702-4748`;
       border: 1px solid #d0e3ff;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    .booking-id {
+      font-size: 14px;
+      text-align: center;
+      color: #666;
+      margin-top: 8px;
+    }
+    .service-item {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid #2563eb;
+    }
   </style>
 </head>
 <body>
@@ -545,13 +599,14 @@ Questions? Call 404-702-4748`;
         Our technician will confirm this time with you before arrival
       </div>
     </div>
+    <div class="booking-id">Booking ID: ${booking.id}</div>
   </div>
   
   <div class="section">
     <div class="section-title">Selected Services</div>
     <div style="display: flex; flex-direction: column; gap: 8px;">
       ${services.length > 0 
-        ? services.map(service => `<div style="padding: 8px; background: #f8f9fa; border-radius: 4px;">${service}</div>`).join('') 
+        ? services.map(service => `<div class="service-item">${service}</div>`).join('') 
         : '<div style="padding: 8px; background: #f8f9fa; border-radius: 4px; color: #666;">No services selected</div>'}
     </div>
   </div>
@@ -602,7 +657,7 @@ Questions? Call 404-702-4748`;
     </div>
 
     <div class="payment-note">
-      <strong>Payment Information:</strong> The full amount will be due at the time of installation.
+      <strong>Payment Information:</strong> The full amount of ${formatPrice(price)} will be due at the time of installation.
       We accept cash, credit cards, Venmo, Cash App, and Zelle.
     </div>
   </div>
@@ -622,6 +677,12 @@ Questions? Call 404-702-4748`;
       <li>Have all your equipment (TV, devices, mounts if provided by you) available on site.</li>
       <li>Add this appointment to your calendar using the attached calendar invite.</li>
     </ul>
+    <p style="margin-top: 16px;">
+      <strong>View your booking details online:</strong><br>
+      <a href="${process.env.SITE_URL || 'https://pictureperfecttv.repl.co'}/booking-confirmation?id=${booking.id}" style="color: #2563eb;">
+        Click here to view your booking confirmation
+      </a>
+    </p>
   </div>
   
   <div class="footer">
