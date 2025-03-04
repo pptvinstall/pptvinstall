@@ -49,6 +49,7 @@ export default function BookingConfirmation() {
                   <li>✓ Our team will review your requirements</li>
                   <li>✓ We'll call you to confirm appointment details</li>
                   <li>✓ Prepare the installation area</li>
+                  <li>✓ Payment will be collected at the time of installation</li>
                 </ul>
               </div>
 

@@ -80,6 +80,14 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         totalPrice += 100;
       }
 
+      if (hasFireplace) {
+        items.push({
+          label: 'Fireplace Installation',
+          price: 50
+        });
+        totalPrice += 50;
+      }
+
       serviceBreakdown.push({ title, items });
       totalPrice += 100; // Base installation
     }
@@ -246,7 +254,6 @@ ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join(
 ).join('\n\n')}
 
 Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
 
 Installation Address:
 ${data.streetAddress}
@@ -337,13 +344,7 @@ Questions? Call 404-702-4748`;
       padding-top: 16px;
       border-top: 2px solid #eee;
     }
-    .deposit-row {
-      font-weight: 500;
-      font-size: 16px;
-      margin-top: 8px;
-      color: #2563eb;
-    }
-    .deposit-note {
+    .payment-note {
       margin-top: 16px;
       color: #666;
       font-size: 14px;
@@ -454,18 +455,8 @@ Questions? Call 404-702-4748`;
       <span class="price">${formatPrice(price)}</span>
     </div>
 
-    <div class="price-row deposit-row">
-      <span>Required Deposit</span>
-      <span class="price">${formatPrice(75)}</span>
-    </div>
-
-    <div class="price-row">
-      <span>Balance Due at Installation</span>
-      <span class="price">${formatPrice(price - 75)}</span>
-    </div>
-
-    <div class="deposit-note">
-      <strong>Important:</strong> A $75 deposit is required to secure your booking and will be deducted from the total amount. The remaining balance will be due at the time of installation. 
+    <div class="payment-note">
+      <strong>Payment Information:</strong> The full amount will be due at the time of installation.
       We accept cash, credit cards, Venmo, Cash App, and Zelle.
     </div>
   </div>
@@ -524,11 +515,8 @@ ${section.items.map(item => `  • ${item.label}: ${formatPrice(item.price)}`).j
 PAYMENT SUMMARY
 --------------
 Total Amount: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
-Balance Due at Installation: ${formatPrice(price - 75)}
 
-IMPORTANT: A $75 deposit is required to secure your booking and will be deducted from the total amount.
-The remaining balance will be due at the time of installation.
+IMPORTANT: Payment is due in full at the time of installation.
 We accept cash, credit cards, Venmo, Cash App, and Zelle.
 
 INSTALLATION LOCATION
