@@ -24,6 +24,8 @@ export const bookings = pgTable("bookings", {
   serviceType: varchar("service_type", { length: 50 }).notNull(),
   preferredDate: varchar("preferred_date", { length: 50 }).notNull(),
   notes: text("notes"),
+  status: varchar("status", { length: 20 }).default('active'),
+  cancellationReason: text("cancellation_reason"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -34,7 +36,9 @@ export const contactMessageSchema = createInsertSchema(contactMessages).omit({
 
 export const bookingSchema = createInsertSchema(bookings).omit({
   id: true, 
-  createdAt: true
+  createdAt: true,
+  status: true,
+  cancellationReason: true
 });
 
 export type ContactMessage = typeof contactMessages.$inferSelect;

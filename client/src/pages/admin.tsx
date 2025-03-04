@@ -24,11 +24,24 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
   const { toast } = useToast();
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -92,6 +105,55 @@ export default function AdminDashboard() {
     }
   });
 
+  const cancelBookingMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const response = await apiRequest("POST", `/api/bookings/${id}/cancel`, { reason });
+      if (!response.ok) {
+        throw new Error('Failed to cancel booking');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      setSelectedBooking(null);
+      setCancellationReason("");
+      toast({
+        title: "Booking cancelled",
+        description: "The booking has been cancelled and the customer has been notified.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Cancellation failed",
+        description: "Failed to cancel the booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/bookings/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Booking deleted",
+        description: "The booking has been permanently deleted.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Deletion failed",
+        description: "Failed to delete the booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     loginMutation.mutate(password);
@@ -147,6 +209,7 @@ export default function AdminDashboard() {
                   <TableHead>Service</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Address</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -156,7 +219,7 @@ export default function AdminDashboard() {
                     <TableCell>
                       {format(new Date(booking.preferredDate), "MMM d, yyyy")}
                     </TableCell>
-                    <TableCell>{booking.preferredTime}</TableCell>
+                    <TableCell>{format(new Date(booking.preferredDate), "h:mm a")}</TableCell>
                     <TableCell>{booking.name}</TableCell>
                     <TableCell>{booking.serviceType}</TableCell>
                     <TableCell>
@@ -177,13 +240,94 @@ export default function AdminDashboard() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedBooking(booking)}
-                      >
-                        Edit
-                      </Button>
+                      <span className={`px-2 py-1 rounded-full text-sm ${
+                        booking.status === 'cancelled' 
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {booking.status || 'active'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedBooking(booking)}
+                        >
+                          Edit
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-50 text-red-600 hover:bg-red-100"
+                            >
+                              Cancel
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to cancel this booking? This will send a cancellation email to the customer.
+                                <div className="mt-4">
+                                  <Textarea
+                                    placeholder="Enter cancellation reason (optional)"
+                                    value={cancellationReason}
+                                    onChange={(e) => setCancellationReason(e.target.value)}
+                                    className="mt-2"
+                                  />
+                                </div>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>No, keep booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => {
+                                  cancelBookingMutation.mutate({
+                                    id: booking.id,
+                                    reason: cancellationReason
+                                  });
+                                }}
+                              >
+                                Yes, cancel booking
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-100 text-red-800 hover:bg-red-200"
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this booking? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>No, keep booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => deleteBookingMutation.mutate(booking.id)}
+                              >
+                                Yes, delete booking
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -255,24 +399,12 @@ export default function AdminDashboard() {
                 <div>
                   <label className="text-sm font-medium">Preferred Date</label>
                   <Input
-                    type="date"
-                    value={selectedBooking.preferredDate}
+                    type="datetime-local"
+                    value={format(new Date(selectedBooking.preferredDate), "yyyy-MM-dd'T'HH:mm")}
                     onChange={(e) =>
                       setSelectedBooking({
                         ...selectedBooking,
                         preferredDate: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Preferred Time</label>
-                  <Input
-                    value={selectedBooking.preferredTime}
-                    onChange={(e) =>
-                      setSelectedBooking({
-                        ...selectedBooking,
-                        preferredTime: e.target.value,
                       })
                     }
                   />

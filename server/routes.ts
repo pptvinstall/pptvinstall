@@ -469,6 +469,58 @@ Making your installation dreams a reality.`;
     }
   });
 
+  app.delete("/api/bookings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBooking(parseInt(id));
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      res.status(400).json({ error: "Failed to delete booking" });
+    }
+  });
+
+  app.post("/api/bookings/:id/cancel", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.updateBooking(parseInt(id), { 
+        status: 'cancelled',
+        cancellationReason: req.body.reason || 'Cancelled by admin'
+      });
+
+      // Send cancellation email to customer
+      if (booking) {
+        await transporter.sendMail({
+          from: process.env.GMAIL_USER,
+          to: booking.email,
+          subject: "Your Installation Booking Has Been Cancelled",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2>Booking Cancellation Notice</h2>
+              <p>Dear ${booking.name},</p>
+              <p>Your installation appointment scheduled for ${new Date(booking.preferredDate).toLocaleDateString()} has been cancelled.</p>
+              ${req.body.reason ? `<p>Reason: ${req.body.reason}</p>` : ''}
+              <p>If you would like to reschedule your installation, please visit our website or contact us directly.</p>
+              <p>We apologize for any inconvenience this may have caused.</p>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p>Questions? Contact us:</p>
+                <p>Phone: 404-702-4748</p>
+                <p>Business Hours:<br>
+                Mon-Fri: 6:30PM-10:30PM<br>
+                Sat-Sun: 11AM-7PM</p>
+              </div>
+            </div>
+          `
+        });
+      }
+
+      res.json(booking);
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      res.status(400).json({ error: "Failed to cancel booking" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
