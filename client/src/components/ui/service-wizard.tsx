@@ -13,6 +13,8 @@ export type TVInstallation = {
   size: 'small' | 'large';
   location: 'standard' | 'fireplace' | 'ceiling';
   mountType: 'fixed' | 'tilt' | 'fullMotion' | 'none';
+  masonryWall: boolean;
+  outletRelocation: boolean;
 };
 
 export type SmartHomeInstallation = {
@@ -36,7 +38,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
     setTvInstallations(prev => [...prev, {
       size: 'small',
       location: 'standard',
-      mountType: 'none'
+      mountType: 'none',
+      masonryWall: false,
+      outletRelocation: false
     }]);
   };
 
@@ -80,6 +84,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 <span>
                   TV {index + 1}: {tv.size === 'large' ? '56"+' : '32"-55"'} - {tv.location} Mount
                   {tv.mountType !== 'none' && ` (${tv.mountType})`}
+                  {tv.masonryWall && ' (Masonry)'}
+                  {tv.outletRelocation && ' (Outlet Relocation)'}
                 </span>
                 <Button
                   variant="ghost"
@@ -95,9 +101,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div key={`smart-${index}`} className="flex justify-between items-center">
                 <span>
                   {device.type === 'doorbell' ? 'Smart Doorbell' :
-                   device.type === 'floodlight' ? 'Floodlight' : 
-                   'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
-                  {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 && 
+                    device.type === 'floodlight' ? 'Floodlight' :
+                      'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
+                  {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
                     ` at ${device.mountHeight}ft`}
                   {device.type === 'doorbell' && device.brickInstallation && ' (Brick)'}
                 </span>
@@ -266,6 +272,39 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                     </Button>
                   </div>
                 </div>
+
+                <div>
+                  <h5 className="text-sm font-medium mb-3">Additional Options</h5>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={installation.masonryWall}
+                        onCheckedChange={(checked) =>
+                          updateTvInstallation(index, { masonryWall: checked })
+                        }
+                      />
+                      <Label>Masonry Wall Installation (+$50)</Label>
+                    </div>
+
+                    {installation.location !== 'fireplace' && (
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={installation.outletRelocation}
+                          onCheckedChange={(checked) =>
+                            updateTvInstallation(index, { outletRelocation: checked })
+                          }
+                        />
+                        <Label>Outlet Relocation (+$100)</Label>
+                      </div>
+                    )}
+
+                    {installation.location === 'fireplace' && (
+                      <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
+                        Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -315,8 +354,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div className="flex justify-between items-center">
                 <h4 className="text-lg font-semibold">
                   {installation.type === 'doorbell' ? 'Smart Doorbell' :
-                   installation.type === 'floodlight' ? 'Floodlight' : 
-                   'Smart Camera'} Installation
+                    installation.type === 'floodlight' ? 'Floodlight' :
+                      'Smart Camera'} Installation
                 </h4>
                 <Button
                   variant="ghost"
@@ -344,7 +383,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={installation.brickInstallation}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         updateSmartHomeInstallation(index, { brickInstallation: checked })
                       }
                     />
@@ -360,7 +399,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       min="8"
                       step="1"
                       value={installation.mountHeight}
-                      onChange={(e) => updateSmartHomeInstallation(index, { 
+                      onChange={(e) => updateSmartHomeInstallation(index, {
                         mountHeight: Math.max(8, parseInt(e.target.value) || 8)
                       })}
                       className="w-full"
@@ -374,8 +413,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 <div className="text-sm text-muted-foreground mt-2">
                   Base Price: {
                     installation.type === 'doorbell' ? '$75' :
-                    installation.type === 'floodlight' ? '$100' :
-                    '$75'
+                      installation.type === 'floodlight' ? '$100' :
+                        '$75'
                   }
                 </div>
               </div>
@@ -388,7 +427,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={() => onServiceSelect({ 
+        <Button onClick={() => onServiceSelect({
           tvs: tvInstallations,
           smartHome: smartHomeInstallations
         })} disabled={tvInstallations.length === 0 && smartHomeInstallations.length === 0}>

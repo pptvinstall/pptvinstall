@@ -24,6 +24,22 @@ export function PriceCalculator({ tvs, smartHome, distance, onUpdate }: PriceCal
                           installation.mountType === 'tilt' ? (installation.size === 'small' ? 50 : 70) :
                           installation.mountType === 'fullMotion' ? (installation.size === 'small' ? 80 : 100) : 0;
 
+        const additionalFees = [];
+
+        if (installation.masonryWall) {
+          additionalFees.push({
+            label: 'Masonry Wall Installation',
+            price: 50
+          });
+        }
+
+        if (installation.outletRelocation && installation.location !== 'fireplace') {
+          additionalFees.push({
+            label: 'Outlet Relocation',
+            price: 100
+          });
+        }
+
         return {
           description: `TV ${index + 1} (${installation.size === 'small' ? '32"-55"' : '56" or larger'})`,
           items: [
@@ -34,7 +50,8 @@ export function PriceCalculator({ tvs, smartHome, distance, onUpdate }: PriceCal
             ...(mountPrice > 0 ? [{
               label: `${installation.mountType} Mount`,
               price: mountPrice
-            }] : [])
+            }] : []),
+            ...additionalFees
           ]
         };
       }),
