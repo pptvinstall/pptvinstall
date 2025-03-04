@@ -11,6 +11,33 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        // Logo-inspired color palette
+        brand: {
+          blue: {
+            50: "hsl(217, 91%, 95%)",
+            100: "hsl(217, 91%, 90%)",
+            200: "hsl(217, 91%, 80%)",
+            300: "hsl(217, 91%, 70%)",
+            400: "hsl(217, 91%, 65%)",
+            500: "hsl(217, 91%, 60%)", // Primary blue from logo
+            600: "hsl(217, 91%, 50%)",
+            700: "hsl(217, 91%, 40%)",
+            800: "hsl(217, 91%, 30%)",
+            900: "hsl(217, 91%, 20%)",
+          },
+          red: {
+            50: "hsl(0, 84%, 95%)",
+            100: "hsl(0, 84%, 90%)",
+            200: "hsl(0, 84%, 80%)",
+            300: "hsl(0, 84%, 70%)",
+            400: "hsl(0, 84%, 65%)",
+            500: "hsl(0, 84%, 60%)", // Accent red from logo
+            600: "hsl(0, 84%, 50%)",
+            700: "hsl(0, 84%, 40%)",
+            800: "hsl(0, 84%, 30%)",
+            900: "hsl(0, 84%, 20%)",
+          }
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -64,20 +91,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {

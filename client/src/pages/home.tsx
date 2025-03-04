@@ -25,7 +25,7 @@ export default function Home() {
                 />
               </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gradient-primary">
               Professional TV Mounting Done Right
             </h1>
             <p className="text-xl text-gray-600 mb-8">
@@ -33,13 +33,13 @@ export default function Home() {
             </p>
             <div className="flex gap-4 justify-center">
               <Link href="/booking">
-                <Button size="lg" className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                <Button size="lg" className="bg-gradient-to-r from-brand-red-500 to-brand-red-600 hover:from-brand-red-600 hover:to-brand-red-700">
                   Book Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/services">
-                <Button variant="outline" size="lg" className="border-blue-200 hover:bg-blue-50">
+                <Button variant="outline" size="lg" className="border-brand-blue-200 hover:bg-brand-blue-50">
                   View Services
                 </Button>
               </Link>
@@ -64,9 +64,9 @@ export default function Home() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+            <Card className="border-2 border-brand-blue-100 hover:border-brand-blue-200 transition-colors">
               <CardContent className="pt-6">
-                <Shield className="h-12 w-12 text-blue-600 mb-4" />
+                <Shield className="h-12 w-12 text-brand-blue-600 mb-4" />
                 <h3 className="text-xl font-bold mb-2">Licensed & Insured</h3>
                 <p className="text-gray-600">
                   Fully licensed and insured for your peace of mind
@@ -74,9 +74,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+            <Card className="border-2 border-brand-blue-100 hover:border-brand-blue-200 transition-colors">
               <CardContent className="pt-6">
-                <Monitor className="h-12 w-12 text-blue-600 mb-4" />
+                <Monitor className="h-12 w-12 text-brand-blue-600 mb-4" />
                 <h3 className="text-xl font-bold mb-2">Expert Installation</h3>
                 <p className="text-gray-600">
                   Professional mounting with proper tools and techniques
@@ -84,9 +84,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+            <Card className="border-2 border-brand-blue-100 hover:border-brand-blue-200 transition-colors">
               <CardContent className="pt-6">
-                <Star className="h-12 w-12 text-blue-600 mb-4" />
+                <Star className="h-12 w-12 text-brand-blue-600 mb-4" />
                 <h3 className="text-xl font-bold mb-2">5-Star Service</h3>
                 <p className="text-gray-600">
                   Highly rated service with satisfied customers

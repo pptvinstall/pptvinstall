@@ -3,11 +3,27 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-primary: theme(colors.brand.blue.500);
+    --brand-accent: theme(colors.brand.red.500);
+  }
+
   * {
     @apply border-border;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Gradient text utilities */
+@layer utilities {
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-800 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-accent {
+    @apply bg-gradient-to-r from-brand-red-500 to-brand-red-700 bg-clip-text text-transparent;
   }
 }
