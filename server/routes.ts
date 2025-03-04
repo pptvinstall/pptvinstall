@@ -52,9 +52,32 @@ function parseServiceType(serviceType: string): ParsedService {
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
     const smartDeviceMatch = trimmedPart.match(/Smart Device (\d+)/);
-
-    // Handle Smart Device installations
-    if (smartDeviceMatch?.[1]) {
+    
+    // Handle multiple Smart Devices (e.g., "3 Smart Devices")
+    const multiDeviceMatch = trimmedPart.match(/^(\d+)\s+Smart\s+Devices?$/i);
+    if (multiDeviceMatch) {
+      const count = parseInt(multiDeviceMatch[1], 10);
+      deviceCount = count; // Set deviceCount explicitly
+      
+      const title = `${count} Smart Device Installation${count > 1 ? 's' : ''}`;
+      services.push(title);
+      
+      const pricePerDevice = SMART_DEVICE_PRICES.DOORBELL.BASE;
+      const itemPrice = pricePerDevice * count;
+      
+      serviceBreakdown.push({
+        title,
+        items: [
+          {
+            label: `Smart Device Installation (${count} units)`,
+            price: itemPrice
+          }
+        ]
+      });
+      totalPrice += itemPrice;
+    }
+    // Handle individual Smart Device installations
+    else if (smartDeviceMatch?.[1]) {
       const deviceNumber = smartDeviceMatch[1];
       const title = `Smart Device ${deviceNumber} Installation`;
       services.push(title);
