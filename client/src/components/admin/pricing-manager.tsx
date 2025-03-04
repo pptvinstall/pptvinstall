@@ -20,7 +20,8 @@ export function PricingManager() {
     queryKey: ['/api/admin/pricing'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/pricing");
-      return response.json();
+      const data = await response.json();
+      return data as PricingConfig[];
     }
   });
 
@@ -29,7 +30,8 @@ export function PricingManager() {
     queryKey: ['/api/admin/pricing/rules'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/admin/pricing/rules");
-      return response.json();
+      const data = await response.json();
+      return data as PricingRule[];
     }
   });
 
@@ -37,6 +39,9 @@ export function PricingManager() {
   const updatePriceMutation = useMutation({
     mutationFn: async (data: Partial<PricingConfig>) => {
       const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, data);
+      if (!response.ok) {
+        throw new Error('Failed to update price');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -60,6 +65,9 @@ export function PricingManager() {
   const updateRuleMutation = useMutation({
     mutationFn: async (data: Partial<PricingRule>) => {
       const response = await apiRequest("PUT", `/api/admin/pricing/rules/${data.id}`, data);
+      if (!response.ok) {
+        throw new Error('Failed to update rule');
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -101,7 +109,7 @@ export function PricingManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prices?.map((price: PricingConfig) => (
+              {prices?.map((price) => (
                 <TableRow key={price.id}>
                   <TableCell>{price.serviceType}</TableCell>
                   <TableCell>
@@ -119,7 +127,7 @@ export function PricingManager() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {Object.entries(price.additionalFees || {}).map(([fee, amount]) => (
+                    {price.additionalFees && Object.entries(price.additionalFees).map(([fee, amount]) => (
                       <div key={fee}>{fee}: ${amount}</div>
                     ))}
                   </TableCell>
@@ -174,7 +182,7 @@ export function PricingManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rules?.map((rule: PricingRule) => (
+              {rules?.map((rule) => (
                 <TableRow key={rule.id}>
                   <TableCell>{rule.ruleName}</TableCell>
                   <TableCell>{rule.ruleType}</TableCell>
