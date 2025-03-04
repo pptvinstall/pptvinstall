@@ -168,6 +168,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               display: flex;
               justify-content: space-between;
               margin-bottom: 5px;
+              padding: 4px 0;
+            }
+            .subtotal-row {
+              font-weight: 500;
+              border-top: 1px dashed #eee;
+              padding-top: 8px;
+              margin-top: 8px;
             }
             .total-row {
               font-weight: bold;
@@ -179,6 +186,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               font-size: 14px;
               color: #666;
               font-style: italic;
+              background-color: #f5f7ff;
+              padding: 8px;
+              border-radius: 4px;
+              margin-top: 8px;
+            }
+            .highlight {
+              color: #2563eb;
             }
           </style>
         </head>
@@ -190,16 +204,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
 
             <div class="section">
-              <div class="section-title">Appointment</div>
-              <div class="detail-row">${formattedDate} at ${formattedTime}</div>
+              <div class="section-title">Appointment Details</div>
+              <div class="detail-row">Date: ${formattedDate}</div>
+              <div class="detail-row">Time: ${formattedTime}</div>
               <div class="detail-row note">📅 Add to calendar: Check attachment or click "Add to Calendar" in your email client</div>
             </div>
 
             <div class="section">
               <div class="section-title">Contact Information</div>
-              <div class="detail-row">${data.name}</div>
-              <div class="detail-row">${data.email}</div>
-              <div class="detail-row">${data.phone}</div>
+              <div class="detail-row">Name: ${data.name}</div>
+              <div class="detail-row">Email: ${data.email}</div>
+              <div class="detail-row">Phone: ${data.phone}</div>
             </div>
 
             <div class="section">
@@ -210,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
 
             <div class="section">
-              <div class="section-title">Price Breakdown</div>
+              <div class="section-title">Detailed Price Breakdown</div>
               ${services.map(service => {
                 const isTV = service.includes('TV');
                 const isDoorbell = service.includes('Doorbell');
@@ -219,15 +234,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
 
                 let basePrice = isTV ? 100 :
-                              isFloodlight ? 100 : 75;
+                             isFloodlight ? 100 : 75;
 
                 let html = `
-                  <div class="price-row">
-                    <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
-                    <span>${formatPrice(basePrice * quantity)}</span>
-                  </div>`;
+                  <div class="service-block">
+                    <div class="price-row">
+                      <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
+                      <span>${formatPrice(basePrice * quantity)}</span>
+                    </div>`;
 
-                // Add any additional fees
+                if (isTV) {
+                  html += `
+                    <div class="price-row">
+                      <span>• Mount Options</span>
+                      <span>From +${formatPrice(40)} to +${formatPrice(100)}</span>
+                    </div>
+                    <div class="note">
+                      Mount prices vary by type:<br>
+                      - Fixed Mount: ${formatPrice(40)} (32"-55") / ${formatPrice(60)} (56"+)<br>
+                      - Tilt Mount: ${formatPrice(50)} (32"-55") / ${formatPrice(70)} (56"+)<br>
+                      - Full-Motion Mount: ${formatPrice(80)} (32"-55") / ${formatPrice(100)} (56"+)
+                    </div>`;
+
+                  if (service.includes('non-drywall')) {
+                    html += `
+                      <div class="price-row">
+                        <span>• Non-Drywall Installation Fee</span>
+                        <span>+${formatPrice(50)}</span>
+                      </div>`;
+                  }
+
+                  if (service.includes('outlet')) {
+                    html += `
+                      <div class="price-row">
+                        <span>• Outlet Relocation</span>
+                        <span>+${formatPrice(100)}</span>
+                      </div>`;
+                  }
+                }
+
                 if (isDoorbell) {
                   html += `
                     <div class="price-row">
@@ -235,6 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       <span>+${formatPrice(10)}</span>
                     </div>`;
                 }
+
                 if (isCamera) {
                   html += `
                     <div class="price-row">
@@ -242,26 +288,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       <span>+${formatPrice(25)}</span>
                     </div>`;
                 }
-                if (isTV) {
-                  html += `
-                    <div class="price-row">
-                      <span>• Mount Options</span>
-                      <span>From +${formatPrice(40)}</span>
-                    </div>`;
-                }
 
-                return html;
-              }).join('')}
+                return html + '</div>';
+              }).join('<div class="separator" style="margin: 12px 0;"></div>')}
 
               <div class="price-row total-row">
                 <span>Estimated Total</span>
                 <span>${formatPrice(price)}</span>
               </div>
-              <div class="price-row">
+              <div class="price-row highlight">
                 <span>Required Deposit</span>
                 <span>${formatPrice(75)}</span>
               </div>
-              <div class="note">* Final price may vary based on specific requirements and additional services selected during installation.</div>
+              <div class="note">
+                * Final price may vary based on specific requirements and additional services selected during installation.<br>
+                * The deposit amount will be deducted from the total cost.
+              </div>
             </div>
 
             ${data.notes ? `
@@ -276,6 +318,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <div class="detail-row">1. Our team will contact you within 24 hours to confirm your appointment</div>
               <div class="detail-row">2. Please ensure the installation area is clear and accessible</div>
               <div class="detail-row">3. Have your devices ready for installation</div>
+              ${data.serviceType.includes('fireplace') ? `
+              <div class="detail-row note">
+                Important: For fireplace installations, please have photos ready of your fireplace and nearby outlets to help us prepare for your installation.
+              </div>
+              ` : ''}
             </div>
 
             <div class="section">
@@ -286,39 +333,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <div class="detail-row">Sat-Sun: 11AM-7PM</div>
             </div>
 
-            <div class="note">Thank you for choosing Picture Perfect TV Install!</div>
+            <div class="note" style="text-align: center; margin-top: 20px;">
+              Thank you for choosing Picture Perfect TV Install!<br>
+              Making your installation dreams a reality.
+            </div>
           </div>
         </body>
         </html>
       `;
 
-      // Send booking confirmation
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: data.email,
-        subject: "Your Installation Booking Confirmation",
-        text: `
+      const textEmail = `
 Selected Services
 ----------------
 ${services.map(service => `• ${service}`).join('\n')}
 
-Appointment
-----------
-${formattedDate} at ${formattedTime}
+Appointment Details
+-----------------
+Date: ${formattedDate}
+Time: ${formattedTime}
 
 Contact Information
 -----------------
-${data.name}
-${data.email}
-${data.phone}
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
 
 Installation Address
 ------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Price Breakdown
--------------
+Detailed Price Breakdown
+----------------------
 ${services.map(service => {
   const isTV = service.includes('TV');
   const isDoorbell = service.includes('Doorbell');
@@ -330,14 +376,25 @@ ${services.map(service => {
 
   let breakdown = `• Base Installation (${quantity} unit${quantity > 1 ? 's' : ''}): ${formatPrice(basePrice * quantity)}`;
 
+  if (isTV) {
+    breakdown += '\nMount Options (prices vary by TV size):\n';
+    breakdown += '  - Fixed Mount: $40 (32"-55") / $60 (56"+)\n';
+    breakdown += '  - Tilt Mount: $50 (32"-55") / $70 (56"+)\n';
+    breakdown += '  - Full-Motion Mount: $80 (32"-55") / $100 (56"+)';
+
+    if (service.includes('non-drywall')) {
+      breakdown += '\n  + Non-Drywall Installation Fee: +$50';
+    }
+    if (service.includes('outlet')) {
+      breakdown += '\n  + Outlet Relocation: +$100';
+    }
+  }
+
   if (isDoorbell) {
     breakdown += '\n  + Brick Installation (if needed): +$10';
   }
   if (service.includes('Camera')) {
     breakdown += '\n  + Height Fee (per 4ft above 8ft): +$25';
-  }
-  if (isTV) {
-    breakdown += '\n  + Mount Options: From +$40';
   }
 
   return breakdown;
@@ -347,6 +404,7 @@ Estimated Total: ${formatPrice(price)}
 Required Deposit: ${formatPrice(75)}
 
 * Final price may vary based on specific requirements and additional services selected during installation.
+* The deposit amount will be deducted from the total cost.
 
 ${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
 
@@ -355,15 +413,24 @@ Next Steps
 1. Our team will contact you within 24 hours to confirm your appointment
 2. Please ensure the installation area is clear and accessible
 3. Have your devices ready for installation
+${data.serviceType.includes('fireplace') ? '\nImportant: For fireplace installations, please have photos ready of your fireplace and nearby outlets.\n' : ''}
 
 Questions?
 ---------
 Call us at 404-702-4748 or reply to this email.
+
 Business Hours:
 Mon-Fri: 6:30PM-10:30PM
 Sat-Sun: 11AM-7PM
 
-Thank you for choosing Picture Perfect TV Install!`,
+Thank you for choosing Picture Perfect TV Install!
+Making your installation dreams a reality.`;
+
+      await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: data.email,
+        subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
+        text: textEmail,
         html: htmlTemplate,
         icalEvent: {
           filename: 'installation-appointment.ics',
