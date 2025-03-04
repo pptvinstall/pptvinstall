@@ -133,214 +133,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
 
       const htmlTemplate = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-            }
-            .container {
-              padding: 20px;
-            }
-            .section {
-              margin-bottom: 20px;
-              border-bottom: 1px solid #eee;
-              padding-bottom: 20px;
-            }
-            .section:last-child {
-              border-bottom: none;
-            }
-            .section-title {
-              font-size: 18px;
-              font-weight: bold;
-              margin-bottom: 10px;
-              color: #2563eb;
-            }
-            .detail-row {
-              margin-bottom: 5px;
-            }
-            .price-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 5px;
-              padding: 4px 0;
-            }
-            .subtotal-row {
-              font-weight: 500;
-              border-top: 1px dashed #eee;
-              padding-top: 8px;
-              margin-top: 8px;
-            }
-            .total-row {
-              font-weight: bold;
-              border-top: 2px solid #eee;
-              padding-top: 10px;
-              margin-top: 10px;
-            }
-            .note {
-              font-size: 14px;
-              color: #666;
-              font-style: italic;
-              background-color: #f5f7ff;
-              padding: 8px;
-              border-radius: 4px;
-              margin-top: 8px;
-            }
-            .highlight {
-              color: #2563eb;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="section">
-              <div class="section-title">Selected Services</div>
-              ${services.map(service => `<div class="detail-row">• ${service}</div>`).join('')}
-            </div>
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .container {
+        padding: 20px;
+      }
+      .section {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+      }
+      .section:last-child {
+        border-bottom: none;
+      }
+      .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #2563eb;
+      }
+      .detail-row {
+        margin-bottom: 5px;
+      }
+      .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        padding: 4px 0;
+      }
+      .subtotal-row {
+        font-weight: 500;
+        border-top: 1px dashed #eee;
+        padding-top: 8px;
+        margin-top: 8px;
+      }
+      .total-row {
+        font-weight: bold;
+        border-top: 2px solid #eee;
+        padding-top: 10px;
+        margin-top: 10px;
+      }
+      .note {
+        font-size: 14px;
+        color: #666;
+        font-style: italic;
+        background-color: #f5f7ff;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+      }
+      .highlight {
+        color: #2563eb;
+      }
+      .alert {
+        background-color: #fff3f3;
+        color: #e11d48;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="section">
+        <div class="section-title">Selected Services</div>
+        ${services.map(service => `<div class="detail-row">• ${service}</div>`).join('')}
+      </div>
 
-            <div class="section">
-              <div class="section-title">Appointment Details</div>
-              <div class="detail-row">Date: ${formattedDate}</div>
-              <div class="detail-row">Time: ${formattedTime}</div>
-              <div class="detail-row note">📅 Add to calendar: Check attachment or click "Add to Calendar" in your email client</div>
-            </div>
+      <div class="section">
+        <div class="section-title">Appointment Details</div>
+        <div class="detail-row">Date: ${formattedDate}</div>
+        <div class="detail-row">Time: ${formattedTime}</div>
+        <div class="detail-row note">📅 Add to calendar: Check attachment or click "Add to Calendar" in your email client</div>
+      </div>
 
-            <div class="section">
-              <div class="section-title">Contact Information</div>
-              <div class="detail-row">Name: ${data.name}</div>
-              <div class="detail-row">Email: ${data.email}</div>
-              <div class="detail-row">Phone: ${data.phone}</div>
-            </div>
+      <div class="section">
+        <div class="section-title">Contact Information</div>
+        <div class="detail-row">Name: ${data.name}</div>
+        <div class="detail-row">Email: ${data.email}</div>
+        <div class="detail-row">Phone: ${data.phone}</div>
+      </div>
 
-            <div class="section">
-              <div class="section-title">Installation Address</div>
-              <div class="detail-row">${data.streetAddress}</div>
-              ${data.addressLine2 ? `<div class="detail-row">${data.addressLine2}</div>` : ''}
-              <div class="detail-row">${data.city}, ${data.state} ${data.zipCode}</div>
-            </div>
+      <div class="section">
+        <div class="section-title">Installation Address</div>
+        <div class="detail-row">${data.streetAddress}</div>
+        ${data.addressLine2 ? `<div class="detail-row">${data.addressLine2}</div>` : ''}
+        <div class="detail-row">${data.city}, ${data.state} ${data.zipCode}</div>
+      </div>
 
-            <div class="section">
-              <div class="section-title">Detailed Price Breakdown</div>
-              ${services.map(service => {
-                const isTV = service.includes('TV');
-                const isDoorbell = service.includes('Doorbell');
-                const isFloodlight = service.includes('Floodlight');
-                const isCamera = service.includes('Camera');
-                const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
+      <div class="section">
+        <div class="section-title">Detailed Price Breakdown</div>
+        ${services.map(service => {
+          const isTV = service.includes('TV');
+          const isDoorbell = service.includes('Doorbell');
+          const isFloodlight = service.includes('Floodlight');
+          const isCamera = service.includes('Camera');
+          const quantity = parseInt(service.match(/\d+/)?.[0] || '1');
 
-                let basePrice = isTV ? 100 :
-                             isFloodlight ? 100 : 75;
+          let basePrice = isTV ? 100 :
+                       isFloodlight ? 100 : 75;
 
-                let html = `
-                  <div class="service-block">
-                    <div class="price-row">
-                      <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
-                      <span>${formatPrice(basePrice * quantity)}</span>
-                    </div>`;
+          let html = `
+            <div class="service-block">
+              <div class="price-row">
+                <span>Base Installation (${quantity} unit${quantity > 1 ? 's' : ''})</span>
+                <span>${formatPrice(basePrice * quantity)}</span>
+              </div>`;
 
-                if (isTV) {
-                  html += `
-                    <div class="price-row">
-                      <span>• Mount Options</span>
-                      <span>From +${formatPrice(40)} to +${formatPrice(100)}</span>
-                    </div>
-                    <div class="note">
-                      Mount prices vary by type:<br>
-                      - Fixed Mount: ${formatPrice(40)} (32"-55") / ${formatPrice(60)} (56"+)<br>
-                      - Tilt Mount: ${formatPrice(50)} (32"-55") / ${formatPrice(70)} (56"+)<br>
-                      - Full-Motion Mount: ${formatPrice(80)} (32"-55") / ${formatPrice(100)} (56"+)
-                    </div>`;
-
-                  if (service.includes('non-drywall')) {
-                    html += `
-                      <div class="price-row">
-                        <span>• Non-Drywall Installation Fee</span>
-                        <span>+${formatPrice(50)}</span>
-                      </div>`;
-                  }
-
-                  if (service.includes('outlet')) {
-                    html += `
-                      <div class="price-row">
-                        <span>• Outlet Relocation</span>
-                        <span>+${formatPrice(100)}</span>
-                      </div>`;
-                  }
-                }
-
-                if (isDoorbell) {
-                  html += `
-                    <div class="price-row">
-                      <span>• Brick Installation (if needed)</span>
-                      <span>+${formatPrice(10)}</span>
-                    </div>`;
-                }
-
-                if (isCamera) {
-                  html += `
-                    <div class="price-row">
-                      <span>• Height Fee (per 4ft above 8ft)</span>
-                      <span>+${formatPrice(25)}</span>
-                    </div>`;
-                }
-
-                return html + '</div>';
-              }).join('<div class="separator" style="margin: 12px 0;"></div>')}
-
-              <div class="price-row total-row">
-                <span>Estimated Total</span>
-                <span>${formatPrice(price)}</span>
-              </div>
-              <div class="price-row highlight">
-                <span>Required Deposit</span>
-                <span>${formatPrice(75)}</span>
-              </div>
+          if (isTV) {
+            html += `
               <div class="note">
-                * Final price may vary based on specific requirements and additional services selected during installation.<br>
-                * The deposit amount will be deducted from the total cost.
-              </div>
-            </div>
+                Mount Options (select during installation):<br>
+                • Fixed Mount: ${formatPrice(40)} (32"-55") / ${formatPrice(60)} (56"+)<br>
+                • Tilt Mount: ${formatPrice(50)} (32"-55") / ${formatPrice(70)} (56"+)<br>
+                • Full-Motion Mount: ${formatPrice(80)} (32"-55") / ${formatPrice(100)} (56"+)
+              </div>`;
 
-            ${data.notes ? `
-            <div class="section">
-              <div class="section-title">Additional Notes</div>
-              <div class="detail-row">${data.notes}</div>
-            </div>
-            ` : ''}
+            if (service.includes('non-drywall')) {
+              html += `
+                <div class="price-row">
+                  <span>• Non-Drywall Installation (brick/concrete/stone)</span>
+                  <span>+${formatPrice(50)}</span>
+                </div>`;
+            }
 
-            <div class="section">
-              <div class="section-title">Next Steps</div>
-              <div class="detail-row">1. Our team will contact you within 24 hours to confirm your appointment</div>
-              <div class="detail-row">2. Please ensure the installation area is clear and accessible</div>
-              <div class="detail-row">3. Have your devices ready for installation</div>
-              ${data.serviceType.includes('fireplace') ? `
-              <div class="detail-row note">
-                Important: For fireplace installations, please have photos ready of your fireplace and nearby outlets to help us prepare for your installation.
-              </div>
-              ` : ''}
-            </div>
+            if (service.includes('outlet') && !service.includes('fireplace')) {
+              html += `
+                <div class="price-row">
+                  <span>• Outlet Relocation</span>
+                  <span>+${formatPrice(100)}</span>
+                </div>`;
+            }
 
-            <div class="section">
-              <div class="section-title">Questions?</div>
-              <div class="detail-row">Call us at 404-702-4748 or reply to this email.</div>
-              <div class="detail-row">Business Hours:</div>
-              <div class="detail-row">Mon-Fri: 6:30PM-10:30PM</div>
-              <div class="detail-row">Sat-Sun: 11AM-7PM</div>
-            </div>
+            if (service.includes('fireplace')) {
+              html += `
+                <div class="alert">
+                  Note: For outlet relocation with fireplace installations, please provide photos of your fireplace and nearby outlets for a custom quote.
+                </div>`;
+            }
+          }
 
-            <div class="note" style="text-align: center; margin-top: 20px;">
-              Thank you for choosing Picture Perfect TV Install!<br>
-              Making your installation dreams a reality.
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+          if (isDoorbell) {
+            html += `
+              <div class="price-row">
+                <span>• Brick Installation (if needed)</span>
+                <span>+${formatPrice(10)}</span>
+              </div>`;
+          }
+
+          if (isCamera) {
+            html += `
+              <div class="price-row">
+                <span>• Height Fee (per 4ft above 8ft)</span>
+                <span>+${formatPrice(25)}</span>
+              </div>`;
+          }
+
+          return html + '</div>';
+        }).join('<div class="separator" style="margin: 12px 0;"></div>')}
+
+        <div class="price-row total-row">
+          <span>Estimated Total</span>
+          <span>${formatPrice(price)}</span>
+        </div>
+        <div class="price-row highlight">
+          <span>Required Deposit</span>
+          <span>${formatPrice(75)}</span>
+        </div>
+        <div class="note">
+          * Final price may vary based on mount selection and additional services required during installation.<br>
+          * The deposit amount will be deducted from the total cost.
+        </div>
+      </div>
+
+      ${data.notes ? `
+      <div class="section">
+        <div class="section-title">Additional Notes</div>
+        <div class="detail-row">${data.notes}</div>
+      </div>
+      ` : ''}
+
+      <div class="section">
+        <div class="section-title">Next Steps</div>
+        <div class="detail-row">1. Our team will contact you within 24 hours to confirm your appointment</div>
+        <div class="detail-row">2. Please ensure the installation area is clear and accessible</div>
+        <div class="detail-row">3. Have your devices ready for installation</div>
+        ${data.serviceType.includes('fireplace') ? `
+        <div class="alert">
+          Important: For fireplace installations, please have photos ready of your fireplace and nearby outlets to help us prepare for your installation.
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="section">
+        <div class="section-title">Questions?</div>
+        <div class="detail-row">Call us at 404-702-4748 or reply to this email.</div>
+        <div class="detail-row">Business Hours:</div>
+        <div class="detail-row">Mon-Fri: 6:30PM-10:30PM</div>
+        <div class="detail-row">Sat-Sun: 11AM-7PM</div>
+      </div>
+
+      <div class="note" style="text-align: center; margin-top: 20px;">
+        Thank you for choosing Picture Perfect TV Install!<br>
+        Making your installation dreams a reality.
+      </div>
+    </div>
+  </body>
+  </html>
+`;
 
       const textEmail = `
 Selected Services
