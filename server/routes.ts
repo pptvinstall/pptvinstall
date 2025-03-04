@@ -282,6 +282,20 @@ Questions? Call 404-702-4748`;
       margin: 0 auto;
       padding: 20px;
     }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+    .tagline {
+      font-style: italic;
+      color: #666;
+    }
     .section {
       margin-bottom: 24px;
     }
@@ -290,17 +304,20 @@ Questions? Call 404-702-4748`;
       font-weight: 600;
       margin-bottom: 16px;
       color: #111;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
     }
     .subsection {
       margin-bottom: 16px;
       background: #f8f9fa;
       padding: 16px;
       border-radius: 8px;
+      border-left: 3px solid #2563eb;
     }
     .subsection-title {
       font-size: 16px;
       font-weight: 500;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       color: #2563eb;
     }
     .price-row {
@@ -311,6 +328,7 @@ Questions? Call 404-702-4748`;
     }
     .price {
       font-variant-numeric: tabular-nums;
+      font-weight: 500;
     }
     .total-row {
       font-weight: 600;
@@ -319,44 +337,106 @@ Questions? Call 404-702-4748`;
       padding-top: 16px;
       border-top: 2px solid #eee;
     }
+    .deposit-row {
+      font-weight: 500;
+      font-size: 16px;
+      margin-top: 8px;
+      color: #2563eb;
+    }
     .deposit-note {
       margin-top: 16px;
       color: #666;
       font-size: 14px;
       font-style: italic;
+      background: #f0f9ff;
+      padding: 12px;
+      border-radius: 6px;
     }
     .discount {
       color: #22c55e;
     }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 8px;
+    }
+    .info-label {
+      font-weight: 500;
+      color: #666;
+    }
+    .info-value {
+      color: #111;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+    }
+    .cta-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #2563eb;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
+  <div class="header">
+    <div class="logo">Picture Perfect TV Install</div>
+    <div class="tagline">Professional TV & Smart Home Installation</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Booking Confirmation</div>
+    <p>Thank you for choosing Picture Perfect TV Install. Your booking has been confirmed for:</p>
+    <div style="text-align: center; padding: 16px; background: #f0f9ff; border-radius: 8px; margin: 16px 0;">
+      <div style="font-size: 18px; font-weight: 600;">${formattedDate}</div>
+      <div style="font-size: 18px; font-weight: 600;">${formattedTime}</div>
+    </div>
+  </div>
+  
   <div class="section">
     <div class="section-title">Selected Services</div>
-    ${services.map(service => `<div>${service}</div>`).join('')}
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      ${services.map(service => `<div style="padding: 8px; background: #f8f9fa; border-radius: 4px;">${service}</div>`).join('')}
+    </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Appointment</div>
-    <div>${formattedDate} at ${formattedTime}</div>
+    <div class="section-title">Installation Location</div>
+    <div class="info-grid">
+      <div class="info-label">Address:</div>
+      <div class="info-value">${data.streetAddress}</div>
+      ${data.addressLine2 ? `
+      <div class="info-label">Address Line 2:</div>
+      <div class="info-value">${data.addressLine2}</div>
+      ` : ''}
+      <div class="info-label">City/State/ZIP:</div>
+      <div class="info-value">${data.city}, ${data.state} ${data.zipCode}</div>
+    </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Installation Address</div>
-    <div>${data.streetAddress}</div>
-    ${data.addressLine2 ? `<div>${data.addressLine2}</div>` : ''}
-    <div>${data.city}, ${data.state} ${data.zipCode}</div>
+    <div class="section-title">Your Information</div>
+    <div class="info-grid">
+      <div class="info-label">Name:</div>
+      <div class="info-value">${data.name}</div>
+      <div class="info-label">Email:</div>
+      <div class="info-value">${data.email}</div>
+      <div class="info-label">Phone:</div>
+      <div class="info-value">${data.phone}</div>
+    </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Contact Information</div>
-    <div>${data.name}</div>
-    <div>${data.email}</div>
-    <div>${data.phone}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Price Breakdown</div>
+    <div class="section-title">Detailed Price Breakdown</div>
     ${serviceBreakdown.map(section => `
       <div class="subsection">
         <div class="subsection-title">${section.title}</div>
@@ -370,26 +450,48 @@ Questions? Call 404-702-4748`;
     `).join('')}
 
     <div class="price-row total-row">
-      <span>Total</span>
+      <span>Total Amount</span>
       <span class="price">${formatPrice(price)}</span>
     </div>
 
-    <div class="price-row">
+    <div class="price-row deposit-row">
       <span>Required Deposit</span>
       <span class="price">${formatPrice(75)}</span>
     </div>
 
+    <div class="price-row">
+      <span>Balance Due at Installation</span>
+      <span class="price">${formatPrice(price - 75)}</span>
+    </div>
+
     <div class="deposit-note">
-      Deposit is required to secure your booking and will be deducted from the total amount.
+      <strong>Important:</strong> A $75 deposit is required to secure your booking and will be deducted from the total amount. The remaining balance will be due at the time of installation. 
+      We accept cash, credit cards, Venmo, Cash App, and Zelle.
     </div>
   </div>
 
   ${data.notes ? `
   <div class="section">
-    <div class="section-title">Additional Notes</div>
-    <div>${data.notes}</div>
+    <div class="section-title">Your Notes</div>
+    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">${data.notes}</div>
   </div>
   ` : ''}
+  
+  <div class="section">
+    <div class="section-title">What's Next?</div>
+    <ul style="padding-left: 20px;">
+      <li>Our technician will call you before your appointment to confirm details.</li>
+      <li>Please ensure the installation area is accessible and cleared of obstructions.</li>
+      <li>Have all your equipment (TV, devices, mounts if provided by you) available on site.</li>
+      <li>Add this appointment to your calendar using the attached calendar invite.</li>
+    </ul>
+  </div>
+  
+  <div class="footer">
+    <p><strong>Business Hours:</strong><br>Monday-Friday: 6:30PM-10:30PM<br>Saturday-Sunday: 11AM-7PM</p>
+    <p>Questions? Contact us at 404-702-4748 or pptvinstall@gmail.com</p>
+    <p>© ${new Date().getFullYear()} Picture Perfect TV Install</p>
+  </div>
 </body>
 </html>`;
 
@@ -397,35 +499,67 @@ Questions? Call 404-702-4748`;
         from: process.env.GMAIL_USER,
         to: data.email,
         subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
-        text: `
-Selected Services
-----------------
-${serviceBreakdown.map(section => 
-  `${section.title}
-${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
-).join('\n\n')}
+        text: `PICTURE PERFECT TV INSTALL
+Professional TV & Smart Home Installation
 
-Total: ${formatPrice(price)}
-Required Deposit: ${formatPrice(75)}
+BOOKING CONFIRMATION
+-------------------
+Thank you for choosing Picture Perfect TV Install!
 
-Appointment
-----------
+APPOINTMENT DATE & TIME
+----------------------
 ${formattedDate} at ${formattedTime}
 
-Installation Address
-------------------
+SELECTED SERVICES
+----------------
+${services.join('\n')}
+
+DETAILED PRICE BREAKDOWN
+-----------------------
+${serviceBreakdown.map(section => 
+  `# ${section.title}
+${section.items.map(item => `  • ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+).join('\n\n')}
+
+PAYMENT SUMMARY
+--------------
+Total Amount: ${formatPrice(price)}
+Required Deposit: ${formatPrice(75)}
+Balance Due at Installation: ${formatPrice(price - 75)}
+
+IMPORTANT: A $75 deposit is required to secure your booking and will be deducted from the total amount.
+The remaining balance will be due at the time of installation.
+We accept cash, credit cards, Venmo, Cash App, and Zelle.
+
+INSTALLATION LOCATION
+-------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Contact Information
------------------
-${data.name}
-${data.email}
-${data.phone}
+YOUR INFORMATION
+--------------
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
 
-${data.notes ? `Additional Notes\n--------------\n${data.notes}\n` : ''}
+${data.notes ? `YOUR NOTES\n---------\n${data.notes}\n\n` : ''}
 
-Note: Deposit is required to secure your booking and will be deducted from the total amount.`,
+WHAT'S NEXT?
+-----------
+• Our technician will call you before your appointment to confirm details.
+• Please ensure the installation area is accessible and cleared of obstructions.
+• Have all your equipment (TV, devices, mounts if provided by you) available on site.
+• Add this appointment to your calendar using the attached calendar invite.
+
+QUESTIONS?
+---------
+Contact us at 404-702-4748 or pptvinstall@gmail.com
+
+Business Hours:
+Monday-Friday: 6:30PM-10:30PM
+Saturday-Sunday: 11AM-7PM
+
+© ${new Date().getFullYear()} Picture Perfect TV Install`,
         html: htmlTemplate,
         icalEvent: {
           filename: 'installation-appointment.ics',
