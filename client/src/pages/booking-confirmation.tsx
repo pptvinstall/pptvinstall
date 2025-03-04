@@ -1,16 +1,19 @@
 import { useEffect } from "react";
-import { useLocation, Link, useSearchParams } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 import { ChevronLeft } from "lucide-react";
-
+import { useQuery } from "@tanstack/react-query";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function BookingConfirmation() {
-  const [, setLocation] = useLocation();
-  const [params] = useSearchParams();
-  const bookingId = params.get('id');
+  const [location] = useLocation();
+  // Extract the ID from the URL using URLSearchParams
+  const searchParams = new URLSearchParams(location.split("?")[1] || "");
+  const bookingId = searchParams.get('id');
+
   const { data: booking, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
@@ -42,143 +45,54 @@ export default function BookingConfirmation() {
     );
   }
 
-  // Parse detailed services if available
-  let services = [];
-  let serviceBreakdown = [];
-  try {
-    if (booking.detailedServices) {
-      const detailedData = JSON.parse(booking.detailedServices);
-      services = detailedData.services || [];
-      serviceBreakdown = detailedData.serviceBreakdown || [];
-    }
-  } catch (e) {
-    console.error("Error parsing detailed services:", e);
-    // Fallback to service type if detailed services can't be parsed
-    services = [booking.serviceType];
-  }
-
-  // Format date and handle time display
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (e) {
-      return "Date not available";
-    }
-  };
-
-  // Use stored appointment time or extract from date
-  const getTime = () => {
-    if (booking.appointmentTime) {
-      return booking.appointmentTime;
-    }
-
-    try {
-      const date = new Date(booking.preferredDate);
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-      });
-    } catch (e) {
-      return "Time not available";
-    }
-  };
-
-  // Format price from totalPrice field or default value
-  const getTotalPrice = () => {
-    if (booking.totalPrice) {
-      return `$${parseFloat(booking.totalPrice).toFixed(2)}`;
-    }
-    return "Price not available";
-  };
-
+  // Rest of your component code that uses the booking data
   return (
     <div className="container max-w-4xl mx-auto py-12 px-4">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Thank You for Booking!</h1>
-        <p className="text-xl">Your installation has been scheduled.</p>
-      </div>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Booking Details</CardTitle>
-          <CardDescription>
-            A confirmation email has been sent to {booking.email}
+      <Card className="border-2 border-primary/10 shadow-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <CheckCircle2 className="h-16 w-16 text-primary" />
+          </div>
+          <CardTitle className="text-3xl">Booking Confirmed!</CardTitle>
+          <CardDescription className="text-lg">
+            Thank you for booking with us, {booking.name}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6">
-            <div>
-              <h3 className="font-medium mb-2">Appointment</h3>
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="font-semibold">{formatDate(booking.preferredDate)}</div>
-                <div>{getTime()}</div>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <h3 className="font-medium">Booking Details:</h3>
+              <div className="grid grid-cols-2 gap-1 text-sm">
+                <div className="text-muted-foreground">Service:</div>
+                <div>{booking.serviceType}</div>
+                <div className="text-muted-foreground">Date:</div>
+                <div>{booking.preferredDate}</div>
+                <div className="text-muted-foreground">Time:</div>
+                <div>{booking.appointmentTime || "To be confirmed"}</div>
+                <div className="text-muted-foreground">Address:</div>
+                <div>{booking.streetAddress}, {booking.city}, {booking.state} {booking.zipCode}</div>
               </div>
             </div>
-
-            <div>
-              <h3 className="font-medium mb-2">Service Details</h3>
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                {services.length > 0 ? (
-                  services.map((service, index) => (
-                    <div key={index} className="p-2 bg-background/50 rounded">
-                      {service}
-                    </div>
-                  ))
-                ) : (
-                  <div>{booking.serviceType}</div>
-                )}
-
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total Price:</span>
-                    <span>{getTotalPrice()}</span>
-                  </div>
-                </div>
+            <div className="pt-4">
+              <div className="grid gap-2">
+                <h3 className="font-medium">What happens next?</h3>
+                <p className="text-sm text-muted-foreground">
+                  We've sent a confirmation email to {booking.email} with all the details of your booking. 
+                  Our team will contact you within 24 hours to confirm your appointment time.
+                </p>
               </div>
             </div>
-
-            <div>
-              <h3 className="font-medium mb-2">Installation Address</h3>
-              <div className="bg-muted p-4 rounded-lg">
-                <div>{booking.streetAddress}</div>
-                {booking.addressLine2 && <div>{booking.addressLine2}</div>}
-                <div>{booking.city}, {booking.state} {booking.zipCode}</div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-2">Contact Information</h3>
-              <div className="bg-muted p-4 rounded-lg">
-                <div>{booking.name}</div>
-                <div>{booking.email}</div>
-                <div>{booking.phone}</div>
-              </div>
+            <div className="pt-4 flex justify-center">
+              <Link to="/">
+                <Button className="w-full sm:w-auto">
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Return to Homepage
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="text-center space-y-4">
-        <h2 className="text-2xl font-semibold">What Happens Next?</h2>
-        <p>
-          One of our installation specialists will contact you before your scheduled 
-          appointment to confirm the details. Please have your TV and other equipment 
-          ready on the day of installation.
-        </p>
-        <div className="pt-6">
-          <Link to="/" className="inline-flex items-center">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Return to Homepage
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
