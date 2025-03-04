@@ -12,9 +12,9 @@ export default function Home() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="mb-8">
               <img
-                src="/assets/IMG_0032.jpeg"
+                src="/attached_assets/IMG_0032.jpeg"
                 alt="Picture Perfect TV Install Logo"
-                className="mx-auto h-32 object-contain"
+                className="mx-auto w-48 h-auto object-contain"
               />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
