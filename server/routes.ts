@@ -40,6 +40,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       const tvMatch = part.match(/(\d+)\s*TV/);
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
       const isLarge = part.toLowerCase().includes('56"') || part.toLowerCase().includes('larger');
+      const hasOutlet = part.toLowerCase().includes('outlet');
 
       serviceBreakdown.push({
         title: `TV ${serviceBreakdown.length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`,
@@ -51,14 +52,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         ]
       });
 
-      if (part.includes('fixed')) {
-        serviceBreakdown[serviceBreakdown.length - 1].items.push({
-          label: 'Fixed Mount',
-          price: isLarge ? 60 : 40
-        });
-      }
-
-      if (part.includes('outlet')) {
+      if (hasOutlet) {
         serviceBreakdown[serviceBreakdown.length - 1].items.push({
           label: 'Outlet Relocation',
           price: 100
@@ -66,19 +60,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       }
 
       totalPrice += 100; // Base installation
-    }
-
-    if (part.includes('Smart Camera')) {
-      serviceBreakdown.push({
-        title: 'Smart Camera',
-        items: [
-          {
-            label: 'Base Installation (1 unit)',
-            price: 75
-          }
-        ]
-      });
-      totalPrice += 75;
+      if (hasOutlet) totalPrice += 100; // Outlet relocation
     }
 
     if (part.includes('Floodlight')) {
@@ -92,6 +74,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         ]
       });
       totalPrice += 100;
+      services.push('Floodlight Installation');
     }
   }
 
@@ -108,69 +91,6 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       ]
     });
     totalPrice -= 10;
-  }
-
-  for (const part of serviceParts) {
-    if (part.includes('TV')) {
-      const tvMatch = part.match(/(\d+)\s*TV/);
-      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
-
-      // Base price for TV mounting
-      const basePrice = count * 100;
-      totalPrice += basePrice;
-
-      // Extract additional options
-      const hasNonDrywall = part.toLowerCase().includes('non-drywall');
-      const hasOutlet = part.toLowerCase().includes('outlet');
-      const hasFireplace = part.toLowerCase().includes('fireplace');
-
-      let description = `TV Installation (${count} unit${count > 1 ? 's' : ''})`;
-      if (hasNonDrywall) {
-        description += ' - Non-Drywall Installation';
-        totalPrice += 50 * count;
-      }
-      if (hasOutlet && !hasFireplace) {
-        description += ' - Outlet Relocation';
-        totalPrice += 100 * count;
-      }
-      if (hasFireplace) {
-        description += ' - Above Fireplace';
-      }
-
-      services.push(description);
-    }
-
-    if (part.includes('Smart')) {
-      if (part.includes('Doorbell')) {
-        const count = parseInt(part.match(/\d+/)?.[0] || '1');
-        const hasBrick = part.toLowerCase().includes('brick');
-        let description = `Smart Doorbell Installation (${count} unit${count > 1 ? 's' : ''})`;
-        if (hasBrick) {
-          description += ' - Brick Installation';
-          totalPrice += 10 * count;
-        }
-        totalPrice += 75 * count;
-        services.push(description);
-      } else if (part.includes('Floodlight')) {
-        const count = parseInt(part.match(/\d+/)?.[0] || '1');
-        totalPrice += 100 * count;
-        services.push(`Floodlight Installation (${count} unit${count > 1 ? 's' : ''})`);
-      } else if (part.includes('Camera')) {
-        const count = parseInt(part.match(/\d+/)?.[0] || '1');
-        const heightMatch = part.match(/height-(\d+)/);
-        const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-        let description = `Smart Camera Installation (${count} unit${count > 1 ? 's' : ''})`;
-
-        if (mountHeight > 8) {
-          const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
-          description += ` - ${mountHeight}ft height`;
-          totalPrice += heightFee * count;
-        }
-
-        totalPrice += 75 * count;
-        services.push(description);
-      }
-    }
   }
 
   return { services, price: totalPrice, serviceBreakdown };
@@ -253,7 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formattedTime = dateTime.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: 'numeric',
-        hour12: true
+        hour12: true,
+        second: 'numeric' // Added to show seconds for more precise time
       });
 
       // Parse services and calculate price
