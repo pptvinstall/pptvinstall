@@ -56,6 +56,44 @@ export default function BookingConfirmation() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Selected Services</h3>
+                  <div className="space-y-2">
+                    {booking?.serviceType.split(' + ').length > 0 
+                      ? booking?.serviceType.split(' + ').map((service, index) => (
+                        <div key={index} className="p-3 bg-muted rounded-md flex items-center">
+                          {service.toLowerCase().includes('tv') && (
+                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M20 6H4C2.89543 6 2 6.89543 2 8V16C2 17.1046 2.89543 18 4 18H20C21.1046 18 22 17.1046 22 16V8C22 6.89543 21.1046 6 20 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M8 21H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 18V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          {(service.toLowerCase().includes('doorbell') || service.toLowerCase().includes('smart doorbell')) && (
+                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M8 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M17 13V7M17 7V1M17 7H11M17 7H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          {(service.toLowerCase().includes('camera') && !service.toLowerCase().includes('floodlight')) && (
+                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M23 19V8C23 6.89543 22.1046 6 21 6H3C1.89543 6 1 6.89543 1 8V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          {(service.toLowerCase().includes('floodlight')) && (
+                            <svg className="w-5 h-5 mr-2 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 3V5M5.64 5.64L7.05 7.05M18.36 5.64L16.95 7.05M12 21V18M4 13H2M22 13H20M6 13C6 9.68629 8.68629 7 12 7C15.3137 7 18 9.68629 18 13C18 14.6569 17.3284 16.1569 16.2426 17.2426L15 20H9L7.75736 17.2426C6.67157 16.1569 6 14.6569 6 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                          <span className="flex-1">{service}</span>
+                        </div>
+                      ))
+                      : <div className="p-3 bg-muted rounded-md text-muted-foreground">No services selected</div>
+                    }
+                  </div>
+                </div>
+
                 <div className="mt-4 space-y-2">
                   <h2 className="text-lg font-medium">Next Steps</h2>
                   <ul className="space-y-2 text-sm">

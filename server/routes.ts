@@ -117,7 +117,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75;
     }
 
-    if (part.includes('Floodlight')) {
+    if (part.includes('Floodlight') || part.toLowerCase().includes('smart floodlight')) {
       const title = 'Smart Floodlight';
       services.push(title);
 
@@ -133,7 +133,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100;
     }
 
-    if (part.includes('Smart Camera') && !part.includes('Floodlight')) {
+    if ((part.includes('Smart Camera') || part.toLowerCase().includes('camera')) && !part.includes('Floodlight') && !part.toLowerCase().includes('floodlight')) {
       const heightMatch = part.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
       const title = 'Smart Camera';
@@ -491,7 +491,9 @@ Questions? Call 404-702-4748`;
   <div class="section">
     <div class="section-title">Selected Services</div>
     <div style="display: flex; flex-direction: column; gap: 8px;">
-      ${services.map(service => `<div style="padding: 8px; background: #f8f9fa; border-radius: 4px;">${service}</div>`).join('')}
+      ${services.length > 0 
+        ? services.map(service => `<div style="padding: 8px; background: #f8f9fa; border-radius: 4px;">${service}</div>`).join('') 
+        : '<div style="padding: 8px; background: #f8f9fa; border-radius: 4px; color: #666;">No services selected</div>'}
     </div>
   </div>
 
@@ -644,7 +646,11 @@ Saturday-Sunday: 11AM-7PM
       res.json(booking);
     } catch (error) {
       console.error('Booking error:', error);
-      res.status(400).json({ error: "Invalid booking data" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ 
+        error: "Invalid booking data", 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
+      });
     }
   });
 

@@ -97,26 +97,52 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </Button>
               </div>
             ))}
+            <div className="space-y-3">
             {smartHomeInstallations.map((device, index) => (
-              <div key={`smart-${index}`} className="flex justify-between items-center">
-                <span>
-                  {device.type === 'doorbell' ? 'Smart Doorbell' :
-                    device.type === 'floodlight' ? 'Floodlight' :
-                      'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
-                  {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
-                    ` at ${device.mountHeight}ft`}
-                  {device.type === 'doorbell' && device.brickInstallation && ' (Brick)'}
-                </span>
+              <div key={index} className="flex justify-between items-center p-3 bg-muted/60 hover:bg-muted/80 border border-muted rounded-md transition-colors">
+                <div className="flex items-center gap-3">
+                  {device.type === 'doorbell' && (
+                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M8 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M17 13V7M17 7V1M17 7H11M17 7H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  {device.type === 'floodlight' && (
+                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 3V5M5.64 5.64L7.05 7.05M18.36 5.64L16.95 7.05M12 21V18M4 13H2M22 13H20M6 13C6 9.68629 8.68629 7 12 7C15.3137 7 18 9.68629 18 13C18 14.6569 17.3284 16.1569 16.2426 17.2426L15 20H9L7.75736 17.2426C6.67157 16.1569 6 14.6569 6 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  {device.type === 'camera' && (
+                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M23 19V8C23 6.89543 22.1046 6 21 6H3C1.89543 6 1 6.89543 1 8V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  <div>
+                    <span className="font-medium">
+                      {device.type === 'doorbell' ? 'Smart Doorbell' : 
+                      device.type === 'floodlight' ? 'Floodlight Camera' : 
+                      'Smart Camera'}
+                      {device.quantity > 1 && ` (${device.quantity})`}
+                    </span>
+                    <div className="text-xs text-muted-foreground">
+                      {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
+                        `Mount height: ${device.mountHeight}ft`}
+                      {device.type === 'doorbell' && device.brickInstallation && 'Brick installation'}
+                    </div>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => removeSmartHomeInstallation(index)}
-                  className="h-6 w-6 p-0"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
               </div>
             ))}
+          </div>
           </div>
         </Card>
       )}
