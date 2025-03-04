@@ -19,24 +19,98 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-// Update parseServiceType function to better handle smart devices
 function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
   const serviceBreakdown = [];
+  let tvCount = 0;
 
-  // First pass to count services
+  // First pass to count TVs for multi-TV discount
+  serviceParts.forEach(part => {
+    if (part.includes('TV')) {
+      const tvMatch = part.match(/(\d+)\s*TV/);
+      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
+    }
+  });
+
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
 
+    // Handle TV installations
+    if (trimmedPart.includes('TV')) {
+      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
+      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
+      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
+      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
+      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
+      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
+                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
+                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
+
+      // Create detailed service description for each TV
+      for (let i = 0; i < count; i++) {
+        const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} Installation`;
+        let description = `${isLarge ? '56" or larger' : '32"-55"'}`;
+        if (hasFireplace) description += ' - Above Fireplace';
+        if (mountType !== 'Standard Mount') description += ` with ${mountType}`;
+
+        services.push(`${title} (${description})`);
+
+        const items = [
+          {
+            label: 'Base Installation',
+            price: 100
+          }
+        ];
+
+        // Add mount pricing
+        if (mountType !== 'Standard Mount') {
+          const mountPrice = isLarge ? 
+            (mountType === 'Fixed Mount' ? 60 : 
+             mountType === 'Tilt Mount' ? 70 : 100) :
+            (mountType === 'Fixed Mount' ? 40 : 
+             mountType === 'Tilt Mount' ? 50 : 80);
+
+          items.push({
+            label: mountType,
+            price: mountPrice
+          });
+          totalPrice += mountPrice;
+        }
+
+        if (hasOutlet) {
+          items.push({
+            label: 'Outlet Relocation',
+            price: 100
+          });
+          totalPrice += 100;
+        }
+
+        if (hasFireplace) {
+          items.push({
+            label: 'Fireplace Installation Fee',
+            price: 50
+          });
+          totalPrice += 50;
+        }
+
+        serviceBreakdown.push({
+          title: `${title} (${description})`,
+          items
+        });
+        totalPrice += 100; // Base installation
+      }
+    }
+
+    // Handle Smart Devices
     if (trimmedPart.match(/(\d+)\s*Smart/i)) {
       const count = parseInt(trimmedPart.match(/(\d+)/)[1]);
-      const title = `Smart Device Installation (${count} units)`;
-      services.push(title);
+      const title = `Smart Device Installation`;
+      services.push(`${title} (${count} units)`);
 
       serviceBreakdown.push({
-        title,
+        title: `${title} (${count} units)`,
         items: [
           {
             label: `Base Installation (${count} units)`,
@@ -48,14 +122,15 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75 * count;
     }
 
+    // Handle Smart Doorbell
     if (trimmedPart.includes('Doorbell')) {
       const title = 'Smart Doorbell Installation';
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
-      services.push(title);
+      services.push(title + (hasBrick ? ' (Brick Surface)' : ''));
 
       const items = [
         {
-          label: 'Base Installation (1 unit)',
+          label: 'Base Installation',
           price: 75
         }
       ];
@@ -72,15 +147,16 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75;
     }
 
+    // Handle Floodlight
     if (trimmedPart.includes('Floodlight')) {
-      const title = 'Smart Floodlight Installation';
+      const title = 'Floodlight Camera Installation';
       services.push(title);
 
       serviceBreakdown.push({
         title,
         items: [
           {
-            label: 'Base Installation (1 unit)',
+            label: 'Base Installation',
             price: 100
           }
         ]
@@ -88,15 +164,18 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100;
     }
 
+    // Handle Smart Camera
     if (trimmedPart.includes('Camera') && !trimmedPart.includes('Floodlight')) {
       const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-      const title = `Smart Camera Installation${mountHeight > 8 ? ` (${mountHeight}ft height)` : ''}`;
+      const title = 'Smart Camera Installation';
+      const description = mountHeight > 8 ? ` (${mountHeight}ft height)` : '';
 
-      services.push(title);
+      services.push(title + description);
+
       const items = [
         {
-          label: 'Base Installation (1 unit)',
+          label: 'Base Installation',
           price: 75
         }
       ];
@@ -110,9 +189,28 @@ function parseServiceType(serviceType: string): { services: string[], price: num
         totalPrice += heightFee;
       }
 
-      serviceBreakdown.push({ title, items });
+      serviceBreakdown.push({
+        title: title + description,
+        items
+      });
       totalPrice += 75;
     }
+  }
+
+  // Apply multi-TV discount if applicable
+  if (tvCount > 1) {
+    services.push('Multi-TV Installation Discount');
+    serviceBreakdown.push({
+      title: 'Multi-TV Discount',
+      items: [
+        {
+          label: 'Multi-TV Installation Discount',
+          price: -10,
+          isDiscount: true
+        }
+      ]
+    });
+    totalPrice -= 10;
   }
 
   return { services, price: totalPrice, serviceBreakdown };
