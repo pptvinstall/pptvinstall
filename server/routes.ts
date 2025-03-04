@@ -19,85 +19,37 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
+// Update parseServiceType function to better handle smart devices
 function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
-  let tvCount = 0;
-
-  // First pass to count TVs for multi-TV discount
-  serviceParts.forEach(part => {
-    if (part.includes('TV')) {
-      const tvMatch = part.match(/(\d+)\s*TV/);
-      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
-    }
-  });
-
   const serviceBreakdown = [];
 
+  // First pass to count services
   for (const part of serviceParts) {
-    // Trim the part to ensure consistent detection
     const trimmedPart = part.trim();
 
-    if (trimmedPart.includes('TV')) {
-      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
-      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
-      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
-      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
-      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
-      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
-                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
-                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
-
-      // Create service title
-      const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
+    if (trimmedPart.match(/(\d+)\s*Smart/i)) {
+      const count = parseInt(trimmedPart.match(/(\d+)/)[1]);
+      const title = `Smart Device Installation (${count} units)`;
       services.push(title);
 
-      const items = [
-        {
-          label: 'Base Installation (standard)',
-          price: 100
-        }
-      ];
+      serviceBreakdown.push({
+        title,
+        items: [
+          {
+            label: `Base Installation (${count} units)`,
+            price: 75 * count
+          }
+        ]
+      });
 
-      // Add mount pricing if specified
-      if (mountType !== 'Standard Mount') {
-        const mountPrice = isLarge ? 
-          (mountType === 'Fixed Mount' ? 60 : 
-           mountType === 'Tilt Mount' ? 70 : 100) :
-          (mountType === 'Fixed Mount' ? 40 : 
-           mountType === 'Tilt Mount' ? 50 : 80);
-
-        items.push({
-          label: mountType,
-          price: mountPrice
-        });
-        totalPrice += mountPrice;
-      }
-
-      if (hasOutlet) {
-        items.push({
-          label: 'Outlet Relocation',
-          price: 100
-        });
-        totalPrice += 100;
-      }
-
-      if (hasFireplace) {
-        items.push({
-          label: 'Fireplace Installation',
-          price: 50
-        });
-        totalPrice += 50;
-      }
-
-      serviceBreakdown.push({ title, items });
-      totalPrice += 100; // Base installation
+      totalPrice += 75 * count;
     }
 
-    // Smart Home Services parsing - note the use of trimmedPart
-    else if (trimmedPart.includes('Smart Doorbell')) {
-      const title = 'Smart Doorbell';
+    if (trimmedPart.includes('Doorbell')) {
+      const title = 'Smart Doorbell Installation';
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       services.push(title);
 
@@ -110,7 +62,7 @@ function parseServiceType(serviceType: string): { services: string[], price: num
 
       if (hasBrick) {
         items.push({
-          label: 'Brick Installation',
+          label: 'Brick Installation Fee',
           price: 10
         });
         totalPrice += 10;
@@ -120,8 +72,8 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 75;
     }
 
-    else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
-      const title = 'Smart Floodlight';
+    if (trimmedPart.includes('Floodlight')) {
+      const title = 'Smart Floodlight Installation';
       services.push(title);
 
       serviceBreakdown.push({
@@ -136,13 +88,12 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       totalPrice += 100;
     }
 
-    else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
-             !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
+    if (trimmedPart.includes('Camera') && !trimmedPart.includes('Floodlight')) {
       const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-      const title = 'Smart Camera';
-      services.push(title);
+      const title = `Smart Camera Installation${mountHeight > 8 ? ` (${mountHeight}ft height)` : ''}`;
 
+      services.push(title);
       const items = [
         {
           label: 'Base Installation (1 unit)',
@@ -162,56 +113,6 @@ function parseServiceType(serviceType: string): { services: string[], price: num
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
-
-    // Handle "Smart Home Services" general selection
-    else if (trimmedPart.toLowerCase().includes('smart home service') || 
-             trimmedPart.toLowerCase().includes('smart home installation')) {
-      // This catches any smart home services that weren't caught by specific categories
-      const title = 'Smart Home Installation';
-      services.push(title);
-
-      serviceBreakdown.push({
-        title,
-        items: [
-          {
-            label: 'Smart Home Base Installation',
-            price: 75
-          }
-        ]
-      });
-      totalPrice += 75;
-    }
-  }
-
-  // Apply multi-TV discount if applicable
-  if (tvCount > 1) {
-    services.push('Multi-TV Discount');
-    serviceBreakdown.push({
-      title: 'Multi-TV Discount',
-      items: [
-        {
-          label: 'Multi-TV Installation Discount',
-          price: -10,
-          isDiscount: true
-        }
-      ]
-    });
-    totalPrice -= 10;
-  }
-
-  // Make sure we have at least one service
-  if (services.length === 0) {
-    services.push('Standard Installation');
-    serviceBreakdown.push({
-      title: 'Standard Installation',
-      items: [
-        {
-          label: 'Base Service',
-          price: 75
-        }
-      ]
-    });
-    totalPrice += 75;
   }
 
   return { services, price: totalPrice, serviceBreakdown };
@@ -389,8 +290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Booking error:', error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-      res.status(400).json({ 
-        error: "Invalid booking data", 
+      res.status(400).json({
+        error: "Invalid booking data",
         details: process.env.NODE_ENV === 'development' ? errorMessage : "Failed to create booking"
       });
     }
@@ -423,12 +324,15 @@ ${data.name}
 ${data.email}
 ${data.phone}
 
-${data.notes ? `Additional Notes\n--------------\n${data.notes}\n\n` : ''}
+${data.notes ? `Additional Notes
+--------------
+${data.notes}\n\n` : ''}
 
 Note: Deposit is required to secure your booking and will be deducted from the total amount.
 `;
   }
 
+  // Update the generateEmailTemplate function
   function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
     return `
 <!DOCTYPE html>
@@ -445,33 +349,35 @@ Note: Deposit is required to secure your booking and will be deducted from the t
     }
     .section {
       margin-bottom: 24px;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
     }
     .section-title {
       font-size: 20px;
       font-weight: 600;
       margin-bottom: 16px;
       color: #111;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 8px;
     }
-    .subsection {
-      margin-bottom: 16px;
+    .service-item {
       background: #f8f9fa;
       padding: 16px;
       border-radius: 8px;
+      margin-bottom: 12px;
     }
-    .subsection-title {
-      font-size: 16px;
-      font-weight: 500;
-      margin-bottom: 8px;
+    .service-title {
+      font-weight: 600;
       color: #2563eb;
+      margin-bottom: 8px;
     }
     .price-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       padding-left: 16px;
-    }
-    .price {
-      font-variant-numeric: tabular-nums;
     }
     .total-row {
       font-weight: 600;
@@ -480,15 +386,17 @@ Note: Deposit is required to secure your booking and will be deducted from the t
       padding: 16px;
       background: #f0f9ff;
       border-radius: 8px;
+      border: 1px solid #bfdbfe;
     }
     .deposit-note {
       margin-top: 16px;
       color: #666;
       font-size: 14px;
       font-style: italic;
-    }
-    .discount {
-      color: #22c55e;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px dashed #94a3b8;
     }
   </style>
 </head>
@@ -496,12 +404,12 @@ Note: Deposit is required to secure your booking and will be deducted from the t
   <div class="section">
     <div class="section-title">Selected Services</div>
     ${serviceBreakdown.map(section => `
-      <div class="subsection">
-        <div class="subsection-title">${section.title}</div>
+      <div class="service-item">
+        <div class="service-title">${section.title}</div>
         ${section.items.map(item => `
           <div class="price-row">
             <span>${item.label}</span>
-            <span class="price${item.isDiscount ? ' discount' : ''}">${formatPrice(item.price)}</span>
+            <span>${formatPrice(item.price)}</span>
           </div>
         `).join('')}
       </div>
@@ -509,22 +417,19 @@ Note: Deposit is required to secure your booking and will be deducted from the t
 
     <div class="total-row price-row">
       <span>Total</span>
-      <span class="price">${formatPrice(price)}</span>
-    </div>
-
-    <div class="price-row">
-      <span>Required Deposit</span>
-      <span class="price">${formatPrice(75)}</span>
+      <span>${formatPrice(price)}</span>
     </div>
 
     <div class="deposit-note">
-      Deposit is required to secure your booking and will be deducted from the total amount.
+      A deposit of ${formatPrice(75)} is required to secure your booking and will be deducted from the total amount.
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Appointment</div>
-    <div>${formattedDate} at ${preferredTime}</div>
+    <div class="section-title">Appointment Details</div>
+    <div style="font-size: 18px; font-weight: 500; color: #2563eb;">
+      ${formattedDate} at ${preferredTime}
+    </div>
   </div>
 
   <div class="section">
@@ -536,17 +441,26 @@ Note: Deposit is required to secure your booking and will be deducted from the t
 
   <div class="section">
     <div class="section-title">Contact Information</div>
-    <div>${data.name}</div>
-    <div>${data.email}</div>
-    <div>${data.phone}</div>
+    <div style="margin-bottom: 4px;"><strong>Name:</strong> ${data.name}</div>
+    <div style="margin-bottom: 4px;"><strong>Email:</strong> ${data.email}</div>
+    <div style="margin-bottom: 4px;"><strong>Phone:</strong> ${data.phone}</div>
   </div>
 
   ${data.notes ? `
   <div class="section">
     <div class="section-title">Additional Notes</div>
-    <div>${data.notes}</div>
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">${data.notes}</div>
   </div>
   ` : ''}
+
+  <div class="section" style="background: #f8f9fa;">
+    <div style="text-align: center; color: #64748b;">
+      <div style="font-weight: 600; margin-bottom: 8px;">Business Hours</div>
+      <div>Monday-Friday: 6:30PM-10:30PM</div>
+      <div>Saturday-Sunday: 11AM-7PM</div>
+      <div style="margin-top: 12px;">Questions? Call 404-702-4748</div>
+    </div>
+  </div>
 </body>
 </html>`;
   }
@@ -647,7 +561,7 @@ Questions? Call 404-702-4748`;
   app.post("/api/bookings/:id/cancel", async (req, res) => {
     try {
       const { id } = req.params;
-      const booking = await storage.updateBooking(parseInt(id), { 
+      const booking = await storage.updateBooking(parseInt(id), {
         status: 'cancelled',
         cancellationReason: req.body.reason || 'Cancelled by admin'
       });
