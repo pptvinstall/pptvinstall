@@ -25,7 +25,8 @@ export const bookings = pgTable("bookings", {
   detailedServices: text("detailed_services"),  // JSON string of detailed services
   totalPrice: varchar("total_price", { length: 20 }), // Store calculated price
   preferredDate: varchar("preferred_date", { length: 50 }).notNull(),
-  appointmentTime: varchar("appointment_time", { length: 20 }), // Store time separately
+  preferredTime: varchar("preferred_time", { length: 20 }).notNull(), // Store time separately
+  appointmentTime: varchar("appointment_time", { length: 20 }), // Confirmed time
   notes: text("notes"),
   status: varchar("status", { length: 20 }).default('active'),
   cancellationReason: text("cancellation_reason"),
@@ -41,7 +42,12 @@ export const bookingSchema = createInsertSchema(bookings).omit({
   id: true, 
   createdAt: true,
   status: true,
-  cancellationReason: true
+  cancellationReason: true,
+  appointmentTime: true // This will be set after confirmation
+}).extend({
+  preferredTime: z.string().min(1, "Preferred time is required"),
+  detailedServices: z.string().optional(),
+  totalPrice: z.string().optional()
 });
 
 export type ContactMessage = typeof contactMessages.$inferSelect;
