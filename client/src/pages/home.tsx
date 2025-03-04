@@ -12,11 +12,16 @@ export default function Home() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="mb-8 transform transition-all duration-700 hover:scale-105">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/50 rounded-xl"></div>
+                <div className="absolute inset-0 bg-gradient-radial from-transparent via-gray-50/80 to-white/90 rounded-3xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/50 rounded-3xl backdrop-blur-[1px]"></div>
                 <img
                   src="/images/logo.jpeg"
                   alt="Picture Perfect TV Install Logo"
-                  className="mx-auto w-40 h-auto object-contain relative z-10"
+                  className="mx-auto w-40 h-auto object-contain relative z-10 drop-shadow-sm"
+                  style={{
+                    maskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)',
+                    WebkitMaskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)'
+                  }}
                 />
               </div>
             </div>
