@@ -35,11 +35,11 @@ export default function Home() {
 
       {/* Showcase Image */}
       <section className="relative">
-        <div className="w-full aspect-[21/9] overflow-hidden">
+        <div className="w-full">
           <img
             src="/assets/IMG_4282.jpeg"
             alt="TV Installation Showcase"
-            className="w-full h-full object-cover"
+            className="w-full"
           />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
         </div>
