@@ -43,6 +43,7 @@ export function PricingManager() {
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async (data: Partial<PricingConfig>) => {
+      console.log("Updating price with data:", data);
       const response = await apiRequest("PUT", `/api/admin/pricing/${data.id}`, {
         ...data,
         basePrice: data.basePrice?.toString()
@@ -70,6 +71,7 @@ export function PricingManager() {
   });
 
   const handlePriceEdit = (price: PricingConfig) => {
+    console.log("Editing price:", price);
     setEditingPrice({
       ...price,
       basePrice: parseFloat(price.basePrice.toString())
@@ -78,15 +80,18 @@ export function PricingManager() {
 
   const handlePriceChange = (value: string) => {
     if (editingPrice) {
+      const numericValue = parseFloat(value) || 0;
+      console.log("Changing price to:", numericValue);
       setEditingPrice({
         ...editingPrice,
-        basePrice: parseFloat(value) || 0
+        basePrice: numericValue
       });
     }
   };
 
   const handlePriceSave = () => {
     if (editingPrice) {
+      console.log("Saving price:", editingPrice);
       updatePriceMutation.mutate(editingPrice);
     }
   };
@@ -159,82 +164,6 @@ export function PricingManager() {
                         variant="outline"
                         size="sm"
                         onClick={() => handlePriceEdit(price)}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      {/* Pricing Rules Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing Rules</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rule</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules?.map((rule) => (
-                <TableRow key={rule.id}>
-                  <TableCell>{rule.ruleName}</TableCell>
-                  <TableCell>{rule.ruleType}</TableCell>
-                  <TableCell>
-                    {editingRule?.id === rule.id ? (
-                      <Input
-                        type="number"
-                        value={editingRule.ruleValue}
-                        onChange={(e) => setEditingRule({
-                          ...editingRule,
-                          ruleValue: parseFloat(e.target.value)
-                        })}
-                      />
-                    ) : (
-                      `$${rule.ruleValue}`
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {rule.isActive ? (
-                      <span className="text-green-600">Active</span>
-                    ) : (
-                      <span className="text-gray-400">Inactive</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {editingRule?.id === rule.id ? (
-                      <div className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingRule(null)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => updateRuleMutation.mutate(editingRule)}
-                          disabled={updateRuleMutation.isPending}
-                        >
-                          {updateRuleMutation.isPending ? "Saving..." : "Save"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingRule(rule)}
                       >
                         Edit
                       </Button>

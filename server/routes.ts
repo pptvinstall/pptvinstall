@@ -827,7 +827,9 @@ Questions? Call 404-702-4748`;
   // Add new pricing admin routes
   app.get("/api/admin/pricing", async (req, res) => {
     try {
+      console.log("Fetching all prices");
       const prices = await storage.getAllPrices();
+      console.log("Retrieved prices:", prices);
       res.json(prices);
     } catch (error) {
       console.error('Error fetching prices:', error);
@@ -849,22 +851,30 @@ Questions? Call 404-702-4748`;
     try {
       const { id } = req.params;
       const priceId = parseInt(id);
+      console.log(`Updating price ${priceId} with:`, req.body);
 
       // Get current price for history
       const currentPrice = await storage.getPrice(priceId);
+      if (!currentPrice) {
+        return res.status(404).json({ error: "Price configuration not found" });
+      }
 
       // Update price
-      const updatedPrice = await storage.updatePrice(priceId, req.body);
+      const updatedPrice = await storage.updatePrice(priceId, {
+        ...req.body,
+        basePrice: req.body.basePrice.toString()
+      });
 
       // Record price change in history
       await storage.createPriceHistory({
         serviceType: currentPrice.serviceType,
         previousPrice: currentPrice.basePrice,
         newPrice: req.body.basePrice,
-        changedBy: req.body.updatedBy,
-        notes: req.body.notes
+        changedBy: req.body.updatedBy || 'admin',
+        notes: req.body.notes || 'Price updated through admin panel'
       });
 
+      console.log("Price updated successfully:", updatedPrice);
       res.json(updatedPrice);
     } catch (error) {
       console.error('Error updating price:', error);
