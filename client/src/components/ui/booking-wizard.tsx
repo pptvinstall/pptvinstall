@@ -18,10 +18,31 @@ const steps = [
   "Review & Book"
 ] as const;
 
+interface BookingFormData {
+  name: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  notes: string;
+  serviceType?: string;
+  preferredDate?: string;
+  preferredTime?: string;
+}
+
+interface ExistingBooking {
+  preferredDate: string;
+  preferredTime: string;
+  id: number;
+}
+
 interface BookingWizardProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: BookingFormData) => void;
   isSubmitting: boolean;
-  existingBookings?: any[];
+  existingBookings?: ExistingBooking[];
   isLoadingBookings?: boolean;
 }
 
@@ -36,7 +57,7 @@ export function BookingWizard({
   const [smartHomeInstallations, setSmartHomeInstallations] = useState<SmartHomeInstallation[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
     phone: "",
@@ -48,14 +69,12 @@ export function BookingWizard({
     notes: ""
   });
 
-  // Generate time slots based on day of week
   const getTimeSlots = (date: Date | undefined) => {
     if (!date) return [];
 
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6; // 0 is Sunday, 6 is Saturday
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6; 
 
     if (isWeekend) {
-      // Weekend slots: 11 AM to 7 PM
       return [
         "11:00 AM",
         "12:00 PM",
@@ -67,7 +86,6 @@ export function BookingWizard({
         "6:00 PM"
       ];
     } else {
-      // Weekday slots: 6:30 PM to 10:30 PM
       return [
         "6:30 PM",
         "7:30 PM",
@@ -82,7 +100,7 @@ export function BookingWizard({
   const isTimeSlotAvailable = (time: string) => {
     if (!selectedDate) return false;
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    return !existingBookings.some(booking =>
+    return !existingBookings?.some(booking =>
       booking.preferredDate === dateString && booking.preferredTime === time
     );
   };
@@ -124,7 +142,6 @@ export function BookingWizard({
 
   return (
     <div className="space-y-8">
-      {/* Progress Steps */}
       <div className="flex justify-between">
         {steps.map((step, index) => (
           <div
@@ -153,7 +170,6 @@ export function BookingWizard({
         ))}
       </div>
 
-      {/* Step Content */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           {currentStep === 0 && (
@@ -170,7 +186,7 @@ export function BookingWizard({
                 selected={selectedDate}
                 onSelect={(date) => {
                   setSelectedDate(date);
-                  setSelectedTime(undefined); // Reset time when date changes
+                  setSelectedTime(undefined); 
                 }}
                 className="rounded-md border"
                 disabled={(date) => {

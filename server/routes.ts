@@ -7,7 +7,6 @@ import {
   SMART_DEVICE_PRICES, 
   SERVICE_NOTES, 
   calculateMultiDeviceDiscount,
-  formatPrice,
   type ServiceBreakdown,
   type PriceItem 
 } from "@shared/pricing";
@@ -20,22 +19,25 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-function formatPrice(amount: number): string {
+// Rename local formatPrice to avoid conflict
+function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
   }).format(amount);
 }
 
-function parseServiceType(serviceType: string): { 
-  services: string[], 
-  price: number, 
-  serviceBreakdown: ServiceBreakdown[] 
-} {
+interface ParsedService {
+  services: string[];
+  price: number;
+  serviceBreakdown: ServiceBreakdown[];
+}
+
+function parseServiceType(serviceType: string): ParsedService {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
-  const services = [];
-  const serviceBreakdown = [];
+  const services: string[] = [];
+  const serviceBreakdown: ServiceBreakdown[] = [];
   let deviceCount = 0;
 
   // First pass to count total devices for discount
@@ -49,10 +51,11 @@ function parseServiceType(serviceType: string): {
 
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
+    const smartDeviceMatch = trimmedPart.match(/Smart Device (\d+)/);
 
     // Handle Smart Device installations
-    if (trimmedPart.match(/Smart Device (\d+)/)) {
-      const deviceNumber = trimmedPart.match(/Smart Device (\d+)/)[1];
+    if (smartDeviceMatch?.[1]) {
+      const deviceNumber = smartDeviceMatch[1];
       const title = `Smart Device ${deviceNumber} Installation`;
       services.push(title);
 
@@ -162,6 +165,76 @@ function parseServiceType(serviceType: string): {
   console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
   console.log("Total price:", totalPrice);
   return { services, price: totalPrice, serviceBreakdown };
+}
+
+interface EmailData {
+  name: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  notes?: string;
+  preferredDate: string;
+  preferredTime: string;
+}
+
+interface ServiceBreakdownSection {
+  title: string;
+  items: Array<{
+    label: string;
+    price: number;
+    note?: string;
+  }>;
+}
+
+function generateEmailText(
+  data: EmailData,
+  services: string[],
+  serviceBreakdown: ServiceBreakdownSection[],
+  price: number,
+  formattedDate: string,
+  preferredTime: string
+): string {
+  return `
+Selected Services
+----------------
+${serviceBreakdown.map(section => 
+`${section.title}
+${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
+).join('\n\n')}
+
+Total: ${formatCurrency(price)}
+
+Appointment
+----------
+${formattedDate} at ${preferredTime}
+
+Installation Address
+------------------
+${data.streetAddress}
+${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
+
+Contact Information
+-----------------
+${data.name}
+${data.email}
+${data.phone}
+
+${data.notes ? `Additional Notes
+--------------
+${data.notes}\n\n` : ''}
+`;
+}
+
+interface RevenueAnalytics {
+  totalRevenue: number;
+  currentMonthRevenue: number;
+  currentYearRevenue: number;
+  revenueByMonth: Record<string, number>;
+  revenueByYear: Record<string, number>;
 }
 
 function generateICalendarEvent(dateTime: Date, duration: number, summary: string, description: string, location: string): string {
@@ -359,16 +432,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  function generateEmailText(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
+  function generateEmailText(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number, formattedDate: string, preferredTime: string): string {
     return `
 Selected Services
 ----------------
 ${serviceBreakdown.map(section => 
 `${section.title}
-${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatPrice(price)}
+Total: ${formatCurrency(price)}
 
 Appointment
 ----------
@@ -392,7 +465,7 @@ ${data.notes}\n\n` : ''}
   }
 
   // Update the generateEmailTemplate function
-  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
+  function generateEmailTemplate(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number, formattedDate: string, preferredTime: string): string {
     return `
 <!DOCTYPE html>
 <html>
@@ -458,7 +531,7 @@ ${data.notes}\n\n` : ''}
         ${section.items.map(item => `
           <div class="price-row">
             <span>${item.label}</span>
-            <span>${formatPrice(item.price)}</span>
+            <span>${formatCurrency(item.price)}</span>
           </div>
         `).join('')}
       </div>
@@ -466,7 +539,7 @@ ${data.notes}\n\n` : ''}
 
     <div class="total-row price-row">
       <span>Total</span>
-      <span>${formatPrice(price)}</span>
+      <span>${formatCurrency(price)}</span>
     </div>
   </div>
 
@@ -510,17 +583,17 @@ ${data.notes}\n\n` : ''}
 </html>`;
   }
 
-  function generateCalendarEvent(data, services, serviceBreakdown, price) {
+  function generateCalendarEvent(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number): string {
     const dateTime = new Date(data.preferredDate);
     const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
     const eventDescription = `
 Selected Services:
 ${serviceBreakdown.map(section => 
 `${section.title}
-${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatPrice(price)}
+Total: ${formatCurrency(price)}
 
 Installation Address:
 ${data.streetAddress}
@@ -837,7 +910,7 @@ Questions? Call 404-702-4748`;
     }
   });
 
-  app.get("/api/admin/pricing/rules", async (req, res) => {
+  app.get("/api/admin/pricing/rules", async(req, res) => {
     try {
       const rules = await storage.getAllPricingRules();
       res.json(rules);
