@@ -5,9 +5,7 @@ import { eq } from "drizzle-orm";
 export class Storage {
   async getAllBookings(): Promise<Booking[]> {
     try {
-      console.log("Fetching all bookings");
       const result = await db.select().from(bookings);
-      console.log(`Retrieved ${result.length} bookings`);
       return result;
     } catch (error) {
       console.error("Error fetching all bookings:", error);
@@ -17,11 +15,10 @@ export class Storage {
 
   async getBookingsByDate(date: string): Promise<Booking[]> {
     try {
-      console.log(`Fetching bookings for date: ${date}`);
+      // Simple date comparison for now - might need refinement
       const result = await db.select().from(bookings).where(
         eq(bookings.preferredDate, date)
       );
-      console.log(`Retrieved ${result.length} bookings for date ${date}`);
       return result;
     } catch (error) {
       console.error("Error fetching bookings by date:", error);
@@ -31,7 +28,6 @@ export class Storage {
 
   async getBooking(id: number): Promise<Booking | null> {
     try {
-      console.log(`Fetching booking with ID: ${id}`);
       const [result] = await db.select().from(bookings).where(
         eq(bookings.id, id)
       );
@@ -44,7 +40,9 @@ export class Storage {
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
     try {
-      console.log("Creating new booking:", JSON.stringify(booking, null, 2));
+      console.log("Creating booking with data:", JSON.stringify(booking, null, 2));
+      
+      // Include all necessary fields including detailed services and price data
       const [newBooking] = await db
         .insert(bookings)
         .values({
@@ -57,15 +55,16 @@ export class Storage {
           state: booking.state,
           zipCode: booking.zipCode,
           serviceType: booking.serviceType,
-          detailedServices: booking.detailedServices,
-          totalPrice: booking.totalPrice,
           preferredDate: booking.preferredDate,
-          preferredTime: booking.preferredTime,
-          notes: booking.notes
+          notes: booking.notes,
+          detailedServices: booking.detailedServices || null,
+          totalPrice: booking.totalPrice || null,
+          appointmentTime: booking.appointmentTime || null,
+          status: 'active'
         })
         .returning();
-
-      console.log("Successfully created booking:", newBooking.id);
+      
+      console.log("Successfully created booking:", JSON.stringify(newBooking, null, 2));
       return newBooking;
     } catch (error) {
       console.error("Error creating booking:", error);
@@ -73,27 +72,14 @@ export class Storage {
     }
   }
 
-  async updateBooking(id: number, booking: Partial<Booking>): Promise<Booking | null> {
+  async updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking | null> {
     try {
-      console.log(`Updating booking ${id} with:`, JSON.stringify(booking, null, 2));
       const [updatedBooking] = await db
         .update(bookings)
-        .set({
-          ...booking,
-          // Ensure these fields aren't accidentally overwritten
-          id: undefined,
-          createdAt: undefined
-        })
+        .set(booking)
         .where(eq(bookings.id, id))
         .returning();
-
-      if (!updatedBooking) {
-        console.error(`No booking found with ID ${id}`);
-        return null;
-      }
-
-      console.log(`Successfully updated booking ${id}`);
-      return updatedBooking;
+      return updatedBooking || null;
     } catch (error) {
       console.error("Error updating booking:", error);
       throw error;
@@ -102,9 +88,7 @@ export class Storage {
 
   async deleteBooking(id: number): Promise<void> {
     try {
-      console.log(`Deleting booking ${id}`);
       await db.delete(bookings).where(eq(bookings.id, id));
-      console.log(`Successfully deleted booking ${id}`);
     } catch (error) {
       console.error("Error deleting booking:", error);
       throw error;
