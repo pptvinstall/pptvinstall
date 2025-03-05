@@ -1,16 +1,13 @@
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-interface LoadingSpinnerProps {
-  className?: string;
-}
+import React from "react";
 
-export function LoadingSpinner({ className }: LoadingSpinnerProps) {
+export function LoadingSpinner() {
   return (
-    <div className={cn("flex items-center justify-center", className)}>
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    <div className="flex justify-center items-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
     </div>
   );
 }
 
+// Add default export to fix import errors
 export default LoadingSpinner;

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useState, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import { Calendar } from "./calendar"
 import { TimeSlot } from "./time-slot"
 import { Button } from "./button"
