@@ -1,9 +1,9 @@
-
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -38,6 +38,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
           <div className="max-w-lg w-full bg-white shadow-lg rounded-lg p-8 border border-gray-200">
@@ -45,9 +49,9 @@ class ErrorBoundary extends Component<Props, State> {
               <div className="mb-6 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertTriangle className="h-10 w-10 text-red-500" />
               </div>
-              
+
               <h2 className="text-2xl font-bold text-center mb-4">Something went wrong</h2>
-              
+
               <div className="text-gray-600 mb-6 text-center">
                 <p className="mb-2">We apologize for the inconvenience. You can try refreshing the page or returning to the homepage.</p>
                 {this.state.error && (
@@ -57,7 +61,7 @@ class ErrorBoundary extends Component<Props, State> {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex space-x-4">
                 <button 
                   onClick={this.handleRefresh}
@@ -74,56 +78,6 @@ class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
           </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-export default ErrorBoundary;
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-interface State {
-  hasError: boolean;
-  error?: Error;
-}
-
-class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
-
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-  }
-
-  public render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-      
-      return (
-        <div className="flex flex-col items-center justify-center p-8 bg-red-50 border border-red-200 rounded-lg">
-          <h2 className="text-xl font-semibold text-red-700 mb-2">Something went wrong</h2>
-          <p className="text-gray-600 mb-4">The application encountered an error. Please try refreshing the page.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-brand-blue-500 text-white rounded-md hover:bg-brand-blue-600 transition-colors"
-          >
-            Refresh Page
-          </button>
         </div>
       );
     }
