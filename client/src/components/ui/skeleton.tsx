@@ -1,19 +1,3 @@
-
-import { cn } from "@/lib/utils";
-
-function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("animate-pulse rounded-md bg-gray-200", className)}
-      {...props}
-    />
-  );
-}
-
-export { Skeleton };
 import { cn } from "@/lib/utils";
 
 interface SkeletonProps {
@@ -73,7 +57,7 @@ export function CardSkeleton() {
 export function ServiceCardSkeleton() {
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm">
-      <Skeleton height={200} rounded="none" className="mb-4" />
+      <Skeleton height={200} rounded="lg" className="mb-4" />
       <div className="p-4">
         <Skeleton height={24} className="mb-2" />
         <Skeleton height={16} className="mb-4" />
@@ -84,30 +68,6 @@ export function ServiceCardSkeleton() {
         </div>
         <Skeleton height={40} rounded="md" />
       </div>
-    </div>
-  );
-}
-
-export function BookingFormSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <Skeleton height={24} width="30%" className="mb-2" />
-        <Skeleton height={40} rounded="md" />
-      </div>
-      <div>
-        <Skeleton height={24} width="30%" className="mb-2" />
-        <Skeleton height={40} rounded="md" />
-      </div>
-      <div>
-        <Skeleton height={24} width="30%" className="mb-2" />
-        <Skeleton height={40} rounded="md" />
-      </div>
-      <div>
-        <Skeleton height={24} width="30%" className="mb-2" />
-        <Skeleton height={100} rounded="md" />
-      </div>
-      <Skeleton height={48} rounded="md" />
     </div>
   );
 }

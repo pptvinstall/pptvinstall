@@ -2,6 +2,7 @@ import { bookings, type Booking, type InsertBooking, pricingConfig, pricingRules
 import { db } from "./db";
 import { LRUCache } from 'lru-cache';
 import NodeCache from "node-cache";
+import { desc, eq, sql } from "drizzle-orm";
 
 // Initialize cache with standard TTL of 5 minutes
 const cache = new NodeCache({ 
@@ -93,17 +94,11 @@ export class Storage {
 
   async getBooking(id: number): Promise<Booking | null> {
     try {
-      const cacheKey = `booking_${id}`;
-      const cachedBooking = cache.get(cacheKey);
-      if (cachedBooking) {
-        return cachedBooking;
-      }
       console.log(`Fetching booking with ID: ${id}`);
-      const db = await getDB();
-      const [result] = await db.select().from(bookings).where(
-        eq(bookings.id, id)
-      );
-      if (result) cache.set(cacheKey, result, 300);
+      const [result] = await db
+        .select()
+        .from(bookings)
+        .where(eq(bookings.id, id));
       return result || null;
     } catch (error) {
       console.error("Error fetching booking:", error);
@@ -113,38 +108,19 @@ export class Storage {
 
   async createBooking(data: InsertBooking): Promise<Booking> {
     try {
-      console.log("Creating new booking with data:", JSON.stringify(data, null, 2));
+      console.log("Creating new booking:", data);
 
-      // Ensure totalPrice is properly formatted
-      if (data.totalPrice && typeof data.totalPrice === 'number') {
-        data.totalPrice = data.totalPrice.toString();
-      }
-
-      // Fix date format if needed
-      if (data.preferredDate && data.preferredDate instanceof Date) {
-        data.preferredDate = data.preferredDate.toISOString();
-      }
-
-      // Create the booking with all required fields
-      const db = await getDB();
       const [newBooking] = await db
         .insert(bookings)
         .values({
           name: data.name,
           email: data.email,
           phone: data.phone,
-          streetAddress: data.streetAddress,
-          addressLine2: data.addressLine2,
-          city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
           serviceType: data.serviceType,
-          detailedServices: data.detailedServices,
-          totalPrice: data.totalPrice,
           preferredDate: data.preferredDate,
           preferredTime: data.preferredTime,
           notes: data.notes,
-          status: 'active'
+          status: 'pending'
         })
         .returning();
 
@@ -152,12 +128,7 @@ export class Storage {
         throw new Error('Failed to create booking - no booking returned from database');
       }
 
-      cache.del('all_bookings');
-      cache.del(`bookings_date_${data.preferredDate.split('T')[0]}`);
-      cache.del(`bookings_email_${data.email}`);
-
-
-      console.log("Successfully created booking:", JSON.stringify(newBooking, null, 2));
+      console.log("Successfully created booking:", newBooking);
       return newBooking;
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -232,13 +203,13 @@ export class Storage {
     }
   }
 
-  async getBookingHistory(bookingId: number): Promise<any[]> { // Replace any[] with the actual type
+  async getBookingHistory(bookingId: number): Promise<any[]> { 
     try {
       console.log(`Fetching history for booking ${bookingId}`);
       const db = await getDB();
       const history = await db
         .select()
-        .from(priceHistory) // Assuming priceHistory is the correct table
+        .from(priceHistory) 
         .where(eq(priceHistory.bookingId, bookingId))
         .orderBy(desc(priceHistory.changedAt));
 
