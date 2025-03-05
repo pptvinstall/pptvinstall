@@ -233,6 +233,43 @@ export default function BookingConfirmation() {
     }
   };
 
+  // Calculate estimated price based on service type
+  const getEstimatedPrice = () => {
+    const serviceType = booking.serviceType?.toLowerCase() || '';
+    
+    // Base pricing
+    let total = 0;
+    
+    // TV mounting prices
+    const tvCount = (serviceType.match(/tv/gi) || []).length;
+    if (tvCount > 0) {
+      // Assume standard TV mounting price is $149
+      total += 149;
+      
+      // Additional TVs
+      if (tvCount > 1) {
+        total += (tvCount - 1) * 99; // Each additional TV at $99
+      }
+      
+      // Add for fireplace if mentioned
+      if (serviceType.includes('fireplace')) {
+        total += 50; // Additional for fireplace mounting
+      }
+    }
+    
+    // Smart home device prices
+    const doorbellCount = (serviceType.match(/doorbell/gi) || []).length;
+    const cameraCount = (serviceType.match(/camera/gi) || []).length;
+    const floodlightCount = (serviceType.match(/floodlight/gi) || []).length;
+    
+    // Add smart home installation costs
+    total += doorbellCount * 99; // $99 per doorbell
+    total += cameraCount * 129;  // $129 per camera
+    total += floodlightCount * 149; // $149 per floodlight
+    
+    return total.toFixed(2);
+  };
+
   return (
     <div className="container max-w-4xl mx-auto py-12 px-4">
       <motion.div
@@ -287,6 +324,19 @@ export default function BookingConfirmation() {
                     <p>{booking.streetAddress}</p>
                     {booking.addressLine2 && <p>{booking.addressLine2}</p>}
                     <p>{booking.city}, {booking.state} {booking.zipCode}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="text-primary mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1v22"/>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Estimated Total</h4>
+                    <p className="font-semibold text-lg">${getEstimatedPrice()}</p>
                   </div>
                 </div>
               </div>
