@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useLocation } from "wouter";
+import { useLocation, useNavigate } from "react-router-dom"; //Import useNavigate
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
@@ -13,6 +13,8 @@ import { BookingWizard } from "@/components/ui/booking-wizard";
 export default function Booking() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const navigate = useNavigate(); // Added useNavigate hook
+
 
   // Fetch existing bookings for selected date
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -29,41 +31,33 @@ export default function Booking() {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
-      // Log the exact data being submitted, especially the time
-      console.log("Submitting booking data:", data);
-      console.log("Selected time (exact value):", data.appointmentTime);
+      const response = await fetch('/api/booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
 
-      const response = await apiRequest("POST", "/api/booking", data);
-      return response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create booking');
+      }
+
+      const result = await response.json();
+      console.log("Booking success response:", result);
+      return result;
     },
-    onSuccess: (response, variables) => {
-      console.log("Booking success response:", response);
-
-      // Store comprehensive booking details with the raw selected time
-      try {
-        if (response && response.id) {
-          // Store both booking details and the raw time string
-          sessionStorage.setItem("bookingConfirmed", "true");
-          sessionStorage.setItem("bookingDetails", JSON.stringify({
-            ...response,
-            // Ensure the raw appointment time is preserved
-            appointmentTime: variables.appointmentTime
-          }));
-          sessionStorage.setItem("bookingId", response.id.toString());
-          sessionStorage.setItem("rawAppointmentTime", variables.appointmentTime);
-
-          // Redirect with ID in URL
-          setLocation(`/booking-confirmation?id=${response.id}`);
-        } else {
-          // Fallback if response doesn't contain ID
-          sessionStorage.setItem("bookingConfirmed", "true");
-          sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
-          sessionStorage.setItem("rawAppointmentTime", variables.appointmentTime);
-          setLocation("/booking-confirmation");
+    onSuccess: (data) => {
+      // Store the booking data and ID in session storage for retrieval
+      if (data.booking) {
+        sessionStorage.setItem('bookingId', data.booking.id);
+        sessionStorage.setItem('bookingData', JSON.stringify(data.booking));
+        if (data.booking.appointmentTime) {
+          sessionStorage.setItem('appointmentTime', data.booking.appointmentTime);
         }
-      } catch (err) {
-        console.error("Error storing booking details:", err);
-        setLocation("/booking-confirmation");
+        // Redirect to confirmation page
+        navigate(`/booking-confirmation?id=${data.booking.id}`);
       }
 
       toast({

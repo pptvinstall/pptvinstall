@@ -79,11 +79,14 @@ export default function BookingConfirmation() {
       try {
         setLoading(true);
         
-        // Debug URL params
+        // Get booking ID from URL or session storage
         const urlBookingId = new URLSearchParams(window.location.search).get("id");
         const storedBookingId = sessionStorage.getItem("bookingId");
         const rawAppointmentTime = sessionStorage.getItem("appointmentTime");
         const hasStoredData = sessionStorage.getItem("bookingData") !== null;
+        
+        // Use either URL booking ID or stored booking ID
+        const effectiveBookingId = urlBookingId || storedBookingId;
         
         console.log("Booking confirmation - URL params:", {
           urlBookingId,
@@ -94,13 +97,27 @@ export default function BookingConfirmation() {
         
         let data = null;
 
-        // Try to fetch from API if there's a booking ID
-        if (bookingId) {
+        // First try to get from session storage as it's most reliable
+        const sessionData = sessionStorage.getItem("bookingData");
+        if (sessionData) {
           try {
-            const response = await fetch(`/api/booking/${bookingId}`);
+            data = JSON.parse(sessionData);
+            console.log("Session storage booking data:", data);
+          } catch (e) {
+            console.error("Error parsing session storage data:", e);
+          }
+        }
+
+        // If no session data, try to fetch from API if there's a booking ID
+        if (!data && effectiveBookingId) {
+          try {
+            const response = await fetch(`/api/booking/${effectiveBookingId}`);
             if (response.ok) {
-              data = await response.json();
-              console.log("API Booking data:", data);
+              const apiResponse = await response.json();
+              if (apiResponse.success && apiResponse.booking) {
+                data = apiResponse.booking;
+                console.log("API Booking data:", data);
+              }
             }
           } catch (apiError) {
             console.error("Error fetching booking data from API:", apiError);

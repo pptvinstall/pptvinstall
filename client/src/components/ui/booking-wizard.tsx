@@ -118,88 +118,86 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
-    // Log the exact date and time being used
+    // Get selected services
+    let selectedServices = "";
+
+    console.log("Services selected:", {
+      tvs: tvInstallations,
+      smartHome: smartHomeInstallations
+    });
+
+    // TV installations
+    if (tvInstallations.length > 0) {
+      const tvCounts: Record<string, number> = {};
+
+      tvInstallations.forEach(tv => {
+        const size = tv.size === "large" ? "65\"+" : tv.size === "medium" ? "55\"-65\"" : "32\"-55\"";
+        const key = `TV ${size}`;
+        tvCounts[key] = (tvCounts[key] || 0) + 1;
+      });
+
+      Object.entries(tvCounts).forEach(([type, count]) => {
+        selectedServices += `${count} ${type}, `;
+      });
+    }
+
+    // Smart home installations
+    if (smartHomeInstallations.length > 0) {
+      const smartHomeCounts: Record<string, number> = {};
+
+      smartHomeInstallations.forEach(device => {
+        smartHomeCounts[device.type] = (smartHomeCounts[device.type] || 0) + 1;
+      });
+
+      Object.entries(smartHomeCounts).forEach(([type, count]) => {
+        selectedServices += `${count} ${type}, `;
+      });
+    }
+
+    // Remove trailing comma and space
+    selectedServices = selectedServices.replace(/, $/, "");
+
+    // Log selected time for debugging
+    console.log("Time selected (raw string):", selectedTime);
+
+    // Submit the form data
+    const formattedDate = selectedDate ? new Date(selectedDate) : undefined;
+
     console.log("Selected date:", selectedDate);
     console.log("Selected time (raw string):", selectedTime);
 
-    const preferredDate = selectedDate ? new Date(selectedDate) : new Date();
-
-    // Set the time based on the selected time slot
-    if (selectedTime) {
-      const [hourStr, minuteStr, period] = selectedTime.match(/(\d+):(\d+)\s+([AP]M)/)?.slice(1) || [];
-
-      if (hourStr && minuteStr && period) {
-        let hour = parseInt(hourStr);
-        const minute = parseInt(minuteStr);
+    // Adjust date by time selection if both are available
+    if (formattedDate && selectedTime) {
+      const timeParts = selectedTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeParts) {
+        let [_, hours, minutes, period] = timeParts;
+        let hourValue = parseInt(hours, 10);
 
         // Convert to 24-hour format
-        if (period === "PM" && hour < 12) hour += 12;
-        if (period === "AM" && hour === 12) hour = 0;
+        if (period.toUpperCase() === 'PM' && hourValue < 12) {
+          hourValue += 12;
+        } else if (period.toUpperCase() === 'AM' && hourValue === 12) {
+          hourValue = 0;
+        }
 
-        preferredDate.setHours(hour, minute, 0, 0);
+        formattedDate.setHours(hourValue);
+        formattedDate.setMinutes(parseInt(minutes, 10));
       }
     }
 
-    // Create the service type string
-    let serviceDescription = "";
-
-    if (tvInstallations.length > 0) {
-      tvInstallations.forEach((tv, index) => {
-        if (index > 0) serviceDescription += " + ";
-
-        const sizeDesc = tv.size === 'large' ? '56" or larger' : '32"-55"';
-        serviceDescription += `${index + 1} TV ${sizeDesc}`;
-
-        if (tv.mountType !== 'none') {
-          serviceDescription += ` with ${tv.mountType} mount`;
-        }
-
-        if (tv.location === 'fireplace') {
-          serviceDescription += ` (fireplace)`;
-        }
-
-        if (tv.outletRelocation) {
-          serviceDescription += ` with outlet relocation`;
-        }
-      });
-    }
-
-    if (smartHomeInstallations.length > 0) {
-      if (serviceDescription) serviceDescription += " + ";
-
-      smartHomeInstallations.forEach((device, index) => {
-        if (index > 0) serviceDescription += " + ";
-
-        if (device.type === 'doorbell') {
-          serviceDescription += `Smart Doorbell`;
-          if (device.brickInstallation) {
-            serviceDescription += ` (brick)`;
-          }
-        } else if (device.type === 'floodlight') {
-          serviceDescription += `Smart Floodlight`;
-        } else if (device.type === 'camera') {
-          serviceDescription += `Smart Camera`;
-          if (device.mountHeight && device.mountHeight > 8) {
-            serviceDescription += ` height-${device.mountHeight}`;
-          }
-        }
-
-        if (device.quantity > 1) {
-          serviceDescription += ` (${device.quantity} units)`;
-        }
-      });
-    }
-
-    // Log the exact time being submitted to verify it's correct
-    console.log("Submitting with selected time:", selectedTime);
-
-    // Submit booking data - critically important: we pass the raw selectedTime string
-    onSubmit({
+    // Create submission data
+    const submissionData = {
       ...formData,
-      serviceType: serviceDescription,
-      preferredDate: preferredDate.toISOString(), // Send ISO string with correct time
-      appointmentTime: selectedTime, // Store raw time string separately
-    });
+      serviceType: selectedServices,
+      preferredDate: formattedDate?.toISOString(),
+      appointmentTime: selectedTime
+    };
+
+    console.log("Submitting with selected time:", selectedTime);
+    console.log("Submitting booking data:", submissionData);
+    console.log("Selected time (exact value):", selectedTime);
+
+    onSubmit(submissionData);
   };
 
   // If existingBookings are not passed from parent, fetch them
