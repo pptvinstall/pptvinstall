@@ -6,6 +6,9 @@ import rateLimit from 'express-rate-limit';
 
 const app = express();
 
+// Trust proxy to properly handle client IP addresses behind Replit proxy
+app.set('trust proxy', 1);
+
 // Basic security headers for all responses
 app.use((req, res, next) => {
   // Allow Replit domains
