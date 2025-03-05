@@ -33,6 +33,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
   const [activeTab, setActiveTab] = React.useState('services');
   const [tvInstallations, setTvInstallations] = React.useState<TVInstallation[]>([]);
   const [smartHomeInstallations, setSmartHomeInstallations] = React.useState<SmartHomeInstallation[]>([]);
+  const [isConfirming, setIsConfirming] = React.useState(false);
 
   const addTvInstallation = () => {
     setTvInstallations(prev => [...prev, {
@@ -72,6 +73,27 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       i === index ? { ...inst, ...updates } : inst
     ));
   };
+
+  // New function to handle confirmation and proceeding in one step
+  const handleConfirmAndProceed = () => {
+    // First mark as confirming to show visual feedback
+    setIsConfirming(true);
+
+    // Confirm selection by notifying parent component
+    onServiceSelect({
+      tvs: tvInstallations,
+      smartHome: smartHomeInstallations
+    });
+
+    // Reset confirming state after a short delay and close the wizard
+    setTimeout(() => {
+      setIsConfirming(false);
+      onClose();
+    }, 300); // Small delay for better UX
+  };
+
+  // Whether we have any services selected
+  const hasSelectionsToConfirm = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
 
   return (
     <div className="space-y-6">
@@ -457,11 +479,13 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={() => onServiceSelect({
-          tvs: tvInstallations,
-          smartHome: smartHomeInstallations
-        })} disabled={tvInstallations.length === 0 && smartHomeInstallations.length === 0}>
-          Confirm Selection
+        {/* Merged the Confirm Selection and Next buttons into a single button with combined functionality */}
+        <Button 
+          onClick={handleConfirmAndProceed} 
+          disabled={!hasSelectionsToConfirm || isConfirming}
+          className={isConfirming ? "opacity-75" : ""}
+        >
+          {isConfirming ? "Confirming..." : "Confirm Selection"}
         </Button>
       </div>
     </div>

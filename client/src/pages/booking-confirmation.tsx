@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -8,42 +9,90 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
+  const [storedBookingId, setStoredBookingId] = useState<string | null>(null);
+  const [storedBookingData, setStoredBookingData] = useState<any>(null);
 
-  // Parse the booking ID from the URL using native URLSearchParams
+  // Extract booking ID from URL and/or session storage
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
-  const bookingId = searchParams.get('id');
+  const urlBookingId = searchParams.get('id');
 
-  const { data: booking, isLoading, error } = useQuery({
+  // Check session storage for booking details on component mount
+  useEffect(() => {
+    try {
+      // Check for stored booking ID
+      const sessionBookingId = sessionStorage.getItem("bookingId");
+      if (sessionBookingId) {
+        setStoredBookingId(sessionBookingId);
+      }
+
+      // Check for stored booking details
+      const sessionBookingData = sessionStorage.getItem("bookingDetails");
+      if (sessionBookingData) {
+        setStoredBookingData(JSON.parse(sessionBookingData));
+        console.log("Found booking data in session storage:", sessionBookingData);
+      }
+    } catch (err) {
+      console.error("Error retrieving booking details from session storage:", err);
+    }
+  }, []);
+
+  // Determine which booking ID to use (URL param takes precedence)
+  const bookingId = urlBookingId || storedBookingId;
+
+  // Log the available booking information sources
+  console.log("Booking confirmation - source data:", { 
+    urlBookingId, 
+    storedBookingId, 
+    hasStoredData: !!storedBookingData 
+  });
+
+  // Fetch booking from API if we have a booking ID
+  const { data: apiBooking, isLoading, error } = useQuery({
     queryKey: ['/api/bookings', bookingId],
     queryFn: async ({ queryKey }) => {
       if (!bookingId) return null;
 
-      // Explicitly construct the API URL
-      const response = await fetch(`/api/bookings/${bookingId}`);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error fetching booking (${response.status}):`, errorText);
-        throw new Error(`Failed to fetch booking details: ${response.status}`);
-      }
+      try {
+        // Explicitly construct the API URL
+        const response = await fetch(`/api/bookings/${bookingId}`);
 
-      return response.json();
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Error fetching booking (${response.status}):`, errorText);
+          throw new Error(`Failed to fetch booking details: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Successfully fetched booking from API:", data);
+        return data;
+      } catch (error) {
+        console.error("Error in booking fetch query:", error);
+        throw error;
+      }
     },
     enabled: !!bookingId, // Only run the query if we have a bookingId
     retry: 2, // Retry failed requests up to 2 times
     staleTime: Infinity // Don't refetch this data automatically
   });
 
+  // Determine which booking data to use - API data has priority over stored data
+  const booking = apiBooking || storedBookingData;
+
   // Debug information
   console.log("Booking confirmation - URL params:", { bookingId, location });
-  console.log("Booking data:", booking);
+  console.log("API Booking data:", apiBooking);
+  console.log("Session storage booking data:", storedBookingData);
+  console.log("Final booking data being used:", booking);
   console.log("Loading state:", isLoading);
   console.log("Error state:", error);
 
-  if (isLoading) {
+  // Show loading spinner while fetching and no stored data is available
+  if (isLoading && !storedBookingData) {
     return <LoadingSpinner />;
   }
 
-  if (error || !booking) {
+  // Show error if both API fetch failed and no stored data is available
+  if ((error || !apiBooking) && !storedBookingData) {
     return (
       <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
         <h1 className="text-3xl font-bold mb-4">Error Loading Booking Details</h1>
@@ -51,9 +100,30 @@ export default function BookingConfirmation() {
           We encountered an issue retrieving your booking information. 
           {error ? ` Error: ${error instanceof Error ? error.message : String(error)}` : ''}
         </p>
-        <Link to="/" className="inline-flex items-center">
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Return to Homepage
+        {/* Fix DOM nesting - Use Link to wrap Button instead of Button wrapping Link */}
+        <Link to="/">
+          <Button variant="outline" className="inline-flex items-center">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Return to Homepage
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // If we still don't have booking data, show error
+  if (!booking) {
+    return (
+      <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Booking Not Found</h1>
+        <p className="mb-6">
+          We couldn't find any booking information. If you've just made a booking, please check your email for confirmation.
+        </p>
+        <Link to="/">
+          <Button variant="outline" className="inline-flex items-center">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Return to Homepage
+          </Button>
         </Link>
       </div>
     );

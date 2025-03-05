@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { calculatePricing } from './pricing';
+import { calculatePrice } from './pricing'; // Fixed import name from calculatePricing to calculatePrice
 import type { TVInstallation, SmartHomeInstallation } from '../components/ui/service-wizard';
 
 export function usePricing(
@@ -15,13 +14,13 @@ export function usePricing(
     discounts: 0,
     total: 0
   });
-  
+
   useEffect(() => {
     const serviceType = formatServiceType(tvInstallations, smartHomeInstallations);
-    const calculatedPricing = calculatePricing(serviceType);
+    const calculatedPricing = calculatePrice(serviceType); // Changed function name to match import
     setPricing(calculatedPricing);
   }, [tvInstallations, smartHomeInstallations]);
-  
+
   return pricing;
 }
 
@@ -29,18 +28,18 @@ function formatServiceType(
   tvInstallations: TVInstallation[], 
   smartHomeInstallations: SmartHomeInstallation[]
 ): string {
-  const parts = [];
-  
+  const parts: string[] = []; // Added explicit type annotation
+
   tvInstallations.forEach((tv, index) => {
     const size = tv.size === 'large' ? '56" or larger' : '32"-55"';
     const mountType = tv.mountType !== 'none' ? ` ${tv.mountType}` : '';
     const masonry = tv.masonryWall ? ' masonry' : '';
     const outlet = tv.outletRelocation ? ' outlet' : '';
     const fireplace = tv.location === 'fireplace' ? ' fireplace' : '';
-    
+
     parts.push(`${index + 1} TV ${size}${mountType}${masonry}${outlet}${fireplace}`);
   });
-  
+
   smartHomeInstallations.forEach(device => {
     if (device.type === 'doorbell') {
       const brick = device.brickInstallation ? ' brick' : '';
@@ -51,7 +50,7 @@ function formatServiceType(
       parts.push('Floodlight');
     }
   });
-  
+
   return parts.join(' + ');
 }
 // Function to format price consistently
@@ -66,7 +65,7 @@ export function formatPrice(amount: number): string {
 export function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
-  const services = [];
+  const services: string[] = [];
   let tvCount = 0;
 
   // First pass to count TVs for multi-TV discount
@@ -77,12 +76,12 @@ export function parseServiceType(serviceType: string): { services: string[], pri
     }
   });
 
-  const serviceBreakdown = [];
+  const serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] = [];
 
   for (const part of serviceParts) {
     // Trim the part to ensure consistent detection
     const trimmedPart = part.trim();
-    
+
     if (trimmedPart.includes('TV')) {
       const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
@@ -138,20 +137,20 @@ export function parseServiceType(serviceType: string): { services: string[], pri
       serviceBreakdown.push({ title, items });
       totalPrice += 100; // Base installation
     }
-    
+
     // Smart Home Services parsing - note the use of trimmedPart
     else if (trimmedPart.includes('Smart Doorbell')) {
       const title = 'Smart Doorbell';
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       services.push(title);
-      
+
       const items = [
         {
           label: 'Base Installation (1 unit)',
           price: 75
         }
       ];
-      
+
       if (hasBrick) {
         items.push({
           label: 'Brick Installation',
@@ -159,7 +158,7 @@ export function parseServiceType(serviceType: string): { services: string[], pri
         });
         totalPrice += 10;
       }
-      
+
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
@@ -206,14 +205,14 @@ export function parseServiceType(serviceType: string): { services: string[], pri
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
     }
-    
+
     // Handle "Smart Home Services" general selection
     else if (trimmedPart.toLowerCase().includes('smart home service') || 
              trimmedPart.toLowerCase().includes('smart home installation')) {
       // This catches any smart home services that weren't caught by specific categories
       const title = 'Smart Home Installation';
       services.push(title);
-      
+
       serviceBreakdown.push({
         title,
         items: [

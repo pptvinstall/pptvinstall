@@ -18,21 +18,46 @@ export default function Booking() {
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings'],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/bookings");
-      return Array.isArray(response) ? response : [];
+      const response = await fetch("/api/bookings");
+      if (!response.ok) {
+        console.error(`Error fetching bookings: ${response.status}`);
+        return [];
+      }
+      return response.json();
     }
   });
 
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
-      return (await apiRequest("POST", "/api/booking", data)).json();
+      console.log("Submitting booking data:", data);
+      const response = await apiRequest("POST", "/api/booking", data);
+      return response.json();
     },
     onSuccess: (response, variables) => {
-      // Store both confirmation flag and booking details in session storage
-      sessionStorage.setItem("bookingConfirmed", "true");
-      sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
+      console.log("Booking success response:", response);
 
-      setLocation("/booking-confirmation");
+      // Store more comprehensive booking details in session storage
+      // This provides a fallback if URL parameters fail
+      try {
+        if (response && response.id) {
+          // Store both confirmation flag and booking details in session storage
+          sessionStorage.setItem("bookingConfirmed", "true");
+          sessionStorage.setItem("bookingDetails", JSON.stringify(response));
+          sessionStorage.setItem("bookingId", response.id.toString());
+
+          // Redirect with ID in URL
+          setLocation(`/booking-confirmation?id=${response.id}`);
+        } else {
+          // Fallback if response doesn't contain ID
+          sessionStorage.setItem("bookingConfirmed", "true");
+          sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
+          setLocation("/booking-confirmation");
+        }
+      } catch (err) {
+        console.error("Error storing booking details:", err);
+        setLocation("/booking-confirmation");
+      }
+
       toast({
         title: "Booking successful!",
         description: "You will receive a confirmation email shortly.",
