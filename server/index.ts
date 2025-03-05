@@ -31,16 +31,16 @@ app.use((req, res, next) => {
   const origin = process.env.NODE_ENV === "production" 
     ? process.env.ALLOWED_ORIGIN || 'https://pictureperfecttvinstall.com' 
     : '*';
-    
+
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
-  
+
   next();
 });
 
@@ -63,7 +63,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   const message = process.env.NODE_ENV === 'production' 
     ? 'Internal Server Error' 
     : err.message || 'Something went wrong';
-    
+
   res.status(statusCode).json({ 
     error: message,
     stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
@@ -74,7 +74,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 process.on('uncaughtException', (error) => {
   console.error('UNCAUGHT EXCEPTION:');
   console.error(error);
-  
+
   // Log the error but don't exit in production
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
@@ -100,16 +100,15 @@ process.on('unhandledRejection', (reason) => {
       serveStatic(app);
     }
 
-    const port = process.env.PORT || 5000;
-    server.listen(port, "0.0.0.0", () => {
-      log(`Server running at http://0.0.0.0:${port}`);
+    server.listen(5000, "0.0.0.0", () => {
+      log(`Server running at http://0.0.0.0:5000`);
       console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
-      
+
       // Log memory usage
       const memoryUsage = process.memoryUsage();
       log(`Memory usage: ${Math.round(memoryUsage.rss / 1024 / 1024)}MB RSS, ${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB Heap`);
     });
-    
+
     // Graceful shutdown
     process.on('SIGTERM', () => {
       log('SIGTERM received, shutting down gracefully');
