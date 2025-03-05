@@ -11,30 +11,15 @@ app.set('trust proxy', 1);
 
 // Basic security headers for all responses
 app.use((req, res, next) => {
-  // Allow Replit domains
-  const origin = req.headers.origin;
-  if (origin && origin.includes('.replit.dev')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  // Allow all origins in development
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // Protect against XSS attacks
+  // Basic security headers
   res.setHeader('X-XSS-Protection', '1; mode=block');
-
-  // Prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-
-  // Prevent clickjacking attacks
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-
-  // Strict transport security for HTTPS
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-
-  // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   next();
@@ -178,24 +163,16 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
+  // Ensure we're binding to 0.0.0.0
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  server.listen(port, "0.0.0.0", () => {
+    log(`Server running at http://0.0.0.0:${port}`);
     console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
   });
 })();
