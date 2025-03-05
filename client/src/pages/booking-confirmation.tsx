@@ -12,6 +12,7 @@ export default function BookingConfirmation() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
+  const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -22,6 +23,7 @@ export default function BookingConfirmation() {
         const urlBookingId = queryParams.get("id");
         const storedBookingId = sessionStorage.getItem("bookingId");
         const rawAppointmentTime = sessionStorage.getItem("appointmentTime");
+        const rawBookingDate = sessionStorage.getItem("rawBookingDate");
 
         // Use either URL booking ID or stored booking ID
         const bookingId = urlBookingId || storedBookingId;
@@ -30,6 +32,7 @@ export default function BookingConfirmation() {
           urlBookingId,
           storedBookingId,
           rawAppointmentTime,
+          rawBookingDate,
           hasStoredData: sessionStorage.getItem("bookingData") !== null
         });
 
@@ -78,6 +81,18 @@ export default function BookingConfirmation() {
         if (data?.appointmentTime) {
           setFormattedTime(data.appointmentTime);
         }
+
+        // Format date if available - USE THE RAW DATE STRING WITHOUT CONVERSION
+        if (data?.preferredDate) {
+          try {
+            const date = new Date(data.preferredDate);
+            // Format the date without any timezone adjustment
+            setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+          } catch (e) {
+            console.error("Error formatting date:", e);
+            setFormattedDate("Date not available");
+          }
+        }
       } catch (err) {
         console.error("Error in booking confirmation:", err);
         setError(err instanceof Error ? err : new Error("Unknown error"));
@@ -98,7 +113,7 @@ export default function BookingConfirmation() {
     // TV mounting prices
     if (bookingData.serviceType.includes("32\"-55\"")) {
       basePrice += 129; // Small TV
-    } else if (bookingData.serviceType.includes("56\"-75\"")) {
+    } else if (bookingData.serviceType.includes("56\"+")) {
       basePrice += 159; // Medium TV
     } else if (bookingData.serviceType.includes("76\" or larger")) {
       basePrice += 199; // Large TV
@@ -177,9 +192,7 @@ export default function BookingConfirmation() {
             <div className="space-y-1">
               <h3 className="font-medium">Appointment Date</h3>
               <p className="text-muted-foreground">
-                {bookingData.preferredDate
-                  ? format(new Date(bookingData.preferredDate), "EEEE, MMMM d, yyyy")
-                  : "Date not available"}
+                {formattedDate || "Date not available"}
               </p>
             </div>
             <div className="space-y-1">

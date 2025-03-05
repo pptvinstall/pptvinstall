@@ -65,8 +65,13 @@ export default function BookingPage() {
         // Store the entire booking data including smart home items if present
         const bookingWithSmartHome = {
           ...data.booking,
-          smartHomeItems: []  // We don't have formData.smartHome here, using empty array as fallback
+          smartHomeItems: data.booking.smartHomeItems || []
         };
+
+        // Additionally store the raw date to ensure it's preserved exactly
+        if (data.booking.preferredDate) {
+          sessionStorage.setItem('rawBookingDate', data.booking.preferredDate);
+        }
 
         // Log what we're storing for debugging
         console.log("Storing booking data in session:", bookingWithSmartHome);
