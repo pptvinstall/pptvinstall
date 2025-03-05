@@ -7,42 +7,35 @@ import {
   SMART_DEVICE_PRICES, 
   SERVICE_NOTES, 
   calculateMultiDeviceDiscount,
+  formatPrice,
   type ServiceBreakdown,
   type PriceItem 
 } from "@shared/pricing";
 
-// Check for required environment variables during startup
-if (!process.env.GMAIL_PASS || process.env.GMAIL_PASS === "default_pass") {
-  console.warn('WARNING: Email functionality may not work properly. GMAIL_PASS environment variable is not properly set.');
-}
-
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.GMAIL_USER || "pptvinstall@gmail.com",
+    user: "pptvinstall@gmail.com",
     pass: process.env.GMAIL_PASS || "default_pass"
   }
 });
 
-// Rename local formatPrice to avoid conflict
-function formatCurrency(amount: number): string {
+function formatPrice(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
   }).format(amount);
 }
 
-interface ParsedService {
-  services: string[];
-  price: number;
-  serviceBreakdown: ServiceBreakdown[];
-}
-
-function parseServiceType(serviceType: string): ParsedService {
+function parseServiceType(serviceType: string): { 
+  services: string[], 
+  price: number, 
+  serviceBreakdown: ServiceBreakdown[] 
+} {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
-  const services: string[] = [];
-  const serviceBreakdown: ServiceBreakdown[] = [];
+  const services = [];
+  const serviceBreakdown = [];
   let deviceCount = 0;
 
   // First pass to count total devices for discount
@@ -56,34 +49,10 @@ function parseServiceType(serviceType: string): ParsedService {
 
   for (const part of serviceParts) {
     const trimmedPart = part.trim();
-    const smartDeviceMatch = trimmedPart.match(/Smart Device (\d+)/);
-    
-    // Handle multiple Smart Devices (e.g., "3 Smart Devices")
-    const multiDeviceMatch = trimmedPart.match(/^(\d+)\s+Smart\s+Devices?$/i);
-    if (multiDeviceMatch) {
-      const count = parseInt(multiDeviceMatch[1], 10);
-      deviceCount = count; // Set deviceCount explicitly
-      
-      const title = `${count} Smart Device Installation${count > 1 ? 's' : ''}`;
-      services.push(title);
-      
-      const pricePerDevice = SMART_DEVICE_PRICES.DOORBELL.BASE;
-      const itemPrice = pricePerDevice * count;
-      
-      serviceBreakdown.push({
-        title,
-        items: [
-          {
-            label: `Smart Device Installation (${count} units)`,
-            price: itemPrice
-          }
-        ]
-      });
-      totalPrice += itemPrice;
-    }
-    // Handle individual Smart Device installations
-    else if (smartDeviceMatch?.[1]) {
-      const deviceNumber = smartDeviceMatch[1];
+
+    // Handle Smart Device installations
+    if (trimmedPart.match(/Smart Device (\d+)/)) {
+      const deviceNumber = trimmedPart.match(/Smart Device (\d+)/)[1];
       const title = `Smart Device ${deviceNumber} Installation`;
       services.push(title);
 
@@ -195,76 +164,6 @@ function parseServiceType(serviceType: string): ParsedService {
   return { services, price: totalPrice, serviceBreakdown };
 }
 
-interface EmailData {
-  name: string;
-  email: string;
-  phone: string;
-  streetAddress: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  notes?: string;
-  preferredDate: string;
-  preferredTime: string;
-}
-
-interface ServiceBreakdownSection {
-  title: string;
-  items: Array<{
-    label: string;
-    price: number;
-    note?: string;
-  }>;
-}
-
-function generateEmailText(
-  data: EmailData,
-  services: string[],
-  serviceBreakdown: ServiceBreakdownSection[],
-  price: number,
-  formattedDate: string,
-  preferredTime: string
-): string {
-  return `
-Selected Services
-----------------
-${serviceBreakdown.map(section => 
-`${section.title}
-${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
-).join('\n\n')}
-
-Total: ${formatCurrency(price)}
-
-Appointment
-----------
-${formattedDate} at ${preferredTime}
-
-Installation Address
-------------------
-${data.streetAddress}
-${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
-
-Contact Information
------------------
-${data.name}
-${data.email}
-${data.phone}
-
-${data.notes ? `Additional Notes
---------------
-${data.notes}\n\n` : ''}
-`;
-}
-
-interface RevenueAnalytics {
-  totalRevenue: number;
-  currentMonthRevenue: number;
-  currentYearRevenue: number;
-  revenueByMonth: Record<string, number>;
-  revenueByYear: Record<string, number>;
-}
-
 function generateICalendarEvent(dateTime: Date, duration: number, summary: string, description: string, location: string): string {
   const start = dateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const end = new Date(dateTime.getTime() + duration * 60000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -345,37 +244,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
       res.status(500).json({ error: "Failed to fetch booking" });
-    }
-  });
-  
-  // New endpoint to fetch bookings by customer email
-  app.get("/api/bookings/customer/:email", async (req, res) => {
-    try {
-      const { email } = req.params;
-      console.log(`Fetching bookings for customer email: ${email}`);
-
-      // Get all bookings for this customer email
-      const customerBookings = await storage.getBookingsByEmail(email);
-      console.log(`Found ${customerBookings.length} bookings for email ${email}`);
-
-      // Process each booking to add service breakdown and pricing
-      const enhancedBookings = customerBookings.map(booking => {
-        const { services, price, serviceBreakdown } = parseServiceType(booking.serviceType);
-        return {
-          ...booking,
-          detailedServices: JSON.stringify({
-            services,
-            serviceBreakdown
-          }),
-          totalPrice: price.toString(),
-          status: booking.status || 'active'
-        };
-      });
-
-      res.json(enhancedBookings);
-    } catch (error) {
-      console.error('Error fetching bookings by email:', error);
-      res.status(500).json({ error: "Failed to fetch customer bookings" });
     }
   });
 
@@ -491,16 +359,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  function generateEmailText(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number, formattedDate: string, preferredTime: string): string {
+  function generateEmailText(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
     return `
 Selected Services
 ----------------
 ${serviceBreakdown.map(section => 
 `${section.title}
-${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatCurrency(price)}
+Total: ${formatPrice(price)}
 
 Appointment
 ----------
@@ -524,7 +392,7 @@ ${data.notes}\n\n` : ''}
   }
 
   // Update the generateEmailTemplate function
-  function generateEmailTemplate(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number, formattedDate: string, preferredTime: string): string {
+  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
     return `
 <!DOCTYPE html>
 <html>
@@ -590,7 +458,7 @@ ${data.notes}\n\n` : ''}
         ${section.items.map(item => `
           <div class="price-row">
             <span>${item.label}</span>
-            <span>${formatCurrency(item.price)}</span>
+            <span>${formatPrice(item.price)}</span>
           </div>
         `).join('')}
       </div>
@@ -598,7 +466,7 @@ ${data.notes}\n\n` : ''}
 
     <div class="total-row price-row">
       <span>Total</span>
-      <span>${formatCurrency(price)}</span>
+      <span>${formatPrice(price)}</span>
     </div>
   </div>
 
@@ -642,17 +510,17 @@ ${data.notes}\n\n` : ''}
 </html>`;
   }
 
-  function generateCalendarEvent(data: EmailData, services: string[], serviceBreakdown: ServiceBreakdownSection[], price: number): string {
+  function generateCalendarEvent(data, services, serviceBreakdown, price) {
     const dateTime = new Date(data.preferredDate);
     const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
     const eventDescription = `
 Selected Services:
 ${serviceBreakdown.map(section => 
 `${section.title}
-${section.items.map(item => `- ${item.label}: ${formatCurrency(item.price)}`).join('\n')}`
+${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatCurrency(price)}
+Total: ${formatPrice(price)}
 
 Installation Address:
 ${data.streetAddress}
@@ -969,7 +837,7 @@ Questions? Call 404-702-4748`;
     }
   });
 
-  app.get("/api/admin/pricing/rules", async(req, res) => {
+  app.get("/api/admin/pricing/rules", async (req, res) => {
     try {
       const rules = await storage.getAllPricingRules();
       res.json(rules);

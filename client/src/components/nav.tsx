@@ -16,26 +16,14 @@ export default function Nav() {
           <Link href="/services">
             <span className="hover:text-primary transition-colors cursor-pointer">Services</span>
           </Link>
-          <Link href="/gallery">
-            <span className="hover:text-primary transition-colors cursor-pointer">Gallery</span>
-          </Link>
-          <Link href="/testimonials">
-            <span className="hover:text-primary transition-colors cursor-pointer">Testimonials</span>
-          </Link>
-          <Link href="/service-area">
-            <span className="hover:text-primary transition-colors cursor-pointer">Service Area</span>
-          </Link>
-          <Link href="/faq">
-            <span className="hover:text-primary transition-colors cursor-pointer">FAQ</span>
+          <Link href="/booking">
+            <span className="hover:text-primary transition-colors cursor-pointer">Book Now</span>
           </Link>
           <Link href="/contact">
             <span className="hover:text-primary transition-colors cursor-pointer">Contact</span>
           </Link>
-          <Link href="/account">
-            <span className="hover:text-primary transition-colors cursor-pointer">My Account</span>
-          </Link>
-          <Link href="/booking">
-            <span className="hover:text-primary transition-colors cursor-pointer">Book Now</span>
+          <Link href="/faq">
+            <span className="hover:text-primary transition-colors cursor-pointer">FAQ</span>
           </Link>
           <Button onClick={() => window.location.href = "tel:404-702-4748"}>
             <PhoneCall className="mr-2 h-4 w-4" />

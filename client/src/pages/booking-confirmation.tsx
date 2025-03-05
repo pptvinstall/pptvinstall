@@ -1,33 +1,12 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import LoadingSpinner from "@/components/loading-spinner";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { apiRequest } from "@/lib/queryClient";
-import { NotificationPreferences } from "@/components/ui/notification-preferences";
-
-interface BookingData {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  streetAddress: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  notes?: string;
-  serviceType: string;
-  preferredDate: string;
-  preferredTime: string;
-  status: string;
-  totalPrice: string;
-  detailedServices: string;
-  formattedDate?: string;
-}
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
@@ -35,58 +14,49 @@ export default function BookingConfirmation() {
   const bookingId = searchParams.get('id');
   const [error, setError] = useState<string | null>(null);
 
-  const { data: booking, isLoading } = useQuery<BookingData>({
+  console.log("Current URL:", window.location.href);
+  console.log("Current booking ID:", bookingId);
+
+  const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       if (!bookingId) {
         throw new Error('No booking ID provided');
       }
 
-      const response = await apiRequest("GET", `/api/bookings/${bookingId}`);
-      const data = await response.json();
+      try {
+        console.log("Fetching booking details for ID:", bookingId);
+        const response = await apiRequest("GET", `/api/bookings/${bookingId}`);
 
-      if (data.preferredDate) {
-        const date = new Date(data.preferredDate);
-        if (!isNaN(date.getTime())) {
-          data.formattedDate = date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        } else {
-          data.formattedDate = data.preferredDate;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Error response:", errorData);
+          throw new Error(errorData.error || 'Failed to fetch booking details');
         }
+
+        const data = await response.json();
+        console.log("Received booking data:", data);
+        return data;
+      } catch (err) {
+        console.error('Error fetching booking:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load booking details');
+        throw err;
       }
-      return data;
     },
     enabled: !!bookingId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    retry: 1
+    retry: 3,
+    retryDelay: 1000
   });
 
-  // Memoized price formatter
-  const formatPrice = useMemo(() => (amount: number | string) => {
+  // Format price helper
+  const formatPrice = (amount: number | string) => {
     if (!amount) return '$0.00';
     const price = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(price);
-  }, []);
-
-  // Memoized service details parsing
-  const parsedServices = useMemo(() => {
-    if (!booking?.detailedServices) return [];
-    try {
-      return Array.isArray(booking.detailedServices) 
-        ? booking.detailedServices 
-        : JSON.parse(booking.detailedServices);
-    } catch (e) {
-      return [];
-    }
-  }, [booking?.detailedServices]);
+  };
 
   if (isLoading) {
     return (
@@ -115,6 +85,18 @@ export default function BookingConfirmation() {
     );
   }
 
+  // Parse service details
+  let parsedServices;
+  try {
+    parsedServices = typeof booking.detailedServices === 'string'
+      ? JSON.parse(booking.detailedServices)
+      : booking.detailedServices;
+    console.log("Parsed services:", parsedServices);
+  } catch (e) {
+    console.error("Error parsing detailed services:", e);
+    parsedServices = null;
+  }
+
   return (
     <div className="container mx-auto py-12 px-4">
       <motion.div
@@ -140,103 +122,116 @@ export default function BookingConfirmation() {
               <div>
                 <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
                 <div className="grid gap-2">
-                  {[
-                    { label: 'Booking ID', value: booking.id },
-                    { label: 'Status', value: booking.status, className: 'capitalize' },
-                    { label: 'Service Type', value: booking.serviceType },
-                    { label: 'Appointment Date', value: booking.formattedDate },
-                    { label: 'Appointment Time', value: booking.preferredTime },
-                    { label: 'Total Price', value: formatPrice(booking.totalPrice), className: 'text-green-600' }
-                  ].map(({ label, value, className = '' }) => (
-                    <div key={label} className="flex justify-between border-b pb-2">
-                      <span className="text-gray-500">{label}:</span>
-                      <span className={`font-medium ${className}`}>{value}</span>
-                    </div>
-                  ))}
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Booking ID:</span>
+                    <span className="font-medium">{booking.id}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Status:</span>
+                    <span className="font-medium capitalize">{booking.status}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Service Type:</span>
+                    <span className="font-medium">{booking.serviceType}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Appointment Date:</span>
+                    <span className="font-medium">
+                      {new Date(booking.preferredDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Appointment Time:</span>
+                    <span className="font-medium">{booking.preferredTime}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-gray-500">Total Price:</span>
+                    <span className="font-medium text-green-600">
+                      {formatPrice(booking.totalPrice)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Services breakdown */}
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
-                {parsedServices.length > 0 ? (
-                  <>
-                    {parsedServices.map((section: any, i: number) => (
-                      <div key={i} className="mb-6 last:mb-0 bg-gray-50 p-4 rounded-md space-y-4">
-                        <div className="font-medium text-indigo-700 mb-2">{section.title || "Service Item"}</div>
-                        {section.items?.map((item: any, j: number) => (
-                          <div key={j} className="flex justify-between py-1 px-2">
-                            <span className={item.isDiscount ? "text-green-600" : ""}>
-                              {item.label}
-                              {item.note && (
-                                <span className="ml-1 text-gray-400 text-xs">(Note: {item.note})</span>
-                              )}
-                            </span>
-                            <span className={`font-medium ${item.isDiscount ? "text-green-600" : ""}`}>
-                              {item.isDiscount ? "-" : ""}{formatPrice(Math.abs(item.price))}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                    <div className="mt-4 flex justify-between py-3 bg-indigo-50 px-4 rounded-md font-medium">
-                      <span>Total</span>
-                      <span className="text-green-600">{formatPrice(booking.totalPrice)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span>{booking.serviceType}</span>
-                      <span className="font-medium">{formatPrice(booking.totalPrice)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Customer details and address */}
-              {[
-                {
-                  title: "Customer Details",
-                  fields: [
-                    { label: "Name", value: booking.name },
-                    { label: "Email", value: booking.email },
-                    { label: "Phone", value: booking.phone }
-                  ]
-                },
-                {
-                  title: "Installation Address",
-                  content: (
-                    <>
-                      <div><span className="font-medium">{booking.streetAddress}</span></div>
-                      {booking.addressLine2 && (
-                        <div><span className="font-medium">{booking.addressLine2}</span></div>
-                      )}
-                      <div>
-                        <span className="font-medium">
-                          {booking.city}, {booking.state} {booking.zipCode}
-                        </span>
-                      </div>
-                    </>
-                  )
-                }
-              ].map(section => (
-                <div key={section.title}>
-                  <h3 className="text-lg font-semibold mb-3">{section.title}</h3>
-                  <div className="grid gap-2">
-                    {section.fields ? (
-                      section.fields.map(field => (
-                        <div key={field.label} className="flex justify-between">
-                          <span className="text-gray-500">{field.label}:</span>
-                          <span className="font-medium">{field.value}</span>
+              {parsedServices && parsedServices.serviceBreakdown && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-3">Services Breakdown</h3>
+                  {parsedServices.serviceBreakdown.map((section: any, i: number) => (
+                    <div key={i} className="mb-6 last:mb-0">
+                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <h4 className="font-medium text-blue-700 mb-3">{section.title}</h4>
+                        <div className="space-y-2">
+                          {section.items && section.items.map((item: any, j: number) => (
+                            <div key={j} className="flex justify-between text-sm">
+                              <span className={item.isDiscount ? "text-green-600" : ""}>
+                                {item.label}
+                              </span>
+                              <span className={
+                                item.isDiscount 
+                                  ? "text-green-600 font-medium" 
+                                  : "font-medium"
+                              }>
+                                {formatPrice(item.price)}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))
-                    ) : (
-                      section.content
-                    )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total Amount:</span>
+                      <span>{formatPrice(booking.totalPrice)}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Customer details */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Customer Details</h3>
+                <div className="grid gap-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Name:</span>
+                    <span className="font-medium">{booking.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email:</span>
+                    <span className="font-medium">{booking.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="font-medium">{booking.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Installation Address */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Installation Address</h3>
+                <div className="grid gap-2">
+                  <div>
+                    <span className="font-medium">{booking.streetAddress}</span>
+                  </div>
+                  {booking.addressLine2 && (
+                    <div>
+                      <span className="font-medium">{booking.addressLine2}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium">
+                      {booking.city}, {booking.state} {booking.zipCode}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Notes */}
               {booking.notes && (
@@ -246,7 +241,6 @@ export default function BookingConfirmation() {
                 </div>
               )}
 
-              {/* Navigation buttons */}
               <div className="flex flex-col items-center mt-6 pt-6 border-t">
                 <p className="text-gray-500 mb-6 text-center">
                   A confirmation email has been sent to your email address with all the details.
@@ -261,18 +255,6 @@ export default function BookingConfirmation() {
                   </Button>
                 </div>
               </div>
-
-              {/* Notification Preferences */}
-              {bookingId && (
-                <div className="mt-10">
-                  <h2 className="text-xl font-bold mb-4">Notification Preferences</h2>
-                  <NotificationPreferences 
-                    bookingId={parseInt(bookingId)} 
-                    phone={booking?.phone || ""} 
-                    email={booking?.email || ""} 
-                  />
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

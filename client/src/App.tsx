@@ -1,54 +1,61 @@
-import { Route, Switch } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
+import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { lazy, Suspense } from "react";
+import { queryClient } from "./lib/queryClient";
+import { Toaster } from "@/components/ui/toaster";
+import { AnimatePresence, motion } from "framer-motion";
 import Nav from "@/components/nav";
 import Footer from "@/components/footer";
-import LoadingSpinner from "@/components/loading-spinner";
-import ScrollToTop from "@/components/scroll-to-top";
-import ErrorBoundary from "@/components/error-boundary";
+import Home from "@/pages/home";
+import Services from "@/pages/services";
+import Booking from "@/pages/booking";
+import BookingConfirmation from "@/pages/booking-confirmation";
+import Contact from "@/pages/contact";
+import FAQ from "@/pages/faq";
+import Dashboard from "@/pages/dashboard";
+import Admin from "@/pages/admin";
+import NotFound from "@/pages/not-found";
 
-// Import the HomePage directly to ensure it loads immediately
-import HomePage from "@/pages/home";
+const PageWrapper = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.3 }}
+  >
+    {children}
+  </motion.div>
+);
 
-// Lazy load other pages
-const ServicesPage = lazy(() => import("@/pages/services"));
-const ContactPage = lazy(() => import("@/pages/contact"));
-const BookingPage = lazy(() => import("@/pages/booking"));
-const FaqPage = lazy(() => import("@/pages/faq"));
-const NotFoundPage = lazy(() => import("@/pages/not-found"));
-
-function AppRouter() {
+function Router() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Nav />
-      <main className="min-h-screen pt-16">
-        <Suspense fallback={<LoadingSpinner />}>
+      <main className="flex-grow">
+        <AnimatePresence mode="wait">
           <Switch>
-            <Route path="/" component={HomePage} />
-            <Route path="/services" component={ServicesPage} />
-            <Route path="/contact" component={ContactPage} />
-            <Route path="/booking" component={BookingPage} />
-            <Route path="/faq" component={FaqPage} />
-            <Route path="/:rest*" component={NotFoundPage} />
+            <Route path="/" component={() => <PageWrapper><Home /></PageWrapper>} />
+            <Route path="/services" component={() => <PageWrapper><Services /></PageWrapper>} />
+            <Route path="/booking" component={() => <PageWrapper><Booking /></PageWrapper>} />
+            <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmation /></PageWrapper>} />
+            <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
+            <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
+            <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
+            <Route path="/admin" component={() => <PageWrapper><Admin /></PageWrapper>} />
+            <Route component={() => <PageWrapper><NotFound /></PageWrapper>} />
           </Switch>
-        </Suspense>
+        </AnimatePresence>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 
 function App() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AppRouter />
-        <Toaster />
-        <ScrollToTop />
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <Router />
+      <Toaster />
+    </QueryClientProvider>
   );
 }
 

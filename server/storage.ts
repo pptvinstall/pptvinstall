@@ -1,6 +1,6 @@
 import { bookings, type Booking, type InsertBooking, pricingConfig, pricingRules, priceHistory, type PricingConfig, type PricingRule, type InsertPriceHistory } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export class Storage {
   async getAllBookings(): Promise<Booking[]> {
@@ -245,18 +245,6 @@ export class Storage {
       await db.insert(priceHistory).values(data);
     } catch (error) {
       console.error("Error recording price history:", error);
-      throw error;
-    }
-  }
-
-  async getBookingsByEmail(email: string): Promise<Booking[]> {
-    try {
-      console.log(`Fetching bookings for email: ${email}`);
-      const result = await db.select().from(bookings).where(sql`LOWER(${bookings.email}) = LOWER(${email})`).orderBy(desc(bookings.preferredDate));
-      console.log(`Retrieved ${result.length} bookings for email ${email}`);
-      return result;
-    } catch (error) {
-      console.error("Error fetching bookings by email:", error);
       throw error;
     }
   }

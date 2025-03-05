@@ -1,58 +1,115 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 
 const app = express();
+// Compress all responses for better performance
+app.use(compression({ 
+  level: 6, // Balance between compression speed and ratio
+  threshold: 0, // Compress all responses
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Trust proxy to properly handle client IP addresses behind Replit proxy
-app.set('trust proxy', 1);
-
-// Basic security headers for all responses
+// Add request logging middleware
 app.use((req, res, next) => {
-  // Allow all origins in development
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} started`);
 
-  // Basic security headers
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode} - ${duration}ms`);
+  });
 
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-// Apply rate limiting to API routes
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: 'Too many requests from this IP, please try again after 15 minutes',
-    status: 429
-  }
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
 });
-
-app.use('/api/', apiLimiter);
 
 (async () => {
   const server = await registerRoutes(app);
 
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    // Enhanced error logging with request context
+    console.error(`[ERROR] ${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.error(`Status: ${status}, Message: ${message}`);
+
+    if (req.body) {
+      console.error("Request body:", JSON.stringify(req.body, null, 2));
+    }
+
+    if (err instanceof Error) {
+      console.error("Error details:", err.message);
+      console.error("Stack trace:", err.stack);
+    }
+
+    // Send error response to client with helpful information
+    res.status(status).json({ 
+      message,
+      error: process.env.NODE_ENV === 'production' ? 'An error occurred processing your request' : err.message,
+      requestId: req.headers['x-request-id'] || Date.now().toString()
+    });
+
+    // Don't throw the error again, as it was already handled
+  });
+
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
+  // ALWAYS serve the app on port 5000
+  // this serves both the API and the client
   const port = 5000;
-  server.listen(port, "0.0.0.0", () => {
-    log(`Server running at http://0.0.0.0:${port}`);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
     console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
   });
 })();
