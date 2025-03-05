@@ -168,7 +168,7 @@ export default function BookingConfirmation() {
       console.log("Using raw appointment time from session storage:", rawAppointmentTime);
       return rawAppointmentTime;
     }
-    
+
     // Then check if the booking object has appointmentTime
     if (booking.appointmentTime) {
       console.log("Using appointment time from booking object:", booking.appointmentTime);
@@ -176,7 +176,7 @@ export default function BookingConfirmation() {
     }
 
     console.log("No exact time available, falling back to date parsing");
-    
+
     // Last resort: try to extract from date, but this is prone to timezone issues
     try {
       const date = new Date(booking.preferredDate);
@@ -193,80 +193,80 @@ export default function BookingConfirmation() {
 
   // Estimate service duration based on service type
   const getEstimatedDuration = () => {
-    const serviceType = booking.serviceType?.toLowerCase() || '';
-    
-    // Count number of TVs and smart home devices
-    const tvCount = (serviceType.match(/tv/gi) || []).length;
-    const smartHomeCount = (
-      (serviceType.match(/doorbell/gi) || []).length +
-      (serviceType.match(/camera/gi) || []).length +
-      (serviceType.match(/floodlight/gi) || []).length
-    );
-    
-    // Base duration is 1 hour for first TV, plus 30 min for each additional
-    let duration = 60;
-    
-    if (tvCount > 1) {
-      duration += (tvCount - 1) * 30;
-    }
-    
-    // Each smart home device adds 30 min
-    if (smartHomeCount > 0) {
-      duration += smartHomeCount * 30;
-    }
-    
-    // Fireplace mounting adds extra time
-    if (serviceType.includes('fireplace')) {
-      duration += 30;
-    }
-    
-    // Convert to hours and minutes
-    const hours = Math.floor(duration / 60);
-    const minutes = duration % 60;
-    
-    if (hours === 0) {
-      return `${minutes} minutes`;
-    } else if (minutes === 0) {
-      return `${hours} hour${hours > 1 ? 's' : ''}`;
-    } else {
-      return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minutes`;
-    }
+    // Estimated duration is based on the service type
+    const services = booking?.serviceType.toLowerCase() || '';
+
+    if (!services) return "1 hour";
+
+    // Base installation time is 1 hour
+    let duration = 1;
+
+    // Add time based on services
+    if (services.includes('tv')) duration += 0.5;
+    if (services.includes('camera')) duration += 0.5;
+    if (services.includes('doorbell')) duration += 0.5;
+    if (services.includes('floodlight')) duration += 0.5;
+
+    // Format the duration
+    const hours = Math.floor(duration);
+    const minutes = Math.round((duration - hours) * 60);
+
+    if (minutes === 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minutes`;
+  };
+
+  const getEstimatedTotal = () => {
+    // Estimated cost based on the service type
+    const services = booking?.serviceType.toLowerCase() || '';
+
+    if (!services) return "99";
+
+    // Base installation cost
+    let cost = 99;
+
+    // Add cost based on services
+    if (services.includes('tv')) cost += 150;
+    if (services.includes('camera')) cost += 120;
+    if (services.includes('doorbell')) cost += 100;
+    if (services.includes('floodlight')) cost += 120;
+
+    return cost.toFixed(2);
   };
 
   // Calculate estimated price based on service type
   const getEstimatedPrice = () => {
     const serviceType = booking.serviceType?.toLowerCase() || '';
-    
+
     // Base pricing
     let total = 0;
-    
+
     // TV mounting prices
     const tvCount = (serviceType.match(/tv/gi) || []).length;
     if (tvCount > 0) {
       // Assume standard TV mounting price is $149
       total += 149;
-      
+
       // Additional TVs
       if (tvCount > 1) {
         total += (tvCount - 1) * 99; // Each additional TV at $99
       }
-      
+
       // Add for fireplace if mentioned
       if (serviceType.includes('fireplace')) {
         total += 50; // Additional for fireplace mounting
       }
     }
-    
+
     // Smart home device prices
     const doorbellCount = (serviceType.match(/doorbell/gi) || []).length;
     const cameraCount = (serviceType.match(/camera/gi) || []).length;
     const floodlightCount = (serviceType.match(/floodlight/gi) || []).length;
-    
+
     // Add smart home installation costs
     total += doorbellCount * 99; // $99 per doorbell
     total += cameraCount * 129;  // $129 per camera
     total += floodlightCount * 149; // $149 per floodlight
-    
+
     return total.toFixed(2);
   };
 
@@ -295,7 +295,7 @@ export default function BookingConfirmation() {
             </div>
 
             <h3 className="text-xl font-semibold mb-4">Appointment Details</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -305,7 +305,7 @@ export default function BookingConfirmation() {
                     <p>{getFormattedDate()}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-primary mt-0.5" />
                   <div>
@@ -316,7 +316,7 @@ export default function BookingConfirmation() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <MapPinIcon className="h-5 w-5 text-primary mt-0.5" />
                   <div>
@@ -336,7 +336,7 @@ export default function BookingConfirmation() {
                   </div>
                   <div>
                     <h4 className="font-medium">Estimated Total</h4>
-                    <p className="font-semibold text-lg">${getEstimatedPrice()}</p>
+                    <p className="font-semibold text-lg">${getEstimatedTotal()}</p>
                   </div>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function BookingConfirmation() {
                     <p>{booking.name}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-primary mt-0.5" />
                   <div>
@@ -357,7 +357,7 @@ export default function BookingConfirmation() {
                     <p>{booking.email}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <Phone className="h-5 w-5 text-primary mt-0.5" />
                   <div>
@@ -372,7 +372,7 @@ export default function BookingConfirmation() {
 
             <h3 className="text-xl font-semibold mb-4">Service Details</h3>
             <p className="mb-4">{booking.serviceType}</p>
-            
+
             {booking.notes && (
               <div className="mb-6">
                 <h4 className="font-medium mb-2">Additional Notes</h4>
