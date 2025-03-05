@@ -1,24 +1,68 @@
-
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
-import { format } from 'date-fns';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { format } from "date-fns";
 
-function BookingConfirmation() {
-  const [location] = useLocation();
-  const [bookingData, setBookingData] = useState<any>(null);
+export default function BookingConfirmation() {
+  const [bookingData, setBookingData] = useState(null);
+  const [rawAppointmentTime, setRawAppointmentTime] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  const calculateTotal = (serviceType: string) => {
+  useEffect(() => {
+    try {
+      // Log initialization
+      console.log("Booking confirmation - URL params:", {
+        urlBookingId: null,
+        storedBookingId: null,
+        rawAppointmentTime: sessionStorage.getItem("appointmentTime"),
+        hasStoredData: !!sessionStorage.getItem("bookingData")
+      });
+
+      // Get raw time from session storage
+      const rawTime = sessionStorage.getItem("appointmentTime");
+      if (rawTime) {
+        console.log("Retrieved raw appointment time from session:", rawTime);
+        setRawAppointmentTime(rawTime);
+      }
+
+      // Get booking data from session storage
+      const storedData = sessionStorage.getItem("bookingData");
+      if (storedData) {
+        console.log("Found booking data in session storage:", storedData);
+        const parsedData = JSON.parse(storedData);
+        setBookingData(parsedData);
+      }
+
+      console.log("Session storage booking data:", JSON.parse(sessionStorage.getItem("bookingData")));
+      console.log("Raw appointment time from session:", rawAppointmentTime);
+      console.log("Final booking data being used:", bookingData);
+
+      setLoading(false);
+    } catch (err) {
+      console.error("Error loading booking data:", err);
+      setError("Failed to load booking details. Please try again.");
+      setLoading(false);
+    }
+  }, []);
+
+  // If there's raw time in session storage, use that instead
+  useEffect(() => {
+    const rawTime = sessionStorage.getItem("appointmentTime");
+    if (rawTime) {
+      console.log("Using raw appointment time from session storage:", rawTime);
+      setRawAppointmentTime(rawTime);
+    }
+  }, []);
+
+  const calculateEstimatedTotal = (serviceType) => {
+    if (!serviceType) return "0.00";
+
     // Base pricing
     let total = 0;
 
-    // Smart home device prices
+    // Smart home device prices from services page
     const doorbellCount = (serviceType.match(/doorbell/gi) || []).length;
     const cameraCount = (serviceType.match(/camera/gi) || []).length;
     const floodlightCount = (serviceType.match(/floodlight/gi) || []).length;
@@ -58,253 +102,118 @@ function BookingConfirmation() {
     return total.toFixed(2);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Parse URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlBookingId = urlParams.get('bookingId');
-        
-        // Check if booking data is stored in session storage
-        const storedBookingData = sessionStorage.getItem('bookingData');
-        const rawAppointmentTime = sessionStorage.getItem('appointmentTime');
-        
-        console.log("Booking confirmation - URL params:", {
-          urlBookingId,
-          storedBookingId: storedBookingData ? JSON.parse(storedBookingData).id : null,
-          rawAppointmentTime,
-          hasStoredData: !!storedBookingData
-        });
-        
-        console.log("Booking confirmation - URL params:", { bookingId: urlBookingId, location });
-        
-        // Attempt to load from API if booking ID is provided
-        let apiBookingData = null;
-        if (urlBookingId) {
-          try {
-            const response = await fetch(`/api/booking/${urlBookingId}`);
-            if (response.ok) {
-              apiBookingData = await response.json();
-            }
-          } catch (err) {
-            console.error("Error fetching booking from API:", err);
-          }
-        }
-        
-        console.log("API Booking data:", apiBookingData);
-        console.log("Session storage booking data:", storedBookingData ? JSON.parse(storedBookingData) : null);
-        console.log("Raw appointment time from session:", rawAppointmentTime);
-        
-        // Use API data if available, otherwise use session storage
-        let finalBookingData = null;
-        if (apiBookingData && apiBookingData.data) {
-          finalBookingData = apiBookingData.data;
-        } else if (storedBookingData) {
-          console.log("Retrieved raw appointment time from session:", rawAppointmentTime);
-          console.log("Found booking data in session storage:", storedBookingData);
-          
-          finalBookingData = JSON.parse(storedBookingData);
-          
-          // Add appointment time from session if available
-          if (rawAppointmentTime && !finalBookingData.appointmentTime) {
-            finalBookingData.appointmentTime = rawAppointmentTime;
-            console.log("Using raw appointment time from session storage:", rawAppointmentTime);
-          }
-        }
-        
-        console.log("Final booking data being used:", finalBookingData);
-        
-        if (finalBookingData) {
-          setBookingData(finalBookingData);
-        } else {
-          setError("Booking information not found. Please try again or contact support.");
-        }
-      } catch (err) {
-        console.error("Error in booking confirmation:", err);
-        setError("An error occurred while loading your booking information.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [location]);
-
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-lg">Loading your booking information...</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto py-12 px-4">
+        <div className="text-center">
+          <div className="animate-pulse">Loading booking details...</div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-500">Booking Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{error}</p>
-            <div className="mt-6">
-              <Button asChild>
-                <Link href="/">
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Return to Homepage
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto py-12 px-4">
+        <div className="text-center">
+          <p className="text-red-500">{error}</p>
+          <Button className="mt-4" variant="outline" asChild>
+            <Link to="/">Return to Homepage</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (!bookingData) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-yellow-200">
-          <CardHeader>
-            <CardTitle className="text-yellow-600">Booking Not Found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>We couldn't find your booking information. Please return to the booking page and try again.</p>
-            <div className="mt-6">
-              <Button asChild>
-                <Link href="/services">
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Go to Services
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto py-12 px-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Booking Not Found</h1>
+          <p>We couldn't find your booking details. Please try again or contact support.</p>
+          <Button className="mt-4" variant="outline" asChild>
+            <Link to="/">Return to Homepage</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="shadow-lg border-green-100">
-        <CardHeader className="bg-green-50 border-b border-green-100">
-          <CardTitle className="text-2xl text-green-800 flex items-center">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-6 w-6 mr-2 text-green-600" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            Booking Confirmed!
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4">
-          <div className="space-y-6">
+    <div className="container mx-auto py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-green-50 p-6 rounded-lg border border-green-200 text-center mb-8">
+          <h1 className="text-3xl font-bold text-green-700 mb-2">Booking Confirmed!</h1>
+          <p className="text-green-600">
+            Thank you for your booking. We'll see you soon!
+          </p>
+        </div>
+
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-6 border-b pb-2">Booking Details</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Service Information</h3>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="font-medium">{bookingData.serviceType}</p>
-                <p className="text-gray-600 mt-1">
-                  {format(new Date(bookingData.preferredDate), 'EEEE, MMMM d, yyyy')}
-                  <span className="mx-2">•</span>
-                  {bookingData.appointmentTime}
-                </p>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Customer Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">Name</p>
-                  <p className="font-medium">{bookingData.name}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Email</p>
-                  <p className="font-medium">{bookingData.email}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Phone</p>
-                  <p className="font-medium">{bookingData.phone}</p>
-                </div>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Installation Address</h3>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="font-medium">{bookingData.streetAddress}</p>
-                {bookingData.addressLine2 && <p>{bookingData.addressLine2}</p>}
-                <p>{bookingData.city}, {bookingData.state} {bookingData.zipCode}</p>
-              </div>
-            </div>
-            
-            {bookingData.notes && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-gray-800">Additional Notes</h3>
-                  <p className="bg-gray-50 p-4 rounded-md italic">{bookingData.notes}</p>
-                </div>
-              </>
-            )}
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Estimated Cost</h3>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex justify-between">
-                  <p className="text-gray-600">Base service</p>
-                  <p className="font-medium">${calculateTotal(bookingData.serviceType)}</p>
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
-                  <p>Final price may vary based on actual installation requirements</p>
-                </div>
-              </div>
+              <h3 className="font-medium text-gray-700 mb-2">Customer Information</h3>
+              <p className="mb-1"><span className="font-semibold">Name:</span> {bookingData.name}</p>
+              <p className="mb-1"><span className="font-semibold">Email:</span> {bookingData.email}</p>
+              <p className="mb-1"><span className="font-semibold">Phone:</span> {bookingData.phone}</p>
             </div>
 
-            <div className="mt-8 space-y-4">
-              <p className="text-sm text-gray-600">
-                We'll contact you shortly to confirm your booking and provide any additional details.
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">Service Details</h3>
+              <p className="mb-1"><span className="font-semibold">Service:</span> {bookingData.serviceType}</p>
+              <p className="mb-1">
+                <span className="font-semibold">Date:</span> {bookingData.preferredDate ? format(new Date(bookingData.preferredDate), "MMMM d, yyyy") : "No date selected"}
               </p>
-              <p className="text-sm text-gray-600">
-                Thank you for choosing Picture Perfect TV Install!
+              <p className="mb-1">
+                <span className="font-semibold">Time:</span> {rawAppointmentTime || bookingData.appointmentTime || "No time selected"}
               </p>
-              <div className="flex justify-center pt-4">
-                <Button asChild>
-                  <Link href="/">
-                    <ChevronLeft className="mr-2 h-4 w-4" />
-                    Return to Homepage
-                  </Link>
-                </Button>
-              </div>
+              <p className="mb-4">
+                <span className="font-semibold">Estimated Total:</span>{" "}
+                <span className="text-xl font-bold text-brand-blue-600">${calculateEstimatedTotal(bookingData.serviceType)}</span>
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6">
+            <h3 className="font-medium text-gray-700 mb-2">Service Address</h3>
+            <p className="mb-1">{bookingData.streetAddress}</p>
+            {bookingData.addressLine2 && <p className="mb-1">{bookingData.addressLine2}</p>}
+            <p className="mb-1">{bookingData.city}, {bookingData.state} {bookingData.zipCode}</p>
+          </div>
+
+          {bookingData.notes && (
+            <div className="mt-6">
+              <h3 className="font-medium text-gray-700 mb-2">Additional Notes</h3>
+              <p className="italic">{bookingData.notes}</p>
+            </div>
+          )}
+
+          <div className="mt-8 border-t pt-6">
+            <h3 className="font-medium text-gray-700 mb-2">What's Next?</h3>
+            <p className="mb-4">
+              You'll receive a confirmation email with these details. Our team will contact you 24 hours before your appointment to confirm.
+            </p>
+            <p className="text-sm text-gray-500">
+              Need to make changes? Please contact us at (404) 702-4748 or support@pictureperfecttv.com
+            </p>
+          </div>
+
+          <div className="mt-8 flex justify-between">
+            <Button variant="outline" asChild className="inline-flex items-center">
+              <Link to="/">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Return to Homepage
+              </Link>
+            </Button>
+
+            <Button asChild>
+              <Link to="/services">Book Another Service</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-export default BookingConfirmation;
