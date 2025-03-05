@@ -1,8 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { type InsertBooking } from "@shared/schema";
+import { bookingSchema, type InsertBooking } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { BookingWizard } from "@/components/ui/booking-wizard";
 
@@ -10,11 +14,21 @@ export default function Booking() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
+  // Fetch existing bookings for selected date
+  const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['/api/bookings'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/bookings");
+      return Array.isArray(response) ? response : [];
+    }
+  });
+
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
       const response = await apiRequest("POST", "/api/booking", data);
       if (!response.ok) {
-        throw new Error('Failed to create booking');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create booking');
       }
       return response.json();
     },
@@ -61,6 +75,8 @@ export default function Booking() {
           <BookingWizard
             onSubmit={(data) => mutation.mutate(data as InsertBooking)}
             isSubmitting={mutation.isPending}
+            existingBookings={existingBookings}
+            isLoadingBookings={isLoadingBookings}
           />
         </motion.div>
       </div>

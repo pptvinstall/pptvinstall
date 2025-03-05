@@ -1,85 +1,58 @@
-import express from "express";
+import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import compression from "compression";
-import helmet from "helmet";
+import rateLimit from 'express-rate-limit';
 
 const app = express();
-
-// Security headers with proper configuration for development
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP in development
-  crossOriginEmbedderPolicy: false // Disable COEP in development
-}));
-
-// Enable compression for all responses
-app.use(compression({
-  level: 6,
-  threshold: 1024,
-}));
 
 // Trust proxy to properly handle client IP addresses behind Replit proxy
 app.set('trust proxy', 1);
 
-// Basic middleware with limits for security
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
-
-// CORS configuration - allow all in development
+// Basic security headers for all responses
 app.use((req, res, next) => {
+  // Allow all origins in development
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  // Basic security headers
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
   next();
 });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  const statusCode = err.statusCode || 500;
-  const message = process.env.NODE_ENV === 'production' 
-    ? 'Internal Server Error' 
-    : err.message || 'Something went wrong';
-
-  res.status(statusCode).json({ 
-    error: message,
-    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack
-  });
+// Apply rate limiting to API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests from this IP, please try again after 15 minutes',
+    status: 429
+  }
 });
 
+app.use('/api/', apiLimiter);
+
 (async () => {
-  try {
-    const server = await registerRoutes(app);
+  const server = await registerRoutes(app);
 
-    // Use environment variable to determine mode, with development as fallback
-    if (process.env.NODE_ENV !== "production") {
-      log('Starting in development mode...');
-      await setupVite(app, server);
-    } else {
-      log('Starting in production mode...');
-      serveStatic(app);
-    }
-
-    server.listen(5000, "0.0.0.0", () => {
-      log(`Server running at http://0.0.0.0:5000`);
-      console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      log('SIGTERM received, shutting down gracefully');
-      server.close(() => {
-        log('Server closed');
-        process.exit(0);
-      });
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
   }
+
+  const port = 5000;
+  server.listen(port, "0.0.0.0", () => {
+    log(`Server running at http://0.0.0.0:${port}`);
+    console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 })();

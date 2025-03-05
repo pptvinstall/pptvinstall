@@ -52,22 +52,17 @@ export default function Contact() {
   });
 
   return (
-    <div className="py-12 min-h-screen bg-gradient-to-b from-white to-blue-50">
+    <div className="py-12 bg-gradient-to-b from-white to-blue-50">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
-          <motion.div 
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-brand-blue-600 to-brand-blue-800 bg-clip-text text-transparent">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Contact Us
             </h1>
-            <p className="text-xl text-gray-600 max-w-xl mx-auto">
-              Get in touch for quotes, questions, or to schedule your professional installation
+            <p className="text-xl text-gray-600">
+              Get in touch for quotes and inquiries
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="border-2 border-blue-100 shadow-lg">

@@ -7,15 +7,15 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "cloudrun"
-build = ["sh", "-c", "npm i"]
-run = ["sh", "-c", "NODE_ENV=production tsx server/index.ts"]
+build = ["sh", "-c", "npm run build"]
+run = ["sh", "-c", "npm run dev"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Dev Server"
+runButton = "Start application"
 
 [[workflows.workflow]]
 name = "Project"
@@ -40,11 +40,3 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Dev Server"
-author = 40064206
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"

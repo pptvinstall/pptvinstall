@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { contactMessageSchema, bookingSchema } from "@shared/schema";
 import nodemailer from "nodemailer";
-import rateLimit from "express-rate-limit";
 import { 
   SMART_DEVICE_PRICES, 
   SERVICE_NOTES, 
@@ -17,36 +16,13 @@ if (!process.env.GMAIL_PASS || process.env.GMAIL_PASS === "default_pass") {
   console.warn('WARNING: Email functionality may not work properly. GMAIL_PASS environment variable is not properly set.');
 }
 
-let transportConfig: nodemailer.TransportOptions;
-
-// Create email transport configuration
-if (process.env.GMAIL_USER && process.env.GMAIL_PASS && process.env.GMAIL_PASS !== "default_pass") {
-  transportConfig = {
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS
-    }
-  };
-} else {
-  console.warn('Using fallback email configuration - emails will NOT be sent in production');
-  // Fallback to use ethereal for development/testing - doesn't actually send emails
-  transportConfig = {
-    host: 'smtp.ethereal.email',
-    port: 587,
-    auth: {
-      user: 'ethereal.user@ethereal.email',
-      pass: 'ethereal_pass'
-    }
-  };
-}
-
-const transporter = nodemailer.createTransport(transportConfig as any);
-
-// Verify email configuration works
-transporter.verify()
-  .then(() => console.log('Email transport verified successfully'))
-  .catch(err => console.error('Email transport verification failed:', err));
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER || "pptvinstall@gmail.com",
+    pass: process.env.GMAIL_PASS || "default_pass"
+  }
+});
 
 // Rename local formatPrice to avoid conflict
 function formatCurrency(amount: number): string {
@@ -313,35 +289,6 @@ END:VCALENDAR`;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Basic rate limiting for general API requests
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many requests, please try again later" }
-  });
-  
-  // More strict rate limiting for form submissions
-  const formSubmissionLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // limit each IP to 10 form submissions per hour
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many form submissions, please try again later" }
-  });
-
-  // Apply rate limiting to API routes
-  app.use("/api/", apiLimiter);
-  
-  // Additional limiters for specific endpoints
-  const bookingLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 5, // limit each IP to 5 booking requests per hour
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many booking requests, please try again later" }
-  });
   app.get("/api/bookings", async (req, res) => {
     try {
       const bookings = await storage.getAllBookings();
@@ -432,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contact", formSubmissionLimiter, async (req, res) => {
+  app.post("/api/contact", async (req, res) => {
     try {
       const data = contactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(data);
@@ -455,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/booking", bookingLimiter, async (req, res) => {
+  app.post("/api/booking", async (req, res) => {
     try {
       // Log the incoming request
       console.log("Received booking request:", JSON.stringify({
