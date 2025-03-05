@@ -30,7 +30,8 @@ export function BookingWizard({
   onSubmit, 
   isSubmitting,
   existingBookings = [],
-  isLoadingBookings = false
+  isLoadingBookings = false,
+  formData
 }: BookingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [tvInstallations, setTvInstallations] = useState<TVInstallation[]>([]);
