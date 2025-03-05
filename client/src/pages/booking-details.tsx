@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -22,15 +21,49 @@ import {
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
+interface BookingDetailsData {
+  id: number;
+  status: string;
+  name: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  notes?: string;
+  preferredDate: string;
+  preferredTime: string;
+  serviceType: string;
+  totalPrice: string;
+  detailedServices: string;
+}
+
+interface ServiceBreakdownItem {
+  label: string;
+  price: number;
+  isDiscount?: boolean;
+}
+
+interface ServiceBreakdownSection {
+  title: string;
+  items: ServiceBreakdownItem[];
+}
+
 export default function BookingDetailsPage() {
-  const [_, params] = useParams();
-  const bookingId = params.id;
-  const [location, navigate] = useLocation();
+  const [, params] = useParams<{ id: string }>();
+  const bookingId = params?.id;
+  const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const { data: booking, isLoading, error } = useQuery({
+  const { data: booking, isLoading, error } = useQuery<BookingDetailsData>({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
+      if (!bookingId) {
+        throw new Error('No booking ID provided');
+      }
+
       const response = await fetch(`/api/bookings/${bookingId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch booking details');
@@ -40,7 +73,6 @@ export default function BookingDetailsPage() {
   });
 
   useEffect(() => {
-    // Verify that the logged-in user owns this booking
     const customerEmail = localStorage.getItem("customerEmail");
     if (booking && customerEmail && booking.email !== customerEmail) {
       toast({
@@ -50,18 +82,17 @@ export default function BookingDetailsPage() {
       });
       navigate("/account");
     }
-  }, [booking]);
+  }, [booking, navigate, toast]);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return format(date, "PPP");
   };
 
-  // Format service breakdown
-  const formatServiceBreakdown = (detailedServices) => {
+  const formatServiceBreakdown = (detailedServices: string): { services: string[], serviceBreakdown: ServiceBreakdownSection[] } => {
     if (!detailedServices) return { services: [], serviceBreakdown: [] };
-    
+
     try {
       return JSON.parse(detailedServices);
     } catch {
@@ -69,7 +100,7 @@ export default function BookingDetailsPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
         return (
@@ -105,7 +136,7 @@ export default function BookingDetailsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-16 px-4 flex justify-center">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -159,7 +190,7 @@ export default function BookingDetailsPage() {
                     <p className="font-medium">{formatDate(booking.preferredDate)}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-brand-blue-500" />
                   <div>
@@ -188,17 +219,17 @@ export default function BookingDetailsPage() {
 
                 <div className="space-y-3">
                   <p className="text-sm text-gray-500">Contact Information</p>
-                  
+
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-brand-blue-500" />
                     <p>{booking.name}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-brand-blue-500" />
                     <p>{booking.email}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <Phone className="h-5 w-5 text-brand-blue-500" />
                     <p>{booking.phone}</p>

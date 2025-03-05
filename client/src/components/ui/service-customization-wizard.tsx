@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Button } from "./button";
 import { RadioGroup, RadioGroupItem } from "./radio-group";
 import { Label } from "./label";
-import { Input } from "./input";
 import { Slider } from "./slider";
 import { Switch } from "./switch";
 import { 
@@ -160,8 +159,8 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
-    setCustomizations({}); // Reset customizations when changing service
-    setStep(1); // Move to customization step
+    setCustomizations({});
+    setStep(1);
   };
 
   const handleNext = () => {
@@ -181,6 +180,16 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
       setCustomizations({});
     }
     setStep(prev => Math.max(0, prev - 1));
+  };
+
+  const isCustomizationComplete = () => {
+    if (!currentService) return false;
+    return currentService.customizations.every(customization => {
+      if (customization.type === 'radio') {
+        return customizations[customization.id] !== undefined;
+      }
+      return true;
+    });
   };
 
   return (
@@ -218,7 +227,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         <div>
                           <h3 className="font-semibold">{service.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            Starting at ${service.basePrice}
+                            Starting at ${service.basePrice.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -285,7 +294,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                                 {option.label}
                                 {option.price > 0 && (
                                   <span className="text-sm text-muted-foreground">
-                                    {" "}(+${option.price})
+                                    {" "}(+${option.price.toFixed(2)})
                                   </span>
                                 )}
                               </Label>
@@ -329,7 +338,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                           }
                         />
                         <span className="text-sm text-muted-foreground">
-                          (+${customization.price})
+                          (+${customization.price?.toFixed(2)})
                         </span>
                       </div>
                     )}
@@ -358,7 +367,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
           </div>
           <Button
             onClick={handleNext}
-            disabled={step === 0 && !selectedService}
+            disabled={step === 0 ? !selectedService : !isCustomizationComplete()}
           >
             {step === 1 ? 'Complete' : 'Next'}
             <ArrowRight className="w-4 h-4 ml-2" />

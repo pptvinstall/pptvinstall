@@ -1,13 +1,21 @@
-
 import { useState, useEffect } from 'react';
-import { calculatePricing } from './pricing';
+import { calculatePrice } from './pricing';
 import type { TVInstallation, SmartHomeInstallation } from '../components/ui/service-wizard';
+
+interface PricingState {
+  basePrice: number;
+  mountPrice: number;
+  additionalServices: number;
+  travelFee: number;
+  discounts: number;
+  total: number;
+}
 
 export function usePricing(
   tvInstallations: TVInstallation[], 
   smartHomeInstallations: SmartHomeInstallation[]
-) {
-  const [pricing, setPricing] = useState({
+): PricingState {
+  const [pricing, setPricing] = useState<PricingState>({
     basePrice: 0,
     mountPrice: 0,
     additionalServices: 0,
@@ -15,13 +23,13 @@ export function usePricing(
     discounts: 0,
     total: 0
   });
-  
+
   useEffect(() => {
     const serviceType = formatServiceType(tvInstallations, smartHomeInstallations);
-    const calculatedPricing = calculatePricing(serviceType);
+    const calculatedPricing = calculatePrice(serviceType);
     setPricing(calculatedPricing);
   }, [tvInstallations, smartHomeInstallations]);
-  
+
   return pricing;
 }
 
@@ -29,18 +37,18 @@ function formatServiceType(
   tvInstallations: TVInstallation[], 
   smartHomeInstallations: SmartHomeInstallation[]
 ): string {
-  const parts = [];
-  
+  const parts: string[] = [];
+
   tvInstallations.forEach((tv, index) => {
     const size = tv.size === 'large' ? '56" or larger' : '32"-55"';
     const mountType = tv.mountType !== 'none' ? ` ${tv.mountType}` : '';
     const masonry = tv.masonryWall ? ' masonry' : '';
     const outlet = tv.outletRelocation ? ' outlet' : '';
     const fireplace = tv.location === 'fireplace' ? ' fireplace' : '';
-    
+
     parts.push(`${index + 1} TV ${size}${mountType}${masonry}${outlet}${fireplace}`);
   });
-  
+
   smartHomeInstallations.forEach(device => {
     if (device.type === 'doorbell') {
       const brick = device.brickInstallation ? ' brick' : '';
@@ -51,10 +59,10 @@ function formatServiceType(
       parts.push('Floodlight');
     }
   });
-  
+
   return parts.join(' + ');
 }
-// Function to format price consistently
+
 export function formatPrice(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -62,14 +70,27 @@ export function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-// Duplicate of server-side function to handle service type parsing on client side
-export function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
+interface ParsedServiceResult {
+  services: string[];
+  price: number;
+  serviceBreakdown: ServiceBreakdown[];
+}
+
+interface ServiceBreakdown {
+  title: string;
+  items: {
+    label: string;
+    price: number;
+    isDiscount?: boolean;
+  }[];
+}
+
+export function parseServiceType(serviceType: string): ParsedServiceResult {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
-  const services = [];
+  const services: string[] = [];
   let tvCount = 0;
 
-  // First pass to count TVs for multi-TV discount
   serviceParts.forEach(part => {
     if (part.includes('TV')) {
       const tvMatch = part.match(/(\d+)\s*TV/);
@@ -77,12 +98,11 @@ export function parseServiceType(serviceType: string): { services: string[], pri
     }
   });
 
-  const serviceBreakdown = [];
+  const serviceBreakdown: ServiceBreakdown[] = [];
 
   for (const part of serviceParts) {
-    // Trim the part to ensure consistent detection
     const trimmedPart = part.trim();
-    
+
     if (trimmedPart.includes('TV')) {
       const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
       const count = tvMatch ? parseInt(tvMatch[1]) : 1;
@@ -93,7 +113,6 @@ export function parseServiceType(serviceType: string): { services: string[], pri
                        trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
                        trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
 
-      // Create service title
       const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
       services.push(title);
 
@@ -104,7 +123,6 @@ export function parseServiceType(serviceType: string): { services: string[], pri
         }
       ];
 
-      // Add mount pricing if specified
       if (mountType !== 'Standard Mount') {
         const mountPrice = isLarge ? 
           (mountType === 'Fixed Mount' ? 60 : 
@@ -136,11 +154,8 @@ export function parseServiceType(serviceType: string): { services: string[], pri
       }
 
       serviceBreakdown.push({ title, items });
-      totalPrice += 100; // Base installation
-    }
-    
-    // Smart Home Services parsing - note the use of trimmedPart
-    else if (trimmedPart.includes('Smart Doorbell')) {
+      totalPrice += 100;
+    } else if (trimmedPart.includes('Smart Doorbell')) {
       const title = 'Smart Doorbell';
       const hasBrick = trimmedPart.toLowerCase().includes('brick');
       services.push(title);
@@ -162,9 +177,7 @@ export function parseServiceType(serviceType: string): { services: string[], pri
       
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
-    }
-
-    else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
+    } else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
       const title = 'Smart Floodlight';
       services.push(title);
 
@@ -178,10 +191,8 @@ export function parseServiceType(serviceType: string): { services: string[], pri
         ]
       });
       totalPrice += 100;
-    }
-
-    else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
-             !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
+    } else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
+               !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
       const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
       const title = 'Smart Camera';
@@ -205,12 +216,8 @@ export function parseServiceType(serviceType: string): { services: string[], pri
 
       serviceBreakdown.push({ title, items });
       totalPrice += 75;
-    }
-    
-    // Handle "Smart Home Services" general selection
-    else if (trimmedPart.toLowerCase().includes('smart home service') || 
-             trimmedPart.toLowerCase().includes('smart home installation')) {
-      // This catches any smart home services that weren't caught by specific categories
+    } else if (trimmedPart.toLowerCase().includes('smart home service') || 
+               trimmedPart.toLowerCase().includes('smart home installation')) {
       const title = 'Smart Home Installation';
       services.push(title);
       
@@ -224,10 +231,19 @@ export function parseServiceType(serviceType: string): { services: string[], pri
         ]
       });
       totalPrice += 75;
+    } else if (trimmedPart.includes('Smart Device')) {
+      const items = [{
+        label: 'Smart Device Installation',
+        price: 75
+      }];
+      serviceBreakdown.push({
+        title: 'Smart Device Installation',
+        items
+      });
+      totalPrice += 75;
     }
   }
 
-  // Apply multi-TV discount if applicable
   if (tvCount > 1) {
     services.push('Multi-TV Discount');
     serviceBreakdown.push({
@@ -243,7 +259,6 @@ export function parseServiceType(serviceType: string): { services: string[], pri
     totalPrice -= 10;
   }
 
-  // Make sure we have at least one service
   if (services.length === 0) {
     services.push('Standard Installation');
     serviceBreakdown.push({
