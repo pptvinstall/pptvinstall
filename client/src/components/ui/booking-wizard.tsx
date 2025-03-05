@@ -83,7 +83,7 @@ export function BookingWizard({
     if (!selectedDate) return false;
     const dateString = format(selectedDate, 'yyyy-MM-dd');
     return !existingBookings.some(booking =>
-      booking.preferredDate === dateString && booking.preferredTime === time
+      booking.preferredDate === dateString && booking.appointmentTime === time
     );
   };
 
@@ -221,7 +221,12 @@ export function BookingWizard({
           {currentStep === 0 && (
             <ServiceWizard
               onServiceSelect={handleServiceSelect}
-              onClose={() => {}}
+              onClose={() => {
+                // Move to next step after service selection is confirmed
+                if (canProceed()) {
+                  setCurrentStep(1);
+                }
+              }}
             />
           )}
 

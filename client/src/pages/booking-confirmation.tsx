@@ -160,9 +160,10 @@ export default function BookingConfirmation() {
     }
   };
 
-  // Use stored appointment time or extract from date
-  // Updated to format time specifically for Eastern Time (Metro Atlanta)
+  // Use the stored appointment time directly instead of trying to parse it from the date
+  // This fixes the timezone issue by using the exact time string the user selected
   const getTime = () => {
+    // Directly return the appointment time if available - no conversion needed
     if (booking.appointmentTime) {
       return booking.appointmentTime;
     }
