@@ -29,21 +29,28 @@ export default function Booking() {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
+      // Log the exact data being submitted, especially the time
       console.log("Submitting booking data:", data);
+      console.log("Selected time (exact value):", data.appointmentTime);
+
       const response = await apiRequest("POST", "/api/booking", data);
       return response.json();
     },
     onSuccess: (response, variables) => {
       console.log("Booking success response:", response);
 
-      // Store more comprehensive booking details in session storage
-      // This provides a fallback if URL parameters fail
+      // Store comprehensive booking details with the raw selected time
       try {
         if (response && response.id) {
-          // Store both confirmation flag and booking details in session storage
+          // Store both booking details and the raw time string
           sessionStorage.setItem("bookingConfirmed", "true");
-          sessionStorage.setItem("bookingDetails", JSON.stringify(response));
+          sessionStorage.setItem("bookingDetails", JSON.stringify({
+            ...response,
+            // Ensure the raw appointment time is preserved
+            appointmentTime: variables.appointmentTime
+          }));
           sessionStorage.setItem("bookingId", response.id.toString());
+          sessionStorage.setItem("rawAppointmentTime", variables.appointmentTime);
 
           // Redirect with ID in URL
           setLocation(`/booking-confirmation?id=${response.id}`);
@@ -51,6 +58,7 @@ export default function Booking() {
           // Fallback if response doesn't contain ID
           sessionStorage.setItem("bookingConfirmed", "true");
           sessionStorage.setItem("bookingDetails", JSON.stringify(variables));
+          sessionStorage.setItem("rawAppointmentTime", variables.appointmentTime);
           setLocation("/booking-confirmation");
         }
       } catch (err) {

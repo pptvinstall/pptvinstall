@@ -33,7 +33,17 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
   const [activeTab, setActiveTab] = React.useState('services');
   const [tvInstallations, setTvInstallations] = React.useState<TVInstallation[]>([]);
   const [smartHomeInstallations, setSmartHomeInstallations] = React.useState<SmartHomeInstallation[]>([]);
-  const [isConfirming, setIsConfirming] = React.useState(false);
+
+  // Auto-save selections whenever they change
+  React.useEffect(() => {
+    // Only notify parent if we have any selections
+    if (tvInstallations.length > 0 || smartHomeInstallations.length > 0) {
+      onServiceSelect({
+        tvs: tvInstallations,
+        smartHome: smartHomeInstallations
+      });
+    }
+  }, [tvInstallations, smartHomeInstallations, onServiceSelect]);
 
   const addTvInstallation = () => {
     setTvInstallations(prev => [...prev, {
@@ -72,24 +82,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
     setSmartHomeInstallations(prev => prev.map((inst, i) =>
       i === index ? { ...inst, ...updates } : inst
     ));
-  };
-
-  // New function to handle confirmation and proceeding in one step
-  const handleConfirmAndProceed = () => {
-    // First mark as confirming to show visual feedback
-    setIsConfirming(true);
-
-    // Confirm selection by notifying parent component
-    onServiceSelect({
-      tvs: tvInstallations,
-      smartHome: smartHomeInstallations
-    });
-
-    // Reset confirming state after a short delay and close the wizard
-    setTimeout(() => {
-      setIsConfirming(false);
-      onClose();
-    }, 300); // Small delay for better UX
   };
 
   // Whether we have any services selected
@@ -458,6 +450,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                     />
                     <p className="text-sm text-muted-foreground">
                       +$25 per additional 4 feet above 8 feet
+                      <span className="ml-1 cursor-help" 
+                            title="Each additional 4 feet of height incurs a $25 charge for additional hardware and safety measures">ⓘ</span>
                     </p>
                   </div>
                 )}
@@ -479,13 +473,12 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        {/* Merged the Confirm Selection and Next buttons into a single button with combined functionality */}
+        {/* Replaced the Confirm Selection button with a Next button that auto-proceeds */}
         <Button 
-          onClick={handleConfirmAndProceed} 
-          disabled={!hasSelectionsToConfirm || isConfirming}
-          className={isConfirming ? "opacity-75" : ""}
+          onClick={onClose}
+          disabled={!hasSelectionsToConfirm}
         >
-          {isConfirming ? "Confirming..." : "Confirm Selection"}
+          Next
         </Button>
       </div>
     </div>

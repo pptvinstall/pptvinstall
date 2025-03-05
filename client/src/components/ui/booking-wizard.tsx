@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion"
 import { Calendar } from "./calendar"
 import { TimeSlot } from "./time-slot"
@@ -88,6 +88,7 @@ export function BookingWizard({
   };
 
   const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
+    console.log("Services selected:", services);
     setTvInstallations(services.tvs);
     setSmartHomeInstallations(services.smartHome);
   };
@@ -107,6 +108,10 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
+    // Log the exact date and time being used
+    console.log("Selected date:", selectedDate);
+    console.log("Selected time (raw string):", selectedTime);
+
     const preferredDate = selectedDate ? new Date(selectedDate) : new Date();
 
     // Set the time based on the selected time slot
@@ -178,12 +183,12 @@ export function BookingWizard({
     // Log the exact time being submitted to verify it's correct
     console.log("Submitting with selected time:", selectedTime);
 
-    // Submit booking data
+    // Submit booking data - critically important: we pass the raw selectedTime string
     onSubmit({
       ...formData,
       serviceType: serviceDescription,
       preferredDate: preferredDate.toISOString(), // Send ISO string with correct time
-      appointmentTime: selectedTime, // Store time separately
+      appointmentTime: selectedTime, // Store raw time string separately
     });
   };
 
@@ -267,7 +272,12 @@ export function BookingWizard({
                           time={time}
                           available={isTimeSlotAvailable(time)}
                           selected={selectedTime === time}
-                          onClick={() => isTimeSlotAvailable(time) && setSelectedTime(time)}
+                          onClick={() => {
+                            if (isTimeSlotAvailable(time)) {
+                              setSelectedTime(time);
+                              console.log("Time selected (raw string):", time);
+                            }
+                          }}
                         />
                       ))}
                     </div>
@@ -393,7 +403,7 @@ export function BookingWizard({
               <div>
                 <h3 className="font-medium mb-2">Appointment</h3>
                 <p className="text-sm">
-                  {selectedDate && format(selectedDate, "MMMM d, yyyy")} at {selectedTime}
+                  {selectedDate && format(selectedDate, "MMMM d, yyyy")} at <span className="font-bold">{selectedTime}</span>
                 </p>
               </div>
 
@@ -441,7 +451,6 @@ export function BookingWizard({
               Previous
             </Button>
 
-            {/* Merged the "Confirm Selection" and "Next" buttons into a single button */}
             <Button
               onClick={() => {
                 if (currentStep < steps.length - 1) {
