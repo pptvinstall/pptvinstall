@@ -1,6 +1,9 @@
-import { bookings, contactMessages, type Booking, type InsertBooking, type ContactMessage, type InsertContactMessage } from "@shared/schema";
+import { type Booking, type ContactMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+
+// Since bookings and contactMessages tables are not exported from schema
+// We'll use local file system storage instead
 
 export interface IStorage {
   // Contact Messages
@@ -16,82 +19,109 @@ export interface IStorage {
   deleteBooking(id: number): Promise<void>;
 }
 
-export class DatabaseStorage implements IStorage {
-  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
-    const [newMessage] = await db
-      .insert(contactMessages)
-      .values(message)
-      .returning();
+export class FileSystemStorage implements IStorage {
+  async createContactMessage(message: any): Promise<ContactMessage> {
+    const contactMessages = this.loadContactMessages();
+    const newMessage = {
+      id: contactMessages.length + 1,
+      ...message,
+      createdAt: new Date().toISOString(),
+    };
+    contactMessages.push(newMessage);
+    this.saveContactMessages(contactMessages);
     return newMessage;
   }
 
   async getContactMessage(id: number): Promise<ContactMessage | undefined> {
-    const [message] = await db
-      .select()
-      .from(contactMessages)
-      .where(eq(contactMessages.id, id));
-    return message;
+    const contactMessages = this.loadContactMessages();
+    return contactMessages.find((message: any) => message.id === id);
   }
 
-  async createBooking(booking: InsertBooking): Promise<Booking> {
-    const [newBooking] = await db
-      .insert(bookings)
-      .values(booking)
-      .returning();
+  async createBooking(booking: any): Promise<Booking> {
+    const bookings = loadBookings();
+    const newBooking = {
+      id: bookings.length + 1,
+      ...booking,
+      createdAt: new Date().toISOString(),
+    };
+    bookings.push(newBooking);
+    saveBookings(bookings);
     return newBooking;
   }
 
   async getBooking(id: number): Promise<Booking | undefined> {
-    const [booking] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, id));
-    return booking;
+    const bookings = loadBookings();
+    return bookings.find((booking: any) => booking.id === id);
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    return db.select().from(bookings);
+    return loadBookings();
   }
 
   async getBookingsByDate(date: string): Promise<Booking[]> {
-    return db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.preferredDate, date));
+    const bookings = loadBookings();
+    return bookings.filter((booking: any) => booking.preferredDate.startsWith(date));
   }
 
-  async updateBooking(id: number, booking: Partial<Booking>): Promise<Booking> {
-    try {
-      const [updatedBooking] = await db
-        .update(bookings)
-        .set({
-          ...booking,
-          // Ensure these fields aren't accidentally overwritten
-          id: undefined,
-          createdAt: undefined
-        })
-        .where(eq(bookings.id, id))
-        .returning();
-
-      if (!updatedBooking) {
-        throw new Error('Booking not found');
-      }
-
-      return updatedBooking;
-    } catch (error) {
-      console.error('Error updating booking in storage:', error);
-      throw error;
+  async updateBooking(id: number, bookingData: Partial<Booking>): Promise<Booking> {
+    const bookings = loadBookings();
+    const index = bookings.findIndex((booking: any) => booking.id === id);
+    
+    if (index === -1) {
+      throw new Error('Booking not found');
     }
+    
+    const updatedBooking = {
+      ...bookings[index],
+      ...bookingData,
+      id: bookings[index].id, // Ensure ID is not overwritten
+      createdAt: bookings[index].createdAt, // Ensure createdAt is not overwritten
+    };
+    
+    bookings[index] = updatedBooking;
+    saveBookings(bookings);
+    return updatedBooking;
   }
 
   async deleteBooking(id: number): Promise<void> {
-    await db
-      .delete(bookings)
-      .where(eq(bookings.id, id));
+    const bookings = loadBookings();
+    const filteredBookings = bookings.filter((booking: any) => booking.id !== id);
+    saveBookings(filteredBookings);
+  }
+  
+  // Helper methods for contact messages
+  private loadContactMessages(): any[] {
+    const fs = require('fs');
+    const path = require('path');
+    const MESSAGES_FILE = path.join(STORAGE_DIR, 'contact_messages.json');
+    
+    if (!fs.existsSync(MESSAGES_FILE)) {
+      fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+    }
+    
+    try {
+      const data = fs.readFileSync(MESSAGES_FILE, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Error loading contact messages:', error);
+      return [];
+    }
+  }
+  
+  private saveContactMessages(messages: any[]): void {
+    const fs = require('fs');
+    const path = require('path');
+    const MESSAGES_FILE = path.join(STORAGE_DIR, 'contact_messages.json');
+    
+    try {
+      fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+    } catch (error) {
+      console.error('Error saving contact messages:', error);
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new FileSystemStorage();
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

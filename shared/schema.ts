@@ -25,5 +25,12 @@ export const bookingSchema = z.object({
 });
 
 // Export types for TypeScript
-export type ContactMessage = z.infer<typeof contactMessageSchema>;
-export type Booking = z.infer<typeof bookingSchema>;
+export type ContactMessage = z.infer<typeof contactMessageSchema> & {
+  id?: number;
+  createdAt?: string;
+};
+
+export type Booking = z.infer<typeof bookingSchema> & {
+  id?: number;
+  createdAt?: string;
+};
