@@ -92,3 +92,54 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Storage path for bookings
+const STORAGE_DIR = path.join(__dirname, 'data');
+const BOOKINGS_FILE = path.join(STORAGE_DIR, 'bookings.json');
+
+// Ensure storage directory exists
+if (!fs.existsSync(STORAGE_DIR)) {
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+}
+
+// Initialize bookings file if it doesn't exist
+if (!fs.existsSync(BOOKINGS_FILE)) {
+  fs.writeFileSync(BOOKINGS_FILE, JSON.stringify([]));
+}
+
+/**
+ * Load bookings from storage
+ */
+export function loadBookings(): any[] {
+  try {
+    const data = fs.readFileSync(BOOKINGS_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+    return [];
+  }
+}
+
+/**
+ * Save bookings to storage
+ */
+export function saveBookings(bookings: any[]): void {
+  try {
+    fs.writeFileSync(BOOKINGS_FILE, JSON.stringify(bookings, null, 2));
+  } catch (error) {
+    console.error('Error saving bookings:', error);
+  }
+}
+
+// Ensure the server/data directory exists
+export function ensureDataDirectory(): void {
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
+}

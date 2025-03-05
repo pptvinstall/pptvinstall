@@ -55,14 +55,20 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    //More detailed error logging
+    // Log the error details for debugging
     console.error("Error handling middleware caught error:", err);
     if (err instanceof Error) {
       console.error("Error details:", err.message);
       console.error("Stack trace:", err.stack);
     }
-    throw err;
+
+    // Don't throw the error after handling it, as this causes unhandled promise rejections
+    // Instead, just return the error response to the client
+    return res.status(status).json({ 
+      success: false,
+      message,
+      ...(process.env.NODE_ENV !== 'production' && { details: err.stack })
+    });
   });
 
   // importantly only setup vite in development and after
