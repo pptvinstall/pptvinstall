@@ -1,10 +1,8 @@
 
-import { useLocation } from "wouter";
+import { useCallback } from 'react';
 
 export function useQueryParams() {
-  const [location] = useLocation();
-  
-  const getParams = () => {
+  const getParams = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       get: (param: string) => params.get(param),
@@ -16,7 +14,7 @@ export function useQueryParams() {
         return result;
       }
     };
-  };
+  }, []);
   
   return getParams();
 }

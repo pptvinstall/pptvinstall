@@ -4,10 +4,10 @@ import { format } from "date-fns";
 import { CheckCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQueryParams } from "@/hooks/use-query-params"; // Assuming this hook is defined elsewhere
+import { useQueryParams } from "@/hooks/use-query-params";
 
 export default function BookingConfirmation() {
-  const { bookingId } = useQueryParams();
+  const queryParams = useQueryParams();
   const [bookingData, setBookingData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -19,7 +19,7 @@ export default function BookingConfirmation() {
         setLoading(true);
 
         // Get booking ID from URL or session storage
-        const urlBookingId = new URLSearchParams(window.location.search).get("id");
+        const urlBookingId = queryParams.get("id");
         const storedBookingId = sessionStorage.getItem("bookingId");
         const rawAppointmentTime = sessionStorage.getItem("appointmentTime");
 
