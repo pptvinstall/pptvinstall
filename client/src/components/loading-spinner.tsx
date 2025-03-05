@@ -7,3 +7,5 @@ export function LoadingSpinner() {
     </div>
   );
 }
+
+export default LoadingSpinner;

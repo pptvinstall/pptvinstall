@@ -2,6 +2,7 @@ import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { AnimatePresence, motion } from "framer-motion";
 
 import Nav from "@/components/nav";
 import Footer from "@/components/footer";
@@ -20,6 +21,7 @@ import TestimonialsPage from "@/pages/testimonials";
 import SubmitReviewPage from "@/pages/submit-review";
 import ServiceAreaPage from "@/pages/service-area";
 import GalleryPage from "@/pages/gallery";
+import ErrorBoundary from "@/components/error-boundary";
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
@@ -42,7 +44,7 @@ function Router() {
             <Route path="/" component={() => <PageWrapper><HomePage /></PageWrapper>} />
             <Route path="/services" component={() => <PageWrapper><ServicesPage /></PageWrapper>} />
             <Route path="/booking" component={() => <PageWrapper><BookingPage /></PageWrapper>} />
-            <Route path="/booking-confirmation/:id" component={() => <PageWrapper><BookingConfirmationPage /></PageWrapper>} />
+            <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmationPage /></PageWrapper>} />
             <Route path="/contact" component={() => <PageWrapper><ContactPage /></PageWrapper>} />
             <Route path="/faq" component={() => <PageWrapper><FaqPage /></PageWrapper>} />
             <Route path="/dashboard" component={() => <PageWrapper><DashboardPage /></PageWrapper>} />
@@ -65,10 +67,12 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router />
+        <Toaster />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
