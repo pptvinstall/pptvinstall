@@ -1,7 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Monitor, Shield, Star, Wrench, ArrowRight, Phone } from "lucide-react";
+import { Monitor, Shield, Star, Wrench, ArrowRight, Phone, CheckCircle, Award, Clock } from "lucide-react";
+import { Suspense, lazy } from "react";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 10,
+    },
+  },
+};
 
 export default function Home() {
   return (

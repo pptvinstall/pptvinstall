@@ -70,19 +70,33 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
-export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
+import { imageOptimizationMiddleware } from './middleware/image-optimization';
 
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+export function serveStatic(app: express.Express) {
+  // Try to use image optimization middleware first (if available)
+  try {
+    app.use(imageOptimizationMiddleware);
+  } catch (error) {
+    console.warn('Image optimization middleware not available:', error);
   }
 
-  app.use(express.static(distPath));
+  // Serve static files with cache headers
+  app.use(express.static("client/dist", {
+    maxAge: '1d', // Cache for 1 day
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      // Set longer cache for assets that rarely change
+      if (path.match(/\.(jpe?g|png|gif|svg|webp|avif|ico|woff2?|ttf|eot)$/i)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+      } else if (path.match(/\.(js|css)$/i)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+      }
+    }
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Serve index.html for all other routes (SPA fallback)
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "client/dist/index.html"));
   });
 }

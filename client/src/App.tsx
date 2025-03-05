@@ -12,12 +12,35 @@ import PerformanceMonitor from "@/components/performance-monitor"; // Added for 
 // Import the HomePage directly to ensure it loads immediately
 import HomePage from "@/pages/home";
 
-// Lazy load other pages
+// Lazy load other pages with prefetching hints
 const ServicesPage = lazy(() => import("@/pages/services"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const BookingPage = lazy(() => import("@/pages/booking"));
 const FaqPage = lazy(() => import("@/pages/faq"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
+const GalleryPage = lazy(() => import("@/pages/gallery"));
+
+// Prefetch critical assets
+const prefetchAssets = () => {
+  const imagesToPrefetch = [
+    '/images/hero-bg.jpg',
+    '/images/logo.png',
+  ];
+
+  // Use low priority prefetch for images
+  if ('connection' in navigator && (navigator.connection as any).saveData) {
+    return; // Don't prefetch if user is in data-saving mode
+  }
+
+  // Prefetch critical images
+  imagesToPrefetch.forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+};
+
+prefetchAssets(); // Call prefetchAssets
+
 
 function AppRouter() {
   return (
@@ -31,6 +54,7 @@ function AppRouter() {
             <Route path="/contact" component={ContactPage} />
             <Route path="/booking" component={BookingPage} />
             <Route path="/faq" component={FaqPage} />
+            <Route path="/gallery" component={GalleryPage} /> {/* Added GalleryPage route */}
             <Route path="/:rest*" component={NotFoundPage} />
           </Switch>
         </Suspense>

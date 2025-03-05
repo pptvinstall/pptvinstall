@@ -21,3 +21,44 @@ export function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerPr
 }
 
 export default LoadingSpinner;
+import { cn } from "@/lib/utils";
+
+type SpinnerSize = "small" | "medium" | "large";
+
+interface LoadingSpinnerProps {
+  size?: SpinnerSize;
+  className?: string;
+  color?: string;
+  text?: string;
+}
+
+const sizeMap = {
+  small: "h-4 w-4 border-2",
+  medium: "h-8 w-8 border-2",
+  large: "h-12 w-12 border-3",
+};
+
+const LoadingSpinner = ({
+  size = "medium",
+  className,
+  color = "currentColor",
+  text,
+}: LoadingSpinnerProps) => {
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <div
+        className={cn(
+          "animate-spin rounded-full border-t-transparent",
+          sizeMap[size],
+          className
+        )}
+        style={{ borderTopColor: "transparent", borderColor: color }}
+      />
+      {text && (
+        <p className="mt-2 text-sm text-gray-600">{text}</p>
+      )}
+    </div>
+  );
+};
+
+export default LoadingSpinner;

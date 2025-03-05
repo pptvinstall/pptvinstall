@@ -107,3 +107,84 @@ const PerformanceMonitor: React.FC = () => {
 };
 
 export default PerformanceMonitor;
+import { useEffect, useState } from "react";
+
+interface PerformanceMetrics {
+  firstContentfulPaint: number | null;
+  domInteractive: number | null;
+  domComplete: number | null;
+  loadEventEnd: number | null;
+}
+
+const PerformanceMonitor = () => {
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({
+    firstContentfulPaint: null,
+    domInteractive: null,
+    domComplete: null,
+    loadEventEnd: null,
+  });
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    
+    // Wait for the load event to ensure all metrics are available
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const performanceEntries = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+        
+        if (performanceEntries) {
+          const fcp = performance.getEntriesByName("first-contentful-paint")[0]?.startTime || null;
+          
+          setMetrics({
+            firstContentfulPaint: fcp,
+            domInteractive: performanceEntries.domInteractive,
+            domComplete: performanceEntries.domComplete,
+            loadEventEnd: performanceEntries.loadEventEnd,
+          });
+        }
+      }, 0);
+    });
+  }, []);
+
+  if (process.env.NODE_ENV !== "development") return null;
+
+  return (
+    <div className="fixed bottom-2 right-2 z-50">
+      <button 
+        onClick={() => setVisible(!visible)}
+        className="bg-brand-blue-500 text-white p-2 rounded-full shadow-lg"
+      >
+        {visible ? "Hide" : "Performance"}
+      </button>
+      
+      {visible && (
+        <div className="bg-white p-4 rounded-lg shadow-xl border mt-2 text-sm">
+          <h3 className="font-bold mb-2">Performance Metrics</h3>
+          <table className="w-full">
+            <tbody>
+              <tr>
+                <td>First Contentful Paint:</td>
+                <td>{metrics.firstContentfulPaint ? `${Math.round(metrics.firstContentfulPaint)}ms` : "Loading..."}</td>
+              </tr>
+              <tr>
+                <td>DOM Interactive:</td>
+                <td>{metrics.domInteractive ? `${Math.round(metrics.domInteractive)}ms` : "Loading..."}</td>
+              </tr>
+              <tr>
+                <td>DOM Complete:</td>
+                <td>{metrics.domComplete ? `${Math.round(metrics.domComplete)}ms` : "Loading..."}</td>
+              </tr>
+              <tr>
+                <td>Load Complete:</td>
+                <td>{metrics.loadEventEnd ? `${Math.round(metrics.loadEventEnd)}ms` : "Loading..."}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PerformanceMonitor;
