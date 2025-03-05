@@ -200,11 +200,20 @@ export default function BookingConfirmation() {
     // Base installation time is 1 hour
     let duration = 1;
 
-    // Add time based on services
-    if (services.includes('tv')) duration += 0.5;
-    if (services.includes('camera')) duration += 0.5;
-    if (services.includes('doorbell')) duration += 0.5;
-    if (services.includes('floodlight')) duration += 0.5;
+    // Count occurrences of each service type
+    const tvCount = (services.match(/tv/gi) || []).length;
+    const cameraCount = (services.match(/camera/gi) || []).length;
+    const doorbellCount = (services.match(/doorbell/gi) || []).length;
+    const floodlightCount = (services.match(/floodlight/gi) || []).length;
+
+    // Add time based on service counts
+    if (tvCount > 0) duration += tvCount * 0.5;
+    if (cameraCount > 0) duration += cameraCount * 0.5;
+    if (doorbellCount > 0) duration += doorbellCount * 0.5;
+    if (floodlightCount > 0) duration += floodlightCount * 0.5;
+
+    // Add extra time for complex installations
+    if (services.includes('fireplace')) duration += 0.5;
 
     // Format the duration
     const hours = Math.floor(duration);
@@ -239,33 +248,42 @@ export default function BookingConfirmation() {
     // Base pricing
     let total = 0;
 
-    // TV mounting prices
-    const tvCount = (serviceType.match(/tv/gi) || []).length;
-    if (tvCount > 0) {
-      // Assume standard TV mounting price is $149
-      total += 149;
-
-      // Additional TVs
-      if (tvCount > 1) {
-        total += (tvCount - 1) * 99; // Each additional TV at $99
-      }
-
-      // Add for fireplace if mentioned
-      if (serviceType.includes('fireplace')) {
-        total += 50; // Additional for fireplace mounting
-      }
-    }
-
     // Smart home device prices
     const doorbellCount = (serviceType.match(/doorbell/gi) || []).length;
     const cameraCount = (serviceType.match(/camera/gi) || []).length;
     const floodlightCount = (serviceType.match(/floodlight/gi) || []).length;
-
+    
+    // TV mounting prices
+    const tvCount = (serviceType.match(/tv/gi) || []).length;
+    
+    // Add base installation costs
+    if (tvCount > 0) {
+      // First TV has base price
+      total += 149;
+      
+      // Additional TVs at discounted rate
+      if (tvCount > 1) {
+        total += (tvCount - 1) * 99;
+      }
+      
+      // Add for fireplace if mentioned
+      if (serviceType.includes('fireplace')) {
+        total += 50;
+      }
+    }
+    
     // Add smart home installation costs
     total += doorbellCount * 99; // $99 per doorbell
     total += cameraCount * 129;  // $129 per camera
     total += floodlightCount * 149; // $149 per floodlight
-
+    
+    // Apply multi-device discounts
+    const smartDeviceCount = doorbellCount + cameraCount + floodlightCount;
+    if (smartDeviceCount > 1) {
+      // Apply a small multi-device discount
+      total -= (smartDeviceCount - 1) * 10;
+    }
+    
     return total.toFixed(2);
   };
 
@@ -278,12 +296,12 @@ export default function BookingConfirmation() {
       >
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Booking Confirmation</h1>
-          <Link to="/">
-            <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" asChild>
+            <Link href="/">
               <ChevronLeft className="h-4 w-4" />
               Back to Home
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
         <Card className="mb-8">
@@ -302,6 +320,23 @@ export default function BookingConfirmation() {
                   <div>
                     <h4 className="font-medium">Date</h4>
                     <p>{getFormattedDate()}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="text-primary mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m16 6 4 14"/>
+                      <path d="M12 6v14"/>
+                      <path d="M8 8v12"/>
+                      <path d="M4 4v16"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Services</h4>
+                    {booking.serviceType.split('+').map((service, index) => (
+                      <p key={index} className="leading-snug">{service.trim()}</p>
+                    ))}
                   </div>
                 </div>
 
@@ -335,7 +370,7 @@ export default function BookingConfirmation() {
                   </div>
                   <div>
                     <h4 className="font-medium">Estimated Total</h4>
-                    <p className="font-semibold text-lg">${getEstimatedPrice()}</p>
+                    <p className="font-semibold text-2xl text-primary">${getEstimatedPrice()}</p>
                   </div>
                 </div>
               </div>
