@@ -111,22 +111,81 @@ export default function BookingConfirmation() {
     let basePrice = 0;
 
     // TV mounting prices
-    if (bookingData.serviceType.includes("32\"-55\"")) {
-      basePrice += 129; // Small TV
-    } else if (bookingData.serviceType.includes("56\"+")) {
-      basePrice += 159; // Medium TV
-    } else if (bookingData.serviceType.includes("76\" or larger")) {
-      basePrice += 199; // Large TV
+    if (bookingData.serviceType.includes("TV Mount")) {
+      // Count how many TV mounts are in the service type
+      const tvMountCount = (bookingData.serviceType.match(/TV Mount/g) || []).length;
+
+      // For each TV mount, determine size and location
+      for (let i = 0; i < tvMountCount; i++) {
+        // Check for size and location in service description
+        const isLargeTV = bookingData.serviceType.includes('56"+');
+        const isFireplace = bookingData.serviceType.includes("fireplace");
+        const isCeiling = bookingData.serviceType.includes("ceiling");
+        const hasMasonry = bookingData.serviceType.includes("masonry");
+        const hasOutletRelocation = bookingData.serviceType.includes("outlet relocation");
+
+        // Base price by location
+        if (isCeiling) {
+          basePrice += 175; // Ceiling mount
+        } else if (isFireplace) {
+          basePrice += 200; // Fireplace (standard + $100)
+        } else {
+          basePrice += 100; // Standard wall
+        }
+
+        // Add-ons
+        if (hasMasonry) basePrice += 50;
+        if (hasOutletRelocation) basePrice += 100;
+
+        // Mount type charges
+        if (bookingData.serviceType.includes("fixed")) {
+          basePrice += isLargeTV ? 60 : 40;
+        } else if (bookingData.serviceType.includes("tilt")) {
+          basePrice += isLargeTV ? 70 : 50;
+        } else if (bookingData.serviceType.includes("fullMotion")) {
+          basePrice += isLargeTV ? 100 : 80;
+        }
+      }
     }
 
-    // Smart home add-ons
-    if (bookingData.smartHomeItems) {
-      if (bookingData.smartHomeItems.includes("doorbell")) basePrice += 89;
-      if (bookingData.smartHomeItems.includes("camera")) basePrice += 79;
-      if (bookingData.smartHomeItems.includes("floodlight")) basePrice += 99;
+    // Smart home devices
+    if (bookingData.serviceType.includes("Smart Doorbell")) {
+      const doorbellCount = extractQuantity(bookingData.serviceType, "Smart Doorbell");
+      let doorbellPrice = 75 * doorbellCount;
+      if (bookingData.serviceType.includes("brick")) {
+        doorbellPrice += 10 * doorbellCount;
+      }
+      basePrice += doorbellPrice;
+    }
+
+    if (bookingData.serviceType.includes("Floodlight Camera")) {
+      const floodlightCount = extractQuantity(bookingData.serviceType, "Floodlight Camera");
+      basePrice += 100 * floodlightCount;
+    }
+
+    if (bookingData.serviceType.includes("Smart Camera")) {
+      const cameraCount = extractQuantity(bookingData.serviceType, "Smart Camera");
+      let cameraPrice = 75 * cameraCount;
+
+      // Check for mount height surcharge
+      const heightMatch = bookingData.serviceType.match(/at (\d+)ft/);
+      if (heightMatch && parseInt(heightMatch[1]) > 8) {
+        const extraHeight = parseInt(heightMatch[1]) - 8;
+        const heightSurcharge = Math.ceil(extraHeight / 4) * 25;
+        cameraPrice += heightSurcharge * cameraCount;
+      }
+
+      basePrice += cameraPrice;
     }
 
     return `$${basePrice}`;
+  };
+
+  // Helper function to extract quantities from service description
+  const extractQuantity = (serviceText, itemName) => {
+    const regex = new RegExp(`${itemName} \\((\\d+)\\)`);
+    const match = serviceText.match(regex);
+    return match ? parseInt(match[1]) : 1;
   };
 
   if (loading) {

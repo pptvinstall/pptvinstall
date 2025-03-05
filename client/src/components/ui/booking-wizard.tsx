@@ -175,12 +175,20 @@ export function BookingWizard({
     console.log("Selected date:", selectedDate);
     console.log("Selected time (raw string):", selectedTime);
 
-    // Submit booking data - critically important: we pass the raw selectedTime string
+    // CRITICAL: Store the raw date value without any modification
+    // We use yyyy-MM-dd format to ensure the date is preserved exactly as selected
+    const rawDateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+
+    // Store the smartHomeItems list for later use in the price calculation
+    const smartHomeItems = smartHomeInstallations.map(item => item.type);
+
+    // Submit booking data with the raw time and date strings
     onSubmit({
       ...formData,
       serviceType: serviceDescription,
-      preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+      preferredDate: rawDateString,
       appointmentTime: selectedTime, // Store raw time string directly
+      smartHomeItems: smartHomeItems // Add this for better tracking of selected services
     });
   };
 
