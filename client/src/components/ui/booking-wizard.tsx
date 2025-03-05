@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Calendar } from "./calendar"
 import { TimeSlot } from "./time-slot"
 import { Button } from "./button"
-import { Card, CardContent } from "./card"
+import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { ServiceWizard } from "./service-wizard"
 import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
@@ -150,8 +150,8 @@ export function BookingWizard({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between">
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between mb-8">
         {steps.map((step, index) => (
           <div
             key={step}
@@ -182,9 +182,9 @@ export function BookingWizard({
       <AnimatePresence mode="wait">
         <motion.div
           key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
