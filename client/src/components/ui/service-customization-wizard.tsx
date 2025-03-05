@@ -163,6 +163,8 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
       if (service) {
         onComplete(service.name, {
           ...customizations,
+          serviceId: service.id,
+          serviceName: service.name,
           basePrice: service.basePrice,
           totalPrice: calculatePrice()
         });
@@ -219,7 +221,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         <div>
                           <h3 className="font-semibold">{service.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            ${service.basePrice.toFixed(2)}
+                            Starting at ${service.basePrice.toFixed(2)}
                           </p>
                         </div>
                       </div>
