@@ -7,6 +7,7 @@ import { CheckCircle2, ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { apiRequest } from "@/lib/queryClient";
+import { NotificationPreferences } from "@/components/ui/notification-preferences"; // Added import
 
 export default function BookingConfirmation() {
   const [location] = useLocation();
@@ -272,6 +273,13 @@ export default function BookingConfirmation() {
                   </Button>
                 </div>
               </div>
+
+              {/* Notification Preferences Section */}
+              <div className="mt-10">
+                <h2 className="text-xl font-bold mb-4">Notification Preferences</h2>
+                <NotificationPreferences bookingId={parseInt(bookingId)} phone={booking?.phone || ""} email={booking?.email || ""} />
+              </div>
+
             </div>
           </CardContent>
         </Card>

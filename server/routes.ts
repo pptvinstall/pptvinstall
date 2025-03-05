@@ -342,6 +342,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch booking" });
     }
   });
+  
+  // New endpoint to fetch bookings by customer email
+  app.get("/api/bookings/customer/:email", async (req, res) => {
+    try {
+      const { email } = req.params;
+      console.log(`Fetching bookings for customer email: ${email}`);
+
+      // Get all bookings for this customer email
+      const customerBookings = await storage.getBookingsByEmail(email);
+      console.log(`Found ${customerBookings.length} bookings for email ${email}`);
+
+      // Process each booking to add service breakdown and pricing
+      const enhancedBookings = customerBookings.map(booking => {
+        const { services, price, serviceBreakdown } = parseServiceType(booking.serviceType);
+        return {
+          ...booking,
+          detailedServices: JSON.stringify({
+            services,
+            serviceBreakdown
+          }),
+          totalPrice: price.toString(),
+          status: booking.status || 'active'
+        };
+      });
+
+      res.json(enhancedBookings);
+    } catch (error) {
+      console.error('Error fetching bookings by email:', error);
+      res.status(500).json({ error: "Failed to fetch customer bookings" });
+    }
+  });
 
   app.post("/api/contact", async (req, res) => {
     try {

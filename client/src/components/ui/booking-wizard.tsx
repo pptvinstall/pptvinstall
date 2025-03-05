@@ -10,9 +10,10 @@ import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 import { format } from "date-fns"
+import { ServiceBundles } from "./service-bundles"; // Added import for ServiceBundles
 
 const steps = [
-  "Choose Services",
+  "Choose Package or Services", //Modified step description
   "Select Date & Time",
   "Your Details",
   "Review & Book"
@@ -68,6 +69,8 @@ export function BookingWizard({
     zipCode: "",
     notes: ""
   });
+  const [selectedServices, setSelectedServices] = useState(""); // Added state for selected services
+
 
   const getTimeSlots = (date: Date | undefined) => {
     if (!date) return [];
@@ -113,10 +116,12 @@ export function BookingWizard({
   const canProceed = () => {
     switch (currentStep) {
       case 0:
-        return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
+        return selectedServices !== ""; //Check if a bundle is selected
       case 1:
-        return selectedDate && selectedTime;
+        return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
       case 2:
+        return selectedDate && selectedTime;
+      case 3:
         return formData.name && formData.email && formData.phone && 
                formData.streetAddress && formData.city && formData.state && formData.zipCode;
       default:
@@ -134,7 +139,7 @@ export function BookingWizard({
 
     onSubmit({
       ...formData,
-      serviceType: fullDescription,
+      serviceType: selectedServices || fullDescription, // Use selectedServices if available
       preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
       preferredTime: selectedTime
     });
@@ -173,13 +178,21 @@ export function BookingWizard({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           {currentStep === 0 && (
+            <ServiceBundles 
+              onSelectBundle={(bundleId, serviceString) => {
+                setSelectedServices(serviceString);
+                setCurrentStep(1); // Proceed to next step
+              }} 
+            />
+          )}
+          {currentStep === 1 && (
             <ServiceWizard
               onServiceSelect={handleServiceSelect}
               onClose={() => {}}
             />
           )}
 
-          {currentStep === 1 && (
+          {currentStep === 2 && (
             <div className="space-y-6">
               <Calendar
                 mode="single"
@@ -223,7 +236,7 @@ export function BookingWizard({
             </div>
           )}
 
-          {currentStep === 2 && (
+          {currentStep === 3 && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Name</label>
@@ -312,7 +325,7 @@ export function BookingWizard({
             </div>
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <div className="space-y-6">
               <div>
                 <h3 className="font-medium mb-2">Selected Services</h3>
