@@ -52,30 +52,30 @@ export default function Booking() {
       // Store the booking data and ID in session storage for retrieval
       if (data.booking) {
         const bookingId = data.booking.id;
-        
+
         // Clear any previous booking data first
         sessionStorage.clear();
-        
+
         // Store all booking information
         sessionStorage.setItem('bookingId', bookingId);
-        
+
         // Store the entire booking data including smart home items if present
         const bookingWithSmartHome = {
           ...data.booking,
           smartHomeItems: formData.smartHome || []
         };
-        
+
         // Log what we're storing for debugging
         console.log("Storing booking data in session:", bookingWithSmartHome);
-        
+
         // Stringify and store the complete booking data
         sessionStorage.setItem('bookingData', JSON.stringify(bookingWithSmartHome));
-        
+
         // Store appointment time separately for redundancy
         if (data.booking.appointmentTime) {
           sessionStorage.setItem('appointmentTime', data.booking.appointmentTime);
         }
-        
+
         // Small delay to ensure storage is complete before navigation
         setTimeout(() => {
           // Redirect to confirmation page
