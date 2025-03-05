@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,14 +50,14 @@ const checkServiceArea = (zipcode: string): { serviceable: boolean, zone: string
       };
     }
   }
-  
+
   // Add logic for ZONE_2 and ZONE_3 based on proximity to primary areas
   // This would normally involve some distance calculation
-  
+
   // For now, use a simple rule: consider certain zipcodes in ZONE_2/ZONE_3
   const zone2Zipcodes = ["30040", "30041", "30071", "30078", "30084"];
   const zone3Zipcodes = ["30114", "30115", "30188", "30189", "30102"];
-  
+
   if (zone2Zipcodes.includes(zipcode)) {
     return { 
       serviceable: true, 
@@ -66,7 +65,7 @@ const checkServiceArea = (zipcode: string): { serviceable: boolean, zone: string
       fee: TRAVEL_FEES.ZONE_2 
     };
   }
-  
+
   if (zone3Zipcodes.includes(zipcode)) {
     return { 
       serviceable: true, 
@@ -74,7 +73,7 @@ const checkServiceArea = (zipcode: string): { serviceable: boolean, zone: string
       fee: TRAVEL_FEES.ZONE_3 
     };
   }
-  
+
   // Not serviceable
   return { 
     serviceable: false, 
@@ -99,12 +98,12 @@ export default function ServiceAreaPage() {
     if (mapContainerRef.current) {
       // This would normally use the Google Maps API
       // Since we can't add a real map here, we'll show a placeholder
-      
+
       // In a real implementation, you'd use something like:
       // const script = document.createElement("script");
       // script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap`;
       // document.body.appendChild(script);
-      
+
       // Instead, set a background image placeholder
       mapContainerRef.current.style.backgroundImage = "url('/images/atlanta-map.jpg')";
       mapContainerRef.current.style.backgroundSize = "cover";
@@ -121,9 +120,9 @@ export default function ServiceAreaPage() {
       });
       return;
     }
-    
+
     setIsChecking(true);
-    
+
     // Simulate API call with timeout
     setTimeout(() => {
       const serviceResult = checkServiceArea(zipcode);
@@ -216,13 +215,13 @@ export default function ServiceAreaPage() {
                             Great news! We service your area.
                           </span>
                         </div>
-                        
+
                         {result.city && (
                           <p className="text-green-700">
                             {zipcode} is in our {result.city} service area.
                           </p>
                         )}
-                        
+
                         {result.fee !== undefined && result.fee > 0 && (
                           <div className="mt-2 p-2 bg-white rounded border border-green-200">
                             <p className="text-sm flex items-center gap-1">
@@ -231,7 +230,7 @@ export default function ServiceAreaPage() {
                             </p>
                           </div>
                         )}
-                        
+
                         <div className="pt-2">
                           <Button 
                             onClick={() => window.location.href = "/booking"}
@@ -249,11 +248,11 @@ export default function ServiceAreaPage() {
                             Sorry, we don't currently service this area.
                           </span>
                         </div>
-                        
+
                         <p className="text-red-700">
                           We're currently focusing on the greater Atlanta area.
                         </p>
-                        
+
                         <div className="pt-2">
                           <Button 
                             variant="outline"
