@@ -26,6 +26,37 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   </motion.div>
 );
 
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen flex flex-col">
+        <Nav />
+        <main className="flex-grow">
+          <AnimatePresence mode="wait">
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/services" component={Services} />
+              <Route path="/booking">
+                {() => <PageWrapper><Booking /></PageWrapper>}
+              </Route>
+              <Route path="/confirmation">
+                {() => <PageWrapper><BookingConfirmation /></PageWrapper>}
+              </Route>
+              <Route path="/contact" component={Contact} />
+              <Route path="/faq" component={FAQ} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/admin" component={Admin} />
+              <Route component={NotFound} />
+            </Switch>
+          </AnimatePresence>
+        </main>
+        <Footer />
+      </div>
+      <Toaster />
+    </QueryClientProvider>
+  );
+}
+
 function Router() {
   return (
     <div className="min-h-screen flex flex-col">

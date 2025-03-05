@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useLocation, useNavigate } from "react-router-dom"; 
+import { useLocation, useNavigate } from "wouter"; 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
@@ -12,7 +12,7 @@ import { BookingWizard } from "@/components/ui/booking-wizard";
 
 export default function Booking() {
   const { toast } = useToast();
-  const location = useLocation(); // Use useLocation correctly
+  const [location, setLocation] = useLocation(); 
   const navigate = useNavigate(); 
 
 
