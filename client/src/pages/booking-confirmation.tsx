@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { CheckCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,28 @@ export default function BookingConfirmation() {
         // Format date if available - USE THE RAW DATE STRING WITHOUT CONVERSION
         if (data?.preferredDate) {
           try {
-            const date = new Date(data.preferredDate);
-            // Format the date without any timezone adjustment
-            setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+            // If we have rawBookingDate from session storage, prioritize using that
+            if (rawBookingDate) {
+              console.log("Using raw booking date from session storage:", rawBookingDate);
+              // Format it directly without any timezone conversion
+              const dateParts = rawBookingDate.split('-');
+              if (dateParts.length === 3) {
+                const year = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1; // Months are 0-indexed in JS Date
+                const day = parseInt(dateParts[2]);
+
+                // Create the date with the exact components to avoid timezone issues
+                const date = new Date(year, month, day);
+                setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+              } else {
+                setFormattedDate(rawBookingDate);
+              }
+            } else {
+              // Make sure we use the rawPreferredDate if available to avoid timezone issues
+              // Use parseISO which is more reliable with timezone handling
+              const date = parseISO(data.preferredDate);
+              setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+            }
           } catch (e) {
             console.error("Error formatting date:", e);
             setFormattedDate("Date not available");
@@ -182,7 +201,7 @@ export default function BookingConfirmation() {
   };
 
   // Helper function to extract quantities from service description
-  const extractQuantity = (serviceText, itemName) => {
+  const extractQuantity = (serviceText: string, itemName: string): number => {
     const regex = new RegExp(`${itemName} \\((\\d+)\\)`);
     const match = serviceText.match(regex);
     return match ? parseInt(match[1]) : 1;
