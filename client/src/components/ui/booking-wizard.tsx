@@ -82,11 +82,11 @@ export function BookingWizard({
 
   // Check if the time slot is already booked
   const isTimeBooked = (dateString: string, time: string) => {
-    // Make sure existingBookings is defined and is an array before using .some()
-    if (!existingBookings || !Array.isArray(existingBookings)) {
+    // Make sure allBookings is defined and is an array before using .some()
+    if (!allBookings || !Array.isArray(allBookings)) {
       return false; // Return false if no bookings exist yet
     }
-    return existingBookings.some(
+    return allBookings.some(
       (booking) => booking.preferredDate === dateString && booking.appointmentTime === time
     );
   };
@@ -202,8 +202,8 @@ export function BookingWizard({
     });
   };
 
-  // Fetch existing bookings to check for time slot availability
-  const { data: bookingsResponse, isLoading } = useQuery({
+  // If existingBookings are not passed from parent, fetch them
+  const { data: bookingsResponse, isLoading: fetchingBookings } = useQuery({
     queryKey: ['/api/bookings'],
     queryFn: async () => {
       try {
@@ -219,12 +219,14 @@ export function BookingWizard({
       }
     },
     // Default to empty array if the query fails
-    initialData: { bookings: [] }
+    initialData: { bookings: [] },
+    // Only fetch if we weren't provided existingBookings
+    enabled: existingBookings.length === 0
   });
 
-  // Make sure we have a valid array of bookings
-  const existingBookings = bookingsResponse?.bookings || [];
-  const isLoadingBookings = isLoading;
+  // Use passed bookings or fetched bookings as fallback
+  const allBookings = existingBookings.length > 0 ? existingBookings : (bookingsResponse?.bookings || []);
+  const isBookingsLoading = isLoadingBookings || fetchingBookings;
 
 
   return (
