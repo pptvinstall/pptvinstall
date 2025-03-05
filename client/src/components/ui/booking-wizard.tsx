@@ -143,7 +143,7 @@ export function BookingWizard({
           serviceDescription += ` (fireplace)`;
         }
 
-        if (tv.needsOutlet) {
+        if (tv.outletRelocation) {
           serviceDescription += ` with outlet relocation`;
         }
       });

@@ -161,6 +161,7 @@ export default function BookingConfirmation() {
   };
 
   // Use stored appointment time or extract from date
+  // Updated to format time specifically for Eastern Time (Metro Atlanta)
   const getTime = () => {
     if (booking.appointmentTime) {
       return booking.appointmentTime;
@@ -168,7 +169,9 @@ export default function BookingConfirmation() {
 
     try {
       const date = new Date(booking.preferredDate);
+      // Format time in Eastern Time Zone (for Metro Atlanta)
       return date.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
         hour: 'numeric',
         minute: 'numeric',
         hour12: true
