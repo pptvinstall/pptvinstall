@@ -11,8 +11,6 @@ import {
   Tv, 
   Camera, 
   Bell, 
-  Maximize2, 
-  Move3D, 
   ArrowRight, 
   ArrowLeft,
   Info
@@ -160,18 +158,29 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
   const currentService = selectedService ? 
     serviceOptions.find(s => s.id === selectedService) : null;
 
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedService(serviceId);
+    setCustomizations({}); // Reset customizations when changing service
+    setStep(1); // Move to customization step
+  };
+
   const handleNext = () => {
     if (step === 0 && !selectedService) return;
 
-    if (step === 1 && onComplete) {
-      onComplete(selectedService!, customizations);
+    if (step === 1 && onComplete && selectedService) {
+      const serviceName = serviceOptions.find(s => s.id === selectedService)?.name || selectedService;
+      onComplete(serviceName, customizations);
     } else {
       setStep(prev => prev + 1);
     }
   };
 
   const handleBack = () => {
-    setStep(prev => prev - 1);
+    if (step === 1) {
+      setSelectedService(null);
+      setCustomizations({});
+    }
+    setStep(prev => Math.max(0, prev - 1));
   };
 
   return (
@@ -199,7 +208,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         "ring-2 ring-primary" : 
                         "hover:bg-accent"
                     )}
-                    onClick={() => setSelectedService(service.id)}
+                    onClick={() => handleServiceSelect(service.id)}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4">
@@ -209,7 +218,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         <div>
                           <h3 className="font-semibold">{service.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {service.description}
+                            Starting at ${service.basePrice}
                           </p>
                         </div>
                       </div>
