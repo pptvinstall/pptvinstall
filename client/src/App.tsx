@@ -9,8 +9,10 @@ import LoadingSpinner from "@/components/loading-spinner";
 import ScrollToTop from "@/components/scroll-to-top";
 import ErrorBoundary from "@/components/error-boundary";
 
-// Lazy load pages for better performance
-const HomePage = lazy(() => import("@/pages/home"));
+// Import the HomePage directly to ensure it loads immediately
+import HomePage from "@/pages/home";
+
+// Lazy load other pages
 const ServicesPage = lazy(() => import("@/pages/services"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const BookingPage = lazy(() => import("@/pages/booking"));
@@ -29,7 +31,7 @@ function AppRouter() {
             <Route path="/contact" component={ContactPage} />
             <Route path="/booking" component={BookingPage} />
             <Route path="/faq" component={FaqPage} />
-            <Route component={NotFoundPage} />
+            <Route path="/:rest*" component={NotFoundPage} />
           </Switch>
         </Suspense>
       </main>
