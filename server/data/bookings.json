@@ -46,21 +46,5 @@
     "appointmentTime": "9:30 PM",
     "id": "1741201705314",
     "createdAt": "2025-03-05T19:08:25.314Z"
-  },
-  {
-    "name": "Jwood",
-    "email": "jwoodceo@gmail.com",
-    "phone": "4047024748",
-    "streetAddress": "4359 oakleaf cove",
-    "addressLine2": "",
-    "city": "Decatur ",
-    "state": "GA",
-    "zipCode": "30034",
-    "notes": "",
-    "serviceType": "TV Mount 1: 32\"-55\" - standard",
-    "preferredDate": "2025-03-05",
-    "appointmentTime": "9:30 PM",
-    "id": "1741204820829",
-    "createdAt": "2025-03-05T20:00:20.829Z"
   }
 ]
