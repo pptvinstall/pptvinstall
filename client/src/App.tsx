@@ -34,19 +34,15 @@ export default function App() {
         <main className="flex-grow">
           <AnimatePresence mode="wait">
             <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/services" component={Services} />
-              <Route path="/booking">
-                {() => <PageWrapper><Booking /></PageWrapper>}
-              </Route>
-              <Route path="/confirmation">
-                {() => <PageWrapper><BookingConfirmation /></PageWrapper>}
-              </Route>
-              <Route path="/contact" component={Contact} />
-              <Route path="/faq" component={FAQ} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="/admin" component={Admin} />
-              <Route component={NotFound} />
+              <Route path="/" component={() => <PageWrapper><Home /></PageWrapper>} />
+              <Route path="/services" component={() => <PageWrapper><Services /></PageWrapper>} />
+              <Route path="/booking" component={() => <PageWrapper><Booking /></PageWrapper>} />
+              <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmation /></PageWrapper>} />
+              <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
+              <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
+              <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
+              <Route path="/admin" component={() => <PageWrapper><Admin /></PageWrapper>} />
+              <Route component={() => <PageWrapper><NotFound /></PageWrapper>} />
             </Switch>
           </AnimatePresence>
         </main>
@@ -56,38 +52,3 @@ export default function App() {
     </QueryClientProvider>
   );
 }
-
-function Router() {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Nav />
-      <main className="flex-grow">
-        <AnimatePresence mode="wait">
-          <Switch>
-            <Route path="/" component={() => <PageWrapper><Home /></PageWrapper>} />
-            <Route path="/services" component={() => <PageWrapper><Services /></PageWrapper>} />
-            <Route path="/booking" component={() => <PageWrapper><Booking /></PageWrapper>} />
-            <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmation /></PageWrapper>} />
-            <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
-            <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
-            <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
-            <Route path="/admin" component={() => <PageWrapper><Admin /></PageWrapper>} />
-            <Route component={() => <PageWrapper><NotFound /></PageWrapper>} />
-          </Switch>
-        </AnimatePresence>
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
-    </QueryClientProvider>
-  );
-}
-
-export default App;

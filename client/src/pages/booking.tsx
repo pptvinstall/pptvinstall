@@ -3,18 +3,16 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useLocation, useNavigate } from "wouter"; 
+import { useLocation } from "wouter"; 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { bookingSchema, type InsertBooking } from "@shared/schema";
+import { bookingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { BookingWizard } from "@/components/ui/booking-wizard";
 
-export default function Booking() {
+export default function BookingPage() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation(); 
-  const navigate = useNavigate(); 
-
 
   // Fetch existing bookings for selected date
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -30,7 +28,12 @@ export default function Booking() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: InsertBooking) => {
+    mutationFn: async (data: any) => {
+      // Log the exact data being submitted to help debugging
+      console.log("Submitting booking data:", data);
+      console.log("Selected time (exact value):", data.appointmentTime);
+
+      // Use simple fetch instead of apiRequest to directly handle response
       const response = await fetch('/api/booking', {
         method: 'POST',
         headers: {
@@ -62,7 +65,7 @@ export default function Booking() {
         // Store the entire booking data including smart home items if present
         const bookingWithSmartHome = {
           ...data.booking,
-          smartHomeItems: formData.smartHome || []
+          smartHomeItems: []  // We don't have formData.smartHome here, using empty array as fallback
         };
 
         // Log what we're storing for debugging
@@ -79,7 +82,7 @@ export default function Booking() {
         // Small delay to ensure storage is complete before navigation
         setTimeout(() => {
           // Redirect to confirmation page
-          navigate(`/booking-confirmation?id=${bookingId}`);
+          setLocation(`/booking-confirmation?id=${bookingId}`);
         }, 100);
       }
 
@@ -120,7 +123,7 @@ export default function Booking() {
           </motion.div>
 
           <BookingWizard
-            onSubmit={(data) => mutation.mutate(data as InsertBooking)}
+            onSubmit={(data) => mutation.mutate(data)}
             isSubmitting={mutation.isPending}
             existingBookings={existingBookings}
             isLoadingBookings={isLoadingBookings}

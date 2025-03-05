@@ -119,7 +119,7 @@ export function BookingWizard({
 
   const handleSubmit = () => {
     // Get selected services
-    let selectedServices = "";
+    let serviceDescription = "";
 
     console.log("Services selected:", {
       tvs: tvInstallations,
@@ -128,104 +128,65 @@ export function BookingWizard({
 
     // TV installations
     if (tvInstallations.length > 0) {
-      const tvCounts: Record<string, number> = {};
+      tvInstallations.forEach((tv, index) => {
+        serviceDescription += `TV Mount ${index + 1}: ${tv.size === 'large' ? '56"+' : '32"-55"'} - ${tv.location}`;
 
-      tvInstallations.forEach(tv => {
-        const size = tv.size === "large" ? "65\"+" : tv.size === "medium" ? "55\"-65\"" : "32\"-55\"";
-        const key = `TV ${size}`;
-        tvCounts[key] = (tvCounts[key] || 0) + 1;
-      });
+        if (tv.mountType !== 'none') {
+          serviceDescription += ` (${tv.mountType})`;
+        }
 
-      Object.entries(tvCounts).forEach(([type, count]) => {
-        selectedServices += `${count} ${type}, `;
+        if (tv.masonryWall) {
+          serviceDescription += ` (masonry)`;
+        }
+
+        if (tv.outletRelocation) {
+          serviceDescription += ` with outlet relocation`;
+        }
+
+        serviceDescription += ", ";
       });
     }
 
     // Smart home installations
     if (smartHomeInstallations.length > 0) {
-      const smartHomeCounts: Record<string, number> = {};
-
       smartHomeInstallations.forEach(device => {
-        smartHomeCounts[device.type] = (smartHomeCounts[device.type] || 0) + 1;
-      });
+        const deviceName = device.type === 'doorbell' ? 'Smart Doorbell' : 
+                          device.type === 'floodlight' ? 'Floodlight Camera' : 'Smart Camera';
 
-      Object.entries(smartHomeCounts).forEach(([type, count]) => {
-        selectedServices += `${count} ${type}, `;
+        serviceDescription += `${deviceName} (${device.quantity})`;
+
+        if (device.type === 'doorbell' && device.brickInstallation) {
+          serviceDescription += " (brick)";
+        }
+
+        if (device.type === 'camera' && device.mountHeight && device.mountHeight > 8) {
+          serviceDescription += ` at ${device.mountHeight}ft`;
+        }
+
+        serviceDescription += ", ";
       });
     }
 
     // Remove trailing comma and space
-    selectedServices = selectedServices.replace(/, $/, "");
+    serviceDescription = serviceDescription.replace(/, $/, "");
 
-    // Log selected time for debugging
-    console.log("Time selected (raw string):", selectedTime);
-
-    // Submit the form data
-    const formattedDate = selectedDate ? new Date(selectedDate) : undefined;
-
+    // Log the exact time being submitted to verify it's correct
+    console.log("Submitting with selected time:", selectedTime);
     console.log("Selected date:", selectedDate);
     console.log("Selected time (raw string):", selectedTime);
 
-    // Adjust date by time selection if both are available
-    if (formattedDate && selectedTime) {
-      const timeParts = selectedTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (timeParts) {
-        let [_, hours, minutes, period] = timeParts;
-        let hourValue = parseInt(hours, 10);
-
-        // Convert to 24-hour format
-        if (period.toUpperCase() === 'PM' && hourValue < 12) {
-          hourValue += 12;
-        } else if (period.toUpperCase() === 'AM' && hourValue === 12) {
-          hourValue = 0;
-        }
-
-        formattedDate.setHours(hourValue);
-        formattedDate.setMinutes(parseInt(minutes, 10));
-      }
-    }
-
-    // Create submission data
-    const submissionData = {
+    // Submit booking data - critically important: we pass the raw selectedTime string
+    onSubmit({
       ...formData,
-      serviceType: selectedServices,
-      preferredDate: formattedDate?.toISOString(),
-      appointmentTime: selectedTime
-    };
-
-    console.log("Submitting with selected time:", selectedTime);
-    console.log("Submitting booking data:", submissionData);
-    console.log("Selected time (exact value):", selectedTime);
-
-    onSubmit(submissionData);
+      serviceType: serviceDescription,
+      preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+      appointmentTime: selectedTime, // Store raw time string directly
+    });
   };
 
-  // If existingBookings are not passed from parent, fetch them
-  const { data: bookingsResponse, isLoading: fetchingBookings } = useQuery({
-    queryKey: ['/api/bookings'],
-    queryFn: async () => {
-      try {
-        const response = await fetch('/api/bookings');
-        if (!response.ok) {
-          console.error('Failed to load bookings:', response.statusText);
-          return { bookings: [] };
-        }
-        return response.json();
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
-        return { bookings: [] };
-      }
-    },
-    // Default to empty array if the query fails
-    initialData: { bookings: [] },
-    // Only fetch if we weren't provided existingBookings
-    enabled: existingBookings.length === 0
-  });
-
   // Use passed bookings or fetched bookings as fallback
-  const allBookings = existingBookings.length > 0 ? existingBookings : (bookingsResponse?.bookings || []);
-  const isBookingsLoading = isLoadingBookings || fetchingBookings;
-
+  const allBookings = existingBookings.length > 0 ? existingBookings : [];
+  const isBookingsLoading = isLoadingBookings;
 
   return (
     <div className="space-y-8">

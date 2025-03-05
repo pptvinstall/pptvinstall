@@ -24,7 +24,7 @@ export default function BookingConfirmation() {
         const rawAppointmentTime = sessionStorage.getItem("appointmentTime");
 
         // Use either URL booking ID or stored booking ID
-        const effectiveBookingId = urlBookingId || storedBookingId;
+        const bookingId = urlBookingId || storedBookingId;
 
         console.log("Booking confirmation - URL params:", {
           urlBookingId,
@@ -49,9 +49,9 @@ export default function BookingConfirmation() {
         }
 
         // If no data from session storage, try fetching from API
-        if (!data && effectiveBookingId) {
+        if (!data && bookingId) {
           try {
-            const response = await fetch(`/api/booking/${effectiveBookingId}`);
+            const response = await fetch(`/api/booking/${bookingId}`);
             if (response.ok) {
               const result = await response.json();
               if (result.success && result.booking) {
@@ -74,7 +74,7 @@ export default function BookingConfirmation() {
         console.log("Final booking data being used:", data);
         setBookingData(data);
 
-        // Format time if available
+        // Format time if available - USE THE RAW TIME STRING WITHOUT CONVERSION
         if (data?.appointmentTime) {
           setFormattedTime(data.appointmentTime);
         }
@@ -87,7 +87,7 @@ export default function BookingConfirmation() {
     }
 
     fetchData();
-  }, [bookingId]);
+  }, [queryParams]);
 
   // Calculate estimated price based on service type
   const calculateEstimatedPrice = () => {
