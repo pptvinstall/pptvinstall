@@ -3,14 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { contactMessageSchema, bookingSchema } from "@shared/schema";
 import nodemailer from "nodemailer";
-import { 
-  SMART_DEVICE_PRICES, 
-  SERVICE_NOTES, 
-  calculateMultiDeviceDiscount,
-  formatPrice,
-  type ServiceBreakdown,
-  type PriceItem 
-} from "@shared/pricing";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -27,140 +19,201 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-function parseServiceType(serviceType: string): { 
-  services: string[], 
-  price: number, 
-  serviceBreakdown: ServiceBreakdown[] 
-} {
+function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
   const serviceParts = serviceType.split(' + ');
   let totalPrice = 0;
   const services = [];
-  const serviceBreakdown = [];
-  let deviceCount = 0;
+  let tvCount = 0;
 
-  // First pass to count total devices for discount
+  // First pass to count TVs for multi-TV discount
   serviceParts.forEach(part => {
-    const trimmedPart = part.trim();
-    if (trimmedPart.includes('Smart Device') || trimmedPart.includes('Doorbell') || 
-        trimmedPart.includes('Floodlight') || trimmedPart.includes('Camera')) {
-      deviceCount += 1;
+    if (part.includes('TV')) {
+      const tvMatch = part.match(/(\d+)\s*TV/);
+      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
     }
   });
 
+  const serviceBreakdown = [];
+
   for (const part of serviceParts) {
+    // Trim the part to ensure consistent detection
     const trimmedPart = part.trim();
+    
+    if (trimmedPart.includes('TV')) {
+      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
+      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
+      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
+      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
+      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
+      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
+                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
+                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
 
-    // Handle Smart Device installations
-    if (trimmedPart.match(/Smart Device (\d+)/)) {
-      const deviceNumber = trimmedPart.match(/Smart Device (\d+)/)[1];
-      const title = `Smart Device ${deviceNumber} Installation`;
+      // Create service title
+      const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
       services.push(title);
 
-      serviceBreakdown.push({
-        title,
-        items: [
-          {
-            label: `Smart Device ${deviceNumber} Installation`,
-            price: SMART_DEVICE_PRICES.DOORBELL.BASE
-          }
-        ]
-      });
-      totalPrice += SMART_DEVICE_PRICES.DOORBELL.BASE;
-    }
-
-    // Handle Smart Doorbell
-    if (trimmedPart.includes('Smart Doorbell')) {
-      const hasBrick = trimmedPart.toLowerCase().includes('brick');
-      const title = "Smart Doorbell Installation";
-      services.push(title);
-
-      const items: PriceItem[] = [
+      const items = [
         {
-          label: 'Smart Doorbell Installation',
-          price: SMART_DEVICE_PRICES.DOORBELL.BASE,
-          note: SERVICE_NOTES.DOORBELL
+          label: 'Base Installation (standard)',
+          price: 100
         }
       ];
 
-      if (hasBrick) {
+      // Add mount pricing if specified
+      if (mountType !== 'Standard Mount') {
+        const mountPrice = isLarge ? 
+          (mountType === 'Fixed Mount' ? 60 : 
+           mountType === 'Tilt Mount' ? 70 : 100) :
+          (mountType === 'Fixed Mount' ? 40 : 
+           mountType === 'Tilt Mount' ? 50 : 80);
+
         items.push({
-          label: 'Brick Surface Installation Fee',
-          price: SMART_DEVICE_PRICES.DOORBELL.BRICK_SURFACE
+          label: mountType,
+          price: mountPrice
         });
-        totalPrice += SMART_DEVICE_PRICES.DOORBELL.BRICK_SURFACE;
+        totalPrice += mountPrice;
+      }
+
+      if (hasOutlet) {
+        items.push({
+          label: 'Outlet Relocation',
+          price: 100
+        });
+        totalPrice += 100;
+      }
+
+      if (hasFireplace) {
+        items.push({
+          label: 'Fireplace Installation',
+          price: 50
+        });
+        totalPrice += 50;
       }
 
       serviceBreakdown.push({ title, items });
-      totalPrice += SMART_DEVICE_PRICES.DOORBELL.BASE;
+      totalPrice += 100; // Base installation
+    }
+    
+    // Smart Home Services parsing - note the use of trimmedPart
+    else if (trimmedPart.includes('Smart Doorbell')) {
+      const title = 'Smart Doorbell';
+      const hasBrick = trimmedPart.toLowerCase().includes('brick');
+      services.push(title);
+      
+      const items = [
+        {
+          label: 'Base Installation (1 unit)',
+          price: 75
+        }
+      ];
+      
+      if (hasBrick) {
+        items.push({
+          label: 'Brick Installation',
+          price: 10
+        });
+        totalPrice += 10;
+      }
+      
+      serviceBreakdown.push({ title, items });
+      totalPrice += 75;
     }
 
-    // Handle Floodlight Camera
-    if (trimmedPart.includes('Floodlight')) {
-      const title = "Floodlight Camera Installation";
+    else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
+      const title = 'Smart Floodlight';
       services.push(title);
 
       serviceBreakdown.push({
         title,
         items: [
           {
-            label: 'Floodlight Camera Installation',
-            price: SMART_DEVICE_PRICES.FLOODLIGHT.BASE,
-            note: SERVICE_NOTES.FLOODLIGHT
+            label: 'Base Installation (1 unit)',
+            price: 100
           }
         ]
       });
-      totalPrice += SMART_DEVICE_PRICES.FLOODLIGHT.BASE;
+      totalPrice += 100;
     }
 
-    // Handle Smart Camera
-    if (trimmedPart.includes('Camera') && !trimmedPart.includes('Floodlight')) {
+    else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
+             !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
       const heightMatch = trimmedPart.match(/height-(\d+)/);
       const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-      const title = "Smart Camera Installation";
-      const description = mountHeight > 8 ? ` (${mountHeight}ft height)` : '';
+      const title = 'Smart Camera';
+      services.push(title);
 
-      services.push(title + description);
-
-      const items: PriceItem[] = [
+      const items = [
         {
-          label: 'Smart Camera Installation',
-          price: SMART_DEVICE_PRICES.CAMERA.BASE
+          label: 'Base Installation (1 unit)',
+          price: 75
         }
       ];
 
       if (mountHeight > 8) {
+        const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
         items.push({
           label: `Height Installation Fee (${mountHeight}ft)`,
-          price: SMART_DEVICE_PRICES.CAMERA.HEIGHT_FEE,
-          note: SERVICE_NOTES.CAMERA_HEIGHT
+          price: heightFee
         });
-        totalPrice += SMART_DEVICE_PRICES.CAMERA.HEIGHT_FEE;
+        totalPrice += heightFee;
       }
 
-      serviceBreakdown.push({ title: title + description, items });
-      totalPrice += SMART_DEVICE_PRICES.CAMERA.BASE;
+      serviceBreakdown.push({ title, items });
+      totalPrice += 75;
+    }
+    
+    // Handle "Smart Home Services" general selection
+    else if (trimmedPart.toLowerCase().includes('smart home service') || 
+             trimmedPart.toLowerCase().includes('smart home installation')) {
+      // This catches any smart home services that weren't caught by specific categories
+      const title = 'Smart Home Installation';
+      services.push(title);
+      
+      serviceBreakdown.push({
+        title,
+        items: [
+          {
+            label: 'Smart Home Base Installation',
+            price: 75
+          }
+        ]
+      });
+      totalPrice += 75;
     }
   }
 
-  // Apply multi-device discount if applicable
-  if (deviceCount > 1) {
-    const discountAmount = calculateMultiDeviceDiscount(deviceCount);
-    services.push('Multi-Device Installation Discount');
+  // Apply multi-TV discount if applicable
+  if (tvCount > 1) {
+    services.push('Multi-TV Discount');
     serviceBreakdown.push({
-      title: 'Multi-Device Installation Discount',
+      title: 'Multi-TV Discount',
       items: [
         {
-          label: `Discount for ${deviceCount} devices`,
-          price: -discountAmount,
+          label: 'Multi-TV Installation Discount',
+          price: -10,
           isDiscount: true
         }
       ]
     });
-    totalPrice -= discountAmount;
+    totalPrice -= 10;
   }
 
-  console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
-  console.log("Total price:", totalPrice);
+  // Make sure we have at least one service
+  if (services.length === 0) {
+    services.push('Standard Installation');
+    serviceBreakdown.push({
+      title: 'Standard Installation',
+      items: [
+        {
+          label: 'Base Service',
+          price: 75
+        }
+      ]
+    });
+    totalPrice += 75;
+  }
+
   return { services, price: totalPrice, serviceBreakdown };
 }
 
@@ -208,39 +261,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch bookings" });
     }
   });
-
+  
   app.get("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      console.log(`Fetching booking details for ID: ${id}`);
-
       const booking = await storage.getBooking(parseInt(id));
-      console.log("Raw booking data from database:", booking);
-
+      
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
-
-      // Parse service type to get service breakdown and pricing
-      console.log("Parsing service type:", booking.serviceType);
-      const { services, price, serviceBreakdown } = parseServiceType(booking.serviceType);
-      console.log("Parsed services:", services);
-      console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
-
-      // Create an enhanced booking object with all required fields
-      const enhancedBooking = {
-        ...booking,
-        id: parseInt(id), // Explicitly include ID as a number
-        detailedServices: JSON.stringify({
-          services,
-          serviceBreakdown
-        }),
-        totalPrice: price.toString(),
-        status: booking.status || 'active'
-      };
-
-      console.log("Enhanced booking details being sent:", JSON.stringify(enhancedBooking, null, 2));
-      res.json(enhancedBooking);
+      
+      res.json(booking);
     } catch (error) {
       console.error('Error fetching booking by ID:', error);
       res.status(500).json({ error: "Failed to fetch booking" });
@@ -277,123 +308,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.body.name,
         email: req.body.email,
         serviceType: req.body.serviceType,
-        preferredDate: req.body.preferredDate,
-        preferredTime: req.body.preferredTime
-      }, null, 2));
-
-      // Validate the request data
+        preferredDate: req.body.preferredDate
+      }));
+      
       const data = bookingSchema.parse(req.body);
-
-      // Parse services and calculate price
+      
+      // Ensure we're storing and using the full date with time
+      if (!data.preferredDate) {
+        return res.status(400).json({
+          error: "Missing required field",
+          details: "Appointment date and time is required"
+        });
+      }
+      
+      // Parse appointment date and time
+      const dateTime = new Date(data.preferredDate);
+      const formattedDate = dateTime.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const formattedTime = dateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      });
+      
+      // Parse services and calculate price - ensure all services are included
       console.log("Parsing service type:", data.serviceType);
       const { services, price, serviceBreakdown } = parseServiceType(data.serviceType);
       console.log("Parsed services:", services);
       console.log("Service breakdown:", JSON.stringify(serviceBreakdown, null, 2));
-
-      // Prepare data for storage with defaults for status
-      const bookingData = {
+      
+      // Store enhanced booking data with detailed service information and price
+      const enhancedData = {
         ...data,
         detailedServices: JSON.stringify({
           services,
           serviceBreakdown
         }),
         totalPrice: price.toString(),
-        status: 'active' // Default status
+        appointmentTime: formattedTime
       };
+      
+      // Create the booking in the database with enhanced data
+      const booking = await storage.createBooking(enhancedData);
 
-      console.log("Prepared booking data:", JSON.stringify(bookingData, null, 2));
+      // Generate calendar event with detailed description
+      const eventSummary = `Picture Perfect TV & Smart Home Installation`;
+      const eventDescription = `
+APPOINTMENT DETAILS
+------------------
+Date: ${formattedDate}
+Time: ${formattedTime}
 
-      // Create the booking in the database
-      let booking;
-      try {
-        booking = await storage.createBooking(bookingData);
-        console.log("Booking created successfully:", booking.id);
-      } catch (dbError) {
-        console.error('Database error creating booking:', dbError);
-        return res.status(500).json({
-          error: "Database error",
-          message: "Failed to create booking in database"
-        });
-      }
-
-      // Format date for email
-      const formattedDate = new Date(data.preferredDate).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-
-      // Send confirmation email
-      try {
-        const emailResult = await transporter.sendMail({
-          from: process.env.GMAIL_USER || "noreply@pictureperfecttvinstall.com",
-          to: data.email,
-          subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
-          text: generateEmailText(data, services, serviceBreakdown, price, formattedDate, data.preferredTime),
-          html: generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, data.preferredTime),
-          icalEvent: {
-            filename: 'installation-appointment.ics',
-            method: 'REQUEST',
-            content: generateCalendarEvent(data, services, serviceBreakdown, price)
-          }
-        });
-        console.log("Confirmation email sent:", emailResult.messageId);
-      } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError);
-        // Don't fail the booking if email fails
-      }
-
-      // Return the created booking
-      res.json(booking);
-
-    } catch (error) {
-      console.error('Booking error:', error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      // More descriptive error response
-      res.status(400).json({
-        error: "Failed to process booking",
-        details: process.env.NODE_ENV === 'development' ? errorMessage : "Please check your booking information and try again"
-      });
-    }
-  });
-
-  function generateEmailText(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
-    return `
-Selected Services
+SELECTED SERVICES
 ----------------
 ${serviceBreakdown.map(section => 
-`${section.title}
+  `${section.title}
 ${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatPrice(price)}
+TOTAL: ${formatPrice(price)}
 
-Appointment
-----------
-${formattedDate} at ${preferredTime}
-
-Installation Address
+INSTALLATION ADDRESS
 ------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Contact Information
+CONTACT INFORMATION
 -----------------
-${data.name}
-${data.email}
-${data.phone}
+Name: ${data.name}
+Phone: ${data.phone}
+Email: ${data.email}
 
-${data.notes ? `Additional Notes
---------------
-${data.notes}\n\n` : ''}
-`;
-  }
+PREPARATION INSTRUCTIONS
+----------------------
+- Please ensure the installation area is clear of obstacles
+- Have your TV and other equipment ready
+- Make sure power outlets are accessible
+- Our technician will call before arrival to confirm details
 
-  // Update the generateEmailTemplate function
-  function generateEmailTemplate(data, services, serviceBreakdown, price, formattedDate, preferredTime) {
-    return `
+${data.notes ? `CUSTOMER NOTES\n-------------\n${data.notes}\n\n` : ''}
+
+BUSINESS HOURS
+------------
+Mon-Fri: 6:30PM-10:30PM
+Sat-Sun: 11AM-7PM
+
+Questions? Call 404-702-4748`;
+
+      const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
+      const iCalEvent = generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
+
+      // We already created the booking above, so we don't need to create it again.
+      // The booking variable is already defined earlier in this function.
+      
+      // The HTML template uses the booking object that was created earlier
+      
+      const htmlTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -406,142 +420,350 @@ ${data.notes}\n\n` : ''}
       margin: 0 auto;
       padding: 20px;
     }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(to right, #2563eb, #1e40af);
+      padding: 20px;
+      border-radius: 10px;
+      color: white;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    .tagline {
+      font-style: italic;
+      opacity: 0.9;
+    }
     .section {
-      margin-bottom: 24px;
-      border-radius: 8px;
-      padding: 16px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-radius: 10px;
+      padding: 20px;
       background: #fff;
-      border: 1px solid #e5e7eb;
     }
     .section-title {
       font-size: 20px;
       font-weight: 600;
       margin-bottom: 16px;
       color: #111;
-      border-bottom: 2px solid #e5e7eb;
-      padding-bottom: 8px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      position: relative;
     }
-    .service-item {
+    .section-title:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -2px;
+      width: 40px;
+      height: 2px;
+      background: #2563eb;
+    }
+    .subsection {
+      margin-bottom: 16px;
       background: #f8f9fa;
       padding: 16px;
       border-radius: 8px;
-      margin-bottom: 12px;
+      border-left: 3px solid #2563eb;
+      transition: transform 0.2s;
     }
-    .service-title {
-      font-weight: 600;
+    .subsection:hover {
+      transform: translateX(3px);
+    }
+    .subsection-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 10px;
       color: #2563eb;
-      margin-bottom: 8px;
     }
     .price-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
       padding-left: 16px;
+    }
+    .price {
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
     }
     .total-row {
       font-weight: 600;
       font-size: 18px;
       margin-top: 16px;
       padding: 16px;
+      border-top: 2px solid #eee;
       background: #f0f9ff;
       border-radius: 8px;
-      border: 1px solid #bfdbfe;
+    }
+    .payment-note {
+      margin-top: 16px;
+      color: #666;
+      font-size: 14px;
+      font-style: italic;
+      background: #f0f9ff;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px dashed #2563eb;
+    }
+    .discount {
+      color: #22c55e;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 8px;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .info-label {
+      font-weight: 500;
+      color: #666;
+    }
+    .info-value {
+      color: #111;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+    }
+    .cta-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #2563eb;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .cta-button:hover {
+      background-color: #1e40af;
+    }
+    .appointment-time {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e6f0ff 100%);
+      border-radius: 10px;
+      margin: 16px 0;
+      font-weight: 600;
+      border: 1px solid #d0e3ff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .booking-id {
+      font-size: 14px;
+      text-align: center;
+      color: #666;
+      margin-top: 8px;
+    }
+    .service-item {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid #2563eb;
     }
   </style>
 </head>
 <body>
+  <div class="header">
+    <div class="logo">Picture Perfect TV Install</div>
+    <div class="tagline">Professional TV & Smart Home Installation</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Booking Confirmation</div>
+    <p>Thank you for choosing Picture Perfect TV Install. Your booking has been confirmed for:</p>
+    <div class="appointment-time">
+      <div style="font-size: 18px; font-weight: 600;">${formattedDate}</div>
+      <div style="font-size: 18px; font-weight: 600;">${formattedTime}</div>
+      <div style="margin-top: 8px; font-size: 14px; color: #4b5563;">
+        Our technician will confirm this time with you before arrival
+      </div>
+    </div>
+    <div class="booking-id">Booking ID: ${booking.id}</div>
+  </div>
+  
   <div class="section">
     <div class="section-title">Selected Services</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      ${services.length > 0 
+        ? services.map(service => `<div class="service-item">${service}</div>`).join('') 
+        : '<div style="padding: 8px; background: #f8f9fa; border-radius: 4px; color: #666;">No services selected</div>'}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Installation Location</div>
+    <div class="info-grid">
+      <div class="info-label">Address:</div>
+      <div class="info-value">${data.streetAddress}</div>
+      ${data.addressLine2 ? `
+      <div class="info-label">Address Line 2:</div>
+      <div class="info-value">${data.addressLine2}</div>
+      ` : ''}
+      <div class="info-label">City/State/ZIP:</div>
+      <div class="info-value">${data.city}, ${data.state} ${data.zipCode}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Your Information</div>
+    <div class="info-grid">
+      <div class="info-label">Name:</div>
+      <div class="info-value">${data.name}</div>
+      <div class="info-label">Email:</div>
+      <div class="info-value">${data.email}</div>
+      <div class="info-label">Phone:</div>
+      <div class="info-value">${data.phone}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Detailed Price Breakdown</div>
     ${serviceBreakdown.map(section => `
-      <div class="service-item">
-        <div class="service-title">${section.title}</div>
+      <div class="subsection">
+        <div class="subsection-title">${section.title}</div>
         ${section.items.map(item => `
           <div class="price-row">
             <span>${item.label}</span>
-            <span>${formatPrice(item.price)}</span>
+            <span class="price${item.isDiscount ? ' discount' : ''}">${formatPrice(item.price)}</span>
           </div>
         `).join('')}
       </div>
     `).join('')}
 
-    <div class="total-row price-row">
-      <span>Total</span>
-      <span>${formatPrice(price)}</span>
+    <div class="price-row total-row">
+      <span>Total Amount</span>
+      <span class="price">${formatPrice(price)}</span>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Appointment Details</div>
-    <div style="font-size: 18px; font-weight: 500; color: #2563eb;">
-      ${formattedDate} at ${preferredTime}
+    <div class="payment-note">
+      <strong>Payment Information:</strong> The full amount of ${formatPrice(price)} will be due at the time of installation.
+      We accept cash, credit cards, Venmo, Cash App, and Zelle.
     </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Installation Address</div>
-    <div>${data.streetAddress}</div>
-    ${data.addressLine2 ? `<div>${data.addressLine2}</div>` : ''}
-    <div>${data.city}, ${data.state} ${data.zipCode}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Contact Information</div>
-    <div style="margin-bottom: 4px;"><strong>Name:</strong> ${data.name}</div>
-    <div style="margin-bottom: 4px;"><strong>Email:</strong> ${data.email}</div>
-    <div style="margin-bottom: 4px;"><strong>Phone:</strong> ${data.phone}</div>
   </div>
 
   ${data.notes ? `
   <div class="section">
-    <div class="section-title">Additional Notes</div>
-    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">${data.notes}</div>
+    <div class="section-title">Your Notes</div>
+    <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">${data.notes}</div>
   </div>
   ` : ''}
-
-  <div class="section" style="background: #f8f9fa;">
-    <div style="text-align: center; color: #64748b;">
-      <div style="font-weight: 600; margin-bottom: 8px;">Business Hours</div>
-      <div>Monday-Friday: 6:30PM-10:30PM</div>
-      <div>Saturday-Sunday: 11AM-7PM</div>
-      <div style="margin-top: 12px;">Questions? Call 404-702-4748</div>
-    </div>
+  
+  <div class="section">
+    <div class="section-title">What's Next?</div>
+    <ul style="padding-left: 20px;">
+      <li>Our technician will call you before your appointment to confirm details.</li>
+      <li>Please ensure the installation area is accessible and cleared of obstructions.</li>
+      <li>Have all your equipment (TV, devices, mounts if provided by you) available on site.</li>
+      <li>Add this appointment to your calendar using the attached calendar invite.</li>
+    </ul>
+    <p style="margin-top: 16px;">
+      <strong>View your booking details online:</strong><br>
+      <a href="${process.env.SITE_URL || 'https://pictureperfecttv.repl.co'}/booking-confirmation?id=${booking.id}" style="color: #2563eb;">
+        Click here to view your booking confirmation
+      </a>
+    </p>
+  </div>
+  
+  <div class="footer">
+    <p><strong>Business Hours:</strong><br>Monday-Friday: 6:30PM-10:30PM<br>Saturday-Sunday: 11AM-7PM</p>
+    <p>Questions? Contact us at 404-702-4748 or pptvinstall@gmail.com</p>
+    <p>© ${new Date().getFullYear()} Picture Perfect TV Install</p>
   </div>
 </body>
 </html>`;
-  }
 
-  function generateCalendarEvent(data, services, serviceBreakdown, price) {
-    const dateTime = new Date(data.preferredDate);
-    const eventSummary = `TV/Smart Home Installation - Picture Perfect`;
-    const eventDescription = `
-Selected Services:
+      await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: data.email,
+        subject: "Your Installation Booking Confirmation - Picture Perfect TV Install",
+        text: `PICTURE PERFECT TV INSTALL
+Professional TV & Smart Home Installation
+
+BOOKING CONFIRMATION
+-------------------
+Thank you for choosing Picture Perfect TV Install!
+
+APPOINTMENT DATE & TIME
+----------------------
+${formattedDate} at ${formattedTime}
+
+SELECTED SERVICES
+----------------
+${services.join('\n')}
+
+DETAILED PRICE BREAKDOWN
+-----------------------
 ${serviceBreakdown.map(section => 
-`${section.title}
-${section.items.map(item => `- ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
+  `# ${section.title}
+${section.items.map(item => `  • ${item.label}: ${formatPrice(item.price)}`).join('\n')}`
 ).join('\n\n')}
 
-Total: ${formatPrice(price)}
+PAYMENT SUMMARY
+--------------
+Total Amount: ${formatPrice(price)}
 
-Installation Address:
+IMPORTANT: Payment is due in full at the time of installation.
+We accept cash, credit cards, Venmo, Cash App, and Zelle.
+
+INSTALLATION LOCATION
+-------------------
 ${data.streetAddress}
 ${data.addressLine2 ? data.addressLine2 + '\n' : ''}${data.city}, ${data.state} ${data.zipCode}
 
-Contact Information:
-${data.name}
-${data.phone}
-${data.email}
+YOUR INFORMATION
+--------------
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
 
-${data.notes ? `Installation Notes:\n${data.notes}\n\n` : ''}
+${data.notes ? `YOUR NOTES\n---------\n${data.notes}\n\n` : ''}
+
+WHAT'S NEXT?
+-----------
+• Our technician will call you before your appointment to confirm details.
+• Please ensure the installation area is accessible and cleared of obstructions.
+• Have all your equipment (TV, devices, mounts if provided by you) available on site.
+• Add this appointment to your calendar using the attached calendar invite.
+
+QUESTIONS?
+---------
+Contact us at 404-702-4748 or pptvinstall@gmail.com
 
 Business Hours:
-Mon-Fri: 6:30PM-10:30PM
-Sat-Sun: 11AM-7PM
+Monday-Friday: 6:30PM-10:30PM
+Saturday-Sunday: 11AM-7PM
 
-Questions? Call 404-702-4748`;
-    const eventLocation = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
-    return generateICalendarEvent(dateTime, 120, eventSummary, eventDescription, eventLocation);
-  }
+© ${new Date().getFullYear()} Picture Perfect TV Install`,
+        html: htmlTemplate,
+        icalEvent: {
+          filename: 'installation-appointment.ics',
+          method: 'REQUEST',
+          content: iCalEvent
+        }
+      });
 
+      res.json(booking);
+    } catch (error) {
+      console.error('Booking error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(400).json({ 
+        error: "Invalid booking data", 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined 
+      });
+    }
+  });
 
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
@@ -559,6 +781,7 @@ Questions? Call 404-702-4748`;
   app.put("/api/bookings/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      // Convert id to number and sanitize the update data
       const bookingId = parseInt(id);
 
       // Get existing booking first
@@ -579,122 +802,8 @@ Questions? Call 404-702-4748`;
         zipCode: req.body.zipCode,
         serviceType: req.body.serviceType,
         preferredDate: req.body.preferredDate,
-        preferredTime: req.body.preferredTime,
-        notes: req.body.notes,
-        status: req.body.status
+        notes: req.body.notes
       });
-
-      if (updatedBooking) {
-        // Send email notification about the changes
-        const changes = [];
-        if (existingBooking.preferredDate !== updatedBooking.preferredDate) {
-          changes.push(`Date: ${new Date(existingBooking.preferredDate).toLocaleDateString()} → ${new Date(updatedBooking.preferredDate).toLocaleDateString()}`);
-        }
-        if (existingBooking.preferredTime !== updatedBooking.preferredTime) {
-          changes.push(`Time: ${existingBooking.preferredTime} → ${updatedBooking.preferredTime}`);
-        }
-        if (existingBooking.serviceType !== updatedBooking.serviceType) {
-          changes.push(`Services: ${existingBooking.serviceType} → ${updatedBooking.serviceType}`);
-        }
-
-        const emailTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .section {
-      margin-bottom: 24px;
-      border-radius: 8px;
-      padding: 16px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-    }
-    .section-title {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: #111;
-    }
-    .change-item {
-      background: #f0f9ff;
-      padding: 12px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      border: 1px solid #bfdbfe;
-    }
-    .button {
-      display: inline-block;
-      padding: 12px 20px;
-      margin: 8px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .accept {
-      background: #22c55e;
-      color: white;
-    }
-    .modify {
-      background: #3b82f6;
-      color: white;
-    }
-  </style>
-</head>
-<body>
-  <div class="section">
-    <div class="section-title">Booking Update Notification</div>
-    <p>Your booking has been updated with the following changes:</p>
-    ${changes.map(change => `<div class="change-item">${change}</div>`).join('')}
-  </div>
-
-  <div class="section">
-    <div class="section-title">Updated Appointment Details</div>
-    <div>Date: ${new Date(updatedBooking.preferredDate).toLocaleDateString()}</div>
-    <div>Time: ${updatedBooking.preferredTime}</div>
-    <div>Services: ${updatedBooking.serviceType}</div>
-    <div style="margin-top: 16px;">
-      <strong>Installation Address:</strong><br>
-      ${updatedBooking.streetAddress}<br>
-      ${updatedBooking.addressLine2 ? updatedBooking.addressLine2 + '<br>' : ''}
-      ${updatedBooking.city}, ${updatedBooking.state} ${updatedBooking.zipCode}
-    </div>
-  </div>
-
-  <div class="section" style="text-align: center;">
-    <p>Please review these changes and let us know if they work for you:</p>
-    <a href="${process.env.SITE_URL}/booking/accept/${updatedBooking.id}" class="button accept">Accept Changes</a>
-    <a href="${process.env.SITE_URL}/booking/modify/${updatedBooking.id}" class="button modify">Modify Booking</a>
-  </div>
-
-  <div class="section" style="background: #f8f9fa;">
-    <div style="text-align: center; color: #64748b;">
-      <div style="font-weight: 600; margin-bottom: 8px;">Questions?</div>
-      <div>Call us at 404-702-4748</div>
-      <div style="margin-top: 8px;">
-        Business Hours:<br>
-        Monday-Friday: 6:30PM-10:30PM<br>
-        Saturday-Sunday: 11AM-7PM
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-
-        await transporter.sendMail({
-          from: process.env.GMAIL_USER,
-          to: updatedBooking.email,
-          subject: "Your Booking Has Been Updated - Picture Perfect TV Install",
-          html: emailTemplate
-        });
-      }
 
       res.json(updatedBooking);
     } catch (error) {
@@ -717,7 +826,7 @@ Questions? Call 404-702-4748`;
   app.post("/api/bookings/:id/cancel", async (req, res) => {
     try {
       const { id } = req.params;
-      const booking = await storage.updateBooking(parseInt(id), {
+      const booking = await storage.updateBooking(parseInt(id), { 
         status: 'cancelled',
         cancellationReason: req.body.reason || 'Cancelled by admin'
       });
@@ -752,144 +861,6 @@ Questions? Call 404-702-4748`;
     } catch (error) {
       console.error('Error cancelling booking:', error);
       res.status(400).json({ error: "Failed to cancel booking" });
-    }
-  });
-  // Add new revenue tracking endpoints
-  app.get("/api/analytics/revenue", async (req, res) => {
-    try {
-      const allBookings = await storage.getAllBookings();
-
-      // Calculate revenue by month and year
-      const revenueByMonth = {};
-      const revenueByYear = {};
-
-      allBookings.forEach(booking => {
-        if (booking.status === 'active' && booking.totalPrice) {
-          const date = new Date(booking.preferredDate);
-          const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
-          const year = date.getFullYear().toString();
-
-          const price = parseFloat(booking.totalPrice);
-          if (!isNaN(price)) {
-            revenueByMonth[month] = (revenueByMonth[month] || 0) + price;
-            revenueByYear[year] = (revenueByYear[year] || 0) + price;
-          }
-        }
-      });
-
-      // Calculate total revenue
-      const totalRevenue = Object.values(revenueByMonth).reduce((sum, val) => sum + val, 0);
-
-      // Get current month's revenue
-      const currentMonth = new Date().toLocaleDateString('default', { month: 'long', year: 'numeric' });
-      const currentMonthRevenue = revenueByMonth[currentMonth] || 0;
-
-      // Get current year's revenue
-      const currentYear = new Date().getFullYear().toString();
-      const currentYearRevenue = revenueByYear[currentYear] || 0;
-
-      res.json({
-        totalRevenue,
-        currentMonthRevenue,
-        currentYearRevenue,
-        revenueByMonth,
-        revenueByYear
-      });
-    } catch (error) {
-      console.error('Error fetching revenue analytics:', error);
-      res.status(500).json({ error: "Failed to fetch revenue analytics" });
-    }
-  });
-
-  // Add endpoint to get booking history
-  app.get("/api/bookings/:id/history", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const booking = await storage.getBooking(parseInt(id));
-
-      if (!booking) {
-        return res.status(404).json({ error: "Booking not found" });
-      }
-
-      // Get booking history (status changes, updates, etc.)
-      const history = await storage.getBookingHistory(parseInt(id));
-
-      res.json({
-        booking,
-        history
-      });
-    } catch (error) {
-      console.error('Error fetching booking history:', error);
-      res.status(500).json({ error: "Failed to fetch booking history" });
-    }
-  });
-
-  // Add new pricing admin routes
-  app.get("/api/admin/pricing", async (req, res) => {
-    try {
-      console.log("Fetching all prices");
-      const prices = await storage.getAllPrices();
-      console.log("Retrieved prices:", prices);
-      res.json(prices);
-    } catch (error) {
-      console.error('Error fetching prices:', error);
-      res.status(500).json({ error: "Failed to fetch pricing configuration" });
-    }
-  });
-
-  app.get("/api/admin/pricing/rules", async (req, res) => {
-    try {
-      const rules = await storage.getAllPricingRules();
-      res.json(rules);
-    } catch (error) {
-      console.error('Error fetching pricing rules:', error);
-      res.status(500).json({ error: "Failed to fetch pricing rules" });
-    }
-  });
-
-  app.put("/api/admin/pricing/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const priceId = parseInt(id);
-      console.log(`Updating price ${priceId} with:`, req.body);
-
-      // Get current price for history
-      const currentPrice = await storage.getPrice(priceId);
-      if (!currentPrice) {
-        return res.status(404).json({ error: "Price configuration not found" });
-      }
-
-      // Update price
-      const updatedPrice = await storage.updatePrice(priceId, {
-        ...req.body,
-        basePrice: req.body.basePrice.toString()
-      });
-
-      // Record price change in history
-      await storage.createPriceHistory({
-        serviceType: currentPrice.serviceType,
-        previousPrice: currentPrice.basePrice,
-        newPrice: req.body.basePrice.toString(),
-        changedBy: 'admin',
-        notes: 'Price updated through admin panel'
-      });
-
-      console.log("Price updated successfully:", updatedPrice);
-      res.json(updatedPrice);
-    } catch (error) {
-      console.error('Error updating price:', error);
-      res.status(400).json({ error: "Failed to update price" });
-    }
-  });
-
-  app.put("/api/admin/pricing/rules/:id", async (req, res) => {    try {
-      const { id } = req.params;
-      const ruleId = parseInt(id);
-      const updatedRule = await storage.updatePricingRule(ruleId, req.body);
-      res.json(updatedRule);
-    } catch (error) {
-      console.error('Error updating pricing rule:', error);
-      res.status(400).json({ error: "Failed to update pricing rule" });
     }
   });
 

@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Booking } from "@shared/schema";
-import { PricingManager } from "@/components/admin/pricing-manager";
 import {
   Drawer,
   DrawerContent,
@@ -168,10 +167,7 @@ export default function AdminDashboard() {
             <CardTitle>Admin Login</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              loginMutation.mutate(password);
-            }} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <Input
                 type="password"
                 placeholder="Enter admin password"
@@ -196,7 +192,6 @@ export default function AdminDashboard() {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
 
-      {/* Bookings Section */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Recent Bookings</CardTitle>
@@ -339,16 +334,6 @@ export default function AdminDashboard() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Pricing Management Section */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Price Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PricingManager />
         </CardContent>
       </Card>
 
