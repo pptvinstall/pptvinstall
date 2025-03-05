@@ -112,13 +112,12 @@ export default function BookingConfirmation() {
           We encountered an issue retrieving your booking information. 
           {error ? ` Error: ${error instanceof Error ? error.message : String(error)}` : ''}
         </p>
-        {/* Fix DOM nesting - Use Link to wrap Button instead of Button wrapping Link */}
-        <Link to="/">
-          <Button variant="outline" className="inline-flex items-center">
+        <Button variant="outline" className="inline-flex items-center" asChild>
+          <Link href="/">
             <ChevronLeft className="mr-2 h-4 w-4" />
             Return to Homepage
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -321,9 +320,9 @@ export default function BookingConfirmation() {
                   <MapPinIcon className="h-5 w-5 text-primary mt-0.5" />
                   <div>
                     <h4 className="font-medium">Location</h4>
-                    <p>{booking.streetAddress}</p>
-                    {booking.addressLine2 && <p>{booking.addressLine2}</p>}
-                    <p>{booking.city}, {booking.state} {booking.zipCode}</p>
+                    <p className="leading-snug">{booking.streetAddress}</p>
+                    {booking.addressLine2 && <p className="leading-snug">{booking.addressLine2}</p>}
+                    <p className="leading-snug">{booking.city}, {booking.state} {booking.zipCode}</p>
                   </div>
                 </div>
 
@@ -336,7 +335,7 @@ export default function BookingConfirmation() {
                   </div>
                   <div>
                     <h4 className="font-medium">Estimated Total</h4>
-                    <p className="font-semibold text-lg">${getEstimatedTotal()}</p>
+                    <p className="font-semibold text-lg">${getEstimatedPrice()}</p>
                   </div>
                 </div>
               </div>
