@@ -3,7 +3,25 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Info, Monitor, Shield, Tv, Home, Zap, Lock } from "lucide-react";
+import { Check, Info, Monitor, Shield, Tv, Home, Zap, Lock, Award, ThumbsUp, Clock } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+// Animation variants for hover effects
+const cardVariants = {
+  initial: { scale: 1 },
+  hover: { scale: 1.02, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }
+};
+
+// Animation variants for feature items
+const featureVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: (custom: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: custom * 0.1 }
+  })
+};
 
 interface Bundle {
   id: string;

@@ -2,25 +2,29 @@ import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 
+import { lazy, Suspense } from "react";
 import Nav from "@/components/nav";
 import Footer from "@/components/footer";
-import HomePage from "@/pages/home";
-import ServicesPage from "@/pages/services";
-import ContactPage from "@/pages/contact";
-import BookingPage from "@/pages/booking";
-import FaqPage from "@/pages/faq";
-import NotFoundPage from "@/pages/not-found";
-import BookingConfirmationPage from "@/pages/booking-confirmation";
-import DashboardPage from "@/pages/dashboard";
-import AdminPage from "@/pages/admin";
-import AccountPage from "@/pages/account";
-import BookingDetailsPage from "@/pages/booking-details";
-import TestimonialsPage from "@/pages/testimonials";
-import SubmitReviewPage from "@/pages/submit-review";
-import ServiceAreaPage from "@/pages/service-area";
-import GalleryPage from "@/pages/gallery";
+import LoadingSpinner from "@/components/loading-spinner";
+
+// Lazy load pages for better performance
+const HomePage = lazy(() => import("@/pages/home"));
+const ServicesPage = lazy(() => import("@/pages/services"));
+const ContactPage = lazy(() => import("@/pages/contact"));
+const BookingPage = lazy(() => import("@/pages/booking"));
+const FaqPage = lazy(() => import("@/pages/faq"));
+const NotFoundPage = lazy(() => import("@/pages/not-found"));
+const BookingConfirmationPage = lazy(() => import("@/pages/booking-confirmation"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const AdminPage = lazy(() => import("@/pages/admin"));
+const AccountPage = lazy(() => import("@/pages/account"));
+const BookingDetailsPage = lazy(() => import("@/pages/booking-details"));
+const TestimonialsPage = lazy(() => import("@/pages/testimonials"));
+const SubmitReviewPage = lazy(() => import("@/pages/submit-review"));
+const ServiceAreaPage = lazy(() => import("@/pages/service-area"));
+const GalleryPage = lazy(() => import("@/pages/gallery"));
 import ErrorBoundary from "@/components/error-boundary";
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -65,12 +69,45 @@ function Router() {
   );
 }
 
+function Router() {
+  return (
+    <>
+      <Nav />
+      <main className="min-h-screen pt-16">
+        <Suspense fallback={<LoadingSpinner />}>
+          <Switch>
+            <Route path="/" component={() => <PageWrapper><HomePage /></PageWrapper>} />
+            <Route path="/services" component={() => <PageWrapper><ServicesPage /></PageWrapper>} />
+            <Route path="/contact" component={() => <PageWrapper><ContactPage /></PageWrapper>} />
+            <Route path="/booking" component={() => <PageWrapper><BookingPage /></PageWrapper>} />
+            <Route path="/booking/confirmation/:id" component={BookingConfirmationPage} />
+            <Route path="/booking/details/:id" component={BookingDetailsPage} />
+            <Route path="/faq" component={() => <PageWrapper><FaqPage /></PageWrapper>} />
+            <Route path="/dashboard" component={() => <PageWrapper><DashboardPage /></PageWrapper>} />
+            <Route path="/admin" component={() => <PageWrapper><AdminPage /></PageWrapper>} />
+            <Route path="/account" component={() => <PageWrapper><AccountPage /></PageWrapper>} />
+            <Route path="/testimonials" component={() => <PageWrapper><TestimonialsPage /></PageWrapper>} />
+            <Route path="/submit-review" component={() => <PageWrapper><SubmitReviewPage /></PageWrapper>} />
+            <Route path="/service-area" component={() => <PageWrapper><ServiceAreaPage /></PageWrapper>} />
+            <Route path="/gallery" component={() => <PageWrapper><GalleryPage /></PageWrapper>} />
+            <Route component={() => <PageWrapper><NotFoundPage /></PageWrapper>} />
+          </Switch>
+        </Suspense>
+      </main>
+      <Footer />
+    </>
+  );
+}
+
+import ScrollToTop from "@/components/scroll-to-top";
+
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router />
         <Toaster />
+        <ScrollToTop />
       </QueryClientProvider>
     </ErrorBoundary>
   );

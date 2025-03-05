@@ -11,10 +11,15 @@ import {
   type PriceItem 
 } from "@shared/pricing";
 
+// Check for required environment variables during startup
+if (!process.env.GMAIL_PASS || process.env.GMAIL_PASS === "default_pass") {
+  console.warn('WARNING: Email functionality may not work properly. GMAIL_PASS environment variable is not properly set.');
+}
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "pptvinstall@gmail.com",
+    user: process.env.GMAIL_USER || "pptvinstall@gmail.com",
     pass: process.env.GMAIL_PASS || "default_pass"
   }
 });
