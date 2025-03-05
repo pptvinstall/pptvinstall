@@ -1,16 +1,20 @@
 import { useEffect } from "react";
-import { useLocation, Link, useSearchParams } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 import { ChevronLeft } from "lucide-react";
-
+import { useQuery } from "@tanstack/react-query";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function BookingConfirmation() {
-  const [, setLocation] = useLocation();
-  const [params] = useSearchParams();
-  const bookingId = params.get('id');
+  const [location] = useLocation();
+
+  // Parse the booking ID from the URL using native URLSearchParams
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const bookingId = searchParams.get('id');
+
   const { data: booking, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
@@ -43,8 +47,8 @@ export default function BookingConfirmation() {
   }
 
   // Parse detailed services if available
-  let services = [];
-  let serviceBreakdown = [];
+  let services: string[] = [];
+  let serviceBreakdown: any[] = [];
   try {
     if (booking.detailedServices) {
       const detailedData = JSON.parse(booking.detailedServices);
