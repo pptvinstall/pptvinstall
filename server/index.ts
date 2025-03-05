@@ -1,8 +1,12 @@
 import express from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import compression from "compression";
 
 const app = express();
+
+// Enable compression for all responses
+app.use(compression());
 
 // Trust proxy to properly handle client IP addresses behind Replit proxy
 app.set('trust proxy', 1);
@@ -23,10 +27,8 @@ app.use((req, res, next) => {
   try {
     const server = await registerRoutes(app);
 
-    // Force development mode for now
-    process.env.NODE_ENV = 'development';
-
-    if (process.env.NODE_ENV === "development") {
+    // Use environment variable to determine mode, with development as fallback
+    if (process.env.NODE_ENV !== "production") {
       log('Starting in development mode...');
       await setupVite(app, server);
     } else {
@@ -37,7 +39,7 @@ app.use((req, res, next) => {
     const port = process.env.PORT || 5000;
     server.listen(port, "0.0.0.0", () => {
       log(`Server running at http://0.0.0.0:${port}`);
-      console.log(`[express] environment: ${process.env.NODE_ENV}`);
+      console.log(`[express] environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -1,5 +1,17 @@
 import { bookings, type Booking, type InsertBooking, pricingConfig, pricingRules, priceHistory, type PricingConfig, type PricingRule, type InsertPriceHistory } from "@shared/schema";
 import { db } from "./db";
+import { LRUCache } from 'lru-cache';
+
+// Simple cache for frequently accessed data
+const bookingCache = new LRUCache<number, any>({
+  max: 100,
+  ttl: 1000 * 60 * 5, // 5 minutes
+});
+
+const pricingCache = new LRUCache<string, any>({
+  max: 50,
+  ttl: 1000 * 60 * 30, // 30 minutes
+});
 import { eq, desc, sql } from "drizzle-orm";
 
 export class Storage {
