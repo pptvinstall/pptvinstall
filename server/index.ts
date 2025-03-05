@@ -5,7 +5,38 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
 const app = express();
-// Compress all responses for better performance
+
+// Basic security headers for all responses
+app.use((req, res, next) => {
+  // Allow Replit domains
+  const origin = req.headers.origin;
+  if (origin && origin.includes('.replit.dev')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  // Protect against XSS attacks
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  // Prevent clickjacking attacks
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+  // Strict transport security for HTTPS
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Referrer policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  next();
+});
+
 // Compress all responses for better performance
 app.use(compression({ 
   level: 6, // Balance between compression speed and ratio
@@ -18,27 +49,6 @@ app.use(compression({
   }
 }));
 
-// Basic security headers for all responses
-app.use((req, res, next) => {
-  // Protect against XSS attacks
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  // Prevent MIME type sniffing
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  
-  // Prevent clickjacking attacks
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  
-  // Strict transport security for HTTPS
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  
-  // Referrer policy
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  next();
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -130,40 +140,40 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  const timestamp = new Date().toISOString();
+  const requestId = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Enhanced error logging with structured data
+  const errorLog = {
+    timestamp,
+    requestId,
+    method: req.method,
+    url: req.url,
+    status,
+    message,
+    body: req.body ? JSON.stringify(req.body) : undefined,
+    stack: err.stack,
+    headers: req.headers,
+    user_agent: req.headers['user-agent']
+  };
+
+  console.error(`[ERROR] ${timestamp} - ${requestId} - ${req.method} ${req.url}`);
+  console.error(`Status: ${status}, Message: ${message}`);
+  console.error(JSON.stringify(errorLog, null, 2));
+
+  // Send error response to client with helpful information
+  res.status(status).json({ 
+    message,
+    error: process.env.NODE_ENV === 'production' ? 'An error occurred processing your request' : err.message,
+    requestId
+  });
+});
+
 (async () => {
   const server = await registerRoutes(app);
-
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    const timestamp = new Date().toISOString();
-    const requestId = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Enhanced error logging with structured data
-    const errorLog = {
-      timestamp,
-      requestId,
-      method: req.method,
-      url: req.url,
-      status,
-      message,
-      body: req.body ? JSON.stringify(req.body) : undefined,
-      stack: err.stack,
-      headers: req.headers,
-      user_agent: req.headers['user-agent']
-    };
-
-    console.error(`[ERROR] ${timestamp} - ${requestId} - ${req.method} ${req.url}`);
-    console.error(`Status: ${status}, Message: ${message}`);
-    console.error(JSON.stringify(errorLog, null, 2));
-
-    // Send error response to client with helpful information
-    res.status(status).json({ 
-      message,
-      error: process.env.NODE_ENV === 'production' ? 'An error occurred processing your request' : err.message,
-      requestId
-    });
-  });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
