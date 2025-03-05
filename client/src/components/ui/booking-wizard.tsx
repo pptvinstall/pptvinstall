@@ -10,6 +10,7 @@ import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 import { format } from "date-fns"
+import { useQuery } from '@tanstack/react-query'; // Assuming you're using react-query
 
 const steps = [
   "Choose Services",
@@ -79,12 +80,21 @@ export function BookingWizard({
 
   const timeSlots = getTimeSlots(selectedDate);
 
-  const isTimeSlotAvailable = (time: string) => {
-    if (!selectedDate) return false;
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    return !existingBookings.some(booking =>
-      booking.preferredDate === dateString && booking.appointmentTime === time
+  // Check if the time slot is already booked
+  const isTimeBooked = (dateString: string, time: string) => {
+    // Make sure existingBookings is defined and is an array before using .some()
+    if (!existingBookings || !Array.isArray(existingBookings)) {
+      return false; // Return false if no bookings exist yet
+    }
+    return existingBookings.some(
+      (booking) => booking.preferredDate === dateString && booking.appointmentTime === time
     );
+  };
+
+  const isTimeSlotAvailable = (time: string) => {
+    if (!selectedDate) return true; //Always available if no date is selected.
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    return !isTimeBooked(dateString, time);
   };
 
   const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
@@ -191,6 +201,31 @@ export function BookingWizard({
       appointmentTime: selectedTime, // Store raw time string separately
     });
   };
+
+  // Fetch existing bookings to check for time slot availability
+  const { data: bookingsResponse, isLoading } = useQuery({
+    queryKey: ['/api/bookings'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/bookings');
+        if (!response.ok) {
+          console.error('Failed to load bookings:', response.statusText);
+          return { bookings: [] };
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        return { bookings: [] };
+      }
+    },
+    // Default to empty array if the query fails
+    initialData: { bookings: [] }
+  });
+
+  // Make sure we have a valid array of bookings
+  const existingBookings = bookingsResponse?.bookings || [];
+  const isLoadingBookings = isLoading;
+
 
   return (
     <div className="space-y-8">
