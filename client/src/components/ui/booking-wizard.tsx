@@ -10,11 +10,13 @@ import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 import { format } from "date-fns"
-import { ServiceBundles } from "./service-bundles"; // Added import for ServiceBundles
+import { ServiceBundles } from "./service-bundles";
+import { ServiceCustomizationWizard } from "./service-customization-wizard";
 
 const steps = [
-  "Choose Package or Services", //Modified step description
-  "Select Date & Time",
+  "Select Service",
+  "Customize Installation",
+  "Choose Date & Time",
   "Your Details",
   "Review & Book"
 ] as const;
@@ -69,8 +71,7 @@ export function BookingWizard({
     zipCode: "",
     notes: ""
   });
-  const [selectedServices, setSelectedServices] = useState(""); // Added state for selected services
-
+  const [selectedServices, setSelectedServices] = useState("");
 
   const getTimeSlots = (date: Date | undefined) => {
     if (!date) return [];
@@ -116,9 +117,9 @@ export function BookingWizard({
   const canProceed = () => {
     switch (currentStep) {
       case 0:
-        return selectedServices !== ""; //Check if a bundle is selected
+        return true; 
       case 1:
-        return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
+        return true; 
       case 2:
         return selectedDate && selectedTime;
       case 3:
@@ -139,7 +140,7 @@ export function BookingWizard({
 
     onSubmit({
       ...formData,
-      serviceType: selectedServices || fullDescription, // Use selectedServices if available
+      serviceType: selectedServices || fullDescription, 
       preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
       preferredTime: selectedTime
     });
@@ -178,12 +179,7 @@ export function BookingWizard({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           {currentStep === 0 && (
-            <ServiceBundles 
-              onSelectBundle={(bundleId, serviceString) => {
-                setSelectedServices(serviceString);
-                setCurrentStep(1); // Proceed to next step
-              }} 
-            />
+            <ServiceCustomizationWizard />
           )}
           {currentStep === 1 && (
             <ServiceWizard
