@@ -15,17 +15,29 @@ export default function BookingConfirmation() {
 
   const { data: booking, isLoading, error } = useQuery({
     queryKey: ['/api/bookings', bookingId],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       if (!bookingId) return null;
 
+      // Explicitly construct the API URL
       const response = await fetch(`/api/bookings/${bookingId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch booking details');
+        const errorText = await response.text();
+        console.error(`Error fetching booking (${response.status}):`, errorText);
+        throw new Error(`Failed to fetch booking details: ${response.status}`);
       }
+
       return response.json();
     },
-    enabled: !!bookingId
+    enabled: !!bookingId, // Only run the query if we have a bookingId
+    retry: 2, // Retry failed requests up to 2 times
+    staleTime: Infinity // Don't refetch this data automatically
   });
+
+  // Debug information
+  console.log("Booking confirmation - URL params:", { bookingId, location });
+  console.log("Booking data:", booking);
+  console.log("Loading state:", isLoading);
+  console.log("Error state:", error);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -35,7 +47,10 @@ export default function BookingConfirmation() {
     return (
       <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
         <h1 className="text-3xl font-bold mb-4">Error Loading Booking Details</h1>
-        <p className="mb-6">We encountered an issue retrieving your booking information.</p>
+        <p className="mb-6">
+          We encountered an issue retrieving your booking information. 
+          {error ? ` Error: ${error instanceof Error ? error.message : String(error)}` : ''}
+        </p>
         <Link to="/" className="inline-flex items-center">
           <ChevronLeft className="mr-2 h-4 w-4" />
           Return to Homepage
@@ -70,6 +85,7 @@ export default function BookingConfirmation() {
         day: 'numeric'
       });
     } catch (e) {
+      console.error("Date formatting error:", e);
       return "Date not available";
     }
   };
@@ -88,6 +104,7 @@ export default function BookingConfirmation() {
         hour12: true
       });
     } catch (e) {
+      console.error("Time formatting error:", e);
       return "Time not available";
     }
   };

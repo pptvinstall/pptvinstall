@@ -107,18 +107,79 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
-    const numTVs = tvInstallations.length;
-    const numSmartDevices = smartHomeInstallations.length;
+    const preferredDate = selectedDate ? new Date(selectedDate) : new Date();
 
-    const serviceDescription = numTVs > 0 ? `${numTVs} TV${numTVs > 1 ? 's' : ''}` : '';
-    const smartDesc = numSmartDevices > 0 ? `${numSmartDevices} Smart Device${numSmartDevices > 1 ? 's' : ''}` : '';
-    const fullDescription = serviceDescription + (smartDesc ? (serviceDescription ? ' + ' : '') + smartDesc : '');
+    // Set the time based on the selected time slot
+    if (selectedTime) {
+      const [hourStr, minuteStr, period] = selectedTime.match(/(\d+):(\d+)\s+([AP]M)/)?.slice(1) || [];
 
+      if (hourStr && minuteStr && period) {
+        let hour = parseInt(hourStr);
+        const minute = parseInt(minuteStr);
+
+        // Convert to 24-hour format
+        if (period === "PM" && hour < 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
+
+        preferredDate.setHours(hour, minute, 0, 0);
+      }
+    }
+
+    // Create the service type string
+    let serviceDescription = "";
+
+    if (tvInstallations.length > 0) {
+      tvInstallations.forEach((tv, index) => {
+        if (index > 0) serviceDescription += " + ";
+
+        const sizeDesc = tv.size === 'large' ? '56" or larger' : '32"-55"';
+        serviceDescription += `${index + 1} TV ${sizeDesc}`;
+
+        if (tv.mountType !== 'none') {
+          serviceDescription += ` with ${tv.mountType} mount`;
+        }
+
+        if (tv.location === 'fireplace') {
+          serviceDescription += ` (fireplace)`;
+        }
+
+        if (tv.needsOutlet) {
+          serviceDescription += ` with outlet relocation`;
+        }
+      });
+    }
+
+    if (smartHomeInstallations.length > 0) {
+      if (serviceDescription) serviceDescription += " + ";
+
+      smartHomeInstallations.forEach((device, index) => {
+        if (index > 0) serviceDescription += " + ";
+
+        if (device.type === 'doorbell') {
+          serviceDescription += `Smart Doorbell`;
+          if (device.brickInstallation) {
+            serviceDescription += ` (brick)`;
+          }
+        } else if (device.type === 'floodlight') {
+          serviceDescription += `Smart Floodlight`;
+        } else if (device.type === 'camera') {
+          serviceDescription += `Smart Camera`;
+          if (device.mountHeight && device.mountHeight > 8) {
+            serviceDescription += ` height-${device.mountHeight}`;
+          }
+        }
+
+        if (device.quantity > 1) {
+          serviceDescription += ` (${device.quantity} units)`;
+        }
+      });
+    }
+
+    // Submit booking data
     onSubmit({
       ...formData,
-      serviceType: fullDescription,
-      preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
-      preferredTime: selectedTime
+      serviceType: serviceDescription,
+      preferredDate: preferredDate.toISOString(), // Send ISO string with correct time
     });
   };
 
@@ -371,21 +432,23 @@ export function BookingWizard({
               Previous
             </Button>
 
-            {currentStep < steps.length - 1 ? (
-              <Button
-                onClick={() => setCurrentStep((prev) => prev + 1)}
-                disabled={!canProceed()}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || !canProceed()}
-              >
-                {isSubmitting ? "Booking..." : "Confirm Booking"}
-              </Button>
-            )}
+            {/* Merged the "Confirm Selection" and "Next" buttons into a single button */}
+            <Button
+              onClick={() => {
+                if (currentStep < steps.length - 1) {
+                  setCurrentStep((prev) => prev + 1);
+                } else {
+                  handleSubmit();
+                }
+              }}
+              disabled={isSubmitting || !canProceed()}
+            >
+              {isSubmitting 
+                ? "Booking..." 
+                : currentStep === steps.length - 1 
+                  ? "Confirm Booking" 
+                  : "Next"}
+            </Button>
           </div>
         </div>
       </div>
