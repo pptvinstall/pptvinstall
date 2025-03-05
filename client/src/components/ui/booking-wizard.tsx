@@ -175,6 +175,9 @@ export function BookingWizard({
       });
     }
 
+    // Log the exact time being submitted to verify it's correct
+    console.log("Submitting with selected time:", selectedTime);
+
     // Submit booking data
     onSubmit({
       ...formData,

@@ -182,7 +182,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             className="w-full py-6"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add TV Installation
+            Add a TV to Mount
           </Button>
 
           {tvInstallations.map((installation, index) => (
