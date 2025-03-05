@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Button } from "./button";
@@ -79,7 +79,7 @@ const serviceOptions: ServiceOption[] = [
         min: 3,
         max: 12,
         step: 0.5,
-        price: 10 // per foot above 6 feet
+        price: 10
       },
       {
         id: 'cable-concealment',
@@ -113,20 +113,24 @@ const serviceOptions: ServiceOption[] = [
         min: 8,
         max: 20,
         step: 1,
-        price: 15 // per foot above 10 feet
+        price: 15
       }
     ]
   }
 ];
 
-export function ServiceCustomizationWizard() {
+interface ServiceCustomizationWizardProps {
+  onComplete?: (selectedService: string, customizations: Record<string, any>) => void;
+}
+
+export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationWizardProps) {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [customizations, setCustomizations] = useState<Record<string, any>>({});
   const [step, setStep] = useState(0);
 
-  const calculatePrice = () => {
+  const calculatePrice = useCallback(() => {
     if (!selectedService) return 0;
-    
+
     const service = serviceOptions.find(s => s.id === selectedService);
     if (!service) return 0;
 
@@ -151,14 +155,19 @@ export function ServiceCustomizationWizard() {
     });
 
     return total;
-  };
+  }, [selectedService, customizations]);
 
   const currentService = selectedService ? 
     serviceOptions.find(s => s.id === selectedService) : null;
 
   const handleNext = () => {
     if (step === 0 && !selectedService) return;
-    setStep(prev => prev + 1);
+
+    if (step === 1 && onComplete) {
+      onComplete(selectedService!, customizations);
+    } else {
+      setStep(prev => prev + 1);
+    }
   };
 
   const handleBack = () => {

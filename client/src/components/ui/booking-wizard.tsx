@@ -71,7 +71,8 @@ export function BookingWizard({
     zipCode: "",
     notes: ""
   });
-  const [selectedServices, setSelectedServices] = useState("");
+  const [selectedService, setSelectedService] = useState<string>("");
+  const [serviceCustomizations, setServiceCustomizations] = useState<Record<string, any>>({});
 
   const getTimeSlots = (date: Date | undefined) => {
     if (!date) return [];
@@ -109,17 +110,18 @@ export function BookingWizard({
     );
   };
 
-  const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
-    setTvInstallations(services.tvs);
-    setSmartHomeInstallations(services.smartHome);
+  const handleServiceComplete = (serviceId: string, customizations: Record<string, any>) => {
+    setSelectedService(serviceId);
+    setServiceCustomizations(customizations);
+    setCurrentStep(currentStep + 1);
   };
 
   const canProceed = () => {
     switch (currentStep) {
       case 0:
-        return true; 
+        return true;
       case 1:
-        return true; 
+        return selectedService !== "";
       case 2:
         return selectedDate && selectedTime;
       case 3:
@@ -131,16 +133,11 @@ export function BookingWizard({
   };
 
   const handleSubmit = () => {
-    const numTVs = tvInstallations.length;
-    const numSmartDevices = smartHomeInstallations.length;
-
-    const serviceDescription = numTVs > 0 ? `${numTVs} TV${numTVs > 1 ? 's' : ''}` : '';
-    const smartDesc = numSmartDevices > 0 ? `${numSmartDevices} Smart Device${numSmartDevices > 1 ? 's' : ''}` : '';
-    const fullDescription = serviceDescription + (smartDesc ? (serviceDescription ? ' + ' : '') + smartDesc : '');
+    const serviceDescription = `${selectedService} - Custom Installation`;
 
     onSubmit({
       ...formData,
-      serviceType: selectedServices || fullDescription, 
+      serviceType: serviceDescription,
       preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
       preferredTime: selectedTime
     });
@@ -179,13 +176,7 @@ export function BookingWizard({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           {currentStep === 0 && (
-            <ServiceCustomizationWizard />
-          )}
-          {currentStep === 1 && (
-            <ServiceWizard
-              onServiceSelect={handleServiceSelect}
-              onClose={() => {}}
-            />
+            <ServiceCustomizationWizard onComplete={handleServiceComplete} />
           )}
 
           {currentStep === 2 && (
@@ -324,25 +315,15 @@ export function BookingWizard({
           {currentStep === 4 && (
             <div className="space-y-6">
               <div>
-                <h3 className="font-medium mb-2">Selected Services</h3>
-                <ul className="space-y-1 text-sm">
-                  {tvInstallations.map((tv, index) => (
-                    <li key={`tv-${index}`}>
-                      TV {index + 1}: {tv.size === 'large' ? '56"+' : '32"-55"'} - {tv.location} Mount
-                      {tv.mountType !== 'none' && ` (${tv.mountType})`}
-                    </li>
+                <h3 className="font-medium mb-2">Selected Service</h3>
+                <p className="text-sm">{selectedService}</p>
+                <div className="mt-2">
+                  {Object.entries(serviceCustomizations).map(([key, value]) => (
+                    <div key={key} className="text-sm text-gray-600">
+                      {key}: {value}
+                    </div>
                   ))}
-                  {smartHomeInstallations.map((device, index) => (
-                    <li key={`smart-${index}`}>
-                      {device.type === 'doorbell' ? 'Smart Doorbell' :
-                       device.type === 'floodlight' ? 'Floodlight' : 
-                       'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
-                      {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 && 
-                        ` at ${device.mountHeight}ft`}
-                      {device.type === 'doorbell' && device.brickInstallation && ' (Brick)'}
-                    </li>
-                  ))}
-                </ul>
+                </div>
               </div>
 
               <div>
