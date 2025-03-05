@@ -40,7 +40,7 @@ export default function BookingConfirmation() {
   const bookingId = urlBookingId || storedBookingId;
 
   // Log the available booking information sources
-  console.log("Booking confirmation - source data:", { 
+  console.log("Booking confirmation - URL params:", { 
     urlBookingId, 
     storedBookingId, 
     hasStoredData: !!storedBookingData 

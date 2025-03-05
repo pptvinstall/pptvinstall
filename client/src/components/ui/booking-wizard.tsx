@@ -180,6 +180,7 @@ export function BookingWizard({
       ...formData,
       serviceType: serviceDescription,
       preferredDate: preferredDate.toISOString(), // Send ISO string with correct time
+      appointmentTime: selectedTime, // Store time separately
     });
   };
 
