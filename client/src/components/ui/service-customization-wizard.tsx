@@ -28,7 +28,7 @@ export interface ServiceOption {
 
 interface CustomizationOption {
   id: string;
-  type: 'radio' | 'slider' | 'switch' | 'input';
+  type: 'radio' | 'slider' | 'switch';
   label: string;
   tooltip?: string;
   options?: { value: string; label: string; price: number }[];
@@ -157,29 +157,17 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
   const currentService = selectedService ? 
     serviceOptions.find(s => s.id === selectedService) : null;
 
-  const handleServiceSelect = (serviceId: string) => {
-    setSelectedService(serviceId);
-    setCustomizations({});
-    setStep(1);
-  };
-
-  const handleNext = () => {
-    if (step === 0 && !selectedService) return;
-
-    if (step === 1 && onComplete && selectedService) {
-      const serviceName = serviceOptions.find(s => s.id === selectedService)?.name || selectedService;
-      onComplete(serviceName, customizations);
-    } else {
-      setStep(prev => prev + 1);
+  const handleComplete = () => {
+    if (onComplete && selectedService) {
+      const service = serviceOptions.find(s => s.id === selectedService);
+      if (service) {
+        onComplete(service.name, {
+          ...customizations,
+          basePrice: service.basePrice,
+          totalPrice: calculatePrice()
+        });
+      }
     }
-  };
-
-  const handleBack = () => {
-    if (step === 1) {
-      setSelectedService(null);
-      setCustomizations({});
-    }
-    setStep(prev => Math.max(0, prev - 1));
   };
 
   const isCustomizationComplete = () => {
@@ -217,7 +205,11 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         "ring-2 ring-primary" : 
                         "hover:bg-accent"
                     )}
-                    onClick={() => handleServiceSelect(service.id)}
+                    onClick={() => {
+                      setSelectedService(service.id);
+                      setCustomizations({});
+                      setStep(1);
+                    }}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4">
@@ -227,7 +219,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
                         <div>
                           <h3 className="font-semibold">{service.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            Starting at ${service.basePrice.toFixed(2)}
+                            ${service.basePrice.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -353,7 +345,13 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
       <div className="mt-6 flex justify-between">
         <Button
           variant="outline"
-          onClick={handleBack}
+          onClick={() => {
+            if (step === 1) {
+              setSelectedService(null);
+              setCustomizations({});
+            }
+            setStep(prev => Math.max(0, prev - 1));
+          }}
           disabled={step === 0}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -366,7 +364,7 @@ export function ServiceCustomizationWizard({ onComplete }: ServiceCustomizationW
             <div className="text-lg font-semibold">${calculatePrice().toFixed(2)}</div>
           </div>
           <Button
-            onClick={handleNext}
+            onClick={step === 1 ? handleComplete : () => setStep(1)}
             disabled={step === 0 ? !selectedService : !isCustomizationComplete()}
           >
             {step === 1 ? 'Complete' : 'Next'}
