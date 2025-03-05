@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useLocation, useNavigate } from "react-router-dom"; //Import useNavigate
+import { useLocation, useNavigate } from "react-router-dom"; 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema, type InsertBooking } from "@shared/schema";
@@ -12,8 +12,8 @@ import { BookingWizard } from "@/components/ui/booking-wizard";
 
 export default function Booking() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const navigate = useNavigate(); // Added useNavigate hook
+  const location = useLocation(); // Use useLocation correctly
+  const navigate = useNavigate(); 
 
 
   // Fetch existing bookings for selected date
