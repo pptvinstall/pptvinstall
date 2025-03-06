@@ -57,46 +57,104 @@ app.use((req, res, next) => {
   next();
 });
 
+// Track server instance for graceful shutdown
+let serverInstance: any = null;
+
+// Setup graceful shutdown handlers
+const setupGracefulShutdown = (server: any) => {
+  const gracefulShutdown = () => {
+    log('Shutting down gracefully...');
+    server.close(() => {
+      log('Server closed. Process terminating...');
+      process.exit(0);
+    });
+
+    // Force shutdown after timeout
+    setTimeout(() => {
+      log('Forcing server shutdown after timeout');
+      process.exit(1);
+    }, 10000); // 10 second timeout
+  };
+
+  // Listen for termination signals
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+
+  // Catch uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    gracefulShutdown();
+  });
+};
+
+// Main application startup
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    const server = await registerRoutes(app);
+    serverInstance = server;
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    // Log the error details for debugging
-    console.error("Error handling middleware caught error:", err);
-    if (err instanceof Error) {
-      console.error("Error details:", err.message);
-      console.error("Stack trace:", err.stack);
+      // Log the error details for debugging
+      console.error("Error handling middleware caught error:", err);
+      if (err instanceof Error) {
+        console.error("Error details:", err.message);
+        console.error("Stack trace:", err.stack);
+      }
+
+      // Don't throw the error after handling it, as this causes unhandled promise rejections
+      // Instead, just return the error response to the client
+      return res.status(status).json({ 
+        success: false,
+        message,
+        ...(process.env.NODE_ENV !== 'production' && { details: err.stack })
+      });
+    });
+
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
     }
 
-    // Don't throw the error after handling it, as this causes unhandled promise rejections
-    // Instead, just return the error response to the client
-    return res.status(status).json({ 
-      success: false,
-      message,
-      ...(process.env.NODE_ENV !== 'production' && { details: err.stack })
+    // Setup graceful shutdown
+    setupGracefulShutdown(server);
+
+    // ALWAYS serve the app on port 5000
+    // this serves both the API and the client
+    const port = 5000;
+
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`Server started successfully, serving on port ${port}`);
     });
-  });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Handle server-level errors
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Error: Port ${port} is already in use. This could be due to another running instance of the app.`);
+        console.error('Attempting to close the process...');
+
+        // Wait and try to reload in case of port conflicts
+        setTimeout(() => {
+          process.exit(1); // Force exit to allow Replit to restart the app
+        }, 1000);
+      } else {
+        console.error('Server error:', error);
+        process.exit(1);
+      }
+    });
+
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
