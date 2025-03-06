@@ -4,14 +4,28 @@ import { setupVite, serveStatic, log } from "./vite";
 import compression from 'compression';
 
 const app = express();
-// Compress all responses for better performance
+// Optimize compression for better performance
 app.use(compression({ 
-  level: 4, // Lower compression level for faster processing
-  threshold: 1024, // Only compress responses larger than 1KB
-  filter: compression.filter
+  level: 6, // Higher compression for better file size reduction
+  threshold: 0, // Compress all responses
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add caching for static assets
+app.use((req, res, next) => {
+  // Only apply to static assets
+  if (req.url.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

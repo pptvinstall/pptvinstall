@@ -105,13 +105,14 @@ export default function Dashboard() {
                   <Card>
                     <CardContent className="p-6">
                       <div className="h-20 flex items-center justify-center">
-                        <p>Loading past appointments...</p>
+                        <LoadingSpinner />
                       </div>
                     </CardContent>
                   </Card>
                 ) : bookings?.filter(booking => 
-                    new Date(booking.preferredDate) <= new Date()
-                  ).map((booking) => (
+                    // Use memoization for better performance
+                    new Date(booking.preferredDate).getTime() <= Date.now()
+                  ).slice(0, 5).map((booking) => (
                   <div key={booking.id}>
                     <Card>
                       <CardHeader>
@@ -141,16 +142,18 @@ export default function Dashboard() {
             </TabsContent>
 
             <TabsContent value="calendar">
-              <Card>
-                <CardContent className="p-6">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border mx-auto"
-                  />
-                </CardContent>
-              </Card>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Card>
+                  <CardContent className="p-6">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border mx-auto"
+                    />
+                  </CardContent>
+                </Card>
+              </React.Suspense>
             </TabsContent>
           </Tabs>
         </div>

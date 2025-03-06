@@ -16,7 +16,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok" });
   });
 
-  // Google Calendar API endpoints
+  // Google Calendar API endpoints with caching
   app.get("/api/calendar/availability", async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
@@ -40,6 +40,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Add caching header for availability data (10 minutes)
+      res.setHeader('Cache-Control', 'public, max-age=600');
+      
       // Get unavailable time slots from Google Calendar
       const unavailableSlots = await googleCalendarService.getUnavailableTimeSlots(start, end);
 
