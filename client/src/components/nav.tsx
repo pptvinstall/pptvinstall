@@ -31,7 +31,7 @@ const Navigation: React.FC = () => {
         </div>
         <Button onClick={() => window.location.href = "tel:+16782632859"}>
           <PhoneCall className="mr-2 h-4 w-4" />
-          (678) 263-2859
+          Call Now
         </Button>
       </div>
     </nav>
