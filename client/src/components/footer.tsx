@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Link } from "wouter";
+import { Link } from 'wouter';
 
 const Footer: React.FC = () => {
   return (
