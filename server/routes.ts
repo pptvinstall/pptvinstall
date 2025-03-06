@@ -1,14 +1,16 @@
 import { type Express, Request, Response } from "express";
 import { type Server } from "http";
 import { db } from "./db";
-import { bookingSchema } from "@shared/schema";
+import { bookingSchema, bookings } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
 import { googleCalendarService } from "./services/googleCalendarService";
+import { and, eq, sql } from "drizzle-orm";
+import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
 
 // Load bookings from storage
 ensureDataDirectory();
-let bookings: any[] = loadBookings();
+let fileBookings: any[] = loadBookings();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
@@ -42,9 +44,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add caching header for availability data (10 minutes)
       res.setHeader('Cache-Control', 'public, max-age=600');
-      
+
       // Get unavailable time slots from Google Calendar
       const unavailableSlots = await googleCalendarService.getUnavailableTimeSlots(start, end);
+
+      // Get existing bookings from the database
+      const dbBookings = await db.select().from(bookings).where(
+        and(
+          sql`DATE(${bookings.preferredDate}) >= ${start.toISOString().split('T')[0]}`,
+          sql`DATE(${bookings.preferredDate}) <= ${end.toISOString().split('T')[0]}`,
+          eq(bookings.status, 'active')
+        )
+      );
+
+      // Add bookings from the database to unavailable slots
+      dbBookings.forEach(booking => {
+        const date = booking.preferredDate.split('T')[0]; // Format: 2023-08-20
+        const timeSlot = booking.appointmentTime; // Format: "9:00 AM - 12:00 PM"
+
+        if (!unavailableSlots[date]) {
+          unavailableSlots[date] = [];
+        }
+
+        if (!unavailableSlots[date].includes(timeSlot)) {
+          unavailableSlots[date].push(timeSlot);
+        }
+      });
 
       res.json({ 
         success: true, 
@@ -68,6 +93,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           success: false,
           message: "Both date and timeSlot are required parameters"
+        });
+      }
+
+      // Format date string for consistency
+      const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Check if the time slot is already booked in the database
+      const existingBookings = await db.select().from(bookings).where(
+        and(
+          sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+          eq(bookings.appointmentTime, timeSlot as string),
+          eq(bookings.status, 'active')
+        )
+      );
+
+      if (existingBookings.length > 0) {
+        return res.json({
+          success: true,
+          isAvailable: false,
+          message: "This time slot is already booked"
         });
       }
 
@@ -100,16 +145,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Booking endpoints
-  app.post("/api/booking", (req, res) => {
+  app.post("/api/booking", async (req, res) => {
     try {
       const booking = bookingSchema.parse(req.body);
 
-      // Store booking
-      const bookingWithId = { ...booking, id: Date.now().toString(), createdAt: new Date() };
-      bookings.push(bookingWithId);
+      // Check if this time slot is already booked
+      const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Save to storage
-      saveBookings(bookings);
+      const existingBookings = await db.select().from(bookings).where(
+        and(
+          sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+          eq(bookings.appointmentTime, booking.appointmentTime),
+          eq(bookings.status, 'active')
+        )
+      );
+
+      if (existingBookings.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "This time slot is already booked. Please select another time."
+        });
+      }
+
+      // Store the pricingBreakdown and pricingTotal as JSON strings
+      let pricingBreakdownStr = null;
+      if (booking.pricingBreakdown) {
+        pricingBreakdownStr = JSON.stringify(booking.pricingBreakdown);
+      }
+
+      // Insert into database
+      const insertedBookings = await db.insert(bookings).values({
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        streetAddress: booking.streetAddress,
+        addressLine2: booking.addressLine2,
+        city: booking.city,
+        state: booking.state,
+        zipCode: booking.zipCode,
+        notes: booking.notes,
+        serviceType: booking.serviceType,
+        preferredDate: booking.preferredDate,
+        appointmentTime: booking.appointmentTime,
+        status: 'active',
+        pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
+        pricingBreakdown: pricingBreakdownStr
+      }).returning();
+
+      const newBooking = insertedBookings[0];
+
+      // Also save to file storage for backward compatibility
+      const bookingWithId = { 
+        ...booking, 
+        id: newBooking.id.toString(), 
+        createdAt: new Date() 
+      };
+
+      fileBookings.push(bookingWithId);
+      saveBookings(fileBookings);
+
+      // Send confirmation email
+      try {
+        if (process.env.SENDGRID_API_KEY) {
+          await sendBookingConfirmationEmail(bookingWithId);
+          await sendAdminBookingNotificationEmail(bookingWithId);
+
+          // Update the email sent status in the database
+          await db.update(bookings)
+            .set({ emailSent: true })
+            .where(eq(bookings.id, newBooking.id));
+        }
+      } catch (emailError) {
+        console.error("Error sending confirmation email:", emailError);
+        // We don't want to fail the booking if the email fails
+      }
 
       // Return success response
       res.status(200).json({ 
@@ -136,19 +245,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all bookings
-  app.get("/api/bookings", (req, res) => {
-    res.json({ bookings });
+  app.get("/api/bookings", async (req, res) => {
+    try {
+      const dbBookings = await db.select().from(bookings).orderBy(bookings.preferredDate);
+
+      // Format bookings to match expected structure
+      const formattedBookings = dbBookings.map(booking => {
+        let pricingBreakdown = null;
+        if (booking.pricingBreakdown) {
+          try {
+            pricingBreakdown = JSON.parse(booking.pricingBreakdown);
+          } catch (e) {
+            console.error('Error parsing pricingBreakdown JSON:', e);
+          }
+        }
+
+        return {
+          ...booking,
+          id: booking.id.toString(),
+          pricingTotal: booking.pricingTotal ? parseFloat(booking.pricingTotal) : null,
+          pricingBreakdown,
+          createdAt: booking.createdAt?.toISOString()
+        };
+      });
+
+      res.json({ bookings: formattedBookings });
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch bookings"
+      });
+    }
   });
 
   // Get booking by ID
-  app.get("/api/booking/:id", (req, res) => {
-    const booking = bookings.find(b => b.id === req.params.id);
+  app.get("/api/booking/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
 
-    if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking ID" 
+        });
+      }
+
+      const result = await db.select().from(bookings).where(eq(bookings.id, id));
+
+      if (result.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Booking not found" 
+        });
+      }
+
+      const booking = result[0];
+
+      // Parse pricing breakdown if it exists
+      let pricingBreakdown = null;
+      if (booking.pricingBreakdown) {
+        try {
+          pricingBreakdown = JSON.parse(booking.pricingBreakdown);
+        } catch (e) {
+          console.error('Error parsing pricingBreakdown JSON:', e);
+        }
+      }
+
+      const formattedBooking = {
+        ...booking,
+        id: booking.id.toString(),
+        pricingTotal: booking.pricingTotal ? parseFloat(booking.pricingTotal) : null,
+        pricingBreakdown,
+        createdAt: booking.createdAt?.toISOString()
+      };
+
+      res.json({ success: true, booking: formattedBooking });
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking"
+      });
     }
+  });
 
-    res.json({ success: true, booking });
+  // Update booking status (e.g., for cancellations)
+  app.post("/api/bookings/:id/cancel", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking ID" 
+        });
+      }
+
+      // Update the booking in the database
+      const result = await db.update(bookings)
+        .set({ 
+          status: 'cancelled',
+          notes: reason ? `CANCELLED - Reason: ${reason}` : 'CANCELLED'
+        })
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Booking not found" 
+        });
+      }
+
+      // Also update in file storage for backward compatibility
+      fileBookings = fileBookings.map(b => {
+        if (b.id === id.toString()) {
+          return { ...b, status: 'cancelled', notes: reason ? `CANCELLED - Reason: ${reason}` : 'CANCELLED' };
+        }
+        return b;
+      });
+      saveBookings(fileBookings);
+
+      res.json({ 
+        success: true, 
+        message: "Booking cancelled successfully" 
+      });
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to cancel booking"
+      });
+    }
   });
 
   //Simplified logging middleware
