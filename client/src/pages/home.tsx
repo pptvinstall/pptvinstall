@@ -22,6 +22,10 @@ export default function Home() {
                     maskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)',
                     WebkitMaskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)'
                   }}
+                  width="160"
+                  height="160"
+                  fetchpriority="high"
+                  loading="eager"
                 />
               </div>
             </div>
@@ -55,6 +59,11 @@ export default function Home() {
             src="/images/showcase.jpeg"
             alt="TV Installation Showcase"
             className="w-full"
+            loading="eager"
+            decoding="async"
+            width="1280"
+            height="720"
+            fetchpriority="high"
           />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
         </div>

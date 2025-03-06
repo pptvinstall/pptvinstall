@@ -8,6 +8,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Suspense } from "react";
+
+// Define a type for bookings
+interface Booking {
+  id: string;
+  preferredDate: string;
+  serviceType: string;
+  // Add other properties as needed
+}
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -17,7 +27,11 @@ export default function Dashboard() {
     queryKey: ["/api/bookings"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/bookings");
-      return response as any[];
+      // Ensure we're getting the data property from the response
+      if (response && typeof response === 'object' && 'bookings' in response) {
+        return (response as {bookings: Booking[]}).bookings;
+      }
+      return [] as Booking[];
     },
   });
 
@@ -52,7 +66,7 @@ export default function Dashboard() {
                   <Card>
                     <CardContent className="p-6">
                       <div className="h-20 flex items-center justify-center">
-                        <p>Loading appointments...</p>
+                        <LoadingSpinner />
                       </div>
                     </CardContent>
                   </Card>
@@ -142,7 +156,7 @@ export default function Dashboard() {
             </TabsContent>
 
             <TabsContent value="calendar">
-              <React.Suspense fallback={<LoadingSpinner />}>
+              <Suspense fallback={<div className="flex justify-center py-8"><LoadingSpinner /></div>}>
                 <Card>
                   <CardContent className="p-6">
                     <Calendar
@@ -153,7 +167,7 @@ export default function Dashboard() {
                     />
                   </CardContent>
                 </Card>
-              </React.Suspense>
+              </Suspense>
             </TabsContent>
           </Tabs>
         </div>

@@ -1,54 +1,17 @@
-import { Switch, Route } from "wouter";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
-import { Toaster } from "@/components/ui/toaster";
-import { AnimatePresence, motion } from "framer-motion";
-import Nav from "@/components/nav";
-import Footer from "@/components/footer";
-import Home from "@/pages/home";
-import Services from "@/pages/services";
-import Booking from "@/pages/booking";
-import BookingConfirmation from "@/pages/booking-confirmation";
-import Contact from "@/pages/contact";
-import FAQ from "@/pages/faq";
-import Dashboard from "@/pages/dashboard";
-import Admin from "@/pages/admin";
-import NotFound from "@/pages/not-found";
+// This file is now deprecated.
+// All routing logic has been moved to main.tsx
+// This file is kept as a placeholder to prevent import errors
+// but will be removed in future updates.
 
-const PageWrapper = ({ children }: { children: React.ReactNode }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.3 }}
-  >
-    {children}
-  </motion.div>
-);
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 
 export default function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col">
-        <Nav />
-        <main className="flex-grow">
-          <AnimatePresence mode="wait">
-            <Switch>
-              <Route path="/" component={() => <PageWrapper><Home /></PageWrapper>} />
-              <Route path="/services" component={() => <PageWrapper><Services /></PageWrapper>} />
-              <Route path="/booking" component={() => <PageWrapper><Booking /></PageWrapper>} />
-              <Route path="/booking-confirmation" component={() => <PageWrapper><BookingConfirmation /></PageWrapper>} />
-              <Route path="/contact" component={() => <PageWrapper><Contact /></PageWrapper>} />
-              <Route path="/faq" component={() => <PageWrapper><FAQ /></PageWrapper>} />
-              <Route path="/dashboard" component={() => <PageWrapper><Dashboard /></PageWrapper>} />
-              <Route path="/admin" component={() => <PageWrapper><Admin /></PageWrapper>} />
-              <Route component={() => <PageWrapper><NotFound /></PageWrapper>} />
-            </Switch>
-          </AnimatePresence>
-        </main>
-        <Footer />
-      </div>
-      <Toaster />
-    </QueryClientProvider>
-  );
+  const [_, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation("/");
+  }, [setLocation]);
+
+  return null;
 }

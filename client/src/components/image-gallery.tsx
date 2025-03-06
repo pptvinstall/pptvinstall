@@ -81,6 +81,10 @@ export function ImageGallery() {
                 src={install.image}
                 alt={install.title}
                 className="object-cover w-full h-full"
+                loading={index < 3 ? "eager" : "lazy"} // Only eagerly load first visible images
+                decoding="async"
+                width="400"
+                height="225"
               />
             </div>
             <CardContent className="p-4">
@@ -104,6 +108,10 @@ export function ImageGallery() {
                 src={installations[currentImageIndex].image}
                 alt={installations[currentImageIndex].title}
                 className="object-contain w-full h-full"
+                loading="eager" // Modal images should load immediately when requested
+                decoding="async"
+                width="800" 
+                height="450"
               />
             </div>
             <Button
