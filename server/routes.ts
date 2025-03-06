@@ -99,21 +99,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Format date string for consistency
       const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Check if the time slot is already booked in the database
-      const existingBookings = await db.select().from(bookings).where(
-        and(
-          sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
-          eq(bookings.appointmentTime, timeSlot as string),
-          eq(bookings.status, 'active')
-        )
-      );
+      try {
+        // Check if the time slot is already booked in the database
+        const existingBookings = await db.select().from(bookings).where(
+          and(
+            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+            eq(bookings.appointmentTime, timeSlot as string),
+            eq(bookings.status, 'active')
+          )
+        );
 
-      if (existingBookings.length > 0) {
-        return res.json({
-          success: true,
-          isAvailable: false,
-          message: "This time slot is already booked"
-        });
+        if (existingBookings.length > 0) {
+          return res.json({
+            success: true,
+            isAvailable: false,
+            message: "This time slot is already booked"
+          });
+        }
+      } catch (dbError) {
+        // Log the error but don't fail the request
+        console.error("Database error checking bookings:", dbError);
+        // Continue with checking Google Calendar
       }
 
       // Get data for a 7-day window around the requested date
@@ -215,11 +221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (process.env.SENDGRID_API_KEY) {
           await sendBookingConfirmationEmail(bookingWithId);
           await sendAdminBookingNotificationEmail(bookingWithId);
-
-          // Update the email sent status in the database
-          await db.update(bookings)
-            .set({ emailSent: true })
-            .where(eq(bookings.id, newBooking.id));
 
           console.log("Confirmation emails sent successfully");
         }

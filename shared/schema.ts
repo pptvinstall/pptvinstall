@@ -53,8 +53,8 @@ export const bookings = pgTable('bookings', {
   status: varchar('status', { length: 20 }).default('active'),
   pricingTotal: text('total_price'),
   pricingBreakdown: text('detailed_services'),
-  createdAt: timestamp('created_at').defaultNow(),
-  emailSent: boolean('email_sent').default(false)
+  createdAt: timestamp('created_at').defaultNow()
+  // Removed emailSent field as it doesn't exist in the database
 });
 
 // Create Drizzle insert schema
