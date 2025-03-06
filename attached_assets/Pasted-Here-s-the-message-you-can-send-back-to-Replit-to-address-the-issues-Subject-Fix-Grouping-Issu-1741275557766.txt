@@ -1,0 +1,39 @@
+Here’s the message you can send back to Replit to address the issues:
+
+⸻
+
+Subject: Fix Grouping Issues and Adjust Booking Flow
+
+Hey Replit Team,
+
+I’ve noticed a few issues with the booking system that need to be adjusted for a more fluid customer experience. Here’s what I’m seeing and what needs to be fixed:
+
+Issues & Required Fixes
+	1.	TV Mounting & Unmounting Are Being Grouped Together
+	•	Right now, when a customer selects “TV Mounting” and “TV Unmounting,” they are being grouped as one combined service.
+	•	Fix: These should be treated as separate services with independent price calculations. Customers should be able to book TV unmounting alone without requiring a mounting service.
+	2.	Standalone TV Unmounting Option Needs Proper Pricing Update
+	•	When a customer selects only TV unmounting, the system should reflect $50 as the correct standalone price.
+	•	Fix: Ensure that TV unmounting can be selected alone and that its price displays correctly in the Price Breakdown and Booking Confirmation page.
+	3.	High-Rise/Steel Studs Option Should Appear Alongside Masonry
+	•	The high-rise/steel studs option is missing when selecting mounting surfaces.
+	•	Fix: Make sure this appears as a separate option next to masonry, so customers can select either “Masonry (+$50)” or “High-Rise/Steel Studs (+$25)” when choosing their mounting location.
+	4.	Booking Confirmation Page Needs Full Service Breakdown
+	•	The final confirmation page is missing a detailed service breakdown, which should clearly list each selected service and price.
+	•	Fix: Ensure that the final booking confirmation page accurately lists all selected services (e.g., TV Mounting, TV Unmounting, Smart Home Installations) with individual prices, so customers know exactly what they are paying for.
+	5.	Estimated Total on Confirmation Page Showing $0
+	•	The estimated total is sometimes displaying $0, even when services are selected.
+	•	Fix: Ensure that the correct pricing carries over from the booking page to the confirmation page without resetting to zero.
+
+Final Request
+
+Once these fixes are implemented, please test the full booking flow to ensure:
+	•	Each service (TV mounting, unmounting, smart home installs) can be booked separately.
+	•	The correct pricing and service breakdown show in the final confirmation.
+	•	The correct total amount carries over to the confirmation page.
+
+Let me know when these updates are completed so I can test again. Thanks!
+
+⸻
+
+This should clearly explain the issues and what needs to be fixed. Let me know if you want any changes before sending it!

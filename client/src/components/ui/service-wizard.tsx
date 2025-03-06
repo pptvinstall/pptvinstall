@@ -18,6 +18,7 @@ export type TVInstallation = {
   highRise: boolean;
   unmount: boolean;
   remount: boolean;
+  isUnmountOnly?: boolean; // New flag to identify unmount-only services
 };
 
 export type SmartHomeInstallation = {
@@ -57,7 +58,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       outletRelocation: false,
       highRise: false,
       unmount: false,
-      remount: false
+      remount: false,
+      isUnmountOnly: false
     }]);
   };
 
@@ -100,7 +102,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       outletRelocation: false,
       highRise: false,
       unmount: true,
-      remount: false
+      remount: false,
+      isUnmountOnly: true // Set this flag to true for unmounting-only services
     }]);
   };
 
@@ -116,13 +119,12 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             {tvInstallations.map((tv, index) => (
               <div key={`tv-${index}`} className="flex justify-between items-center">
                 <span>
-                  {tv.unmount && !tv.location && !tv.size && !tv.mountType ? 'TV Unmounting Only' : 
-                  `TV ${index + 1}: ${tv.size === 'large' ? '56"+' : '32"-55"'} - ${tv.location} Mount
-                  ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
-                  {tv.masonryWall && ' (Masonry)'}
+                  {tv.isUnmountOnly ? 'TV Unmounting Only' : 
+                  `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
+                  {tv.masonryWall && ' (Non-Drywall Surface)'}
                   {tv.highRise && ' (High-Rise/Steel Studs)'}
                   {tv.outletRelocation && ' (Outlet Relocation)'}
-                  {tv.unmount && ' + Unmounting'}
+                  {tv.unmount && !tv.isUnmountOnly && ' + Unmounting'}
                   {tv.remount && ' + Remounting'}
                 </span>
                 <Button
@@ -221,7 +223,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             >
               <div className="flex justify-between items-center">
                 <h4 className="text-lg font-semibold">
-                  {installation.unmount && !installation.location && !installation.size && !installation.mountType ? 
+                  {installation.isUnmountOnly ? 
                   'TV Unmounting Only' : `TV ${index + 1}`}
                 </h4>
                 {tvInstallations.length > 1 && (
@@ -237,7 +239,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               </div>
 
               {/* Only show TV mounting options if not "unmounting only" */}
-              {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && (
+              {!installation.isUnmountOnly && (
                 <div className="space-y-6">
                   <div>
                     <h5 className="text-sm font-medium mb-3">TV Size</h5>
@@ -355,87 +357,105 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </div>
               )}
 
+              {/* Show proper additional options based on service type */}
               <div>
                 <h5 className="text-sm font-medium mb-3">Additional Options</h5>
                 <div className="space-y-4">
-                  {/* Surface type options */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={installation.masonryWall}
-                      onCheckedChange={(checked) =>
-                        updateTvInstallation(index, { masonryWall: checked })
-                      }
-                    />
-                    <Label>Non-Drywall Installation (+$50)<br/>
-                      <span className="text-sm text-muted-foreground">
-                        Includes brick, concrete, stone, tile, or siding
-                      </span>
-                    </Label>
-                  </div>
+                  {/* Only show surface options for mounting services, not for unmounting-only */}
+                  {!installation.isUnmountOnly && (
+                    <>
+                      {/* Surface type options */}
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={installation.masonryWall}
+                          onCheckedChange={(checked) =>
+                            updateTvInstallation(index, { masonryWall: checked })
+                          }
+                        />
+                        <Label>Non-Drywall Installation (+$50)<br/>
+                          <span className="text-sm text-muted-foreground">
+                            Includes brick, concrete, stone, tile, or siding
+                          </span>
+                        </Label>
+                      </div>
 
-                  {/* High-rise/steel studs option - positioned right after masonry */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={installation.highRise}
-                      onCheckedChange={(checked) =>
-                        updateTvInstallation(index, { highRise: checked })
-                      }
-                    />
-                    <Label>High-Rise Building / Steel Studs (+$25)<br/>
-                      <span className="text-sm text-muted-foreground">
-                        Additional fee for specialized anchors and drill bits
-                      </span>
-                    </Label>
-                  </div>
+                      {/* High-rise/steel studs option - positioned right after masonry */}
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={installation.highRise}
+                          onCheckedChange={(checked) =>
+                            updateTvInstallation(index, { highRise: checked })
+                          }
+                        />
+                        <Label>High-Rise Building / Steel Studs (+$25)<br/>
+                          <span className="text-sm text-muted-foreground">
+                            Additional fee for specialized anchors and drill bits
+                          </span>
+                        </Label>
+                      </div>
 
-                  {/* Only show outlet relocation option for non-fireplace installs */}
-                  {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && installation.location !== 'fireplace' && (
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={installation.outletRelocation}
-                        onCheckedChange={(checked) =>
-                          updateTvInstallation(index, { outletRelocation: checked })
-                        }
-                      />
-                      <Label>Outlet Relocation (+$100)</Label>
-                    </div>
+                      {/* Only show outlet relocation option for non-fireplace installs */}
+                      {installation.location !== 'fireplace' && (
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={installation.outletRelocation}
+                            onCheckedChange={(checked) =>
+                              updateTvInstallation(index, { outletRelocation: checked })
+                            }
+                          />
+                          <Label>Outlet Relocation (+$100)</Label>
+                        </div>
+                      )}
+
+                      {/* Fireplace warning note */}
+                      {installation.location === 'fireplace' && (
+                        <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
+                          Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {/* Fireplace warning note */}
-                  {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && installation.location === 'fireplace' && (
-                    <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
-                      Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
-                    </div>
+                  {/* For regular TV mounting, show unmounting and remounting options */}
+                  {!installation.isUnmountOnly && (
+                    <>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={installation.unmount}
+                          onCheckedChange={(checked) =>
+                            updateTvInstallation(index, { unmount: checked })
+                          }
+                        />
+                        <Label>TV Unmounting (+$50)<br/>
+                          <span className="text-sm text-muted-foreground">
+                            Remove your existing TV from its current location
+                          </span>
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={installation.remount}
+                          onCheckedChange={(checked) =>
+                            updateTvInstallation(index, { remount: checked })
+                          }
+                        />
+                        <Label>TV Remounting (+$50)<br/>
+                          <span className="text-sm text-muted-foreground">
+                            If the mount is already on the wall and matching arms are provided
+                          </span>
+                        </Label>
+                      </div>
+                    </>
                   )}
 
-                  {/* Unmounting and Remounting options - available for all TV services */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={installation.unmount}
-                      onCheckedChange={(checked) =>
-                        updateTvInstallation(index, { unmount: checked })
-                      }
-                    />
-                    <Label>TV Unmounting (+$50)<br/>
-                      <span className="text-sm text-muted-foreground">
-                        Remove your existing TV from its current location
-                      </span>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={installation.remount}
-                      onCheckedChange={(checked) =>
-                        updateTvInstallation(index, { remount: checked })
-                      }
-                    />
-                    <Label>TV Remounting (+$50)<br/>
-                      <span className="text-sm text-muted-foreground">
-                        If the mount is already on the wall and matching arms are provided
-                      </span>
-                    </Label>
-                  </div>
+                  {/* For unmounting-only, show a price info callout */}
+                  {installation.isUnmountOnly && (
+                    <div className="text-sm p-3 bg-muted rounded-lg">
+                      <p className="mb-1 font-medium">TV Unmounting Only</p>
+                      <p className="text-muted-foreground">$50 per TV - Our team will safely remove your TV from its current mount or stand.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -32,19 +32,24 @@ export function PriceCalculator({
 
   // Calculate pricing based on selections
   const pricingData = React.useMemo(() => {
+    // Count unmount-only TVs separately from regular TV mounting services
+    const mountingTvs = tvs.filter(tv => !tv.isUnmountOnly);
+    const unmountOnlyCount = tvs.filter(tv => tv.isUnmountOnly).length;
+
     // Convert UI data model to pricing service options
     const serviceOptions: ServiceOptions = {
-      tvCount: tvs.length,
-      tvMountSurface: tvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
-      isFireplace: tvs.some(tv => tv.location === 'fireplace'),
-      isHighRise: tvs.some(tv => tv.highRise),
-      outletCount: tvs.filter(tv => tv.outletRelocation).length,
+      tvCount: mountingTvs.length,
+      tvMountSurface: mountingTvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
+      isFireplace: mountingTvs.some(tv => tv.location === 'fireplace'),
+      isHighRise: mountingTvs.some(tv => tv.highRise),
+      outletCount: mountingTvs.filter(tv => tv.outletRelocation).length,
       smartCameras: smartHome.filter(item => item.type === 'camera').reduce((sum, item) => sum + item.quantity, 0),
       smartDoorbells: smartHome.filter(item => item.type === 'doorbell').reduce((sum, item) => sum + item.quantity, 0),
       smartFloodlights: smartHome.filter(item => item.type === 'floodlight').reduce((sum, item) => sum + item.quantity, 0),
       generalLaborHours: options.generalLaborHours,
-      needsUnmount: tvs.some(tv => tv.unmount),
-      needsRemount: tvs.some(tv => tv.remount),
+      needsUnmount: mountingTvs.some(tv => tv.unmount),
+      needsRemount: mountingTvs.some(tv => tv.remount),
+      unmountOnlyCount: unmountOnlyCount, // Pass the count of unmount-only TVs to the pricing calculator
       travelDistance: distance
     };
 

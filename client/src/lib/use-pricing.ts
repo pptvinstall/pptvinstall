@@ -47,13 +47,17 @@ export function usePricing(
   });
 
   useEffect(() => {
+    // Separate TV installations and unmounting-only services
+    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly);
+    const unmountOnlyCount = tvInstallations.filter(tv => tv.isUnmountOnly).length;
+
     // Convert installation data to service options format
     const serviceOptions: ServiceOptions = {
-      tvCount: tvInstallations.length,
-      tvMountSurface: tvInstallations.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
-      isFireplace: tvInstallations.some(tv => tv.location === 'fireplace'),
-      isHighRise: options.isHighRise || false,
-      outletCount: tvInstallations.filter(tv => tv.outletRelocation).length,
+      tvCount: mountingTvs.length,
+      tvMountSurface: mountingTvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
+      isFireplace: mountingTvs.some(tv => tv.location === 'fireplace'),
+      isHighRise: options.isHighRise || mountingTvs.some(tv => tv.highRise),
+      outletCount: mountingTvs.filter(tv => tv.outletRelocation).length,
       smartCameras: smartHomeInstallations.filter(item => item.type === 'camera')
                      .reduce((sum, item) => sum + item.quantity, 0),
       smartDoorbells: smartHomeInstallations.filter(item => item.type === 'doorbell')
@@ -61,8 +65,9 @@ export function usePricing(
       smartFloodlights: smartHomeInstallations.filter(item => item.type === 'floodlight')
                          .reduce((sum, item) => sum + item.quantity, 0),
       generalLaborHours: options.generalLaborHours || 0,
-      needsUnmount: options.includeUnmount || false,
-      needsRemount: options.includeRemount || false,
+      needsUnmount: options.includeUnmount || mountingTvs.some(tv => tv.unmount),
+      needsRemount: options.includeRemount || mountingTvs.some(tv => tv.remount),
+      unmountOnlyCount: unmountOnlyCount, // Include unmount-only count
       travelDistance: options.travelDistance || 0
     };
 
@@ -89,33 +94,60 @@ export function createServiceDescription(
 
   // Process TV installations
   if (tvInstallations.length > 0) {
-    const tvParts = tvInstallations.map((tv, index) => {
-      let description = `TV ${index + 1} (${tv.size === 'large' ? '56" or larger' : '32"-55"'})`;
+    // Separate unmount-only services from regular TV installations
+    const unmountOnlyTvs = tvInstallations.filter(tv => tv.isUnmountOnly);
+    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly);
 
-      if (tv.location === 'fireplace') {
-        description += ' - Fireplace Mount';
-      } else if (tv.location === 'ceiling') {
-        description += ' - Ceiling Mount';
-      } else {
-        description += ' - Standard Mount';
-      }
+    // Handle regular TV mounting services
+    if (mountingTvs.length > 0) {
+      const tvParts = mountingTvs.map((tv, index) => {
+        let description = `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'}`;
 
-      if (tv.mountType !== 'none') {
-        description += ` (${tv.mountType})`;
-      }
+        if (tv.location === 'fireplace') {
+          description += ' - Fireplace Mount';
+        } else if (tv.location === 'ceiling') {
+          description += ' - Ceiling Mount';
+        } else {
+          description += ' - Standard Mount';
+        }
 
-      if (tv.masonryWall) {
-        description += ' - Non-Drywall Surface';
-      }
+        if (tv.mountType !== 'none') {
+          description += ` (${tv.mountType})`;
+        }
 
-      if (tv.outletRelocation) {
-        description += ' with Outlet Installation';
-      }
+        if (tv.masonryWall) {
+          description += ' - Non-Drywall Surface';
+        }
 
-      return description;
-    });
+        if (tv.highRise) {
+          description += ' - High-Rise/Steel Studs';
+        }
 
-    parts.push(tvParts.join(', '));
+        if (tv.outletRelocation) {
+          description += ' with Outlet Installation';
+        }
+
+        if (tv.unmount) {
+          description += ' + Unmounting';
+        }
+
+        if (tv.remount) {
+          description += ' + Remounting';
+        }
+
+        return description;
+      });
+
+      parts.push(tvParts.join(', '));
+    }
+
+    // Handle unmount-only services
+    if (unmountOnlyTvs.length > 0) {
+      const unmountText = unmountOnlyTvs.length === 1 
+        ? 'TV Unmounting Only' 
+        : `TV Unmounting Only (${unmountOnlyTvs.length} TVs)`;
+      parts.push(unmountText);
+    }
   }
 
   // Process Smart Home installations
@@ -149,7 +181,7 @@ export function createServiceDescription(
 
     const itemDetails = items.map(item => {
       if (item.quantity <= 0) return '';
-      return `${smartHomeMap[typeKey].name}${item.quantity > 1 ? ` (${item.quantity})` : ''}${smartHomeMap[typeKey].details(item)}`;
+      return `${smartHomeMap[typeKey].name}${item.quantity > 1 ? ` (×${item.quantity})` : ''}${smartHomeMap[typeKey].details(item)}`;
     }).filter(Boolean);
 
     if (itemDetails.length > 0) {

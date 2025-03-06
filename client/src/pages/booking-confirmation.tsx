@@ -142,9 +142,22 @@ export default function BookingConfirmation() {
             name: `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? `(${tv.mountType})` : ''}`,
             details: [
               tv.masonryWall ? 'Non-Drywall Surface' : null,
+              tv.highRise ? 'High-Rise/Steel Studs' : null,
               tv.outletRelocation ? 'With Outlet Installation' : null
             ].filter(Boolean)
           }))
+        });
+      }
+
+      // Process TV unmounting only services
+      const unmountOnlyItems = bookingData.pricingBreakdown.filter(item => item.isUnmountOnly);
+      if (unmountOnlyItems.length > 0) {
+        breakdown.push({
+          category: 'TV Unmounting',
+          items: [{
+            name: unmountOnlyItems.length > 1 ? `TV Unmounting Only (${unmountOnlyItems.length})` : 'TV Unmounting Only',
+            details: []
+          }]
         });
       }
 
@@ -188,8 +201,18 @@ export default function BookingConfirmation() {
 
         const items = [];
 
+        // Check if this is a TV unmounting only service
+        if (trimmedCategory.includes('TV Unmounting Only')) {
+          serviceTypeBreakdown.push({
+            category: 'TV Unmounting',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
+        }
         // Check if this is a TV category
-        if (trimmedCategory.includes('TV')) {
+        else if (trimmedCategory.includes('TV')) {
           serviceTypeBreakdown.push({
             category: 'TV Mounting',
             items: [{
@@ -274,12 +297,25 @@ export default function BookingConfirmation() {
         tvPrice += 50;
       }
 
+      if (tvProperties.includes('high-rise') || tvProperties.includes('steel studs')) {
+        tvPrice += 25;
+      }
+
       if (tvProperties.includes('outlet')) {
         tvPrice += 100;
       }
 
       totalPrice += tvPrice;
     });
+
+    // TV unmounting only service
+    if (serviceType.includes('TV Unmounting Only')) {
+      // Check for quantity in parentheses
+      const unmountQuantityMatch = serviceType.match(/TV Unmounting Only \((\d+) TVs\)/);
+      const unmountQuantity = unmountQuantityMatch ? parseInt(unmountQuantityMatch[1]) : 1;
+
+      totalPrice += unmountQuantity * 50; // $50 per TV for unmounting only
+    }
 
     // Smart doorbell
     const doorbellMatches = serviceType.match(/Smart Doorbell/g) || [];
@@ -469,7 +505,7 @@ export default function BookingConfirmation() {
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground">
               A confirmation email has been sent to {bookingData.email}. If you have any questions, 
-              please contact us at (404) 702-4748.
+              please contact us at (678) 263-2859.
             </p>
           </div>
         </CardContent>
