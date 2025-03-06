@@ -17,7 +17,7 @@ interface PriceCalculatorProps {
     isHighRise?: boolean;
     generalLaborHours?: number;
   };
-  onUpdate?: (total: number, deposit: number) => void;
+  onUpdate?: (total: number) => void;
 }
 
 export function PriceCalculator({ 
@@ -57,18 +57,10 @@ export function PriceCalculator({
     return calculatePrice(serviceOptions);
   }, [tvs, smartHome, distance, options]);
 
-  // Calculate deposit based on complexity
-  const deposit = React.useMemo(() => {
-    const hasFireplace = tvs.some(tv => tv.location === 'fireplace');
-    const hasLargeTV = tvs.some(tv => tv.size === 'large');
-    const hasComplexInstall = hasFireplace || hasLargeTV || tvs.length > 1 || smartHome.length > 0;
-    return hasComplexInstall ? 75 : 50;
-  }, [tvs, smartHome]);
-
   // Update parent component with pricing data
   React.useEffect(() => {
-    onUpdate?.(pricingData.total, deposit);
-  }, [pricingData.total, deposit, onUpdate]);
+    onUpdate?.(pricingData.total);
+  }, [pricingData.total, onUpdate]);
 
   return (
     <Card>
@@ -153,15 +145,11 @@ export function PriceCalculator({
 
           <Separator />
 
-          {/* Total and deposit */}
+          {/* Total without deposit */}
           <div className="space-y-2">
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
               <span>{formatPrice(pricingData.total)}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm text-muted-foreground">
-              <span>Required Deposit</span>
-              <span>{formatPrice(deposit)}</span>
             </div>
           </div>
 

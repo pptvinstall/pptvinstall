@@ -312,8 +312,7 @@ const ReviewBookingStep = React.memo(({
   selectedDate,
   selectedTime,
   formData,
-  pricingTotal,
-  pricingDeposit
+  pricingTotal
 }: {
   tvInstallations: TVInstallation[];
   smartHomeInstallations: SmartHomeInstallation[];
@@ -321,7 +320,6 @@ const ReviewBookingStep = React.memo(({
   selectedTime: string | undefined;
   formData: any;
   pricingTotal: number;
-  pricingDeposit: number;
 }) => (
   <div className="space-y-6">
     <Card>
@@ -339,7 +337,7 @@ const ReviewBookingStep = React.memo(({
           <div>
             <h4 className="text-sm font-medium">Total Price</h4>
             <p className="text-sm mt-1">
-              <span className="font-medium">${pricingTotal}</span> (${pricingDeposit} deposit required)
+              <span className="font-medium">${pricingTotal}</span>
             </p>
           </div>
         </div>
@@ -420,9 +418,6 @@ const ReviewBookingStep = React.memo(({
       <p>
         By clicking "Confirm Booking", you agree to our <a href="/terms" className="text-primary underline">Terms of Service</a> and acknowledge our <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
       </p>
-      <p>
-        A ${pricingDeposit} deposit will be collected to confirm your appointment.
-      </p>
     </div>
   </div>
 ));
@@ -439,7 +434,6 @@ export function BookingWizard({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
-  const [pricingDeposit, setPricingDeposit] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -573,9 +567,8 @@ export function BookingWizard({
   }, []);
 
   // Update pricing totals
-  const handlePricingUpdate = useCallback((total: number, deposit: number) => {
+  const handlePricingUpdate = useCallback((total: number) => {
     setPricingTotal(total);
-    setPricingDeposit(deposit);
   }, []);
 
   // Validate the customer details form data
@@ -646,9 +639,23 @@ export function BookingWizard({
       appointmentTime: selectedTime, // Store raw time string directly
       smartHomeItems: smartHomeItems, // Add this for better tracking of selected services
       pricingTotal: pricingTotal,
-      pricingDeposit: pricingDeposit
+      pricingBreakdown: tvInstallations.map(tv => ({
+        type: 'tv',
+        size: tv.size,
+        location: tv.location,
+        mountType: tv.mountType,
+        masonryWall: tv.masonryWall,
+        outletRelocation: tv.outletRelocation
+      })).concat(
+        smartHomeInstallations.map(item => ({
+          type: item.type,
+          quantity: item.quantity,
+          mountHeight: item.mountHeight,
+          brickInstallation: item.brickInstallation
+        }))
+      )
     });
-  }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit, pricingTotal, pricingDeposit]);
+  }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit, pricingTotal]);
 
   // Use passed bookings or fetched bookings as fallback
   const allBookings = existingBookings.length > 0 ? existingBookings : [];
@@ -757,7 +764,6 @@ export function BookingWizard({
               selectedTime={selectedTime}
               formData={formData}
               pricingTotal={pricingTotal}
-              pricingDeposit={pricingDeposit}
             />
           )}
         </Card>

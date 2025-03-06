@@ -17,8 +17,8 @@ export const pricing = {
 
   smartHome: {
     camera: 75, // Per smart security camera
-    doorbell: 85, // Per smart doorbell
-    floodlight: 125, // Per smart floodlight (existing wiring)
+    doorbell: 85, // Per smart doorbell (updated from 75 to 85)
+    floodlight: 125, // Per smart floodlight (updated from 100 to 125)
   },
 
   bundles: {

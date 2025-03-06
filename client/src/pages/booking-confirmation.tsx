@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { useQueryParams } from "@/hooks/use-query-params";
 import { CheckCircle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { formatPrice } from "@/lib/pricing";
 
 export default function BookingConfirmation() {
   const queryParams = useQueryParams();
@@ -123,88 +125,217 @@ export default function BookingConfirmation() {
     fetchData();
   }, [queryParams]);
 
-  // Calculate estimated price based on service type
-  const calculateEstimatedPrice = () => {
-    if (!bookingData?.serviceType) return "$0";
+  // Process breakdown based on stored pricingBreakdown or fall back to serviceType text
+  const processServiceBreakdown = () => {
+    if (!bookingData) return [];
 
-    let basePrice = 0;
+    // If we have detailed pricingBreakdown, use that
+    if (bookingData.pricingBreakdown && Array.isArray(bookingData.pricingBreakdown)) {
+      const breakdown = [];
 
-    // TV mounting prices
-    if (bookingData.serviceType.includes("TV Mount")) {
-      // Count how many TV mounts are in the service type
-      const tvMountCount = (bookingData.serviceType.match(/TV Mount/g) || []).length;
+      // Process TV installations
+      const tvItems = bookingData.pricingBreakdown.filter(item => item.type === 'tv');
+      if (tvItems.length > 0) {
+        breakdown.push({
+          category: 'TV Mounting',
+          items: tvItems.map((tv, index) => ({
+            name: `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? `(${tv.mountType})` : ''}`,
+            details: [
+              tv.masonryWall ? 'Non-Drywall Surface' : null,
+              tv.outletRelocation ? 'With Outlet Installation' : null
+            ].filter(Boolean)
+          }))
+        });
+      }
 
-      // For each TV mount, determine size and location
-      for (let i = 0; i < tvMountCount; i++) {
-        // Check for size and location in service description
-        const isLargeTV = bookingData.serviceType.includes('56"+');
-        const isFireplace = bookingData.serviceType.includes("fireplace");
-        const isCeiling = bookingData.serviceType.includes("ceiling");
-        const hasMasonry = bookingData.serviceType.includes("masonry");
-        const hasOutletRelocation = bookingData.serviceType.includes("outlet relocation");
+      // Process Smart Home devices
+      const smartHomeItems = bookingData.pricingBreakdown.filter(item => 
+        item.type === 'doorbell' || item.type === 'camera' || item.type === 'floodlight'
+      );
 
-        // Base price by location
-        if (isCeiling) {
-          basePrice += 175; // Ceiling mount
-        } else if (isFireplace) {
-          basePrice += 200; // Fireplace (standard + $100)
-        } else {
-          basePrice += 100; // Standard wall
+      if (smartHomeItems.length > 0) {
+        breakdown.push({
+          category: 'Smart Home',
+          items: smartHomeItems.map(item => {
+            const deviceName = 
+              item.type === 'doorbell' ? 'Smart Doorbell' : 
+              item.type === 'floodlight' ? 'Smart Floodlight' : 'Smart Camera';
+
+            return {
+              name: `${deviceName}${item.quantity > 1 ? ` (×${item.quantity})` : ''}`,
+              details: [
+                item.type === 'camera' && item.mountHeight > 8 ? `at ${item.mountHeight}ft` : null,
+                item.type === 'doorbell' && item.brickInstallation ? 'on Brick' : null
+              ].filter(Boolean)
+            };
+          })
+        });
+      }
+
+      return breakdown;
+    }
+
+    // Fallback: Parse from serviceType string
+    const serviceTypeBreakdown = [];
+
+    if (bookingData.serviceType) {
+      // Split by semicolons for major categories, then by commas for individual items
+      const serviceCategories = bookingData.serviceType.split(';');
+
+      serviceCategories.forEach(category => {
+        const trimmedCategory = category.trim();
+        if (!trimmedCategory) return;
+
+        const items = [];
+
+        // Check if this is a TV category
+        if (trimmedCategory.includes('TV')) {
+          serviceTypeBreakdown.push({
+            category: 'TV Mounting',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
+        } 
+        // Check if this is a smart home category
+        else if (trimmedCategory.includes('Smart') || 
+                trimmedCategory.includes('Camera') || 
+                trimmedCategory.includes('Doorbell') || 
+                trimmedCategory.includes('Floodlight')) {
+          serviceTypeBreakdown.push({
+            category: 'Smart Home',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
         }
-
-        // Add-ons
-        if (hasMasonry) basePrice += 50;
-        if (hasOutletRelocation) basePrice += 100;
-
-        // Mount type charges
-        if (bookingData.serviceType.includes("fixed")) {
-          basePrice += isLargeTV ? 60 : 40;
-        } else if (bookingData.serviceType.includes("tilt")) {
-          basePrice += isLargeTV ? 70 : 50;
-        } else if (bookingData.serviceType.includes("fullMotion")) {
-          basePrice += isLargeTV ? 100 : 80;
+        // Other service
+        else {
+          serviceTypeBreakdown.push({
+            category: 'Additional Services',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
         }
-      }
+      });
+
+      return serviceTypeBreakdown;
     }
 
-    // Smart home devices
-    if (bookingData.serviceType.includes("Smart Doorbell")) {
-      const doorbellCount = extractQuantity(bookingData.serviceType, "Smart Doorbell");
-      let doorbellPrice = 75 * doorbellCount;
-      if (bookingData.serviceType.includes("brick")) {
-        doorbellPrice += 10 * doorbellCount;
-      }
-      basePrice += doorbellPrice;
-    }
-
-    if (bookingData.serviceType.includes("Floodlight Camera")) {
-      const floodlightCount = extractQuantity(bookingData.serviceType, "Floodlight Camera");
-      basePrice += 100 * floodlightCount;
-    }
-
-    if (bookingData.serviceType.includes("Smart Camera")) {
-      const cameraCount = extractQuantity(bookingData.serviceType, "Smart Camera");
-      let cameraPrice = 75 * cameraCount;
-
-      // Check for mount height surcharge
-      const heightMatch = bookingData.serviceType.match(/at (\d+)ft/);
-      if (heightMatch && parseInt(heightMatch[1]) > 8) {
-        const extraHeight = parseInt(heightMatch[1]) - 8;
-        const heightSurcharge = Math.ceil(extraHeight / 4) * 25;
-        cameraPrice += heightSurcharge * cameraCount;
-      }
-
-      basePrice += cameraPrice;
-    }
-
-    return `$${basePrice}`;
+    return [];
   };
 
-  // Helper function to extract quantities from service description
-  const extractQuantity = (serviceText: string, itemName: string): number => {
-    const regex = new RegExp(`${itemName} \\((\\d+)\\)`);
-    const match = serviceText.match(regex);
-    return match ? parseInt(match[1]) : 1;
+  // Calculate total price from the breakdown and actual price data
+  const calculateTotalPrice = () => {
+    // If we have the exact price from the booking data, use that
+    if (bookingData?.pricingTotal) {
+      return formatPrice(bookingData.pricingTotal);
+    }
+
+    // Fallback: estimate based on service type
+    return estimatePriceFromServiceType(bookingData?.serviceType || '');
+  };
+
+  // Fallback: Estimate price from service type string
+  const estimatePriceFromServiceType = (serviceType: string) => {
+    if (!serviceType) return "$0";
+
+    let totalPrice = 0;
+
+    // TV mounting prices
+    const tvMatches = serviceType.match(/TV \d+:/g) || [];
+
+    tvMatches.forEach(tvMatch => {
+      // Get index from the tvMatch (e.g., "TV 1:" -> 1)
+      const tvIndex = parseInt(tvMatch.match(/\d+/)?.[0] || "1");
+
+      // Check this specific TV's properties
+      const tvSection = serviceType.split(';')[0]; // Assume TVs are in the first section
+
+      // Extract properties for this specific TV
+      const tvProperties = tvSection.split(',')
+        .find(part => part.includes(`TV ${tvIndex}:`)) || '';
+
+      // Base price
+      let tvPrice = 100; // Default standard TV mount
+
+      if (tvProperties.includes('fireplace')) {
+        tvPrice = 200; // Fireplace installation
+      } else if (tvProperties.includes('ceiling')) {
+        tvPrice = 175; // Ceiling mount
+      }
+
+      // Add-ons
+      if (tvProperties.includes('non-drywall') || tvProperties.includes('masonry')) {
+        tvPrice += 50;
+      }
+
+      if (tvProperties.includes('outlet')) {
+        tvPrice += 100;
+      }
+
+      totalPrice += tvPrice;
+    });
+
+    // Smart doorbell
+    const doorbellMatches = serviceType.match(/Smart Doorbell/g) || [];
+    if (doorbellMatches.length > 0) {
+      // Extract quantity if it exists
+      const doorbellSection = serviceType.split(';')
+        .find(section => section.includes('Smart Doorbell')) || '';
+
+      const quantityMatch = doorbellSection.match(/\(×(\d+)\)/);
+      const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+
+      let doorbellPrice = 85 * quantity;
+
+      // Check for brick installation
+      if (doorbellSection.includes('Brick') || doorbellSection.includes('brick')) {
+        doorbellPrice += 10 * quantity;
+      }
+
+      totalPrice += doorbellPrice;
+    }
+
+    // Smart floodlight
+    const floodlightMatches = serviceType.match(/Smart Floodlight/g) || [];
+    if (floodlightMatches.length > 0) {
+      const floodlightSection = serviceType.split(';')
+        .find(section => section.includes('Smart Floodlight')) || '';
+
+      const quantityMatch = floodlightSection.match(/\(×(\d+)\)/);
+      const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+
+      totalPrice += 125 * quantity;
+    }
+
+    // Smart camera
+    const cameraMatches = serviceType.match(/Smart Camera/g) || [];
+    if (cameraMatches.length > 0) {
+      const cameraSection = serviceType.split(';')
+        .find(section => section.includes('Smart Camera')) || '';
+
+      const quantityMatch = cameraSection.match(/\(×(\d+)\)/);
+      const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+
+      let cameraPrice = 75 * quantity;
+
+      // Check for height surcharge
+      const heightMatch = cameraSection.match(/at (\d+)ft/);
+      if (heightMatch && parseInt(heightMatch[1]) > 8) {
+        const height = parseInt(heightMatch[1]);
+        const surcharge = Math.ceil((height - 8) / 4) * 25;
+        cameraPrice += surcharge * quantity;
+      }
+
+      totalPrice += cameraPrice;
+    }
+
+    return formatPrice(totalPrice);
   };
 
   if (loading) {
@@ -243,6 +374,9 @@ export default function BookingConfirmation() {
     );
   }
 
+  const serviceBreakdown = processServiceBreakdown();
+  const totalPrice = calculateTotalPrice();
+
   return (
     <div className="container mx-auto py-12">
       <Card className="max-w-2xl mx-auto">
@@ -256,15 +390,35 @@ export default function BookingConfirmation() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          <div className="space-y-1">
-            <h3 className="font-medium">Service Details</h3>
-            <p className="text-muted-foreground">{bookingData.serviceType}</p>
-            {bookingData.smartHomeItems && (
-              <p className="text-muted-foreground">
-                Smart Home: {bookingData.smartHomeItems.join(", ")}
-              </p>
+          {/* Service Breakdown */}
+          <div className="space-y-6">
+            <h3 className="font-medium text-lg">Service Details</h3>
+
+            {serviceBreakdown.length > 0 ? (
+              serviceBreakdown.map((category, index) => (
+                <div key={index} className="space-y-3">
+                  <h4 className="font-medium">{category.category}</h4>
+                  <ul className="space-y-2">
+                    {category.items.map((item, itemIndex) => (
+                      <li key={itemIndex} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
+                        <span>{item.name}</span>
+                        {item.details && item.details.length > 0 && (
+                          <span className="text-muted-foreground ml-1">
+                            ({item.details.join(', ')})
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {index < serviceBreakdown.length - 1 && <Separator className="my-3" />}
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">{bookingData.serviceType || "No service details available"}</p>
             )}
           </div>
+
+          <Separator />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -305,8 +459,8 @@ export default function BookingConfirmation() {
           )}
 
           <div className="bg-muted p-4 rounded-md">
-            <h3 className="font-medium mb-2">Estimated Price</h3>
-            <p className="text-xl font-bold">{calculateEstimatedPrice()}</p>
+            <h3 className="font-medium mb-2">Estimated Total</h3>
+            <p className="text-xl font-bold">{totalPrice}</p>
             <p className="text-sm text-muted-foreground mt-1">
               This is an estimate. Final price may vary based on additional services or special requirements.
             </p>
