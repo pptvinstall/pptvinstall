@@ -18,7 +18,8 @@ export type TVInstallation = {
   highRise: boolean;
   unmount: boolean;
   remount: boolean;
-  isUnmountOnly?: boolean; // New flag to identify unmount-only services
+  isUnmountOnly?: boolean; // Flag to identify unmount-only services
+  isRemountOnly?: boolean; // New flag to identify remount-only services
 };
 
 export type SmartHomeInstallation = {
@@ -59,7 +60,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       highRise: false,
       unmount: false,
       remount: false,
-      isUnmountOnly: false
+      isUnmountOnly: false,
+      isRemountOnly: false
     }]);
   };
 
@@ -103,7 +105,24 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       highRise: false,
       unmount: true,
       remount: false,
-      isUnmountOnly: true // Set this flag to true for unmounting-only services
+      isUnmountOnly: true, // Set this flag to true for unmounting-only services
+      isRemountOnly: false
+    }]);
+  };
+
+  const addTVRemountingOnly = () => {
+    // Add TV remounting service without a mounting service
+    setTvInstallations(prev => [...prev, {
+      size: 'small',
+      location: 'standard',
+      mountType: 'none',
+      masonryWall: false,
+      outletRelocation: false,
+      highRise: false,
+      unmount: false,
+      remount: true,
+      isUnmountOnly: false,
+      isRemountOnly: true // Set this flag to true for remounting-only services
     }]);
   };
 
@@ -120,12 +139,13 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div key={`tv-${index}`} className="flex justify-between items-center">
                 <span>
                   {tv.isUnmountOnly ? 'TV Unmounting Only' : 
-                  `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
+                   tv.isRemountOnly ? 'TV Remounting Only' :
+                   `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
                   {tv.masonryWall && ' (Non-Drywall Surface)'}
                   {tv.highRise && ' (High-Rise/Steel Studs)'}
                   {tv.outletRelocation && ' (Outlet Relocation)'}
                   {tv.unmount && !tv.isUnmountOnly && ' + Unmounting'}
-                  {tv.remount && ' + Remounting'}
+                  {tv.remount && !tv.isRemountOnly && ' + Remounting'}
                 </span>
                 <Button
                   variant="ghost"
@@ -163,7 +183,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       {device.type === 'doorbell' ? 'Smart Doorbell' : 
                       device.type === 'floodlight' ? 'Smart Floodlight' : 
                       'Smart Camera'}
-                      {device.quantity > 1 && ` (${device.quantity})`}
+                      {device.quantity > 1 && ` (×${device.quantity})`}
                     </span>
                     <div className="text-xs text-muted-foreground">
                       {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
@@ -194,7 +214,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         </TabsList>
 
         <TabsContent value="services" className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <Button
               variant="outline"
               onClick={addTvInstallation}
@@ -212,6 +232,15 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <Plus className="h-4 w-4 mr-2" />
               Add TV Unmounting Only
             </Button>
+
+            <Button
+              variant="outline"
+              onClick={addTVRemountingOnly}
+              className="w-full py-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add TV Remounting Only
+            </Button>
           </div>
 
           {tvInstallations.map((installation, index) => (
@@ -224,7 +253,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div className="flex justify-between items-center">
                 <h4 className="text-lg font-semibold">
                   {installation.isUnmountOnly ? 
-                  'TV Unmounting Only' : `TV ${index + 1}`}
+                  'TV Unmounting Only' : 
+                  installation.isRemountOnly ? 
+                  'TV Remounting Only' : 
+                  `TV ${index + 1}`}
                 </h4>
                 {tvInstallations.length > 1 && (
                   <Button
@@ -238,8 +270,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 )}
               </div>
 
-              {/* Only show TV mounting options if not "unmounting only" */}
-              {!installation.isUnmountOnly && (
+              {/* Only show TV mounting options if not a specialized service */}
+              {!installation.isUnmountOnly && !installation.isRemountOnly && (
                 <div className="space-y-6">
                   <div>
                     <h5 className="text-sm font-medium mb-3">TV Size</h5>
@@ -354,16 +386,11 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Show proper additional options based on service type */}
-              <div>
-                <h5 className="text-sm font-medium mb-3">Additional Options</h5>
-                <div className="space-y-4">
-                  {/* Only show surface options for mounting services, not for unmounting-only */}
-                  {!installation.isUnmountOnly && (
-                    <>
+                  {/* Surface type options and additional options for mounting */}
+                  <div>
+                    <h5 className="text-sm font-medium mb-3">Additional Options</h5>
+                    <div className="space-y-4">
                       {/* Surface type options */}
                       <div className="flex items-center space-x-2">
                         <Switch
@@ -413,51 +440,62 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
                         </div>
                       )}
-                    </>
-                  )}
-
-                  {/* For regular TV mounting, show unmounting and remounting options */}
-                  {!installation.isUnmountOnly && (
-                    <>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={installation.unmount}
-                          onCheckedChange={(checked) =>
-                            updateTvInstallation(index, { unmount: checked })
-                          }
-                        />
-                        <Label>TV Unmounting (+$50)<br/>
-                          <span className="text-sm text-muted-foreground">
-                            Remove your existing TV from its current location
-                          </span>
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={installation.remount}
-                          onCheckedChange={(checked) =>
-                            updateTvInstallation(index, { remount: checked })
-                          }
-                        />
-                        <Label>TV Remounting (+$50)<br/>
-                          <span className="text-sm text-muted-foreground">
-                            If the mount is already on the wall and matching arms are provided
-                          </span>
-                        </Label>
-                      </div>
-                    </>
-                  )}
-
-                  {/* For unmounting-only, show a price info callout */}
-                  {installation.isUnmountOnly && (
-                    <div className="text-sm p-3 bg-muted rounded-lg">
-                      <p className="mb-1 font-medium">TV Unmounting Only</p>
-                      <p className="text-muted-foreground">$50 per TV - Our team will safely remove your TV from its current mount or stand.</p>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Show appropriate callout based on service type */}
+              {!installation.isUnmountOnly && !installation.isRemountOnly && (
+                <div>
+                  <h5 className="text-sm font-medium mb-3">Service Add-ons</h5>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={installation.unmount}
+                        onCheckedChange={(checked) =>
+                          updateTvInstallation(index, { unmount: checked })
+                        }
+                      />
+                      <Label>TV Unmounting (+$50)<br/>
+                        <span className="text-sm text-muted-foreground">
+                          Remove your existing TV from its current location
+                        </span>
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={installation.remount}
+                        onCheckedChange={(checked) =>
+                          updateTvInstallation(index, { remount: checked })
+                        }
+                      />
+                      <Label>TV Remounting (+$50)<br/>
+                        <span className="text-sm text-muted-foreground">
+                          If the mount is already on the wall and matching arms are provided
+                        </span>
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* For unmounting-only, show a price info callout */}
+              {installation.isUnmountOnly && (
+                <div className="text-sm p-3 bg-muted rounded-lg">
+                  <p className="mb-1 font-medium">TV Unmounting Only</p>
+                  <p className="text-muted-foreground">$50 per TV - Our team will safely remove your TV from its current mount or stand.</p>
+                </div>
+              )}
+
+              {/* For remounting-only, show a price info callout */}
+              {installation.isRemountOnly && (
+                <div className="text-sm p-3 bg-muted rounded-lg">
+                  <p className="mb-1 font-medium">TV Remounting Only</p>
+                  <p className="text-muted-foreground">$50 per TV - Our team will mount your TV to an existing bracket on the wall (matching arms must be provided).</p>
+                </div>
+              )}
             </motion.div>
           ))}
         </TabsContent>
@@ -506,7 +544,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div className="flex justify-between items-center">
                 <h4 className="text-lg font-semibold">
                   {installation.type === 'doorbell' ? 'Smart Doorbell' :
-                    installation.type === 'floodlight' ? 'Floodlight' :
+                    installation.type === 'floodlight' ? 'Smart Floodlight' :
                       'Smart Camera'} Installation
                 </h4>
                 <Button

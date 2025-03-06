@@ -48,8 +48,9 @@ export function usePricing(
 
   useEffect(() => {
     // Separate TV installations and unmounting-only services
-    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly);
+    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
     const unmountOnlyCount = tvInstallations.filter(tv => tv.isUnmountOnly).length;
+    const remountOnlyCount = tvInstallations.filter(tv => tv.isRemountOnly).length;
 
     // Convert installation data to service options format
     const serviceOptions: ServiceOptions = {
@@ -68,6 +69,7 @@ export function usePricing(
       needsUnmount: options.includeUnmount || mountingTvs.some(tv => tv.unmount),
       needsRemount: options.includeRemount || mountingTvs.some(tv => tv.remount),
       unmountOnlyCount: unmountOnlyCount, // Include unmount-only count
+      remountOnlyCount: remountOnlyCount, // Include remount-only count
       travelDistance: options.travelDistance || 0
     };
 
@@ -94,9 +96,10 @@ export function createServiceDescription(
 
   // Process TV installations
   if (tvInstallations.length > 0) {
-    // Separate unmount-only services from regular TV installations
+    // Separate specialized services from regular TV installations
     const unmountOnlyTvs = tvInstallations.filter(tv => tv.isUnmountOnly);
-    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly);
+    const remountOnlyTvs = tvInstallations.filter(tv => tv.isRemountOnly);
+    const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
 
     // Handle regular TV mounting services
     if (mountingTvs.length > 0) {
@@ -147,6 +150,14 @@ export function createServiceDescription(
         ? 'TV Unmounting Only' 
         : `TV Unmounting Only (${unmountOnlyTvs.length} TVs)`;
       parts.push(unmountText);
+    }
+
+    // Handle remount-only services
+    if (remountOnlyTvs.length > 0) {
+      const remountText = remountOnlyTvs.length === 1 
+        ? 'TV Remounting Only' 
+        : `TV Remounting Only (${remountOnlyTvs.length} TVs)`;
+      parts.push(remountText);
     }
   }
 

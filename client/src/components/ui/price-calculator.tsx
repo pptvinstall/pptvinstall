@@ -32,9 +32,10 @@ export function PriceCalculator({
 
   // Calculate pricing based on selections
   const pricingData = React.useMemo(() => {
-    // Count unmount-only TVs separately from regular TV mounting services
-    const mountingTvs = tvs.filter(tv => !tv.isUnmountOnly);
+    // Count different TV service types separately
+    const mountingTvs = tvs.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
     const unmountOnlyCount = tvs.filter(tv => tv.isUnmountOnly).length;
+    const remountOnlyCount = tvs.filter(tv => tv.isRemountOnly).length;
 
     // Convert UI data model to pricing service options
     const serviceOptions: ServiceOptions = {
@@ -49,7 +50,8 @@ export function PriceCalculator({
       generalLaborHours: options.generalLaborHours,
       needsUnmount: mountingTvs.some(tv => tv.unmount),
       needsRemount: mountingTvs.some(tv => tv.remount),
-      unmountOnlyCount: unmountOnlyCount, // Pass the count of unmount-only TVs to the pricing calculator
+      unmountOnlyCount: unmountOnlyCount, // Pass the count of unmount-only TVs
+      remountOnlyCount: remountOnlyCount, // Pass the count of remount-only TVs
       travelDistance: distance
     };
 

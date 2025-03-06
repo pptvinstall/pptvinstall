@@ -48,6 +48,7 @@ export type ServiceOptions = {
   needsUnmount: boolean;
   needsRemount: boolean;
   unmountOnlyCount: number; // New property for standalone TV unmounting
+  remountOnlyCount: number; // New property for standalone TV remounting
   travelDistance: number; // in minutes
 };
 
@@ -177,6 +178,28 @@ export function calculatePrice(options: ServiceOptions): {
     breakdown.push({
       category: "TV Unmounting",
       items: unmountItems
+    });
+  }
+
+  // Standalone TV Remounting (when no TV mounting is selected)
+  if (options.remountOnlyCount > 0) {
+    const remountItems = [];
+    const remountFee = options.remountOnlyCount * pricing.tvMounting.remount;
+
+    remountItems.push({ 
+      name: options.remountOnlyCount > 1 
+        ? `TV Remounting Only (${options.remountOnlyCount})` 
+        : "TV Remounting Only", 
+      price: remountFee 
+    });
+
+    // Add standalone remounting to basePrice
+    basePrice += remountFee;
+
+    // Add TV remounting items to breakdown as a separate category
+    breakdown.push({
+      category: "TV Remounting",
+      items: remountItems
     });
   }
 

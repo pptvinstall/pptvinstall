@@ -161,8 +161,20 @@ export default function BookingConfirmation() {
         });
       }
 
+      // Process TV remounting only services
+      const remountOnlyItems = bookingData.pricingBreakdown.filter(item => item.isRemountOnly);
+      if (remountOnlyItems.length > 0) {
+        breakdown.push({
+          category: 'TV Remounting',
+          items: [{
+            name: remountOnlyItems.length > 1 ? `TV Remounting Only (${remountOnlyItems.length})` : 'TV Remounting Only',
+            details: []
+          }]
+        });
+      }
+
       // Process Smart Home devices
-      const smartHomeItems = bookingData.pricingBreakdown.filter(item => 
+      const smartHomeItems = bookingData.pricingBreakdown.filter(item =>
         item.type === 'doorbell' || item.type === 'camera' || item.type === 'floodlight'
       );
 
@@ -170,9 +182,9 @@ export default function BookingConfirmation() {
         breakdown.push({
           category: 'Smart Home',
           items: smartHomeItems.map(item => {
-            const deviceName = 
-              item.type === 'doorbell' ? 'Smart Doorbell' : 
-              item.type === 'floodlight' ? 'Smart Floodlight' : 'Smart Camera';
+            const deviceName =
+              item.type === 'doorbell' ? 'Smart Doorbell' :
+                item.type === 'floodlight' ? 'Smart Floodlight' : 'Smart Camera';
 
             return {
               name: `${deviceName}${item.quantity > 1 ? ` (×${item.quantity})` : ''}`,
@@ -211,6 +223,16 @@ export default function BookingConfirmation() {
             }]
           });
         }
+        // Check if this is a TV remounting only service
+        else if (trimmedCategory.includes('TV Remounting Only')) {
+          serviceTypeBreakdown.push({
+            category: 'TV Remounting',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
+        }
         // Check if this is a TV category
         else if (trimmedCategory.includes('TV')) {
           serviceTypeBreakdown.push({
@@ -220,12 +242,12 @@ export default function BookingConfirmation() {
               details: []
             }]
           });
-        } 
+        }
         // Check if this is a smart home category
-        else if (trimmedCategory.includes('Smart') || 
-                trimmedCategory.includes('Camera') || 
-                trimmedCategory.includes('Doorbell') || 
-                trimmedCategory.includes('Floodlight')) {
+        else if (trimmedCategory.includes('Smart') ||
+          trimmedCategory.includes('Camera') ||
+          trimmedCategory.includes('Doorbell') ||
+          trimmedCategory.includes('Floodlight')) {
           serviceTypeBreakdown.push({
             category: 'Smart Home',
             items: [{
@@ -315,6 +337,15 @@ export default function BookingConfirmation() {
       const unmountQuantity = unmountQuantityMatch ? parseInt(unmountQuantityMatch[1]) : 1;
 
       totalPrice += unmountQuantity * 50; // $50 per TV for unmounting only
+    }
+
+    // TV remounting only service
+    if (serviceType.includes('TV Remounting Only')) {
+      // Check for quantity in parentheses
+      const remountQuantityMatch = serviceType.match(/TV Remounting Only \((\d+) TVs\)/);
+      const remountQuantity = remountQuantityMatch ? parseInt(remountQuantityMatch[1]) : 1;
+
+      totalPrice += remountQuantity * 50; // $50 per TV for remounting only
     }
 
     // Smart doorbell
@@ -504,7 +535,7 @@ export default function BookingConfirmation() {
 
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground">
-              A confirmation email has been sent to {bookingData.email}. If you have any questions, 
+              A confirmation email has been sent to {bookingData.email}. If you have any questions,
               please contact us at (678) 263-2859.
             </p>
           </div>
