@@ -9,6 +9,7 @@ import { Input } from "./input"
 import { Card } from "./card"
 import { Separator } from "./separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu"
+import { MinusCircle, PlusCircle } from "lucide-react";
 
 export type TVInstallation = {
   size: 'small' | 'large';
@@ -139,9 +140,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             {tvInstallations.map((tv, index) => (
               <div key={`tv-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
                 <span>
-                  {tv.isUnmountOnly ? 'TV Unmounting Only' : 
-                   tv.isRemountOnly ? 'TV Remounting Only' :
-                   `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
+                  {tv.isUnmountOnly ? 'TV Unmounting Only' :
+                    tv.isRemountOnly ? 'TV Remounting Only' :
+                      `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
                   {tv.masonryWall && ' • Non-Drywall Surface'}
                   {tv.highRise && ' • High-Rise/Steel Studs'}
                   {tv.outletRelocation && ' • Outlet Installation'}
@@ -164,9 +165,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div key={`smart-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {device.type === 'doorbell' ? 'Smart Doorbell' : 
-                     device.type === 'floodlight' ? 'Smart Floodlight' : 
-                     'Smart Camera'}
+                    {device.type === 'doorbell' ? 'Smart Doorbell' :
+                      device.type === 'floodlight' ? 'Smart Floodlight' :
+                        'Smart Camera'}
                     {device.quantity > 1 && ` (×${device.quantity})`}
                   </span>
                   {(device.type === 'camera' && device.mountHeight && device.mountHeight > 8) && (
@@ -224,11 +225,11 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             >
               <div className="flex justify-between items-center">
                 <h4 className="text-lg font-semibold">
-                  {installation.isUnmountOnly ? 
-                  'TV Unmounting Only' : 
-                  installation.isRemountOnly ? 
-                  'TV Remounting Only' : 
-                  `TV ${index + 1}`}
+                  {installation.isUnmountOnly ?
+                    'TV Unmounting Only' :
+                    installation.isRemountOnly ?
+                      'TV Remounting Only' :
+                      `TV ${index + 1}`}
                 </h4>
                 {tvInstallations.length > 1 && (
                   <Button
@@ -371,7 +372,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                             updateTvInstallation(index, { masonryWall: checked })
                           }
                         />
-                        <Label>Non-Drywall Installation (+$50)<br/>
+                        <Label>Non-Drywall Installation (+$50)<br />
                           <span className="text-xs text-muted-foreground">
                             Includes brick, concrete, stone, tile, or siding
                           </span>
@@ -386,7 +387,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                             updateTvInstallation(index, { highRise: checked })
                           }
                         />
-                        <Label>High-Rise Building / Steel Studs (+$25)<br/>
+                        <Label>High-Rise Building / Steel Studs (+$25)<br />
                           <span className="text-xs text-muted-foreground">
                             Additional fee for specialized anchors and drill bits
                           </span>
@@ -429,7 +430,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           updateTvInstallation(index, { unmount: checked })
                         }
                       />
-                      <Label>TV Unmounting (+$50)<br/>
+                      <Label>TV Unmounting (+$50)<br />
                         <span className="text-xs text-muted-foreground">
                           Remove your existing TV from its current location
                         </span>
@@ -443,7 +444,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           updateTvInstallation(index, { remount: checked })
                         }
                       />
-                      <Label>TV Remounting (+$50)<br/>
+                      <Label>TV Remounting (+$50)<br />
                         <span className="text-xs text-muted-foreground">
                           If the mount is already on the wall and matching arms are provided
                         </span>
@@ -532,14 +533,33 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <Label htmlFor={`quantity-${index}`} className="w-20">Quantity:</Label>
-                  <Input
-                    id={`quantity-${index}`}
-                    type="number"
-                    min="1"
-                    value={installation.quantity}
-                    onChange={(e) => updateSmartHomeInstallation(index, { quantity: parseInt(e.target.value) || 1 })}
-                    className="w-20"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => updateSmartHomeInstallation(index, {
+                        quantity: Math.max(1, installation.quantity - 1)
+                      })}
+                    >
+                      <MinusCircle className="h-4 w-4" />
+                    </Button>
+                    <div className="w-12 text-center font-medium">
+                      {installation.quantity}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => updateSmartHomeInstallation(index, {
+                        quantity: Math.min(10, installation.quantity + 1)
+                      })}
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {installation.type === 'doorbell' && (
@@ -557,17 +577,33 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 {installation.type === 'camera' && (
                   <div className="space-y-2">
                     <Label htmlFor={`height-${index}`}>Mount Height (feet)</Label>
-                    <Input
-                      id={`height-${index}`}
-                      type="number"
-                      min="8"
-                      step="1"
-                      value={installation.mountHeight}
-                      onChange={(e) => updateSmartHomeInstallation(index, {
-                        mountHeight: Math.max(8, parseInt(e.target.value) || 8)
-                      })}
-                      className="w-full"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => updateSmartHomeInstallation(index, {
+                          mountHeight: Math.max(8, (installation.mountHeight || 8) - 1)
+                        })}
+                      >
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
+                      <div className="w-12 text-center font-medium">
+                        {installation.mountHeight || 8}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => updateSmartHomeInstallation(index, {
+                          mountHeight: Math.min(20, (installation.mountHeight || 8) + 1)
+                        })}
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       +$25 per additional 4 feet above 8 feet
                     </p>
@@ -584,10 +620,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   </p>
 
                   {/* Additional fees display */}
-                  {((installation.type === 'doorbell' && installation.brickInstallation) || 
+                  {((installation.type === 'doorbell' && installation.brickInstallation) ||
                     (installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8)) && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      {installation.type === 'doorbell' && installation.brickInstallation && 
+                      {installation.type === 'doorbell' && installation.brickInstallation &&
                         `+ $10${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Brick Installation)`}
                       {installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8 &&
                         `+ $${Math.ceil((installation.mountHeight - 8) / 4) * 25}${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Height Surcharge)`}
@@ -605,7 +641,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
           Cancel
         </Button>
         {/* Replaced the Confirm Selection button with a Next button that auto-proceeds */}
-        <Button 
+        <Button
           onClick={onClose}
           disabled={!hasSelectionsToConfirm}
         >
