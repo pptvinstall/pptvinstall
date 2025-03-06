@@ -3,7 +3,8 @@ import { Link } from 'wouter';
 import { Button } from "@/components/ui/button";
 import { PhoneCall } from "lucide-react";
 
-const Nav: React.FC = () => {
+// Using different name for the component constant to avoid duplicate declaration
+const Navigation: React.FC = () => {
   const navigationLinks = [
     { href: '/', name: 'Home' },
     { href: '/services', name: 'Services' },
@@ -37,4 +38,4 @@ const Nav: React.FC = () => {
   );
 };
 
-export default Nav;
+export default Navigation;
