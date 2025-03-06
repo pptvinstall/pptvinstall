@@ -10,8 +10,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Router, Switch } from 'wouter';
 import { Toaster } from '@/components/ui/toaster';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import Nav from '@/components/ui/nav';
-import Footer from '@/components/ui/footer';
+import Nav from '@/components/nav';
+import Footer from '@/components/footer';
 
 import './index.css';
 
