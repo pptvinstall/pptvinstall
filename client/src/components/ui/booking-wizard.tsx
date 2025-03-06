@@ -110,18 +110,19 @@ const DateTimeSelectionStep = React.memo(({
               // Get availability status (true, false, or undefined if checking)
               const availability = isTimeSlotAvailable(time);
 
+              // Only show the time slot if it's available or we're still checking
+              if (availability === false) return null; // Don't render unavailable slots
+
               return (
                 <TimeSlot
                   key={time}
                   time={time}
-                  available={availability !== false} // Show as available while checking
+                  available={true} // If we're rendering it, it's either available or checking
                   selected={selectedTime === time}
                   loading={availability === undefined} // Show loading state if undefined
                   onClick={() => {
-                    if (availability !== false) { // Allow selection if not definitely unavailable
-                      setSelectedTime(time);
-                      console.log("Time selected (raw string):", time);
-                    }
+                    setSelectedTime(time);
+                    console.log("Time selected (raw string):", time);
                   }}
                 />
               );

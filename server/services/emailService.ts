@@ -17,19 +17,33 @@ export async function sendBookingConfirmationEmail(booking: any) {
   }
 
   try {
+    console.log(`Attempting to send confirmation email to customer: ${booking.email}`);
+
+    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    console.log(`Using sender email: ${fromEmail}`);
+
     const msg = {
       to: booking.email,
-      from: process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com',
+      from: fromEmail,
       subject: 'Your TV Installation Booking Confirmation',
       text: getPlainTextConfirmation(booking),
       html: getHtmlConfirmation(booking),
     };
-    
+
+    console.log("Customer email payload:", JSON.stringify({
+      to: msg.to,
+      from: msg.from,
+      subject: msg.subject
+    }));
+
     await sgMail.send(msg);
     console.log(`Booking confirmation email sent to ${booking.email}`);
     return true;
   } catch (error) {
     console.error('Error sending booking confirmation email:', error);
+    if (error.response) {
+      console.error('SendGrid API error response:', error.response.body);
+    }
     return false;
   }
 }
@@ -45,7 +59,7 @@ function getPlainTextConfirmation(booking: any): string {
     month: 'long', 
     day: 'numeric' 
   });
-  
+
   let emailText = `
 Booking Confirmation - Picture Perfect TV Install
 
@@ -62,7 +76,7 @@ LOCATION
 ${booking.streetAddress}
 ${booking.addressLine2 ? booking.addressLine2 + '\n' : ''}${booking.city}, ${booking.state} ${booking.zipCode}
 
-If you need to reschedule or cancel your appointment, please contact us at (678) 263-2859.
+If you need to reschedule or cancel your appointment, please contact us at +16782632859.
 
 Thank you for choosing Picture Perfect TV Install!
   `;
@@ -98,31 +112,31 @@ function getHtmlConfirmation(booking: any): string {
   <div class="header">
     <h1>Your Booking is Confirmed</h1>
   </div>
-  
+
   <div class="content">
     <p>Dear ${booking.name},</p>
-    
+
     <p>Thank you for booking with Picture Perfect TV Install. Your appointment has been confirmed.</p>
-    
+
     <div class="appointment-details">
       <h3>Appointment Details</h3>
       <p><strong>Date:</strong> ${formattedDate}</p>
       <p><strong>Time:</strong> ${booking.appointmentTime}</p>
       <p><strong>Service:</strong> ${booking.serviceType}</p>
     </div>
-    
+
     <div class="appointment-details">
       <h3>Location</h3>
       <p>${booking.streetAddress}</p>
       ${booking.addressLine2 ? `<p>${booking.addressLine2}</p>` : ''}
       <p>${booking.city}, ${booking.state} ${booking.zipCode}</p>
     </div>
-    
-    <p>If you need to reschedule or cancel your appointment, please contact us at <strong>(678) 263-2859</strong>.</p>
-    
+
+    <p>If you need to reschedule or cancel your appointment, please contact us at <strong>+16782632859</strong>.</p>
+
     <p>Thank you for choosing Picture Perfect TV Install!</p>
   </div>
-  
+
   <div class="footer">
     <p>© ${new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.</p>
   </div>
@@ -145,19 +159,33 @@ export async function sendAdminBookingNotificationEmail(booking: any) {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@pictureperfecttv.com';
 
   try {
+    console.log(`Attempting to send notification email to admin: ${adminEmail}`);
+
+    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    console.log(`Using sender email: ${fromEmail}`);
+
     const msg = {
       to: adminEmail,
-      from: process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com',
+      from: fromEmail,
       subject: 'New Booking Notification',
       text: getPlainTextAdminNotification(booking),
       html: getHtmlAdminNotification(booking),
     };
-    
+
+    console.log("Admin email payload:", JSON.stringify({
+      to: msg.to,
+      from: msg.from,
+      subject: msg.subject
+    }));
+
     await sgMail.send(msg);
     console.log(`Admin notification email sent to ${adminEmail}`);
     return true;
   } catch (error) {
     console.error('Error sending admin notification email:', error);
+    if (error.response) {
+      console.error('SendGrid API error response:', error.response.body);
+    }
     return false;
   }
 }
@@ -173,7 +201,7 @@ function getPlainTextAdminNotification(booking: any): string {
     month: 'long', 
     day: 'numeric' 
   });
-  
+
   let emailText = `
 New Booking Notification - Picture Perfect TV Install
 
@@ -230,39 +258,39 @@ function getHtmlAdminNotification(booking: any): string {
   <div class="header">
     <h1>New Booking Notification</h1>
   </div>
-  
+
   <div class="content">
     <p>A new booking has been received:</p>
-    
+
     <div class="section">
       <h3>Customer Information</h3>
       <p><strong>Name:</strong> ${booking.name}</p>
       <p><strong>Email:</strong> ${booking.email}</p>
       <p><strong>Phone:</strong> ${booking.phone}</p>
     </div>
-    
+
     <div class="section">
       <h3>Appointment Details</h3>
       <p><strong>Date:</strong> ${formattedDate}</p>
       <p><strong>Time:</strong> ${booking.appointmentTime}</p>
       <p><strong>Service:</strong> ${booking.serviceType}</p>
     </div>
-    
+
     <div class="section">
       <h3>Location</h3>
       <p>${booking.streetAddress}</p>
       ${booking.addressLine2 ? `<p>${booking.addressLine2}</p>` : ''}
       <p>${booking.city}, ${booking.state} ${booking.zipCode}</p>
     </div>
-    
+
     <div class="section">
       <h3>Additional Notes</h3>
       <p>${booking.notes || 'None provided'}</p>
     </div>
-    
+
     <p>You can view and manage this booking from the admin dashboard.</p>
   </div>
-  
+
   <div class="footer">
     <p>© ${new Date().getFullYear()} Picture Perfect TV Install</p>
   </div>
