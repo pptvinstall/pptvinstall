@@ -117,10 +117,10 @@ const DateTimeSelectionStep = React.memo(({
 ));
 
 // Step 3 component - Customer Details
-const CustomerDetailsStep = React.memo(({ 
-  formData, 
-  setFormData, 
-  validationErrors 
+const CustomerDetailsStep = React.memo(({
+  formData,
+  setFormData,
+  validationErrors
 }: {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
@@ -243,12 +243,12 @@ const CustomerDetailsStep = React.memo(({
 ));
 
 // Step 4 component - Review & Book
-const ReviewBookingStep = React.memo(({ 
-  tvInstallations, 
-  smartHomeInstallations, 
-  selectedDate, 
-  selectedTime, 
-  formData 
+const ReviewBookingStep = React.memo(({
+  tvInstallations,
+  smartHomeInstallations,
+  selectedDate,
+  selectedTime,
+  formData
 }: {
   tvInstallations: TVInstallation[];
   smartHomeInstallations: SmartHomeInstallation[];
@@ -269,9 +269,9 @@ const ReviewBookingStep = React.memo(({
         {smartHomeInstallations.map((device, index) => (
           <li key={`smart-${index}`}>
             {device.type === 'doorbell' ? 'Smart Doorbell' :
-             device.type === 'floodlight' ? 'Floodlight' : 
-             'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
-            {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 && 
+              device.type === 'floodlight' ? 'Floodlight' :
+                'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
+            {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
               ` at ${device.mountHeight}ft`}
             {device.type === 'doorbell' && device.brickInstallation && ' (Brick)'}
           </li>
@@ -313,8 +313,8 @@ const ReviewBookingStep = React.memo(({
   </div>
 ));
 
-export function BookingWizard({ 
-  onSubmit, 
+export function BookingWizard({
+  onSubmit,
   isSubmitting,
   existingBookings = [],
   isLoadingBookings = false
@@ -482,12 +482,14 @@ export function BookingWizard({
       case 1:
         return selectedDate && selectedTime;
       case 2:
-        // Now validation is handled by validateCustomerDetails
-        return validateCustomerDetails();
+        // Don't call validateCustomerDetails directly here as it can cause infinite renders
+        // Instead just check if the required fields have values
+        return !!formData.name && !!formData.email && !!formData.phone &&
+          !!formData.streetAddress && !!formData.city && !!formData.state && !!formData.zipCode;
       default:
         return true;
     }
-  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, validateCustomerDetails]);
+  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData]);
 
   const handleSubmit = useCallback(() => {
     // Get selected services
@@ -517,8 +519,8 @@ export function BookingWizard({
     // Smart home installations
     if (smartHomeInstallations.length > 0) {
       smartHomeInstallations.forEach(device => {
-        const deviceName = device.type === 'doorbell' ? 'Smart Doorbell' : 
-                          device.type === 'floodlight' ? 'Floodlight Camera' : 'Smart Camera';
+        const deviceName = device.type === 'doorbell' ? 'Smart Doorbell' :
+          device.type === 'floodlight' ? 'Floodlight Camera' : 'Smart Camera';
 
         serviceDescription += `${deviceName} (${device.quantity})`;
 
@@ -672,10 +674,10 @@ export function BookingWizard({
               onClick={handleNextClick}
               disabled={isSubmitting || !canProceed()}
             >
-              {isSubmitting 
-                ? "Booking..." 
-                : currentStep === steps.length - 1 
-                  ? "Confirm Booking" 
+              {isSubmitting
+                ? "Booking..."
+                : currentStep === steps.length - 1
+                  ? "Confirm Booking"
                   : "Next"}
             </Button>
           </div>
