@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { addDays } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 
 // Define the interface for unavailable time slots
 export interface UnavailableTimeSlot {
@@ -11,60 +12,45 @@ export interface UnavailableTimeSlot {
  * Hook to fetch and manage calendar availability data
  */
 export function useCalendarAvailability() {
-  const [unavailableSlots, setUnavailableSlots] = useState<UnavailableTimeSlot[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  // Cache availability data with React Query instead of local state
+  const { data: unavailableSlots = [], isLoading, error } = useQuery({
+    queryKey: ['calendar-availability'],
+    queryFn: async () => {
+      const today = new Date();
+      // Look 30 days into the future
+      const endDate = addDays(today, 30);
 
-  // Fetch unavailable time slots for the next 30 days
-  useEffect(() => {
-    async function fetchAvailability() {
-      try {
-        setIsLoading(true);
-        setError(null);
+      // Use the server-side API endpoint
+      const response = await fetch(
+        `/api/calendar/availability?startDate=${today.toISOString()}&endDate=${endDate.toISOString()}`
+      );
 
-        const today = new Date();
-        // Look 30 days into the future
-        const endDate = addDays(today, 30);
-
-        // Use the new server-side API endpoint
-        const response = await fetch(`/api/calendar/availability?startDate=${today.toISOString()}&endDate=${endDate.toISOString()}`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch availability: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          setUnavailableSlots(data.unavailableSlots);
-        } else {
-          throw new Error(data.message || 'Unknown error fetching availability');
-        }
-      } catch (err) {
-        console.error('Error fetching calendar availability:', err);
-        setError(err instanceof Error ? err : new Error('Unknown error fetching availability'));
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch availability: ${response.status}`);
       }
-    }
 
-    fetchAvailability();
-  }, []);
+      const data = await response.json();
+
+      if (data.success) {
+        return data.unavailableSlots;
+      } else {
+        throw new Error(data.message || 'Unknown error fetching availability');
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: false // Don't refetch when window regains focus
+  });
 
   /**
    * Check if a specific date and time slot is available
+   * Uses a dedicated API endpoint to reduce client-side processing
    */
-  const isTimeSlotAvailable = async (date: string, timeSlot: string): Promise<boolean> => {
-    // If we're still loading or encountered an error, assume the slot is available
-    // This prevents blocking the booking flow on API failures
-    if (isLoading || error) {
-      console.warn('Calendar availability check bypassed due to loading or error state');
-      return true;
-    }
-
+  const isTimeSlotAvailable = useCallback(async (date: string, timeSlot: string): Promise<boolean> => {
     try {
       // Use the specific time slot check endpoint
-      const response = await fetch(`/api/calendar/checkTimeSlot?date=${date}&timeSlot=${encodeURIComponent(timeSlot)}`);
+      const response = await fetch(
+        `/api/calendar/checkTimeSlot?date=${date}&timeSlot=${encodeURIComponent(timeSlot)}`
+      );
 
       if (!response.ok) {
         console.warn(`Error checking time slot availability: ${response.status}`);
@@ -77,7 +63,7 @@ export function useCalendarAvailability() {
       console.error('Error checking slot availability:', err);
       return true; // Fallback to available if API fails
     }
-  };
+  }, []);
 
   return {
     isTimeSlotAvailable,
