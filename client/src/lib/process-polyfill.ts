@@ -9,7 +9,10 @@ if (typeof window !== 'undefined' && typeof (window as any).process === 'undefin
     nextTick: (fn: Function, ...args: any[]) => setTimeout(() => fn(...args), 0),
     version: '',
     versions: { node: '16.0.0' },
-    platform: 'browser'
+    platform: 'browser',
+    // Add stdout and stderr with isTTY property
+    stdout: { isTTY: false },
+    stderr: { isTTY: false }
   };
 }
 
