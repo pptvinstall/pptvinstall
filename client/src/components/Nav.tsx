@@ -1,23 +1,10 @@
-// ... other imports ...
-import Link from 'next/link'; // Assuming Next.js Link component
+// This file has been deprecated in favor of nav.tsx (lowercase)
+// All navigation functionality is now handled in nav.tsx
+// This file is kept as a placeholder and will be removed in a future cleanup
 
-// ... other code ...
+import { Link } from 'wouter';
 
-// Assuming this is part of a component rendering navigation links
-const navigationLinks = [
-  { href: '/home', name: 'Home', icon: HomeIcon },
-  { href: '/profile', name: 'Profile', icon: UserIcon },
-  // ... more links ...
-];
-
-
-// ... other code ...
-
-{navigationLinks.map((link) => (
-  <Link href={link.href} className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-    {link.icon && <link.icon className="w-4 h-4 mr-2" />}
-    {link.name}
-  </Link>
-))}
-
-// ... rest of the component ...
+export default function Nav() {
+  // Redirect to the proper component
+  return null;
+}

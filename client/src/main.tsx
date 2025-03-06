@@ -1,7 +1,7 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Route, Router, Switch } from 'wouter';
+import { Route, Router, Switch, useLocation } from 'wouter';
 import { Toaster } from '@/components/ui/toaster';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import Nav from '@/components/nav';
@@ -32,6 +32,17 @@ const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Admin = lazy(() => import('@/pages/admin'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
+// ScrollToTop component to handle scroll restoration
+const ScrollToTop = () => {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location]);
+
+  return null;
+};
+
 // Animated page wrapper
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <div className="page-transition">
@@ -47,6 +58,7 @@ createRoot(document.getElementById('root')!).render(
         <main className="flex-grow">
           <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>
             <Router>
+              <ScrollToTop />
               <Switch>
                 <Route path="/" component={Home} />
                 <Route path="/services">

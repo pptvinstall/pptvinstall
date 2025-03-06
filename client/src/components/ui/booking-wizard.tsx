@@ -4,20 +4,22 @@ import { motion } from "framer-motion"
 import { Calendar } from "./calendar"
 import { TimeSlot } from "./time-slot"
 import { Button } from "./button"
-import { Card, CardContent } from "./card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./card"
 import { ServiceWizard, type TVInstallation, type SmartHomeInstallation } from "./service-wizard"
 import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
+import { Checkbox } from "./checkbox"
+import { Label } from "./label"
 import { format } from "date-fns"
 import { useQuery } from '@tanstack/react-query';
 import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
+import { createServiceDescription } from "@/lib/use-pricing"; // Added import for the new function
 import { bookingSchema } from "@shared/schema";
 
-// Add environment variables
+// Environment variables
 const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const GOOGLE_CALENDAR_ID = import.meta.env.VITE_GOOGLE_CALENDAR_ID;
-
 
 const steps = [
   "Choose Services",
@@ -63,6 +65,13 @@ const DateTimeSelectionStep = React.memo(({
   isTimeSlotAvailable: (time: string) => boolean | undefined;
 }) => (
   <div className="space-y-6">
+    <div className="space-y-2">
+      <h3 className="text-lg font-medium">Select a Date</h3>
+      <p className="text-sm text-muted-foreground">
+        Choose a preferred date for your installation.
+      </p>
+    </div>
+
     <Calendar
       mode="single"
       selected={selectedDate}
@@ -70,7 +79,7 @@ const DateTimeSelectionStep = React.memo(({
         setSelectedDate(date);
         setSelectedTime(undefined); // Reset time when date changes
       }}
-      className="rounded-md border"
+      className="rounded-md border mx-auto"
       disabled={(date) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -82,13 +91,21 @@ const DateTimeSelectionStep = React.memo(({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        className="space-y-4"
       >
-        <h3 className="font-medium">Available Time Slots</h3>
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Select a Time Slot</h3>
+          <p className="text-sm text-muted-foreground">
+            Available time slots for {format(selectedDate, "EEEE, MMMM d, yyyy")}.
+          </p>
+        </div>
+
         {isBookingsLoading ? (
-          <div className="text-center py-4">Loading availability...</div>
+          <div className="text-center py-4 animate-pulse">
+            <p className="text-muted-foreground">Loading available time slots...</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {timeSlots.map((time) => {
               // Get availability status (true, false, or undefined if checking)
               const availability = isTimeSlotAvailable(time);
@@ -126,118 +143,164 @@ const CustomerDetailsStep = React.memo(({
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   validationErrors: Record<string, string[]>;
 }) => (
-  <div className="space-y-4">
+  <div className="space-y-6">
     <div className="space-y-2">
-      <label className="text-sm font-medium">Name</label>
-      <Input
-        value={formData.name}
-        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        placeholder="Your name"
-        className={validationErrors.name ? "border-red-500" : ""}
-      />
-      {validationErrors.name && (
-        <p className="text-sm text-red-500">{validationErrors.name[0]}</p>
-      )}
+      <h3 className="text-lg font-medium">Contact Information</h3>
+      <p className="text-sm text-muted-foreground">
+        Please provide your contact details so we can confirm your booking.
+      </p>
     </div>
 
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Email</label>
-      <Input
-        type="email"
-        value={formData.email}
-        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        placeholder="Your email"
-        className={validationErrors.email ? "border-red-500" : ""}
-      />
-      {validationErrors.email && (
-        <p className="text-sm text-red-500">{validationErrors.email[0]}</p>
-      )}
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Phone</label>
-      <Input
-        type="tel"
-        value={formData.phone}
-        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-        placeholder="Your phone number"
-        className={validationErrors.phone ? "border-red-500" : ""}
-      />
-      {validationErrors.phone && (
-        <p className="text-sm text-red-500">{validationErrors.phone[0]}</p>
-      )}
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Street Address</label>
-      <Input
-        value={formData.streetAddress}
-        onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
-        placeholder="Street address"
-        className={validationErrors.streetAddress ? "border-red-500" : ""}
-      />
-      {validationErrors.streetAddress && (
-        <p className="text-sm text-red-500">{validationErrors.streetAddress[0]}</p>
-      )}
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Address Line 2 (optional)</label>
-      <Input
-        value={formData.addressLine2}
-        onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-        placeholder="Apartment, suite, etc."
-      />
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">City</label>
+        <Label htmlFor="name">Full Name</Label>
         <Input
-          value={formData.city}
-          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-          placeholder="City"
-          className={validationErrors.city ? "border-red-500" : ""}
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="Your full name"
+          className={validationErrors.name ? "border-red-500" : ""}
         />
-        {validationErrors.city && (
-          <p className="text-sm text-red-500">{validationErrors.city[0]}</p>
+        {validationErrors.name && (
+          <p className="text-sm text-red-500">{validationErrors.name[0]}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">State</label>
-        <Input
-          value={formData.state}
-          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-          placeholder="State"
-          className={validationErrors.state ? "border-red-500" : ""}
-        />
-        {validationErrors.state && (
-          <p className="text-sm text-red-500">{validationErrors.state[0]}</p>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email Address</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="your.email@example.com"
+            className={validationErrors.email ? "border-red-500" : ""}
+          />
+          {validationErrors.email && (
+            <p className="text-sm text-red-500">{validationErrors.email[0]}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            placeholder="(123) 456-7890"
+            className={validationErrors.phone ? "border-red-500" : ""}
+          />
+          {validationErrors.phone && (
+            <p className="text-sm text-red-500">{validationErrors.phone[0]}</p>
+          )}
+        </div>
       </div>
     </div>
 
     <div className="space-y-2">
-      <label className="text-sm font-medium">Zip Code</label>
-      <Input
-        value={formData.zipCode}
-        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-        placeholder="Zip code"
-        className={validationErrors.zipCode ? "border-red-500" : ""}
-      />
-      {validationErrors.zipCode && (
-        <p className="text-sm text-red-500">{validationErrors.zipCode[0]}</p>
-      )}
+      <h3 className="text-lg font-medium">Installation Address</h3>
+      <p className="text-sm text-muted-foreground">
+        Where will we be performing the installation service?
+      </p>
+    </div>
+
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="streetAddress">Street Address</Label>
+        <Input
+          id="streetAddress"
+          value={formData.streetAddress}
+          onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+          placeholder="123 Main Street"
+          className={validationErrors.streetAddress ? "border-red-500" : ""}
+        />
+        {validationErrors.streetAddress && (
+          <p className="text-sm text-red-500">{validationErrors.streetAddress[0]}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
+        <Input
+          id="addressLine2"
+          value={formData.addressLine2}
+          onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+          placeholder="Apt, Suite, Unit, etc."
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <Input
+            id="city"
+            value={formData.city}
+            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            placeholder="Atlanta"
+            className={validationErrors.city ? "border-red-500" : ""}
+          />
+          {validationErrors.city && (
+            <p className="text-sm text-red-500">{validationErrors.city[0]}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="state">State</Label>
+          <Input
+            id="state"
+            value={formData.state}
+            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+            placeholder="GA"
+            className={validationErrors.state ? "border-red-500" : ""}
+          />
+          {validationErrors.state && (
+            <p className="text-sm text-red-500">{validationErrors.state[0]}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="zipCode">ZIP Code</Label>
+        <Input
+          id="zipCode"
+          value={formData.zipCode}
+          onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+          placeholder="30303"
+          className={validationErrors.zipCode ? "border-red-500" : ""}
+        />
+        {validationErrors.zipCode && (
+          <p className="text-sm text-red-500">{validationErrors.zipCode[0]}</p>
+        )}
+      </div>
     </div>
 
     <div className="space-y-2">
-      <label className="text-sm font-medium">Notes (optional)</label>
+      <Label htmlFor="notes">Special Instructions (Optional)</Label>
       <Textarea
+        id="notes"
         value={formData.notes}
         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-        placeholder="Add any additional notes"
+        placeholder="Any specific instructions or details about the installation location"
+        className="min-h-[100px]"
       />
+    </div>
+
+    <div className="flex items-start space-x-2">
+      <Checkbox 
+        id="consent" 
+        checked={formData.consentToContact}
+        onCheckedChange={(checked) => 
+          setFormData({ ...formData, consentToContact: checked === true })
+        }
+      />
+      <Label 
+        htmlFor="consent" 
+        className="text-sm leading-tight"
+      >
+        I consent to receive text messages about my appointment details, promotions, and service updates.
+      </Label>
     </div>
   </div>
 ));
@@ -248,68 +311,119 @@ const ReviewBookingStep = React.memo(({
   smartHomeInstallations,
   selectedDate,
   selectedTime,
-  formData
+  formData,
+  pricingTotal,
+  pricingDeposit
 }: {
   tvInstallations: TVInstallation[];
   smartHomeInstallations: SmartHomeInstallation[];
   selectedDate: Date | undefined;
   selectedTime: string | undefined;
   formData: any;
+  pricingTotal: number;
+  pricingDeposit: number;
 }) => (
   <div className="space-y-6">
-    <div>
-      <h3 className="font-medium mb-2">Selected Services</h3>
-      <ul className="space-y-1 text-sm">
-        {tvInstallations.map((tv, index) => (
-          <li key={`tv-${index}`}>
-            TV {index + 1}: {tv.size === 'large' ? '56"+' : '32"-55"'} - {tv.location} Mount
-            {tv.mountType !== 'none' && ` (${tv.mountType})`}
-          </li>
-        ))}
-        {smartHomeInstallations.map((device, index) => (
-          <li key={`smart-${index}`}>
-            {device.type === 'doorbell' ? 'Smart Doorbell' :
-              device.type === 'floodlight' ? 'Floodlight' :
-                'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
-            {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
-              ` at ${device.mountHeight}ft`}
-            {device.type === 'doorbell' && device.brickInstallation && ' (Brick)'}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Installation Details</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <h4 className="text-sm font-medium">Date & Time</h4>
+            <p className="text-sm mt-1">
+              {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")} at <span className="font-medium">{selectedTime}</span>
+            </p>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium">Total Price</h4>
+            <p className="text-sm mt-1">
+              <span className="font-medium">${pricingTotal}</span> (${pricingDeposit} deposit required)
+            </p>
+          </div>
+        </div>
 
-    <div>
-      <h3 className="font-medium mb-2">Appointment</h3>
-      <p className="text-sm">
-        {selectedDate && format(selectedDate, "MMMM d, yyyy")} at <span className="font-bold">{selectedTime}</span>
-      </p>
-    </div>
+        <div>
+          <h4 className="text-sm font-medium">Services</h4>
+          <ul className="text-sm mt-1 space-y-1">
+            {tvInstallations.map((tv, index) => (
+              <li key={`tv-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
+                TV {index + 1}: {tv.size === 'large' ? '56" or larger' : '32"-55"'} - {tv.location} 
+                {tv.mountType !== 'none' && ` (${tv.mountType})`}
+                {tv.masonryWall && ' on non-drywall surface'}
+                {tv.outletRelocation && ' with outlet installation'}
+              </li>
+            ))}
+            {smartHomeInstallations.map((device, index) => (
+              <li key={`smart-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
+                {device.type === 'doorbell' ? 'Smart Doorbell' :
+                  device.type === 'floodlight' ? 'Smart Floodlight' :
+                    'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
+                {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
+                  ` at ${device.mountHeight}ft`}
+                {device.type === 'doorbell' && device.brickInstallation && ' (on Brick)'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
 
-    <div>
-      <h3 className="font-medium mb-2">Contact Information</h3>
-      <div className="space-y-1 text-sm">
-        <p>{formData.name}</p>
-        <p>{formData.email}</p>
-        <p>{formData.phone}</p>
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Contact Information</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <h4 className="text-sm font-medium">Name</h4>
+            <p className="text-sm mt-1">{formData.name}</p>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium">Phone</h4>
+            <p className="text-sm mt-1">{formData.phone}</p>
+          </div>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium">Email</h4>
+          <p className="text-sm mt-1">{formData.email}</p>
+        </div>
+      </CardContent>
+    </Card>
 
-    <div>
-      <h3 className="font-medium mb-2">Installation Address</h3>
-      <div className="space-y-1 text-sm">
-        <p>{formData.streetAddress}</p>
-        {formData.addressLine2 && <p>{formData.addressLine2}</p>}
-        <p>{formData.city}, {formData.state} {formData.zipCode}</p>
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Installation Address</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm">
+          {formData.streetAddress}<br />
+          {formData.addressLine2 && <>{formData.addressLine2}<br /></>}
+          {formData.city}, {formData.state} {formData.zipCode}
+        </p>
+      </CardContent>
+    </Card>
 
     {formData.notes && (
-      <div>
-        <h3 className="font-medium mb-2">Additional Notes</h3>
-        <p className="text-sm">{formData.notes}</p>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Special Instructions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm">{formData.notes}</p>
+        </CardContent>
+      </Card>
     )}
+
+    <div className="text-sm space-y-2">
+      <p>
+        By clicking "Confirm Booking", you agree to our <a href="/terms" className="text-primary underline">Terms of Service</a> and acknowledge our <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
+      </p>
+      <p>
+        A ${pricingDeposit} deposit will be collected to confirm your appointment.
+      </p>
+    </div>
   </div>
 ));
 
@@ -324,6 +438,8 @@ export function BookingWizard({
   const [smartHomeInstallations, setSmartHomeInstallations] = useState<SmartHomeInstallation[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [pricingTotal, setPricingTotal] = useState(0);
+  const [pricingDeposit, setPricingDeposit] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -333,12 +449,18 @@ export function BookingWizard({
     city: "",
     state: "",
     zipCode: "",
-    notes: ""
+    notes: "",
+    consentToContact: false
   });
-  // New state to track time slot availability
+  // State to track time slot availability
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
-  // New state for validation errors
+  // State for validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+
+  // Auto-scroll to top when changing steps
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
 
   // Get calendar availability data
   const { isTimeSlotAvailable: checkCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
@@ -360,6 +482,7 @@ export function BookingWizard({
     if (isWeekend) {
       // Weekend slots: 11 AM to 7 PM
       return [
+        "10:00 AM",
         "11:00 AM",
         "12:00 PM",
         "1:00 PM",
@@ -367,11 +490,13 @@ export function BookingWizard({
         "3:00 PM",
         "4:00 PM",
         "5:00 PM",
-        "6:00 PM"
+        "6:00 PM",
+        "7:00 PM"
       ];
     } else {
       // Weekday slots: 6:30 PM to 10:30 PM
       return [
+        "5:30 PM",
         "6:30 PM",
         "7:30 PM",
         "8:30 PM",
@@ -391,7 +516,7 @@ export function BookingWizard({
     );
   }, [existingBookings]);
 
-  // Check time slot availability and update state - now handles async Google Calendar checking
+  // Check time slot availability and update state - handles async Google Calendar checking
   const checkTimeSlotAvailability = useCallback(async (dateString: string, time: string) => {
     // First check our existing bookings (synchronous)
     if (isTimeBooked(dateString, time)) {
@@ -424,7 +549,7 @@ export function BookingWizard({
     }
   }, [isTimeBooked, checkCalendarSlotAvailable]);
 
-  // Check if a time slot is available - now consults the local state for up-to-date availability
+  // Check if a time slot is available - consults the local state for up-to-date availability
   const isTimeSlotAvailable = useCallback((time: string) => {
     if (!selectedDate) return true; // Always available if no date is selected
 
@@ -445,6 +570,12 @@ export function BookingWizard({
   const handleServiceSelect = useCallback((services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
     setTvInstallations(services.tvs);
     setSmartHomeInstallations(services.smartHome);
+  }, []);
+
+  // Update pricing totals
+  const handlePricingUpdate = useCallback((total: number, deposit: number) => {
+    setPricingTotal(total);
+    setPricingDeposit(deposit);
   }, []);
 
   // Validate the customer details form data
@@ -475,6 +606,7 @@ export function BookingWizard({
     return true;
   }, [formData]);
 
+  // Check if user can proceed to next step
   const canProceed = useCallback(() => {
     switch (currentStep) {
       case 0:
@@ -491,60 +623,20 @@ export function BookingWizard({
     }
   }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData]);
 
+  // Handle form submission
   const handleSubmit = useCallback(() => {
-    // Get selected services
-    let serviceDescription = "";
-
-    // TV installations
-    if (tvInstallations.length > 0) {
-      tvInstallations.forEach((tv, index) => {
-        serviceDescription += `TV Mount ${index + 1}: ${tv.size === 'large' ? '56"+' : '32"-55"'} - ${tv.location}`;
-
-        if (tv.mountType !== 'none') {
-          serviceDescription += ` (${tv.mountType})`;
-        }
-
-        if (tv.masonryWall) {
-          serviceDescription += ` (masonry)`;
-        }
-
-        if (tv.outletRelocation) {
-          serviceDescription += ` with outlet relocation`;
-        }
-
-        serviceDescription += ", ";
-      });
-    }
-
-    // Smart home installations
-    if (smartHomeInstallations.length > 0) {
-      smartHomeInstallations.forEach(device => {
-        const deviceName = device.type === 'doorbell' ? 'Smart Doorbell' :
-          device.type === 'floodlight' ? 'Floodlight Camera' : 'Smart Camera';
-
-        serviceDescription += `${deviceName} (${device.quantity})`;
-
-        if (device.type === 'doorbell' && device.brickInstallation) {
-          serviceDescription += " (brick)";
-        }
-
-        if (device.type === 'camera' && device.mountHeight && device.mountHeight > 8) {
-          serviceDescription += ` at ${device.mountHeight}ft`;
-        }
-
-        serviceDescription += ", ";
-      });
-    }
-
-    // Remove trailing comma and space
-    serviceDescription = serviceDescription.replace(/, $/, "");
+    // Create service description using the utility function
+    const serviceDescription = createServiceDescription(tvInstallations, smartHomeInstallations);
 
     // CRITICAL: Store the raw date value without any modification
     // We use yyyy-MM-dd format to ensure the date is preserved exactly as selected
     const rawDateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
 
-    // Store the smartHomeItems list for later use in the price calculation
-    const smartHomeItems = smartHomeInstallations.map(item => item.type);
+    // Create lists of smart home items by type
+    const smartHomeItems = smartHomeInstallations.flatMap(item => 
+      Array(item.quantity).fill(item.type === 'doorbell' ? 'doorbell' : 
+        item.type === 'floodlight' ? 'floodlight' : 'camera')
+    );
 
     // Submit booking data with the raw time and date strings
     onSubmit({
@@ -552,9 +644,11 @@ export function BookingWizard({
       serviceType: serviceDescription,
       preferredDate: rawDateString,
       appointmentTime: selectedTime, // Store raw time string directly
-      smartHomeItems: smartHomeItems // Add this for better tracking of selected services
+      smartHomeItems: smartHomeItems, // Add this for better tracking of selected services
+      pricingTotal: pricingTotal,
+      pricingDeposit: pricingDeposit
     });
-  }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit]);
+  }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit, pricingTotal, pricingDeposit]);
 
   // Use passed bookings or fetched bookings as fallback
   const allBookings = existingBookings.length > 0 ? existingBookings : [];
@@ -579,7 +673,7 @@ export function BookingWizard({
 
   return (
     <div className="space-y-8">
-      {/* Progress Steps - Simplified */}
+      {/* Progress Steps */}
       <div className="flex justify-between">
         {steps.map((step, index) => (
           <div
@@ -588,19 +682,31 @@ export function BookingWizard({
               index < steps.length - 1 ? "flex-1" : ""
             }`}
           >
-            <div
-              className={`w-6 h-6 rounded border flex items-center justify-center ${
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0.5 }}
+              animate={{ 
+                scale: index <= currentStep ? 1 : 0.9,
+                opacity: index <= currentStep ? 1 : 0.5
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 index <= currentStep
-                  ? "border-primary bg-primary text-white"
-                  : "border-gray-300 text-gray-300"
+                  ? "bg-primary text-white"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {index + 1}
+            </motion.div>
+            <div className="ml-2 hidden sm:block">
+              <p className={`text-sm font-medium ${
+                index <= currentStep ? "text-foreground" : "text-muted-foreground"
+              }`}>
+                {step}
+              </p>
             </div>
             {index < steps.length - 1 && (
               <div
-                className={`flex-1 h-[1px] mx-2 ${
-                  index < currentStep ? "bg-primary" : "bg-gray-300"
+                className={`flex-1 h-[2px] mx-2 ${
+                  index < currentStep ? "bg-primary" : "bg-muted"
                 }`}
               />
             )}
@@ -609,8 +715,8 @@ export function BookingWizard({
       </div>
 
       {/* Step Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <Card className="md:col-span-3 p-6">
           {currentStep === 0 && (
             <ServiceSelectionStep
               onServiceSelect={handleServiceSelect}
@@ -650,15 +756,18 @@ export function BookingWizard({
               selectedDate={selectedDate}
               selectedTime={selectedTime}
               formData={formData}
+              pricingTotal={pricingTotal}
+              pricingDeposit={pricingDeposit}
             />
           )}
         </Card>
 
-        <div className="space-y-6">
+        <div className="md:col-span-2 space-y-6">
           <PriceCalculator
             tvs={tvInstallations}
             smartHome={smartHomeInstallations}
-            distance={0}
+            distance={0} // Default distance, could be calculated based on zip code
+            onUpdate={handlePricingUpdate}
           />
 
           <div className="flex justify-between">
@@ -675,7 +784,7 @@ export function BookingWizard({
               disabled={isSubmitting || !canProceed()}
             >
               {isSubmitting
-                ? "Booking..."
+                ? "Processing..."
                 : currentStep === steps.length - 1
                   ? "Confirm Booking"
                   : "Next"}

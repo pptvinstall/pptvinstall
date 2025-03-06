@@ -1,261 +1,164 @@
 import { useState, useEffect } from 'react';
-import { calculatePrice } from './pricing'; // Fixed import name from calculatePricing to calculatePrice
+import { calculatePrice, type ServiceOptions } from './pricing';
+// Import formatPrice function from pricing module - removing the duplicate local definition
+import { formatPrice } from './pricing';
 import type { TVInstallation, SmartHomeInstallation } from '../components/ui/service-wizard';
+
+interface UsePricingResult {
+  total: number;
+  basePrice: number;
+  additionalServices: number;
+  discounts: number;
+  travelFee: number;
+  formattedTotal: string;
+  formattedBasePrice: string;
+  breakdown: Array<{
+    category: string;
+    items: Array<{
+      name: string;
+      price: number;
+      isDiscount?: boolean;
+    }>;
+  }>;
+}
+
+interface UsePricingOptions {
+  includeUnmount?: boolean;
+  includeRemount?: boolean;
+  isHighRise?: boolean;
+  generalLaborHours?: number;
+  travelDistance?: number; // in minutes
+}
 
 export function usePricing(
   tvInstallations: TVInstallation[], 
-  smartHomeInstallations: SmartHomeInstallation[]
-) {
-  const [pricing, setPricing] = useState({
+  smartHomeInstallations: SmartHomeInstallation[],
+  options: UsePricingOptions = {}
+): UsePricingResult {
+  const [pricingResult, setPricingResult] = useState<UsePricingResult>({
+    total: 0,
     basePrice: 0,
-    mountPrice: 0,
     additionalServices: 0,
-    travelFee: 0,
     discounts: 0,
-    total: 0
+    travelFee: 0,
+    formattedTotal: formatPrice(0),
+    formattedBasePrice: formatPrice(0),
+    breakdown: []
   });
 
   useEffect(() => {
-    const serviceType = formatServiceType(tvInstallations, smartHomeInstallations);
-    const calculatedPricing = calculatePrice(serviceType); // Changed function name to match import
-    setPricing(calculatedPricing);
-  }, [tvInstallations, smartHomeInstallations]);
+    // Convert installation data to service options format
+    const serviceOptions: ServiceOptions = {
+      tvCount: tvInstallations.length,
+      tvMountSurface: tvInstallations.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
+      isFireplace: tvInstallations.some(tv => tv.location === 'fireplace'),
+      isHighRise: options.isHighRise || false,
+      outletCount: tvInstallations.filter(tv => tv.outletRelocation).length,
+      smartCameras: smartHomeInstallations.filter(item => item.type === 'camera')
+                     .reduce((sum, item) => sum + item.quantity, 0),
+      smartDoorbells: smartHomeInstallations.filter(item => item.type === 'doorbell')
+                       .reduce((sum, item) => sum + item.quantity, 0),
+      smartFloodlights: smartHomeInstallations.filter(item => item.type === 'floodlight')
+                         .reduce((sum, item) => sum + item.quantity, 0),
+      generalLaborHours: options.generalLaborHours || 0,
+      needsUnmount: options.includeUnmount || false,
+      needsRemount: options.includeRemount || false,
+      travelDistance: options.travelDistance || 0
+    };
 
-  return pricing;
+    // Calculate pricing
+    const calculatedPricing = calculatePrice(serviceOptions);
+
+    // Format currency values
+    setPricingResult({
+      ...calculatedPricing,
+      formattedTotal: formatPrice(calculatedPricing.total),
+      formattedBasePrice: formatPrice(calculatedPricing.basePrice)
+    });
+  }, [tvInstallations, smartHomeInstallations, options]);
+
+  return pricingResult;
 }
 
-function formatServiceType(
+// Utility function to create a human-readable service description from installations
+export function createServiceDescription(
   tvInstallations: TVInstallation[], 
   smartHomeInstallations: SmartHomeInstallation[]
 ): string {
-  const parts: string[] = []; // Added explicit type annotation
+  const parts: string[] = [];
 
-  tvInstallations.forEach((tv, index) => {
-    const size = tv.size === 'large' ? '56" or larger' : '32"-55"';
-    const mountType = tv.mountType !== 'none' ? ` ${tv.mountType}` : '';
-    const masonry = tv.masonryWall ? ' masonry' : '';
-    const outlet = tv.outletRelocation ? ' outlet' : '';
-    const fireplace = tv.location === 'fireplace' ? ' fireplace' : '';
+  // Process TV installations
+  if (tvInstallations.length > 0) {
+    const tvParts = tvInstallations.map((tv, index) => {
+      let description = `TV ${index + 1} (${tv.size === 'large' ? '56" or larger' : '32"-55"'})`;
 
-    parts.push(`${index + 1} TV ${size}${mountType}${masonry}${outlet}${fireplace}`);
-  });
-
-  smartHomeInstallations.forEach(device => {
-    if (device.type === 'doorbell') {
-      const brick = device.brickInstallation ? ' brick' : '';
-      parts.push(`Smart Doorbell${brick}`);
-    } else if (device.type === 'camera') {
-      parts.push(`Smart Camera height-${device.mountHeight}`);
-    } else if (device.type === 'floodlight') {
-      parts.push('Floodlight');
-    }
-  });
-
-  return parts.join(' + ');
-}
-// Function to format price consistently
-export function formatPrice(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-}
-
-// Duplicate of server-side function to handle service type parsing on client side
-export function parseServiceType(serviceType: string): { services: string[], price: number, serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] } {
-  const serviceParts = serviceType.split(' + ');
-  let totalPrice = 0;
-  const services: string[] = [];
-  let tvCount = 0;
-
-  // First pass to count TVs for multi-TV discount
-  serviceParts.forEach(part => {
-    if (part.includes('TV')) {
-      const tvMatch = part.match(/(\d+)\s*TV/);
-      tvCount += tvMatch ? parseInt(tvMatch[1]) : 1;
-    }
-  });
-
-  const serviceBreakdown: {title:string, items: {label:string, price:number, isDiscount?:boolean}[]}[] = [];
-
-  for (const part of serviceParts) {
-    // Trim the part to ensure consistent detection
-    const trimmedPart = part.trim();
-
-    if (trimmedPart.includes('TV')) {
-      const tvMatch = trimmedPart.match(/(\d+)\s*TV/);
-      const count = tvMatch ? parseInt(tvMatch[1]) : 1;
-      const isLarge = trimmedPart.toLowerCase().includes('56"') || trimmedPart.toLowerCase().includes('larger');
-      const hasOutlet = trimmedPart.toLowerCase().includes('outlet');
-      const hasFireplace = trimmedPart.toLowerCase().includes('fireplace');
-      const mountType = trimmedPart.toLowerCase().includes('fixed') ? 'Fixed Mount' :
-                       trimmedPart.toLowerCase().includes('tilt') ? 'Tilt Mount' :
-                       trimmedPart.toLowerCase().includes('full-motion') ? 'Full-Motion Mount' : 'Standard Mount';
-
-      // Create service title
-      const title = `TV ${serviceBreakdown.filter(s => s.title.includes('TV')).length + 1} (${isLarge ? '56" or larger' : '32"-55"'})`;
-      services.push(title);
-
-      const items = [
-        {
-          label: 'Base Installation (standard)',
-          price: 100
-        }
-      ];
-
-      // Add mount pricing if specified
-      if (mountType !== 'Standard Mount') {
-        const mountPrice = isLarge ? 
-          (mountType === 'Fixed Mount' ? 60 : 
-           mountType === 'Tilt Mount' ? 70 : 100) :
-          (mountType === 'Fixed Mount' ? 40 : 
-           mountType === 'Tilt Mount' ? 50 : 80);
-
-        items.push({
-          label: mountType,
-          price: mountPrice
-        });
-        totalPrice += mountPrice;
+      if (tv.location === 'fireplace') {
+        description += ' - Fireplace Mount';
+      } else if (tv.location === 'ceiling') {
+        description += ' - Ceiling Mount';
+      } else {
+        description += ' - Standard Mount';
       }
 
-      if (hasOutlet) {
-        items.push({
-          label: 'Outlet Relocation',
-          price: 100
-        });
-        totalPrice += 100;
+      if (tv.mountType !== 'none') {
+        description += ` (${tv.mountType})`;
       }
 
-      if (hasFireplace) {
-        items.push({
-          label: 'Fireplace Installation',
-          price: 50
-        });
-        totalPrice += 50;
+      if (tv.masonryWall) {
+        description += ' - Non-Drywall Surface';
       }
 
-      serviceBreakdown.push({ title, items });
-      totalPrice += 100; // Base installation
-    }
-
-    // Smart Home Services parsing - note the use of trimmedPart
-    else if (trimmedPart.includes('Smart Doorbell')) {
-      const title = 'Smart Doorbell';
-      const hasBrick = trimmedPart.toLowerCase().includes('brick');
-      services.push(title);
-
-      const items = [
-        {
-          label: 'Base Installation (1 unit)',
-          price: 75
-        }
-      ];
-
-      if (hasBrick) {
-        items.push({
-          label: 'Brick Installation',
-          price: 10
-        });
-        totalPrice += 10;
+      if (tv.outletRelocation) {
+        description += ' with Outlet Installation';
       }
 
-      serviceBreakdown.push({ title, items });
-      totalPrice += 75;
-    }
-
-    else if (trimmedPart.includes('Floodlight') || trimmedPart.toLowerCase().includes('smart floodlight')) {
-      const title = 'Smart Floodlight';
-      services.push(title);
-
-      serviceBreakdown.push({
-        title,
-        items: [
-          {
-            label: 'Base Installation (1 unit)',
-            price: 100
-          }
-        ]
-      });
-      totalPrice += 100;
-    }
-
-    else if ((trimmedPart.includes('Smart Camera') || trimmedPart.toLowerCase().includes('camera')) && 
-             !trimmedPart.includes('Floodlight') && !trimmedPart.toLowerCase().includes('floodlight')) {
-      const heightMatch = trimmedPart.match(/height-(\d+)/);
-      const mountHeight = heightMatch ? parseInt(heightMatch[1]) : 8;
-      const title = 'Smart Camera';
-      services.push(title);
-
-      const items = [
-        {
-          label: 'Base Installation (1 unit)',
-          price: 75
-        }
-      ];
-
-      if (mountHeight > 8) {
-        const heightFee = Math.floor((mountHeight - 8) / 4) * 25;
-        items.push({
-          label: `Height Installation Fee (${mountHeight}ft)`,
-          price: heightFee
-        });
-        totalPrice += heightFee;
-      }
-
-      serviceBreakdown.push({ title, items });
-      totalPrice += 75;
-    }
-
-    // Handle "Smart Home Services" general selection
-    else if (trimmedPart.toLowerCase().includes('smart home service') || 
-             trimmedPart.toLowerCase().includes('smart home installation')) {
-      // This catches any smart home services that weren't caught by specific categories
-      const title = 'Smart Home Installation';
-      services.push(title);
-
-      serviceBreakdown.push({
-        title,
-        items: [
-          {
-            label: 'Smart Home Base Installation',
-            price: 75
-          }
-        ]
-      });
-      totalPrice += 75;
-    }
-  }
-
-  // Apply multi-TV discount if applicable
-  if (tvCount > 1) {
-    services.push('Multi-TV Discount');
-    serviceBreakdown.push({
-      title: 'Multi-TV Discount',
-      items: [
-        {
-          label: 'Multi-TV Installation Discount',
-          price: -10,
-          isDiscount: true
-        }
-      ]
+      return description;
     });
-    totalPrice -= 10;
+
+    parts.push(tvParts.join(', '));
   }
 
-  // Make sure we have at least one service
-  if (services.length === 0) {
-    services.push('Standard Installation');
-    serviceBreakdown.push({
-      title: 'Standard Installation',
-      items: [
-        {
-          label: 'Base Service',
-          price: 75
-        }
-      ]
-    });
-    totalPrice += 75;
-  }
+  // Process Smart Home installations
+  const smartHomeMap = {
+    camera: { name: 'Smart Camera', details: (item: SmartHomeInstallation) => 
+      item.mountHeight && item.mountHeight > 8 ? ` at ${item.mountHeight}ft` : '' 
+    },
+    doorbell: { name: 'Smart Doorbell', details: (item: SmartHomeInstallation) => 
+      item.brickInstallation ? ' on Brick' : '' 
+    },
+    floodlight: { name: 'Smart Floodlight', details: () => '' }
+  };
 
-  return { services, price: totalPrice, serviceBreakdown };
+  // Group similar smart home items
+  const smartHomeGroups = smartHomeInstallations.reduce((groups, item) => {
+    if (!groups[item.type]) {
+      groups[item.type] = [];
+    }
+    groups[item.type].push(item);
+    return groups;
+  }, {} as Record<string, SmartHomeInstallation[]>);
+
+  // Format each smart home group
+  Object.entries(smartHomeGroups).forEach(([type, items]) => {
+    if (items.length === 0) return;
+
+    const typeKey = type as keyof typeof smartHomeMap;
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+    if (totalQuantity === 0) return;
+
+    const itemDetails = items.map(item => {
+      if (item.quantity <= 0) return '';
+      return `${smartHomeMap[typeKey].name}${item.quantity > 1 ? ` (${item.quantity})` : ''}${smartHomeMap[typeKey].details(item)}`;
+    }).filter(Boolean);
+
+    if (itemDetails.length > 0) {
+      parts.push(itemDetails.join(', '));
+    }
+  });
+
+  return parts.join('; ');
 }
+
+// Export formatPrice function from pricing module
+export { formatPrice } from './pricing';
