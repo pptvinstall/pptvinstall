@@ -7,7 +7,6 @@ import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
 import { googleCalendarService } from "./services/googleCalendarService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
-import { sendBookingConfirmationSMS } from "./services/smsService";
 
 // Load bookings from storage
 ensureDataDirectory();
@@ -151,6 +150,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add endpoint to manage business hours and blocked time slots
+  app.post("/api/admin/availability", async (req, res) => {
+    try {
+      const { password, action, data } = req.body;
+
+      // Verify admin password
+      if (password !== adminPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid password" 
+        });
+      }
+
+      switch (action) {
+        case 'blockTimeSlot':
+          // Block a specific time slot
+          const { date, startTime, endTime, reason } = data;
+          await googleCalendarService.blockTimeSlot(date, startTime, endTime, reason);
+          break;
+
+        case 'setBusinessHours':
+          // Set business hours for specific days
+          const { businessHours } = data;
+          await googleCalendarService.setBusinessHours(businessHours);
+          break;
+
+        default:
+          return res.status(400).json({
+            success: false,
+            message: "Invalid action specified"
+          });
+      }
+
+      res.json({
+        success: true,
+        message: "Availability updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating availability:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update availability"
+      });
+    }
+  });
+
   // Booking endpoints
   app.post("/api/booking", async (req, res) => {
     try {
@@ -217,18 +262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileBookings.push(bookingWithId);
       saveBookings(fileBookings);
 
-      // Send confirmation email and SMS
+      // Send confirmation email
       try {
         if (process.env.SENDGRID_API_KEY) {
           await sendBookingConfirmationEmail(bookingWithId);
           await sendAdminBookingNotificationEmail(bookingWithId);
           console.log("Confirmation emails sent successfully");
-        }
-
-        // Send SMS confirmation
-        if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-          await sendBookingConfirmationSMS(bookingWithId);
-          console.log("Confirmation SMS sent successfully");
         }
       } catch (error) {
         console.error("Error sending notifications:", error);

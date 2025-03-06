@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "name": "Justin",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4047024748",
+    "streetAddress": "4359 oakleaf cove ",
+    "addressLine2": "",
+    "city": "Decatur ",
+    "state": "GA",
+    "zipCode": "30034",
+    "notes": "",
+    "serviceType": "Smart Doorbell; Smart Floodlight; Smart Camera",
+    "preferredDate": "2025-03-06",
+    "appointmentTime": "5:30 PM",
+    "status": "active",
+    "pricingTotal": 285,
+    "pricingBreakdown": [
+      {
+        "type": "doorbell",
+        "quantity": 1,
+        "brickInstallation": false
+      },
+      {
+        "type": "floodlight",
+        "quantity": 1
+      },
+      {
+        "type": "camera",
+        "quantity": 1,
+        "mountHeight": 8
+      }
+    ],
+    "id": "59",
+    "createdAt": "2025-03-06T22:26:39.043Z"
+  }
+]
