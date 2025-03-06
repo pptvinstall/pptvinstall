@@ -29,9 +29,9 @@ const Navigation: React.FC = () => {
         <div className="md:hidden">
           {/* Mobile menu button would go here */}
         </div>
-        <Button onClick={() => window.location.href = "tel:1234567890"}>
+        <Button onClick={() => window.location.href = "tel:+16782632859"}>
           <PhoneCall className="mr-2 h-4 w-4" />
-          Call Now
+          (678) 263-2859
         </Button>
       </div>
     </nav>
