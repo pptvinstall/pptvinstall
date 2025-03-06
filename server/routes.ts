@@ -7,6 +7,7 @@ import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
 import { googleCalendarService } from "./services/googleCalendarService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
+import { sendBookingConfirmationSMS } from "./services/smsService";
 
 // Load bookings from storage
 ensureDataDirectory();
@@ -216,17 +217,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileBookings.push(bookingWithId);
       saveBookings(fileBookings);
 
-      // Send confirmation email
+      // Send confirmation email and SMS
       try {
         if (process.env.SENDGRID_API_KEY) {
           await sendBookingConfirmationEmail(bookingWithId);
           await sendAdminBookingNotificationEmail(bookingWithId);
-
           console.log("Confirmation emails sent successfully");
         }
-      } catch (emailError) {
-        console.error("Error sending confirmation email:", emailError);
-        // We don't want to fail the booking if the email fails
+
+        // Send SMS confirmation
+        if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+          await sendBookingConfirmationSMS(bookingWithId);
+          console.log("Confirmation SMS sent successfully");
+        }
+      } catch (error) {
+        console.error("Error sending notifications:", error);
+        // We don't want to fail the booking if notifications fail
       }
 
       // Return success response

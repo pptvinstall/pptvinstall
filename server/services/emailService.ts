@@ -130,25 +130,16 @@ function getHtmlConfirmation(booking: any): string {
       border-radius: 0 0 8px 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .appointment-details {
+    .appointment-details, .location-details, .next-steps, .pricing-details {
       background-color: #f0f9ff;
       padding: 20px;
       border-radius: 8px;
       margin: 20px 0;
       border-left: 4px solid #3b82f6;
     }
-    .location-details {
-      background-color: #f0f9ff;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      border-left: 4px solid #3b82f6;
-    }
-    .next-steps {
-      background-color: #f0f9ff;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
+    .pricing-details {
+      background-color: #f0fff4;
+      border-left-color: #059669;
     }
     .next-steps ul {
       list-style-type: none;
@@ -182,6 +173,11 @@ function getHtmlConfirmation(booking: any): string {
     h1 { margin: 0; font-size: 24px; }
     h2 { color: #1e40af; font-size: 20px; margin-top: 0; }
     .highlight { color: #1e40af; font-weight: bold; }
+    .price { 
+      font-size: 24px;
+      color: #059669;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -199,6 +195,14 @@ function getHtmlConfirmation(booking: any): string {
       <p><strong>Date:</strong> ${formattedDate}</p>
       <p><strong>Time:</strong> ${booking.appointmentTime}</p>
       <p><strong>Service:</strong> ${booking.serviceType}</p>
+    </div>
+
+    <div class="pricing-details">
+      <h2>💰 Estimated Price</h2>
+      <p class="price">${booking.pricingTotal || 'To be determined'}</p>
+      <p class="text-sm" style="color: #666; font-size: 14px;">
+        This is an estimate. Final price may vary based on additional services or special requirements.
+      </p>
     </div>
 
     <div class="location-details">
