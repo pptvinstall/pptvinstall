@@ -124,6 +124,9 @@ export class GoogleCalendarService {
 const GOOGLE_CALENDAR_ID = import.meta.env.VITE_GOOGLE_CALENDAR_ID || '';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
 
+console.log('Client API Key Present:', !!GOOGLE_API_KEY);
+console.log('Client Calendar ID Present:', !!GOOGLE_CALENDAR_ID);
+
 // Export a singleton instance
 export const googleCalendarService = new GoogleCalendarService(
   GOOGLE_CALENDAR_ID,

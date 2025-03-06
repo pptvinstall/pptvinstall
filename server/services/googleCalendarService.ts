@@ -118,8 +118,12 @@ export class GoogleCalendarService {
 }
 
 // Get API keys from environment variables
-const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || '';
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
+// Get API keys from environment variables
+const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || process.env.VITE_GOOGLE_CALENDAR_ID || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY || '';
+
+console.log('API Key Present:', !!GOOGLE_API_KEY);
+console.log('Calendar ID Present:', !!GOOGLE_CALENDAR_ID);
 
 // Create and export a singleton instance
 export const googleCalendarService = new GoogleCalendarService(
