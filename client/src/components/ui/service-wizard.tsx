@@ -82,7 +82,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       type,
       quantity: 1,
       ...(type === 'doorbell' ? { brickInstallation: false } : {}),
-      ...(type === 'camera' ? { mountHeight: 8 } : {})
+      ...(type === 'camera' ? { mountHeight: 1 } : {})
     }]);
   };
 
@@ -584,13 +584,13 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateSmartHomeInstallation(index, {
-                          mountHeight: Math.max(8, (installation.mountHeight || 8) - 1)
+                          mountHeight: Math.max(1, (installation.mountHeight || 1) - 1)
                         })}
                       >
                         <MinusCircle className="h-4 w-4" />
                       </Button>
                       <div className="w-12 text-center font-medium">
-                        {installation.mountHeight || 8}
+                        {installation.mountHeight || 1}
                       </div>
                       <Button
                         type="button"
@@ -598,14 +598,14 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateSmartHomeInstallation(index, {
-                          mountHeight: Math.min(20, (installation.mountHeight || 8) + 1)
+                          mountHeight: Math.min(20, (installation.mountHeight || 1) + 1)
                         })}
                       >
                         <PlusCircle className="h-4 w-4" />
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      +$25 per additional 4 feet above 8 feet
+                      Height surcharge: +$25 per additional 4 feet above 8 feet
                     </p>
                   </div>
                 )}
