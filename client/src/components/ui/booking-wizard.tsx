@@ -54,9 +54,19 @@ export function BookingWizard({
     zipCode: "",
     notes: ""
   });
+  // New state to track time slot availability
+  const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
 
   // Get calendar availability data
-  const { isTimeSlotAvailable: isCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
+  const { isTimeSlotAvailable: checkCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
+
+  // Effect to update availabilities when date changes
+  useEffect(() => {
+    if (selectedDate) {
+      // Reset availability when date changes
+      setTimeSlotAvailability({});
+    }
+  }, [selectedDate]);
 
   // Generate time slots based on day of week
   const getTimeSlots = (date: Date | undefined) => {
@@ -100,19 +110,55 @@ export function BookingWizard({
     );
   };
 
-  // Check if a time slot is available - now also checks Google Calendar
+  // Check time slot availability and update state - now handles async Google Calendar checking
+  const checkTimeSlotAvailability = async (dateString: string, time: string) => {
+    // First check our existing bookings (synchronous)
+    if (isTimeBooked(dateString, time)) {
+      setTimeSlotAvailability(prev => ({
+        ...prev,
+        [`${dateString}-${time}`]: false
+      }));
+      return false;
+    }
+
+    try {
+      // Then check Google Calendar availability (async)
+      const isAvailable = await checkCalendarSlotAvailable(dateString, time);
+
+      // Update the state with the result
+      setTimeSlotAvailability(prev => ({
+        ...prev,
+        [`${dateString}-${time}`]: isAvailable
+      }));
+
+      return isAvailable;
+    } catch (error) {
+      console.error("Error checking time slot availability:", error);
+      // Default to available if there's an error
+      setTimeSlotAvailability(prev => ({
+        ...prev,
+        [`${dateString}-${time}`]: true
+      }));
+      return true;
+    }
+  };
+
+  // Check if a time slot is available - now consults the local state for up-to-date availability
   const isTimeSlotAvailable = (time: string) => {
     if (!selectedDate) return true; // Always available if no date is selected
 
     const dateString = format(selectedDate, 'yyyy-MM-dd');
+    const key = `${dateString}-${time}`;
 
-    // First check our existing bookings
-    if (isTimeBooked(dateString, time)) {
-      return false;
+    // If we haven't checked this slot yet, trigger a check and default to unknown (showing loading state)
+    if (timeSlotAvailability[key] === undefined) {
+      // Trigger an async check that will update the state
+      checkTimeSlotAvailability(dateString, time);
+      return undefined; // Return undefined to indicate "checking"
     }
 
-    // Then check Google Calendar availability
-    return isCalendarSlotAvailable(dateString, time);
+    // Return the known availability
+    return timeSlotAvailability[key];
   };
 
   const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
@@ -288,20 +334,26 @@ export function BookingWizard({
                     <div className="text-center py-4">Loading availability...</div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      {timeSlots.map((time) => (
-                        <TimeSlot
-                          key={time}
-                          time={time}
-                          available={isTimeSlotAvailable(time)}
-                          selected={selectedTime === time}
-                          onClick={() => {
-                            if (isTimeSlotAvailable(time)) {
-                              setSelectedTime(time);
-                              console.log("Time selected (raw string):", time);
-                            }
-                          }}
-                        />
-                      ))}
+                      {timeSlots.map((time) => {
+                        // Get availability status (true, false, or undefined if checking)
+                        const availability = isTimeSlotAvailable(time);
+
+                        return (
+                          <TimeSlot
+                            key={time}
+                            time={time}
+                            available={availability !== false} // Show as available while checking
+                            selected={selectedTime === time}
+                            loading={availability === undefined} // Show loading state if undefined
+                            onClick={() => {
+                              if (availability !== false) { // Allow selection if not definitely unavailable
+                                setSelectedTime(time);
+                                console.log("Time selected (raw string):", time);
+                              }
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
