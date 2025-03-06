@@ -1,3 +1,5 @@
+// Import process polyfill first to avoid "process is not defined" errors
+import './process-polyfill';
 import { google, calendar_v3 } from 'googleapis';
 
 // Define the interface for unavailable time slots
