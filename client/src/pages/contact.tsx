@@ -167,7 +167,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <h3 className="font-bold text-blue-700">Phone</h3>
-                      <p className="text-gray-600">(678) 263-2859</p>
+                      <p className="text-gray-600">+16782632859</p>
                     </div>
                   </div>
                 </CardContent>

@@ -134,7 +134,7 @@ export default function BookingConfirmation() {
       const breakdown = [];
 
       // Process TV installations
-      const tvItems = bookingData.pricingBreakdown.filter(item => 
+      const tvItems = bookingData.pricingBreakdown.filter(item =>
         item.type === 'tv' && !item.isUnmountOnly && !item.isRemountOnly
       );
 
@@ -539,7 +539,7 @@ export default function BookingConfirmation() {
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground">
               A confirmation email has been sent to {bookingData.email}. If you have any questions,
-              please contact us at (678) 263-2859.
+              please contact us at +16782632859.
             </p>
           </div>
         </CardContent>
