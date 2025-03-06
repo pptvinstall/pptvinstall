@@ -381,6 +381,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoints
+  // Default admin password (for development only, should use env var in production)
+  let adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+
+  // Admin login
+  app.post("/api/admin/login", (req, res) => {
+    const { password } = req.body;
+
+    if (password === adminPassword) {
+      res.json({ 
+        success: true, 
+        message: "Login successful" 
+      });
+    } else {
+      res.status(401).json({ 
+        success: false, 
+        message: "Invalid password" 
+      });
+    }
+  });
+
+  // Reset admin password
+  app.post("/api/admin/reset-password", (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    // Verify current password
+    if (currentPassword !== adminPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Current password is incorrect" 
+      });
+    }
+
+    // Update password
+    adminPassword = newPassword;
+
+    res.json({ 
+      success: true, 
+      message: "Password updated successfully" 
+    });
+  });
+
+  // Clear all bookings
+  app.post("/api/admin/clear-bookings", async (req, res) => {
+    try {
+      const { password } = req.body;
+
+      // Verify admin password
+      if (password !== adminPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid password" 
+        });
+      }
+
+      // Clear bookings from database
+      await db.delete(bookings);
+
+      // Clear bookings from file storage
+      fileBookings = [];
+      saveBookings(fileBookings);
+
+      res.json({ 
+        success: true, 
+        message: "All bookings have been cleared" 
+      });
+    } catch (error) {
+      console.error("Error clearing bookings:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to clear bookings"
+      });
+    }
+  });
+
   //Simplified logging middleware
   app.use((req, res, next) => {
     const start = Date.now();

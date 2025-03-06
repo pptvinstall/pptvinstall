@@ -16,22 +16,48 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Booking } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [activeTab, setActiveTab] = useState("bookings");
   const { toast } = useToast();
 
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/bookings"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/bookings");
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
-      return response.json() as Promise<Booking[]>;
+      const data = await response.json();
+      return data.bookings || [];
     },
     enabled: isAuthenticated
   });
@@ -55,6 +81,56 @@ export default function AdminDashboard() {
       toast({
         title: "Login failed",
         description: "Invalid password",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
+      const response = await apiRequest("POST", "/api/admin/reset-password", { currentPassword, newPassword });
+      if (!response.ok) {
+        throw new Error('Failed to reset password');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password reset successful",
+        description: "Your admin password has been updated.",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: () => {
+      toast({
+        title: "Password reset failed",
+        description: "Failed to reset password. Please check your current password.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const clearBookingsMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const response = await apiRequest("POST", "/api/admin/clear-bookings", { password });
+      if (!response.ok) {
+        throw new Error('Failed to clear bookings');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        title: "Bookings cleared",
+        description: "All bookings have been successfully cleared.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to clear bookings",
+        description: "Could not clear bookings. Please verify your password.",
         variant: "destructive"
       });
     }
@@ -139,6 +215,25 @@ export default function AdminDashboard() {
     loginMutation.mutate(password);
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "New password and confirmation password must match.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    resetPasswordMutation.mutate({ currentPassword, newPassword });
+  };
+
+  const handleClearBookings = async () => {
+    clearBookingsMutation.mutate(password);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -172,150 +267,241 @@ export default function AdminDashboard() {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Recent Bookings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Loading bookings...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      {format(new Date(booking.preferredDate), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>{format(new Date(booking.preferredDate), "h:mm a")}</TableCell>
-                    <TableCell>{booking.name}</TableCell>
-                    <TableCell>{booking.serviceType}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p>{booking.phone}</p>
-                        <p className="text-sm text-gray-500">{booking.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p>{booking.streetAddress}</p>
-                        {booking.addressLine2 && (
-                          <p>{booking.addressLine2}</p>
-                        )}
-                        <p className="text-sm text-gray-500">
-                          {booking.city}, {booking.state} {booking.zipCode}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-sm ${
-                        booking.status === 'cancelled' 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {booking.status || 'active'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedBooking(booking)}
-                        >
-                          Edit
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-red-50 text-red-600 hover:bg-red-100"
-                            >
-                              Cancel
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to cancel this booking? This will send a cancellation email to the customer.
-                                <div className="mt-4">
-                                  <Textarea
-                                    placeholder="Enter cancellation reason (optional)"
-                                    value={cancellationReason}
-                                    onChange={(e) => setCancellationReason(e.target.value)}
-                                    className="mt-2"
-                                  />
-                                </div>
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>No, keep booking</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => {
-                                  cancelBookingMutation.mutate({
-                                    id: booking.id,
-                                    reason: cancellationReason
-                                  });
-                                }}
-                              >
-                                Yes, cancel booking
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+        <TabsList className="mb-4">
+          <TabsTrigger value="bookings">Bookings</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
+        <TabsContent value="bookings">
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>Recent Bookings</span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">Clear All Bookings</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Bookings</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action will permanently delete all bookings. Are you sure?
+                        <div className="mt-4">
+                          <Input
+                            type="password"
+                            placeholder="Confirm with admin password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={handleClearBookings}
+                      >
+                        Clear All Bookings
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8">Loading bookings...</div>
+              ) : bookings.length === 0 ? (
+                <div className="text-center py-8">No bookings found.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell>
+                          {booking.preferredDate ? format(new Date(booking.preferredDate), "MMM d, yyyy") : "N/A"}
+                        </TableCell>
+                        <TableCell>{booking.appointmentTime}</TableCell>
+                        <TableCell>{booking.name}</TableCell>
+                        <TableCell>{booking.serviceType}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p>{booking.phone}</p>
+                            <p className="text-sm text-gray-500">{booking.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p>{booking.streetAddress}</p>
+                            {booking.addressLine2 && (
+                              <p>{booking.addressLine2}</p>
+                            )}
+                            <p className="text-sm text-gray-500">
+                              {booking.city}, {booking.state} {booking.zipCode}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-sm ${
+                            booking.status === 'cancelled' 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {booking.status || 'active'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="bg-red-100 text-red-800 hover:bg-red-200"
+                              onClick={() => setSelectedBooking(booking)}
                             >
-                              Delete
+                              Edit
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Booking</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this booking? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>No, keep booking</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => deleteBookingMutation.mutate(booking.id)}
-                              >
-                                Yes, delete booking
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-red-50 text-red-600 hover:bg-red-100"
+                                >
+                                  Cancel
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to cancel this booking? This will send a cancellation email to the customer.
+                                    <div className="mt-4">
+                                      <Textarea
+                                        placeholder="Enter cancellation reason (optional)"
+                                        value={cancellationReason}
+                                        onChange={(e) => setCancellationReason(e.target.value)}
+                                        className="mt-2"
+                                      />
+                                    </div>
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>No, keep booking</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => {
+                                      cancelBookingMutation.mutate({
+                                        id: parseInt(booking.id as string),
+                                        reason: cancellationReason
+                                      });
+                                    }}
+                                  >
+                                    Yes, cancel booking
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-red-100 text-red-800 hover:bg-red-200"
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this booking? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>No, keep booking</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => deleteBookingMutation.mutate(parseInt(booking.id as string))}
+                                  >
+                                    Yes, delete booking
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium">Change Admin Password</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Current Password</label>
+                      <Input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">New Password</label>
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Confirm New Password</label>
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit"
+                    disabled={resetPasswordMutation.isPending || !currentPassword || !newPassword || !confirmPassword}
+                  >
+                    {resetPasswordMutation.isPending ? "Updating..." : "Update Password"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Drawer open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
         <DrawerContent>
@@ -377,14 +563,13 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Preferred Date</label>
+                  <label className="text-sm font-medium">Appointment Time</label>
                   <Input
-                    type="datetime-local"
-                    value={format(new Date(selectedBooking.preferredDate), "yyyy-MM-dd'T'HH:mm")}
+                    value={selectedBooking.appointmentTime}
                     onChange={(e) =>
                       setSelectedBooking({
                         ...selectedBooking,
-                        preferredDate: e.target.value,
+                        appointmentTime: e.target.value,
                       })
                     }
                   />
@@ -398,7 +583,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 if (selectedBooking) {
                   updateBookingMutation.mutate({
-                    id: selectedBooking.id,
+                    id: parseInt(selectedBooking.id as string),
                     data: selectedBooking,
                   });
                 }
