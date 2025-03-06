@@ -10,7 +10,13 @@ import { PriceCalculator } from "./price-calculator"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 import { format } from "date-fns"
-import { useQuery } from '@tanstack/react-query'; // Assuming you're using react-query
+import { useQuery } from '@tanstack/react-query';
+import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
+
+// Add environment variables
+const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const GOOGLE_CALENDAR_ID = import.meta.env.VITE_GOOGLE_CALENDAR_ID;
+
 
 const steps = [
   "Choose Services",
@@ -48,6 +54,9 @@ export function BookingWizard({
     zipCode: "",
     notes: ""
   });
+
+  // Get calendar availability data
+  const { isTimeSlotAvailable: isCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
 
   // Generate time slots based on day of week
   const getTimeSlots = (date: Date | undefined) => {
@@ -91,10 +100,19 @@ export function BookingWizard({
     );
   };
 
+  // Check if a time slot is available - now also checks Google Calendar
   const isTimeSlotAvailable = (time: string) => {
-    if (!selectedDate) return true; //Always available if no date is selected.
+    if (!selectedDate) return true; // Always available if no date is selected
+
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    return !isTimeBooked(dateString, time);
+
+    // First check our existing bookings
+    if (isTimeBooked(dateString, time)) {
+      return false;
+    }
+
+    // Then check Google Calendar availability
+    return isCalendarSlotAvailable(dateString, time);
   };
 
   const handleServiceSelect = (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
@@ -194,7 +212,7 @@ export function BookingWizard({
 
   // Use passed bookings or fetched bookings as fallback
   const allBookings = existingBookings.length > 0 ? existingBookings : [];
-  const isBookingsLoading = isLoadingBookings;
+  const isBookingsLoading = isLoadingBookings || isCalendarLoading;
 
   return (
     <div className="space-y-8">
@@ -266,7 +284,7 @@ export function BookingWizard({
                   className="space-y-2"
                 >
                   <h3 className="font-medium">Available Time Slots</h3>
-                  {isLoadingBookings ? (
+                  {isBookingsLoading ? (
                     <div className="text-center py-4">Loading availability...</div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
