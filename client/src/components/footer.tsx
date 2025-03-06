@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'wouter';
 
@@ -30,7 +29,7 @@ const Footer: React.FC = () => {
             <p className="text-muted-foreground">
               Atlanta, GA<br />
               Email: info@pictureperfecttv.com<br />
-              Phone: (404) 123-4567
+              Phone: (678) 263-2859
             </p>
           </div>
         </div>

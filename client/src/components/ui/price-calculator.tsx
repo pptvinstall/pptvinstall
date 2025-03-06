@@ -2,8 +2,6 @@ import * as React from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
-import { Switch } from "./switch"
-import { Label } from "./label"
 import { pricing, calculatePrice, formatPrice, type ServiceOptions } from "@/lib/pricing"
 import type { TVInstallation, SmartHomeInstallation } from "./service-wizard"
 
@@ -29,9 +27,6 @@ export function PriceCalculator({
 }: PriceCalculatorProps) {
   // Keep track of user-toggled options
   const [options, setOptions] = React.useState({
-    needsUnmount: additionalOptions.needsUnmount || false,
-    needsRemount: additionalOptions.needsRemount || false,
-    isHighRise: additionalOptions.isHighRise || false,
     generalLaborHours: additionalOptions.generalLaborHours || 0
   });
 
@@ -42,14 +37,14 @@ export function PriceCalculator({
       tvCount: tvs.length,
       tvMountSurface: tvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
       isFireplace: tvs.some(tv => tv.location === 'fireplace'),
-      isHighRise: options.isHighRise,
+      isHighRise: tvs.some(tv => tv.highRise),
       outletCount: tvs.filter(tv => tv.outletRelocation).length,
       smartCameras: smartHome.filter(item => item.type === 'camera').reduce((sum, item) => sum + item.quantity, 0),
       smartDoorbells: smartHome.filter(item => item.type === 'doorbell').reduce((sum, item) => sum + item.quantity, 0),
       smartFloodlights: smartHome.filter(item => item.type === 'floodlight').reduce((sum, item) => sum + item.quantity, 0),
       generalLaborHours: options.generalLaborHours,
-      needsUnmount: options.needsUnmount,
-      needsRemount: options.needsRemount,
+      needsUnmount: tvs.some(tv => tv.unmount),
+      needsRemount: tvs.some(tv => tv.remount),
       travelDistance: distance
     };
 
@@ -88,60 +83,6 @@ export function PriceCalculator({
               {index < pricingData.breakdown.length - 1 && <Separator />}
             </div>
           ))}
-
-          {/* Additional options that the user can toggle */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-lg">Additional Options</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="high-rise">High-Rise Building / Steel Studs</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Additional {formatPrice(pricing.tvMounting.highRise)} for specialized anchors and drill bits
-                  </p>
-                </div>
-                <Switch
-                  id="high-rise"
-                  checked={options.isHighRise}
-                  onCheckedChange={(checked) => {
-                    setOptions(prev => ({ ...prev, isHighRise: checked }));
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="unmount">TV Unmounting</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Additional {formatPrice(pricing.tvMounting.unmount)} to remove an existing TV
-                  </p>
-                </div>
-                <Switch
-                  id="unmount"
-                  checked={options.needsUnmount}
-                  onCheckedChange={(checked) => {
-                    setOptions(prev => ({ ...prev, needsUnmount: checked }));
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="remount">TV Remounting</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Additional {formatPrice(pricing.tvMounting.remount)} if the mount is already on the wall
-                  </p>
-                </div>
-                <Switch
-                  id="remount"
-                  checked={options.needsRemount}
-                  onCheckedChange={(checked) => {
-                    setOptions(prev => ({ ...prev, needsRemount: checked }));
-                  }}
-                />
-              </div>
-            </div>
-          </div>
 
           <Separator />
 

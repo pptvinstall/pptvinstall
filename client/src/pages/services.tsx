@@ -55,7 +55,7 @@ const tvServices = [
 const smartHomeServices = [
   {
     title: "Smart Doorbell",
-    price: "From $75",
+    price: "$85",
     description: "Professional smart doorbell installation",
     features: [
       "Proper wiring setup",
@@ -81,7 +81,7 @@ const smartHomeServices = [
   },
   {
     title: "Floodlight",
-    price: "$100",
+    price: "$125",
     description: "Smart floodlight camera installation",
     features: [
       "Professional wiring",

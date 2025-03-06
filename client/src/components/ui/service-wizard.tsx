@@ -15,6 +15,9 @@ export type TVInstallation = {
   mountType: 'fixed' | 'tilt' | 'fullMotion' | 'none';
   masonryWall: boolean;
   outletRelocation: boolean;
+  highRise: boolean;
+  unmount: boolean;
+  remount: boolean;
 };
 
 export type SmartHomeInstallation = {
@@ -51,7 +54,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       location: 'standard',
       mountType: 'none',
       masonryWall: false,
-      outletRelocation: false
+      outletRelocation: false,
+      highRise: false,
+      unmount: false,
+      remount: false
     }]);
   };
 
@@ -84,6 +90,20 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
     ));
   };
 
+  const addTVUnmountingOnly = () => {
+    // Add TV unmounting service without a mounting service
+    setTvInstallations(prev => [...prev, {
+      size: 'small',
+      location: 'standard',
+      mountType: 'none',
+      masonryWall: false,
+      outletRelocation: false,
+      highRise: false,
+      unmount: true,
+      remount: false
+    }]);
+  };
+
   // Whether we have any services selected
   const hasSelectionsToConfirm = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
 
@@ -96,10 +116,14 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             {tvInstallations.map((tv, index) => (
               <div key={`tv-${index}`} className="flex justify-between items-center">
                 <span>
-                  TV {index + 1}: {tv.size === 'large' ? '56"+' : '32"-55"'} - {tv.location} Mount
-                  {tv.mountType !== 'none' && ` (${tv.mountType})`}
+                  {tv.unmount && !tv.location && !tv.size && !tv.mountType ? 'TV Unmounting Only' : 
+                  `TV ${index + 1}: ${tv.size === 'large' ? '56"+' : '32"-55"'} - ${tv.location} Mount
+                  ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
                   {tv.masonryWall && ' (Masonry)'}
+                  {tv.highRise && ' (High-Rise/Steel Studs)'}
                   {tv.outletRelocation && ' (Outlet Relocation)'}
+                  {tv.unmount && ' + Unmounting'}
+                  {tv.remount && ' + Remounting'}
                 </span>
                 <Button
                   variant="ghost"
@@ -135,7 +159,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   <div>
                     <span className="font-medium">
                       {device.type === 'doorbell' ? 'Smart Doorbell' : 
-                      device.type === 'floodlight' ? 'Floodlight Camera' : 
+                      device.type === 'floodlight' ? 'Smart Floodlight' : 
                       'Smart Camera'}
                       {device.quantity > 1 && ` (${device.quantity})`}
                     </span>
@@ -168,14 +192,25 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         </TabsList>
 
         <TabsContent value="services" className="space-y-6">
-          <Button
-            variant="outline"
-            onClick={addTvInstallation}
-            className="w-full py-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add a TV to Mount
-          </Button>
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant="outline"
+              onClick={addTvInstallation}
+              className="w-full py-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add a TV to Mount
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={addTVUnmountingOnly}
+              className="w-full py-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add TV Unmounting Only
+            </Button>
+          </div>
 
           {tvInstallations.map((installation, index) => (
             <motion.div
@@ -185,7 +220,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               className="bg-card border rounded-lg p-6 space-y-6"
             >
               <div className="flex justify-between items-center">
-                <h4 className="text-lg font-semibold">TV {index + 1}</h4>
+                <h4 className="text-lg font-semibold">
+                  {installation.unmount && !installation.location && !installation.size && !installation.mountType ? 
+                  'TV Unmounting Only' : `TV ${index + 1}`}
+                </h4>
                 {tvInstallations.length > 1 && (
                   <Button
                     variant="ghost"
@@ -198,155 +236,205 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 )}
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <h5 className="text-sm font-medium mb-3">TV Size</h5>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant={installation.size === 'small' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { size: 'small' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">32" - 55"</div>
-                        <div className="text-xs text-muted-foreground mt-1">Small TV</div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.size === 'large' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { size: 'large' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">56" or larger</div>
-                        <div className="text-xs text-muted-foreground mt-1">Large TV</div>
-                      </div>
-                    </Button>
+              {/* Only show TV mounting options if not "unmounting only" */}
+              {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && (
+                <div className="space-y-6">
+                  <div>
+                    <h5 className="text-sm font-medium mb-3">TV Size</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        variant={installation.size === 'small' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { size: 'small' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">32" - 55"</div>
+                          <div className="text-xs text-muted-foreground mt-1">Small TV</div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.size === 'large' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { size: 'large' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">56" or larger</div>
+                          <div className="text-xs text-muted-foreground mt-1">Large TV</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 className="text-sm font-medium mb-3">Mounting Location</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Button
+                        variant={installation.location === 'standard' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { location: 'standard' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Standard Wall</div>
+                          <div className="text-xs text-muted-foreground mt-1">$100</div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.location === 'fireplace' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { location: 'fireplace' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Above Fireplace</div>
+                          <div className="text-xs text-muted-foreground mt-1">$200</div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.location === 'ceiling' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { location: 'ceiling' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Ceiling Mount</div>
+                          <div className="text-xs text-muted-foreground mt-1">$175</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 className="text-sm font-medium mb-3">Mount Type (Optional)</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        variant={installation.mountType === 'fixed' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { mountType: 'fixed' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Fixed Mount</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {installation.size === 'small' ? '$40' : '$60'}
+                          </div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.mountType === 'tilt' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { mountType: 'tilt' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Tilt Mount</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {installation.size === 'small' ? '$50' : '$70'}
+                          </div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.mountType === 'fullMotion' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { mountType: 'fullMotion' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">Full Motion</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {installation.size === 'small' ? '$80' : '$100'}
+                          </div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={installation.mountType === 'none' ? 'default' : 'outline'}
+                        onClick={() => updateTvInstallation(index, { mountType: 'none' })}
+                        className="h-auto py-3 px-4"
+                      >
+                        <div className="text-center">
+                          <div className="font-medium">No Mount</div>
+                          <div className="text-xs text-muted-foreground mt-1">Customer Provided</div>
+                        </div>
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <h5 className="text-sm font-medium mb-3">Mounting Location</h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Button
-                      variant={installation.location === 'standard' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { location: 'standard' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Standard Wall</div>
-                        <div className="text-xs text-muted-foreground mt-1">$100</div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.location === 'fireplace' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { location: 'fireplace' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Above Fireplace</div>
-                        <div className="text-xs text-muted-foreground mt-1">+$100</div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.location === 'ceiling' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { location: 'ceiling' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Ceiling Mount</div>
-                        <div className="text-xs text-muted-foreground mt-1">$175</div>
-                      </div>
-                    </Button>
+              <div>
+                <h5 className="text-sm font-medium mb-3">Additional Options</h5>
+                <div className="space-y-4">
+                  {/* Surface type options */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={installation.masonryWall}
+                      onCheckedChange={(checked) =>
+                        updateTvInstallation(index, { masonryWall: checked })
+                      }
+                    />
+                    <Label>Non-Drywall Installation (+$50)<br/>
+                      <span className="text-sm text-muted-foreground">
+                        Includes brick, concrete, stone, tile, or siding
+                      </span>
+                    </Label>
                   </div>
-                </div>
 
-                <div>
-                  <h5 className="text-sm font-medium mb-3">Mount Type (Optional)</h5>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant={installation.mountType === 'fixed' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { mountType: 'fixed' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Fixed Mount</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {installation.size === 'small' ? '$40' : '$60'}
-                        </div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.mountType === 'tilt' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { mountType: 'tilt' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Tilt Mount</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {installation.size === 'small' ? '$50' : '$70'}
-                        </div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.mountType === 'fullMotion' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { mountType: 'fullMotion' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Full Motion</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {installation.size === 'small' ? '$80' : '$100'}
-                        </div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={installation.mountType === 'none' ? 'default' : 'outline'}
-                      onClick={() => updateTvInstallation(index, { mountType: 'none' })}
-                      className="h-auto py-3 px-4"
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">No Mount</div>
-                        <div className="text-xs text-muted-foreground mt-1">Customer Provided</div>
-                      </div>
-                    </Button>
+                  {/* High-rise/steel studs option - positioned right after masonry */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={installation.highRise}
+                      onCheckedChange={(checked) =>
+                        updateTvInstallation(index, { highRise: checked })
+                      }
+                    />
+                    <Label>High-Rise Building / Steel Studs (+$25)<br/>
+                      <span className="text-sm text-muted-foreground">
+                        Additional fee for specialized anchors and drill bits
+                      </span>
+                    </Label>
                   </div>
-                </div>
 
-                <div>
-                  <h5 className="text-sm font-medium mb-3">Additional Options</h5>
-                  <div className="space-y-4">
+                  {/* Only show outlet relocation option for non-fireplace installs */}
+                  {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && installation.location !== 'fireplace' && (
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={installation.masonryWall}
+                        checked={installation.outletRelocation}
                         onCheckedChange={(checked) =>
-                          updateTvInstallation(index, { masonryWall: checked })
+                          updateTvInstallation(index, { outletRelocation: checked })
                         }
                       />
-                      <Label>Non-Drywall Installation (+$50)<br/>
-                        <span className="text-sm text-muted-foreground">
-                          Includes brick, concrete, stone, tile, or siding
-                        </span>
-                      </Label>
+                      <Label>Outlet Relocation (+$100)</Label>
                     </div>
+                  )}
 
-                    {installation.location !== 'fireplace' && (
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={installation.outletRelocation}
-                          onCheckedChange={(checked) =>
-                            updateTvInstallation(index, { outletRelocation: checked })
-                          }
-                        />
-                        <Label>Outlet Relocation (+$100)</Label>
-                      </div>
-                    )}
+                  {/* Fireplace warning note */}
+                  {!(installation.unmount && !installation.location && !installation.size && !installation.mountType) && installation.location === 'fireplace' && (
+                    <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
+                      Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
+                    </div>
+                  )}
 
-                    {installation.location === 'fireplace' && (
-                      <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
-                        Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
-                      </div>
-                    )}
+                  {/* Unmounting and Remounting options - available for all TV services */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={installation.unmount}
+                      onCheckedChange={(checked) =>
+                        updateTvInstallation(index, { unmount: checked })
+                      }
+                    />
+                    <Label>TV Unmounting (+$50)<br/>
+                      <span className="text-sm text-muted-foreground">
+                        Remove your existing TV from its current location
+                      </span>
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={installation.remount}
+                      onCheckedChange={(checked) =>
+                        updateTvInstallation(index, { remount: checked })
+                      }
+                    />
+                    <Label>TV Remounting (+$50)<br/>
+                      <span className="text-sm text-muted-foreground">
+                        If the mount is already on the wall and matching arms are provided
+                      </span>
+                    </Label>
                   </div>
                 </div>
               </div>
@@ -363,7 +451,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             >
               <div className="text-center">
                 <div className="font-medium">Smart Doorbell</div>
-                <div className="text-xs text-muted-foreground mt-1">From $75</div>
+                <div className="text-xs text-muted-foreground mt-1">$85</div>
               </div>
             </Button>
             <Button
@@ -373,7 +461,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             >
               <div className="text-center">
                 <div className="font-medium">Floodlight</div>
-                <div className="text-xs text-muted-foreground mt-1">$100</div>
+                <div className="text-xs text-muted-foreground mt-1">$125</div>
               </div>
             </Button>
             <Button
@@ -383,7 +471,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             >
               <div className="text-center">
                 <div className="font-medium">Smart Camera</div>
-                <div className="text-xs text-muted-foreground mt-1">From $75</div>
+                <div className="text-xs text-muted-foreground mt-1">$75</div>
               </div>
             </Button>
           </div>
@@ -458,8 +546,8 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
                 <div className="text-sm text-muted-foreground mt-2">
                   Base Price: {
-                    installation.type === 'doorbell' ? '$75' :
-                      installation.type === 'floodlight' ? '$100' :
+                    installation.type === 'doorbell' ? '$85' :
+                      installation.type === 'floodlight' ? '$125' :
                         '$75'
                   }
                 </div>
