@@ -14,7 +14,7 @@ import { Label } from "./label"
 import { format } from "date-fns"
 import { useQuery } from '@tanstack/react-query';
 import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
-import { createServiceDescription } from "@/lib/use-pricing"; // Added import for the new function
+import { createServiceDescription } from "@/lib/use-pricing";
 import { bookingSchema } from "@shared/schema";
 
 // Environment variables
@@ -288,15 +288,15 @@ const CustomerDetailsStep = React.memo(({
     </div>
 
     <div className="flex items-start space-x-2">
-      <Checkbox 
-        id="consent" 
+      <Checkbox
+        id="consent"
         checked={formData.consentToContact}
-        onCheckedChange={(checked) => 
+        onCheckedChange={(checked) =>
           setFormData({ ...formData, consentToContact: checked === true })
         }
       />
-      <Label 
-        htmlFor="consent" 
+      <Label
+        htmlFor="consent"
         className="text-sm leading-tight"
       >
         I consent to receive text messages about my appointment details, promotions, and service updates.
@@ -347,17 +347,19 @@ const ReviewBookingStep = React.memo(({
           <ul className="text-sm mt-1 space-y-1">
             {tvInstallations.map((tv, index) => (
               <li key={`tv-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
-                TV {index + 1}: {tv.size === 'large' ? '56" or larger' : '32"-55"'} - {tv.location} 
-                {tv.mountType !== 'none' && ` (${tv.mountType})`}
-                {tv.masonryWall && ' on non-drywall surface'}
-                {tv.outletRelocation && ' with outlet installation'}
+                {tv.isUnmountOnly ? 'TV Unmounting Only' :
+                  tv.isRemountOnly ? 'TV Remounting Only' :
+                    `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} 
+                     ${tv.mountType !== 'none' && ` (${tv.mountType})`}
+                     ${tv.masonryWall && ' on non-drywall surface'}
+                     ${tv.outletRelocation && ' with outlet installation'}`}
               </li>
             ))}
             {smartHomeInstallations.map((device, index) => (
               <li key={`smart-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
                 {device.type === 'doorbell' ? 'Smart Doorbell' :
                   device.type === 'floodlight' ? 'Smart Floodlight' :
-                    'Smart Camera'} {device.quantity > 1 && `(${device.quantity})`}
+                    'Smart Camera'} {device.quantity > 1 && `(×${device.quantity})`}
                 {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
                   ` at ${device.mountHeight}ft`}
                 {device.type === 'doorbell' && device.brickInstallation && ' (on Brick)'}
@@ -626,8 +628,8 @@ export function BookingWizard({
     const rawDateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
 
     // Create lists of smart home items by type
-    const smartHomeItems = smartHomeInstallations.flatMap(item => 
-      Array(item.quantity).fill(item.type === 'doorbell' ? 'doorbell' : 
+    const smartHomeItems = smartHomeInstallations.flatMap(item =>
+      Array(item.quantity).fill(item.type === 'doorbell' ? 'doorbell' :
         item.type === 'floodlight' ? 'floodlight' : 'camera')
     );
 
@@ -645,7 +647,10 @@ export function BookingWizard({
         location: tv.location,
         mountType: tv.mountType,
         masonryWall: tv.masonryWall,
-        outletRelocation: tv.outletRelocation
+        outletRelocation: tv.outletRelocation,
+        highRise: tv.highRise,
+        isUnmountOnly: tv.isUnmountOnly || false,
+        isRemountOnly: tv.isRemountOnly || false
       })).concat(
         smartHomeInstallations.map(item => ({
           type: item.type,
@@ -691,7 +696,7 @@ export function BookingWizard({
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0.5 }}
-              animate={{ 
+              animate={{
                 scale: index <= currentStep ? 1 : 0.9,
                 opacity: index <= currentStep ? 1 : 0.5
               }}

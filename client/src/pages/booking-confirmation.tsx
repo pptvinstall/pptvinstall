@@ -134,7 +134,10 @@ export default function BookingConfirmation() {
       const breakdown = [];
 
       // Process TV installations
-      const tvItems = bookingData.pricingBreakdown.filter(item => item.type === 'tv');
+      const tvItems = bookingData.pricingBreakdown.filter(item => 
+        item.type === 'tv' && !item.isUnmountOnly && !item.isRemountOnly
+      );
+
       if (tvItems.length > 0) {
         breakdown.push({
           category: 'TV Mounting',
