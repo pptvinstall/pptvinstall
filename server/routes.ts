@@ -148,9 +148,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, booking });
   });
 
+  //Simplified logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const path = req.path;
+
+    res.on("finish", () => {
+      if (path.startsWith("/api")) {
+        const duration = Date.now() - start;
+        log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+      }
+    });
+
+    next();
+  });
+
   // Create and return HTTP server
   const http = await import("http");
   const server = http.createServer(app);
 
   return server;
 }
+
+const log = (message: string) => {
+  console.log(message);
+};

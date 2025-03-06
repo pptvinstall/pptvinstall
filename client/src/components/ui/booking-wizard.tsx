@@ -262,7 +262,7 @@ export function BookingWizard({
 
   return (
     <div className="space-y-8">
-      {/* Progress Steps */}
+      {/* Progress Steps - Simplified */}
       <div className="flex justify-between">
         {steps.map((step, index) => (
           <div
@@ -272,7 +272,7 @@ export function BookingWizard({
             }`}
           >
             <div
-              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+              className={`w-6 h-6 rounded border flex items-center justify-center ${
                 index <= currentStep
                   ? "border-primary bg-primary text-white"
                   : "border-gray-300 text-gray-300"
@@ -282,7 +282,7 @@ export function BookingWizard({
             </div>
             {index < steps.length - 1 && (
               <div
-                className={`flex-1 h-[2px] mx-2 ${
+                className={`flex-1 h-[1px] mx-2 ${
                   index < currentStep ? "bg-primary" : "bg-gray-300"
                 }`}
               />

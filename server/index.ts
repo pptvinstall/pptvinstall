@@ -6,14 +6,9 @@ import compression from 'compression';
 const app = express();
 // Compress all responses for better performance
 app.use(compression({ 
-  level: 6, // Balance between compression speed and ratio
-  threshold: 0, // Compress all responses
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  }
+  level: 4, // Lower compression level for faster processing
+  threshold: 1024, // Only compress responses larger than 1KB
+  filter: compression.filter
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

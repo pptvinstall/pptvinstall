@@ -1,7 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useLocation } from "wouter"; 
 import { Button } from "@/components/ui/button";
@@ -29,9 +26,6 @@ export default function BookingPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      // Log the exact data being submitted to help debugging
-      console.log("Submitting booking data:", data);
-      console.log("Selected time (exact value):", data.appointmentTime);
 
       // Use simple fetch instead of apiRequest to directly handle response
       const response = await fetch('/api/booking', {
@@ -109,23 +103,13 @@ export default function BookingPage() {
   return (
     <div className="py-12">
       <div className="container mx-auto px-4">
-        <motion.div
-          className="max-w-6xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Book Your Installation</h1>
             <p className="text-xl text-gray-600">
               Schedule your TV mounting or smart home installation service
             </p>
-          </motion.div>
+          </div>
 
           <BookingWizard
             onSubmit={(data) => mutation.mutate(data)}
@@ -133,7 +117,7 @@ export default function BookingPage() {
             existingBookings={existingBookings}
             isLoadingBookings={isLoadingBookings}
           />
-        </motion.div>
+        </div>
       </div>
     </div>
   );

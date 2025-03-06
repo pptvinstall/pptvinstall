@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,41 +21,21 @@ export default function Dashboard() {
     },
   });
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
-  };
 
   return (
     <div className="py-12">
       <div className="container mx-auto px-4">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
+        <div
           className="max-w-6xl mx-auto"
         >
-          <motion.div 
+          <div 
             className="text-center mb-8"
-            variants={itemVariants}
           >
             <h1 className="text-4xl font-bold mb-2">Your Dashboard</h1>
             <p className="text-xl text-gray-600">
               Manage your TV mounting appointments
             </p>
-          </motion.div>
+          </div>
 
           <Tabs defaultValue="upcoming" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
@@ -66,8 +45,7 @@ export default function Dashboard() {
             </TabsList>
 
             <TabsContent value="upcoming">
-              <motion.div 
-                variants={containerVariants}
+              <div 
                 className="grid gap-6"
               >
                 {isLoading ? (
@@ -81,7 +59,7 @@ export default function Dashboard() {
                 ) : bookings?.filter(booking => 
                     new Date(booking.preferredDate) > new Date()
                   ).map((booking) => (
-                  <motion.div key={booking.id} variants={itemVariants}>
+                  <div key={booking.id}>
                     <Card>
                       <CardHeader>
                         <CardTitle>
@@ -114,14 +92,13 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             </TabsContent>
 
             <TabsContent value="past">
-              <motion.div 
-                variants={containerVariants}
+              <div 
                 className="grid gap-6"
               >
                 {isLoading ? (
@@ -135,7 +112,7 @@ export default function Dashboard() {
                 ) : bookings?.filter(booking => 
                     new Date(booking.preferredDate) <= new Date()
                   ).map((booking) => (
-                  <motion.div key={booking.id} variants={itemVariants}>
+                  <div key={booking.id}>
                     <Card>
                       <CardHeader>
                         <CardTitle>
@@ -158,9 +135,9 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             </TabsContent>
 
             <TabsContent value="calendar">
@@ -176,7 +153,7 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
           </Tabs>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
