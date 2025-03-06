@@ -8,6 +8,7 @@ import { Label } from "./label"
 import { Input } from "./input"
 import { Card } from "./card"
 import { Separator } from "./separator"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu"
 
 export type TVInstallation = {
   size: 'small' | 'large';
@@ -134,75 +135,58 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       {(tvInstallations.length > 0 || smartHomeInstallations.length > 0) && (
         <Card className="p-4">
           <h3 className="font-medium mb-3">Selected Services</h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             {tvInstallations.map((tv, index) => (
-              <div key={`tv-${index}`} className="flex justify-between items-center">
+              <div key={`tv-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
                 <span>
                   {tv.isUnmountOnly ? 'TV Unmounting Only' : 
                    tv.isRemountOnly ? 'TV Remounting Only' :
-                   `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? ` (${tv.mountType})` : ''}`}
-                  {tv.masonryWall && ' (Non-Drywall Surface)'}
-                  {tv.highRise && ' (High-Rise/Steel Studs)'}
-                  {tv.outletRelocation && ' (Outlet Relocation)'}
-                  {tv.unmount && !tv.isUnmountOnly && ' + Unmounting'}
-                  {tv.remount && !tv.isRemountOnly && ' + Remounting'}
+                   `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
+                  {tv.masonryWall && ' • Non-Drywall Surface'}
+                  {tv.highRise && ' • High-Rise/Steel Studs'}
+                  {tv.outletRelocation && ' • Outlet Installation'}
+                  {tv.unmount && !tv.isUnmountOnly && ' • With Unmounting'}
+                  {tv.remount && !tv.isRemountOnly && ' • With Remounting'}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => removeTvInstallation(index)}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 ml-2"
+                  aria-label="Remove service"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-            <div className="space-y-3">
+
             {smartHomeInstallations.map((device, index) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-muted/60 hover:bg-muted/80 border border-muted rounded-md transition-colors">
-                <div className="flex items-center gap-3">
-                  {device.type === 'doorbell' && (
-                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M17 13V7M17 7V1M17 7H11M17 7H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+              <div key={`smart-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {device.type === 'doorbell' ? 'Smart Doorbell' : 
+                     device.type === 'floodlight' ? 'Smart Floodlight' : 
+                     'Smart Camera'}
+                    {device.quantity > 1 && ` (×${device.quantity})`}
+                  </span>
+                  {(device.type === 'camera' && device.mountHeight && device.mountHeight > 8) && (
+                    <span className="text-xs text-muted-foreground">• {device.mountHeight}ft height</span>
                   )}
-                  {device.type === 'floodlight' && (
-                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 3V5M5.64 5.64L7.05 7.05M18.36 5.64L16.95 7.05M12 21V18M4 13H2M22 13H20M6 13C6 9.68629 8.68629 7 12 7C15.3137 7 18 9.68629 18 13C18 14.6569 17.3284 16.1569 16.2426 17.2426L15 20H9L7.75736 17.2426C6.67157 16.1569 6 14.6569 6 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  {(device.type === 'doorbell' && device.brickInstallation) && (
+                    <span className="text-xs text-muted-foreground">• Brick installation</span>
                   )}
-                  {device.type === 'camera' && (
-                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M23 19V8C23 6.89543 22.1046 6 21 6H3C1.89543 6 1 6.89543 1 8V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                  <div>
-                    <span className="font-medium">
-                      {device.type === 'doorbell' ? 'Smart Doorbell' : 
-                      device.type === 'floodlight' ? 'Smart Floodlight' : 
-                      'Smart Camera'}
-                      {device.quantity > 1 && ` (×${device.quantity})`}
-                    </span>
-                    <div className="text-xs text-muted-foreground">
-                      {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
-                        `Mount height: ${device.mountHeight}ft`}
-                      {device.type === 'doorbell' && device.brickInstallation && 'Brick installation'}
-                    </div>
-                  </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => removeSmartHomeInstallation(index)}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                  className="h-7 w-7 p-0 ml-2"
+                  aria-label="Remove service"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-          </div>
           </div>
         </Card>
       )}
@@ -214,34 +198,22 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         </TabsList>
 
         <TabsContent value="services" className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Button
-              variant="outline"
-              onClick={addTvInstallation}
-              className="w-full py-6"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add a TV to Mount
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={addTVUnmountingOnly}
-              className="w-full py-6"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add TV Unmounting Only
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={addTVRemountingOnly}
-              className="w-full py-6"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add TV Remounting Only
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full py-6 flex flex-col items-center"
+              >
+                <Plus className="h-5 w-5 mb-2" />
+                <span className="text-center">Add TV Mounting</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={addTvInstallation}>Add TV Mounting</DropdownMenuItem>
+              <DropdownMenuItem onClick={addTVUnmountingOnly}>Add TV Unmounting Only</DropdownMenuItem>
+              <DropdownMenuItem onClick={addTVRemountingOnly}>Add TV Remounting Only</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {tvInstallations.map((installation, index) => (
             <motion.div
@@ -400,7 +372,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           }
                         />
                         <Label>Non-Drywall Installation (+$50)<br/>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             Includes brick, concrete, stone, tile, or siding
                           </span>
                         </Label>
@@ -415,7 +387,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                           }
                         />
                         <Label>High-Rise Building / Steel Studs (+$25)<br/>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             Additional fee for specialized anchors and drill bits
                           </span>
                         </Label>
@@ -430,14 +402,14 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                               updateTvInstallation(index, { outletRelocation: checked })
                             }
                           />
-                          <Label>Outlet Relocation (+$100)</Label>
+                          <Label>Outlet Installation (+$100)</Label>
                         </div>
                       )}
 
                       {/* Fireplace warning note */}
                       {installation.location === 'fireplace' && (
                         <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
-                          Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
+                          Note: For outlet installation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
                         </div>
                       )}
                     </div>
@@ -458,7 +430,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         }
                       />
                       <Label>TV Unmounting (+$50)<br/>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           Remove your existing TV from its current location
                         </span>
                       </Label>
@@ -472,7 +444,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         }
                       />
                       <Label>TV Remounting (+$50)<br/>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           If the mount is already on the wall and matching arms are provided
                         </span>
                       </Label>
@@ -483,16 +455,16 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
               {/* For unmounting-only, show a price info callout */}
               {installation.isUnmountOnly && (
-                <div className="text-sm p-3 bg-muted rounded-lg">
-                  <p className="mb-1 font-medium">TV Unmounting Only</p>
+                <div className="text-sm p-4 bg-muted rounded-lg">
+                  <p className="font-medium mb-2">TV Unmounting Only Service</p>
                   <p className="text-muted-foreground">$50 per TV - Our team will safely remove your TV from its current mount or stand.</p>
                 </div>
               )}
 
               {/* For remounting-only, show a price info callout */}
               {installation.isRemountOnly && (
-                <div className="text-sm p-3 bg-muted rounded-lg">
-                  <p className="mb-1 font-medium">TV Remounting Only</p>
+                <div className="text-sm p-4 bg-muted rounded-lg">
+                  <p className="font-medium mb-2">TV Remounting Only Service</p>
                   <p className="text-muted-foreground">$50 per TV - Our team will mount your TV to an existing bracket on the wall (matching arms must be provided).</p>
                 </div>
               )}
@@ -501,11 +473,11 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         </TabsContent>
 
         <TabsContent value="smarthome" className="space-y-6">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('doorbell')}
-              className="h-auto py-3 px-4"
+              className="h-auto py-4 px-4 flex flex-col items-center"
             >
               <div className="text-center">
                 <div className="font-medium">Smart Doorbell</div>
@@ -515,17 +487,17 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('floodlight')}
-              className="h-auto py-3 px-4"
+              className="h-auto py-4 px-4 flex flex-col items-center"
             >
               <div className="text-center">
-                <div className="font-medium">Floodlight</div>
+                <div className="font-medium">Smart Floodlight</div>
                 <div className="text-xs text-muted-foreground mt-1">$125</div>
               </div>
             </Button>
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('camera')}
-              className="h-auto py-3 px-4"
+              className="h-auto py-4 px-4 flex flex-col items-center"
             >
               <div className="text-center">
                 <div className="font-medium">Smart Camera</div>
@@ -559,8 +531,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
-                  <Label>Quantity:</Label>
+                  <Label htmlFor={`quantity-${index}`} className="w-20">Quantity:</Label>
                   <Input
+                    id={`quantity-${index}`}
                     type="number"
                     min="1"
                     value={installation.quantity}
@@ -583,8 +556,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
                 {installation.type === 'camera' && (
                   <div className="space-y-2">
-                    <Label>Mount Height (feet)</Label>
+                    <Label htmlFor={`height-${index}`}>Mount Height (feet)</Label>
                     <Input
+                      id={`height-${index}`}
                       type="number"
                       min="8"
                       step="1"
@@ -594,20 +568,31 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       })}
                       className="w-full"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       +$25 per additional 4 feet above 8 feet
-                      <span className="ml-1 cursor-help" 
-                            title="Each additional 4 feet of height incurs a $25 charge for additional hardware and safety measures">ⓘ</span>
                     </p>
                   </div>
                 )}
 
-                <div className="text-sm text-muted-foreground mt-2">
-                  Base Price: {
+                <div className="mt-4 p-3 bg-muted rounded-md">
+                  <h5 className="font-medium text-sm mb-1">Base Price</h5>
+                  <p className="text-lg font-semibold">{
                     installation.type === 'doorbell' ? '$85' :
                       installation.type === 'floodlight' ? '$125' :
                         '$75'
-                  }
+                  }{installation.quantity > 1 ? ` × ${installation.quantity}` : ''}
+                  </p>
+
+                  {/* Additional fees display */}
+                  {((installation.type === 'doorbell' && installation.brickInstallation) || 
+                    (installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8)) && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {installation.type === 'doorbell' && installation.brickInstallation && 
+                        `+ $10${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Brick Installation)`}
+                      {installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8 &&
+                        `+ $${Math.ceil((installation.mountHeight - 8) / 4) * 25}${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Height Surcharge)`}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

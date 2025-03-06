@@ -81,17 +81,17 @@ export function PriceCalculator({
               <h3 className="font-medium text-lg">{category.category}</h3>
               <div className="space-y-1">
                 {category.items.map((item, itemIndex) => (
-                  <div key={itemIndex} className={`flex justify-between items-center ${item.isDiscount ? "text-green-600" : ""}`}>
-                    <span>{item.name}</span>
-                    <span>{formatPrice(item.price)}</span>
+                  <div key={itemIndex} className={`flex justify-between items-center ${item.isDiscount ? "text-green-600 dark:text-green-500" : ""}`}>
+                    <span className="text-sm">{item.name}</span>
+                    <span className="font-medium">{formatPrice(item.price)}</span>
                   </div>
                 ))}
               </div>
-              {index < pricingData.breakdown.length - 1 && <Separator />}
+              {index < pricingData.breakdown.length - 1 && <Separator className="my-4" />}
             </div>
           ))}
 
-          <Separator />
+          <Separator className="my-4" />
 
           {/* Total without deposit */}
           <div className="space-y-2">
@@ -101,7 +101,7 @@ export function PriceCalculator({
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground italic">
+          <div className="text-xs text-muted-foreground italic mt-2">
             * Prices are estimates. Final pricing may vary based on site conditions.
           </div>
         </motion.div>
