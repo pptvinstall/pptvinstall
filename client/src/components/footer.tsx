@@ -25,33 +25,6 @@ const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="font-bold text-xl mb-4 text-blue-700">Contact Info</h3>
-            <div className="flex flex-col gap-2 text-gray-600">
-              <p className="flex items-center gap-2">
-                <span className="text-blue-600">📞</span>
-                404-702-4748
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-blue-600">📧</span>
-                pptvinstall@gmail.com
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-blue-600">🕒</span>
-                Mon-Fri: 6:30PM-10:30PM
-              </p>
-              <p className="ml-6">Sat-Sun: 11AM-7PM</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-12 pt-8 border-t border-blue-100 text-center text-gray-600">
-          <p>© {new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
-  );
-}
-<div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <p className="text-muted-foreground">
               Atlanta, GA<br />
@@ -62,12 +35,10 @@ const Footer: React.FC = () => {
         </div>
         <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.
-        </div>reground">
-          &copy; {new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.
         </div>
       </div>
     </footer>
   );
 };
 
-export default Footer;lt Footer;
+export default Footer;
