@@ -20,12 +20,14 @@ export default function BookingPage() {
         console.error(`Error fetching bookings: ${response.status}`);
         return [];
       }
-      return response.json();
+      const data = await response.json();
+      return data.bookings || [];
     }
   });
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Booking mutation received data:", data);
 
       // Use simple fetch instead of apiRequest to directly handle response
       const response = await fetch('/api/booking', {
@@ -36,14 +38,17 @@ export default function BookingPage() {
         body: JSON.stringify(data),
       });
 
+      console.log("API response status:", response.status);
+
+      // Parse response JSON
+      const responseData = await response.json();
+      console.log("API response data:", responseData);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create booking');
+        throw new Error(responseData.message || 'Failed to create booking');
       }
 
-      const result = await response.json();
-      console.log("Booking success response:", result);
-      return result;
+      return responseData;
     },
     onSuccess: (data) => {
       // Store the booking data and ID in session storage for retrieval
@@ -90,11 +95,15 @@ export default function BookingPage() {
         description: "You will receive a confirmation email shortly.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Booking error:", error);
+
+      // Show more detailed error message if available
+      const errorMessage = error.message || "There was an error processing your booking.";
+
       toast({
         title: "Booking failed",
-        description: "There was an error processing your booking.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

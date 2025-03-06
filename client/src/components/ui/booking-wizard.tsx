@@ -620,12 +620,15 @@ export function BookingWizard({
 
   // Handle form submission
   const handleSubmit = useCallback(() => {
+    console.log("Starting booking submission");
     // Create service description using the utility function
     const serviceDescription = createServiceDescription(tvInstallations, smartHomeInstallations);
 
     // CRITICAL: Store the raw date value without any modification
     // We use yyyy-MM-dd format to ensure the date is preserved exactly as selected
     const rawDateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+    console.log("Raw date string:", rawDateString);
+    console.log("Selected time:", selectedTime);
 
     // Create lists of smart home items by type
     const smartHomeItems = smartHomeInstallations.flatMap(item =>
@@ -633,33 +636,38 @@ export function BookingWizard({
         item.type === 'floodlight' ? 'floodlight' : 'camera')
     );
 
-    // Submit booking data with the raw time and date strings
-    onSubmit({
+    // Prepare the booking data payload
+    const bookingData = {
       ...formData,
       serviceType: serviceDescription,
       preferredDate: rawDateString,
       appointmentTime: selectedTime, // Store raw time string directly
       smartHomeItems: smartHomeItems, // Add this for better tracking of selected services
       pricingTotal: pricingTotal,
-      pricingBreakdown: tvInstallations.map(tv => ({
-        type: 'tv',
-        size: tv.size,
-        location: tv.location,
-        mountType: tv.mountType,
-        masonryWall: tv.masonryWall,
-        outletRelocation: tv.outletRelocation,
-        highRise: tv.highRise,
-        isUnmountOnly: tv.isUnmountOnly || false,
-        isRemountOnly: tv.isRemountOnly || false
-      })).concat(
-        smartHomeInstallations.map(item => ({
+      pricingBreakdown: [
+        ...tvInstallations.map(tv => ({
+          type: 'tv',
+          size: tv.size,
+          location: tv.location,
+          mountType: tv.mountType,
+          masonryWall: tv.masonryWall,
+          outletRelocation: tv.outletRelocation,
+          highRise: tv.highRise,
+          isUnmountOnly: tv.isUnmountOnly || false,
+          isRemountOnly: tv.isRemountOnly || false
+        })),
+        ...smartHomeInstallations.map(item => ({
           type: item.type,
           quantity: item.quantity,
           mountHeight: item.mountHeight,
           brickInstallation: item.brickInstallation
         }))
-      )
-    });
+      ]
+    };
+
+    console.log("Submitting booking data:", bookingData);
+    // Submit booking data
+    onSubmit(bookingData);
   }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit, pricingTotal]);
 
   // Use passed bookings or fetched bookings as fallback

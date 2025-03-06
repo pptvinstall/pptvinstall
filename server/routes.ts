@@ -147,10 +147,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Booking endpoints
   app.post("/api/booking", async (req, res) => {
     try {
+      console.log("Booking submission received:", req.body);
       const booking = bookingSchema.parse(req.body);
+      console.log("Booking validated successfully");
 
       // Check if this time slot is already booked
       const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
+      console.log("Checking for existing bookings on date:", dateStr, "and time:", booking.appointmentTime);
 
       const existingBookings = await db.select().from(bookings).where(
         and(
@@ -161,6 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       if (existingBookings.length > 0) {
+        console.log("Time slot already booked, returning conflict error");
         return res.status(409).json({
           success: false,
           message: "This time slot is already booked. Please select another time."
@@ -173,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricingBreakdownStr = JSON.stringify(booking.pricingBreakdown);
       }
 
+      console.log("Preparing to insert booking into database");
       // Insert into database
       const insertedBookings = await db.insert(bookings).values({
         name: booking.name,
@@ -192,6 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricingBreakdown: pricingBreakdownStr
       }).returning();
 
+      console.log("Booking successfully inserted into database");
       const newBooking = insertedBookings[0];
 
       // Also save to file storage for backward compatibility
@@ -214,6 +220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.update(bookings)
             .set({ emailSent: true })
             .where(eq(bookings.id, newBooking.id));
+
+          console.log("Confirmation emails sent successfully");
         }
       } catch (emailError) {
         console.error("Error sending confirmation email:", emailError);
@@ -230,12 +238,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Booking validation error:", error);
 
       if (error instanceof ZodError) {
+        console.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({
           success: false,
           message: "Invalid booking data",
           errors: error.errors
         });
       }
+
+      console.error("Booking submission error details:", error instanceof Error ? error.message : String(error));
+      console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace available');
 
       res.status(500).json({
         success: false,
