@@ -12,6 +12,7 @@ import { Textarea } from "./textarea"
 import { format } from "date-fns"
 import { useQuery } from '@tanstack/react-query';
 import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
+import { bookingSchema } from "@shared/schema";
 
 // Add environment variables
 const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -33,7 +34,10 @@ interface BookingWizardProps {
 }
 
 // Step 1 component - Choose Services
-const ServiceSelectionStep = React.memo(({ onServiceSelect, onContinue }) => (
+const ServiceSelectionStep = React.memo(({ onServiceSelect, onContinue }: {
+  onServiceSelect: (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => void;
+  onContinue: () => void;
+}) => (
   <ServiceWizard
     onServiceSelect={onServiceSelect}
     onClose={onContinue}
@@ -49,6 +53,14 @@ const DateTimeSelectionStep = React.memo(({
   isBookingsLoading,
   timeSlots,
   isTimeSlotAvailable
+}: {
+  selectedDate: Date | undefined;
+  setSelectedDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
+  selectedTime: string | undefined;
+  setSelectedTime: React.Dispatch<React.SetStateAction<string | undefined>>;
+  isBookingsLoading: boolean;
+  timeSlots: string[];
+  isTimeSlotAvailable: (time: string) => boolean | undefined;
 }) => (
   <div className="space-y-6">
     <Calendar
@@ -105,7 +117,15 @@ const DateTimeSelectionStep = React.memo(({
 ));
 
 // Step 3 component - Customer Details
-const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
+const CustomerDetailsStep = React.memo(({ 
+  formData, 
+  setFormData, 
+  validationErrors 
+}: {
+  formData: any;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  validationErrors: Record<string, string[]>;
+}) => (
   <div className="space-y-4">
     <div className="space-y-2">
       <label className="text-sm font-medium">Name</label>
@@ -113,7 +133,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
         value={formData.name}
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         placeholder="Your name"
+        className={validationErrors.name ? "border-red-500" : ""}
       />
+      {validationErrors.name && (
+        <p className="text-sm text-red-500">{validationErrors.name[0]}</p>
+      )}
     </div>
 
     <div className="space-y-2">
@@ -123,7 +147,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
         value={formData.email}
         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
         placeholder="Your email"
+        className={validationErrors.email ? "border-red-500" : ""}
       />
+      {validationErrors.email && (
+        <p className="text-sm text-red-500">{validationErrors.email[0]}</p>
+      )}
     </div>
 
     <div className="space-y-2">
@@ -133,7 +161,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
         value={formData.phone}
         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
         placeholder="Your phone number"
+        className={validationErrors.phone ? "border-red-500" : ""}
       />
+      {validationErrors.phone && (
+        <p className="text-sm text-red-500">{validationErrors.phone[0]}</p>
+      )}
     </div>
 
     <div className="space-y-2">
@@ -142,7 +174,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
         value={formData.streetAddress}
         onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
         placeholder="Street address"
+        className={validationErrors.streetAddress ? "border-red-500" : ""}
       />
+      {validationErrors.streetAddress && (
+        <p className="text-sm text-red-500">{validationErrors.streetAddress[0]}</p>
+      )}
     </div>
 
     <div className="space-y-2">
@@ -161,7 +197,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
           value={formData.city}
           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
           placeholder="City"
+          className={validationErrors.city ? "border-red-500" : ""}
         />
+        {validationErrors.city && (
+          <p className="text-sm text-red-500">{validationErrors.city[0]}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -170,7 +210,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
           value={formData.state}
           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
           placeholder="State"
+          className={validationErrors.state ? "border-red-500" : ""}
         />
+        {validationErrors.state && (
+          <p className="text-sm text-red-500">{validationErrors.state[0]}</p>
+        )}
       </div>
     </div>
 
@@ -180,7 +224,11 @@ const CustomerDetailsStep = React.memo(({ formData, setFormData }) => (
         value={formData.zipCode}
         onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
         placeholder="Zip code"
+        className={validationErrors.zipCode ? "border-red-500" : ""}
       />
+      {validationErrors.zipCode && (
+        <p className="text-sm text-red-500">{validationErrors.zipCode[0]}</p>
+      )}
     </div>
 
     <div className="space-y-2">
@@ -201,6 +249,12 @@ const ReviewBookingStep = React.memo(({
   selectedDate, 
   selectedTime, 
   formData 
+}: {
+  tvInstallations: TVInstallation[];
+  smartHomeInstallations: SmartHomeInstallation[];
+  selectedDate: Date | undefined;
+  selectedTime: string | undefined;
+  formData: any;
 }) => (
   <div className="space-y-6">
     <div>
@@ -283,6 +337,8 @@ export function BookingWizard({
   });
   // New state to track time slot availability
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
+  // New state for validation errors
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
 
   // Get calendar availability data
   const { isTimeSlotAvailable: checkCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
@@ -391,6 +447,34 @@ export function BookingWizard({
     setSmartHomeInstallations(services.smartHome);
   }, []);
 
+  // Validate the customer details form data
+  const validateCustomerDetails = useCallback(() => {
+    // Create a subset of the bookingSchema with only the customer fields
+    const customerSchema = bookingSchema.pick({
+      name: true,
+      email: true,
+      phone: true,
+      streetAddress: true,
+      city: true,
+      state: true,
+      zipCode: true
+    });
+
+    // Validate the form data
+    const result = customerSchema.safeParse(formData);
+
+    if (!result.success) {
+      // Extract error messages
+      const fieldErrors = result.error.flatten().fieldErrors;
+      setValidationErrors(fieldErrors);
+      return false;
+    }
+
+    // Clear validation errors if validation succeeds
+    setValidationErrors({});
+    return true;
+  }, [formData]);
+
   const canProceed = useCallback(() => {
     switch (currentStep) {
       case 0:
@@ -398,12 +482,12 @@ export function BookingWizard({
       case 1:
         return selectedDate && selectedTime;
       case 2:
-        return formData.name && formData.email && formData.phone && 
-               formData.streetAddress && formData.city && formData.state && formData.zipCode;
+        // Now validation is handled by validateCustomerDetails
+        return validateCustomerDetails();
       default:
         return true;
     }
-  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData]);
+  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, validateCustomerDetails]);
 
   const handleSubmit = useCallback(() => {
     // Get selected services
@@ -474,6 +558,23 @@ export function BookingWizard({
   const allBookings = existingBookings.length > 0 ? existingBookings : [];
   const isBookingsLoading = isLoadingBookings || isCalendarLoading;
 
+  // Handle next button click with validation
+  const handleNextClick = useCallback(() => {
+    if (currentStep === 2) {
+      // For customer details step, run validation explicitly
+      if (validateCustomerDetails()) {
+        setCurrentStep(3);
+      }
+      // If validation fails, the error state will be updated and errors displayed
+    } else if (currentStep < steps.length - 1) {
+      // For other steps, proceed normally
+      setCurrentStep((prev) => prev + 1);
+    } else {
+      // For final step, submit the form
+      handleSubmit();
+    }
+  }, [currentStep, handleSubmit, validateCustomerDetails]);
+
   return (
     <div className="space-y-8">
       {/* Progress Steps - Simplified */}
@@ -536,6 +637,7 @@ export function BookingWizard({
             <CustomerDetailsStep
               formData={formData}
               setFormData={setFormData}
+              validationErrors={validationErrors}
             />
           )}
 
@@ -567,13 +669,7 @@ export function BookingWizard({
             </Button>
 
             <Button
-              onClick={() => {
-                if (currentStep < steps.length - 1) {
-                  setCurrentStep((prev) => prev + 1);
-                } else {
-                  handleSubmit();
-                }
-              }}
+              onClick={handleNextClick}
               disabled={isSubmitting || !canProceed()}
             >
               {isSubmitting 
