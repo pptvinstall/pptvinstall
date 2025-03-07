@@ -162,6 +162,66 @@ export function calculatePrice(options: ServiceOptions) {
     basePrice += remountFee;
   }
 
+  // Electrical Work
+  if (options.outletCount > 0) {
+    // First outlet installation
+    const firstOutletPrice = pricing.electrical.outletInstallation;
+    electricalItems.push({
+      name: "Outlet Installation",
+      price: firstOutletPrice
+    });
+    additionalServices += firstOutletPrice;
+
+    // Additional outlets
+    if (options.outletCount > 1) {
+      const additionalOutletCount = options.outletCount - 1;
+      const additionalOutletPrice = additionalOutletCount * pricing.electrical.additionalOutlet;
+      electricalItems.push({
+        name: `Additional Outlet Installation (${additionalOutletCount})`,
+        price: additionalOutletPrice
+      });
+      additionalServices += additionalOutletPrice;
+
+      // Multi-outlet discount
+      const multiOutletDiscount = additionalOutletCount * pricing.electrical.additionalOutlet;
+      if (multiOutletDiscount > 0) {
+        electricalItems.push({
+          name: "Multi-Outlet Discount",
+          price: -multiOutletDiscount,
+          isDiscount: true
+        });
+        discounts += multiOutletDiscount;
+      }
+    }
+
+    // Add electrical items to breakdown
+    if (electricalItems.length > 0) {
+      breakdown.push({
+        category: "Electrical Work",
+        items: electricalItems
+      });
+    }
+
+    // Apply bundle discount for TV + outlet combination
+    if (options.tvCount > 0 && !options.isFireplace) {
+      const standardPrice = pricing.tvMounting.base + pricing.electrical.outletInstallation;
+      const bundlePrice = pricing.bundles.tvPlusOutlet;
+      const bundleSavings = standardPrice - bundlePrice;
+
+      if (bundleSavings > 0) {
+        breakdown.push({
+          category: "Bundle Discount",
+          items: [{
+            name: "TV Mount + Outlet Bundle",
+            price: -bundleSavings,
+            isDiscount: true
+          }]
+        });
+        discounts += bundleSavings;
+      }
+    }
+  }
+
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
     if (options.smartCameras > 0) {
