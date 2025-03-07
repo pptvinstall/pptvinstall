@@ -1,0 +1,75 @@
+Got it! Here’s a simplified Replit prompt for your admin panel that reduces API reliance while still keeping it robust and customizable.
+
+⸻
+
+Prompt for Replit (Bolt.new):
+
+Objective:
+Build an admin panel for Picture Perfect TV Install that allows easy management of bookings, pricing, availability, and customer inquiries without heavy API reliance. The panel should be secure and only accessible to the admin.
+
+⸻
+
+Features to Include:
+
+1. Booking Management
+	•	View, edit, and cancel customer bookings.
+	•	Mark bookings as completed, pending, or canceled.
+	•	Store bookings in a local database (SQLite or PostgreSQL).
+	•	Export booking data as a CSV file for records.
+
+2. Availability & Scheduling
+	•	Set available working hours and update as needed.
+	•	Block out specific dates for holidays, personal days, or special events.
+	•	Display only available time slots for customers based on admin input.
+
+3. Pricing & Service Customization
+	•	Update pricing for TV mounting, wire concealment, and smart home installations.
+	•	Adjust discounts for multiple services in a single booking.
+	•	Enable/disable seasonal promotions or limited-time discounts.
+	•	Modify service descriptions and tooltips for customer clarity.
+
+4. Travel Fee & Service Area
+	•	Manually set a base service radius and apply a fixed travel fee for bookings beyond that.
+	•	Enable/disable travel fees with a simple toggle switch.
+	•	Customers input their address, and the admin verifies manually if needed.
+
+5. Customer Communication & Notifications
+	•	View customer inquiries and booking requests in a simple inbox.
+	•	Send pre-written email responses with a “Send Email” button (uses local SMTP instead of APIs).
+	•	Generate PDF invoices for customers.
+
+6. Website Content Management
+	•	Edit text and images for About Us, Services, and FAQs pages.
+	•	Update the disclaimer text for liability protection.
+	•	Add, edit, or delete customer testimonials.
+
+7. Analytics & Reports
+	•	Track monthly bookings and revenue.
+	•	Display customer trends (most popular services, peak booking times).
+	•	Simple bar charts or tables (no external API needed).
+
+8. User Management & Security
+	•	Secure admin login with username/password (hashed for security).
+	•	Track all changes made (simple audit log in the database).
+	•	Multi-user support (if you want multiple admins in the future).
+
+⸻
+
+Tech Stack (API-Free Approach)
+	•	Frontend: HTML, CSS, JavaScript (Flask or Django-based UI)
+	•	Backend: Python (Flask or Django)
+	•	Database: SQLite or PostgreSQL (local storage, no external API)
+	•	Email Handling: SMTP (uses your email provider instead of an API)
+	•	PDF Generation: ReportLab or WeasyPrint (local, no API)
+
+⸻
+
+Deployment Requirements:
+	•	Ensure admin panel is password-protected.
+	•	Host on Replit with environment variables for credentials.
+	•	Optimize for mobile access (responsive design).
+	•	Store all data locally with easy backup/export options.
+
+⸻
+
+This setup avoids external API dependencies, making it lightweight and fully self-hosted. You can copy & paste this into Replit’s AI coding tool to start building! Let me know if you need any changes.
