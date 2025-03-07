@@ -26,7 +26,6 @@ export type SmartHomeInstallation = {
   type: 'doorbell' | 'floodlight' | 'camera';
   quantity: number;
   brickInstallation?: boolean;
-  mountHeight?: number;
 };
 
 interface ServiceWizardProps {
@@ -47,7 +46,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         smartHome: smartHomeInstallations.map(installation => ({
           ...installation,
           quantity: installation.quantity || 1,
-          mountHeight: installation.type === 'camera' ? (installation.mountHeight || 1) : undefined,
           brickInstallation: installation.type === 'doorbell' ? (installation.brickInstallation || false) : undefined
         }))
       });
@@ -83,8 +81,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
     setSmartHomeInstallations(prev => [...prev, {
       type,
       quantity: 1,
-      ...(type === 'doorbell' ? { brickInstallation: false } : {}),
-      ...(type === 'camera' ? { mountHeight: 1 } : {})
+      ...(type === 'doorbell' ? { brickInstallation: false } : {})
     }]);
   };
 
@@ -99,11 +96,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
       // Ensure quantity is always at least 1
       if (updated.quantity < 1) updated.quantity = 1;
-
-      // Ensure mount height is valid for cameras
-      if (updated.type === 'camera' && updated.mountHeight !== undefined) {
-        updated.mountHeight = Math.max(1, Math.min(20, updated.mountHeight));
-      }
 
       return updated;
     }));
@@ -179,9 +171,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         'Smart Camera'}
                     {device.quantity > 1 && ` (×${device.quantity})`}
                   </span>
-                  {device.type === 'camera' && device.mountHeight && (
-                    <span className="text-xs text-muted-foreground">• {device.mountHeight}ft height</span>
-                  )}
                   {device.type === 'doorbell' && device.brickInstallation && (
                     <span className="text-xs text-muted-foreground">• Brick installation</span>
                   )}
@@ -573,42 +562,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   </div>
                 )}
 
-                {installation.type === 'camera' && (
-                  <div className="space-y-2">
-                    <Label htmlFor={`height-${index}`}>Mount Height (feet)</Label>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateSmartHomeInstallation(index, {
-                          mountHeight: Math.max(1, (installation.mountHeight || 1) - 1)
-                        })}
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-                      <div className="w-12 text-center font-medium">
-                        {installation.mountHeight || 1}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateSmartHomeInstallation(index, {
-                          mountHeight: Math.min(20, (installation.mountHeight || 1) + 1)
-                        })}
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Height surcharge: +$25 per additional 4 feet above 8 feet
-                    </p>
-                  </div>
-                )}
-
                 <div className="mt-4 p-3 bg-muted rounded-md">
                   <h5 className="font-medium text-sm mb-1">Base Price</h5>
                   <p className="text-lg font-semibold">
@@ -617,13 +570,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         '$75'}{installation.quantity > 1 ? ` × ${installation.quantity}` : ''}
                   </p>
 
-                  {((installation.type === 'doorbell' && installation.brickInstallation) ||
-                    (installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8)) && (
+                  {installation.type === 'doorbell' && installation.brickInstallation && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      {installation.type === 'doorbell' && installation.brickInstallation &&
-                        `+ $10${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Brick Installation)`}
-                      {installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8 &&
-                        `+ $${Math.ceil((installation.mountHeight - 8) / 4) * 25}${installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Height Surcharge)`}
+                      + $10{installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Brick Installation)
                     </div>
                   )}
                 </div>

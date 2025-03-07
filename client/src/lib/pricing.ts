@@ -19,7 +19,6 @@ export const pricing = {
     camera: 75,
     doorbell: 85,
     floodlight: 125,
-    heightSurcharge: 25, // per 4ft increment above 8ft
     brickInstallation: 10,
   },
 
@@ -53,7 +52,6 @@ export type ServiceOptions = {
   remountOnlyCount: number;
   travelDistance: number;
   installation: {
-    mountHeight?: number;
     brickInstallation?: boolean;
   };
 };
@@ -167,35 +165,15 @@ export function calculatePrice(options: ServiceOptions) {
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
     if (options.smartCameras > 0) {
-      // Base camera price
       const basePriceCamera = options.smartCameras * pricing.smartHome.camera;
       smartHomeItems.push({
         name: `Smart Camera Installation (${options.smartCameras})`,
         price: basePriceCamera
       });
       additionalServices += basePriceCamera;
-
-      // Height surcharge calculation
-      if (options.installation?.mountHeight !== undefined) {
-        const height = options.installation.mountHeight;
-        if (height > 8) {
-          const heightDifference = height - 8;
-          const surchargeMultiplier = Math.ceil(heightDifference / 4);
-          const heightSurcharge = surchargeMultiplier * pricing.smartHome.heightSurcharge * options.smartCameras;
-
-          if (heightSurcharge > 0) {
-            smartHomeItems.push({
-              name: `Height Surcharge (${heightDifference}ft above 8ft)`,
-              price: heightSurcharge
-            });
-            additionalServices += heightSurcharge;
-          }
-        }
-      }
     }
 
     if (options.smartDoorbells > 0) {
-      // Base doorbell price
       const basePriceDoorbell = options.smartDoorbells * pricing.smartHome.doorbell;
       smartHomeItems.push({
         name: `Smart Doorbell Installation (${options.smartDoorbells})`,
@@ -203,7 +181,6 @@ export function calculatePrice(options: ServiceOptions) {
       });
       additionalServices += basePriceDoorbell;
 
-      // Brick installation fee
       if (options.installation?.brickInstallation) {
         const brickFee = pricing.smartHome.brickInstallation * options.smartDoorbells;
         smartHomeItems.push({
