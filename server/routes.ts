@@ -5,6 +5,7 @@ import { bookingSchema, bookings } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
 import { googleCalendarService } from "./services/googleCalendarService";
+import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
 
@@ -17,19 +18,26 @@ function verifyAdminPassword(password: string | undefined): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
   if (!password) {
-    console.log('Admin authentication failed: No password provided');
+    logger.auth('Admin authentication failed: No password provided');
     return false;
   }
 
   const isValid = password === adminPassword;
-  console.log(`Admin authentication ${isValid ? 'successful' : 'failed'}`);
+  logger.auth('Admin authentication attempt', {
+    success: isValid,
+    passwordProvided: !!password
+  });
 
   return isValid;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add logging middleware
+  app.use(logger.logRequest.bind(logger));
+
   // API routes
   app.get("/api/health", (req, res) => {
+    logger.debug('Health check requested');
     res.json({ status: "ok" });
   });
 
@@ -91,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unavailableSlots
       });
     } catch (error) {
-      console.error("Error fetching calendar availability:", error);
+      logger.error("Error fetching calendar availability:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch calendar availability"
@@ -133,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (dbError) {
         // Log the error but don't fail the request
-        console.error("Database error checking bookings:", dbError);
+        logger.error("Database error checking bookings:", dbError as Error);
         // Continue with checking Google Calendar
       }
 
@@ -157,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAvailable
       });
     } catch (error) {
-      console.error("Error checking time slot availability:", error);
+      logger.error("Error checking time slot availability:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to check time slot availability"
@@ -191,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         blockedSlots
       });
     } catch (error) {
-      console.error("Error fetching blocked time slots:", error);
+      logger.error("Error fetching blocked time slots:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch blocked time slots"
@@ -225,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         blockedDays
       });
     } catch (error) {
-      console.error("Error fetching blocked days:", error);
+      logger.error("Error fetching blocked days:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch blocked days"
@@ -233,13 +241,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Modify existing /api/admin/availability endpoint
+  // Modify existing /api/admin/availability endpoint with better logging
   app.post("/api/admin/availability", async (req, res) => {
     try {
       const { password, action, data } = req.body;
+      logger.debug('Availability update requested', { action, requestId: req.requestId });
 
       // Verify admin password using the helper function
       if (!verifyAdminPassword(password)) {
+        logger.auth('Invalid password for availability update', { 
+          action,
+          requestId: req.requestId 
+        });
         return res.status(401).json({
           success: false,
           message: "Invalid password"
@@ -248,8 +261,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       switch (action) {
         case 'blockTimeSlot':
-          // Block a specific time slot
           const { date, timeSlots, reason } = data;
+          logger.debug('Blocking time slots', { 
+            date, 
+            timeSlots,
+            requestId: req.requestId 
+          });
 
           try {
             for (const timeSlot of timeSlots) {
@@ -266,11 +283,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${period}`;
 
-              console.log('Attempting to block time slot:', {
+              logger.debug('Processing time slot block', {
                 date,
                 startTime: timeSlot,
                 endTime,
-                reason
+                reason,
+                requestId: req.requestId
               });
 
               const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
@@ -279,7 +297,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           } catch (error) {
-            console.error('Error blocking time slots:', error);
+            logger.error('Error blocking time slots', error as Error, {
+              date,
+              timeSlots,
+              requestId: req.requestId
+            });
             return res.status(500).json({
               success: false,
               message: "Failed to block time slots. Please try again."
@@ -288,10 +310,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case 'blockFullDay':
-          // Block an entire day
           const { date: fullDate, reason: fullDayReason } = data;
+          logger.debug('Blocking full day', { 
+            date: fullDate,
+            reason: fullDayReason,
+            requestId: req.requestId 
+          });
+
           const fullDaySuccess = await googleCalendarService.blockFullDay(fullDate, fullDayReason);
           if (!fullDaySuccess) {
+            logger.error('Failed to block full day', null, {
+              date: fullDate,
+              requestId: req.requestId
+            });
             return res.status(500).json({
               success: false,
               message: "Failed to block full day. Please try again."
@@ -300,18 +331,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         default:
+          logger.error('Invalid action specified', null, {
+            action,
+            requestId: req.requestId
+          });
           return res.status(400).json({
             success: false,
             message: "Invalid action specified"
           });
       }
 
+      logger.info('Availability updated successfully', {
+        action,
+        requestId: req.requestId
+      });
+
       res.json({
         success: true,
         message: "Availability updated successfully"
       });
     } catch (error) {
-      console.error("Error updating availability:", error);
+      logger.error('Error updating availability', error as Error, {
+        requestId: req.requestId
+      });
       res.status(500).json({
         success: false,
         message: "Failed to update availability"
@@ -322,13 +364,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Booking endpoints
   app.post("/api/booking", async (req, res) => {
     try {
-      console.log("Booking submission received:", req.body);
+      logger.debug("Booking submission received:", req.body);
       const booking = bookingSchema.parse(req.body);
-      console.log("Booking validated successfully");
+      logger.info("Booking validated successfully");
 
       // Check if this time slot is already booked
       const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
-      console.log("Checking for existing bookings on date:", dateStr, "and time:", booking.appointmentTime);
+      logger.debug("Checking for existing bookings on date:", dateStr, "and time:", booking.appointmentTime);
 
       const existingBookings = await db.select().from(bookings).where(
         and(
@@ -339,7 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       if (existingBookings.length > 0) {
-        console.log("Time slot already booked, returning conflict error");
+        logger.warn("Time slot already booked, returning conflict error");
         return res.status(409).json({
           success: false,
           message: "This time slot is already booked. Please select another time."
@@ -352,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricingBreakdownStr = JSON.stringify(booking.pricingBreakdown);
       }
 
-      console.log("Preparing to insert booking into database");
+      logger.debug("Preparing to insert booking into database");
       // Insert into database
       const insertedBookings = await db.insert(bookings).values({
         name: booking.name,
@@ -372,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricingBreakdown: pricingBreakdownStr
       }).returning();
 
-      console.log("Booking successfully inserted into database");
+      logger.info("Booking successfully inserted into database");
       const newBooking = insertedBookings[0];
 
       // Also save to file storage for backward compatibility
@@ -390,10 +432,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (process.env.SENDGRID_API_KEY) {
           await sendBookingConfirmationEmail(bookingWithId);
           await sendAdminBookingNotificationEmail(bookingWithId);
-          console.log("Confirmation emails sent successfully");
+          logger.info("Confirmation emails sent successfully");
         }
       } catch (error) {
-        console.error("Error sending notifications:", error);
+        logger.error("Error sending notifications:", error as Error);
         // We don't want to fail the booking if notifications fail
       }
 
@@ -404,10 +446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         booking: bookingWithId
       });
     } catch (error) {
-      console.error("Booking validation error:", error);
+      logger.error("Booking validation error:", error as Error);
 
       if (error instanceof ZodError) {
-        console.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
+        logger.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({
           success: false,
           message: "Invalid booking data",
@@ -415,8 +457,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.error("Booking submission error details:", error instanceof Error ? error.message : String(error));
-      console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace available');
+      logger.error("Booking submission error details:", error instanceof Error ? error.message : String(error));
+      logger.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace available');
 
       res.status(500).json({
         success: false,
@@ -437,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             pricingBreakdown = JSON.parse(booking.pricingBreakdown);
           } catch (e) {
-            console.error('Error parsing pricingBreakdown JSON:', e);
+            logger.error('Error parsing pricingBreakdown JSON:', e as Error);
           }
         }
 
@@ -452,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ bookings: formattedBookings });
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      logger.error("Error fetching bookings:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch bookings"
@@ -489,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           pricingBreakdown = JSON.parse(booking.pricingBreakdown);
         } catch (e) {
-          console.error('Error parsing pricingBreakdown JSON:', e);
+          logger.error('Error parsing pricingBreakdown JSON:', e as Error);
         }
       }
 
@@ -503,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ success: true, booking: formattedBooking });
     } catch (error) {
-      console.error("Error fetching booking:", error);
+      logger.error("Error fetching booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch booking"
@@ -554,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Booking cancelled successfully"
       });
     } catch (error) {
-      console.error("Error cancelling booking:", error);
+      logger.error("Error cancelling booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to cancel booking"
@@ -600,10 +642,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (process.env.SENDGRID_API_KEY) {
           const booking = result[0];
           await sendBookingConfirmationEmail(booking);
-          console.log("Confirmation email sent successfully");
+          logger.info("Confirmation email sent successfully");
         }
       } catch (error) {
-        console.error("Error sending confirmation:", error);
+        logger.error("Error sending confirmation:", error as Error);
         // Don't fail the approval if email fails
       }
 
@@ -612,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Booking approved successfully"
       });
     } catch (error) {
-      console.error("Error approving booking:", error);
+      logger.error("Error approving booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to approve booking"
@@ -662,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Booking declined successfully"
       });
     } catch (error) {
-      console.error("Error declining booking:", error);
+      logger.error("Error declining booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to decline booking"
@@ -711,7 +753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         booking: result[0]
       });
     } catch (error) {
-      console.error("Error updating booking:", error);
+      logger.error("Error updating booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to update booking"
@@ -785,7 +827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "All bookings have been cleared"
       });
     } catch (error) {
-      console.error("Error clearing bookings:", error);
+      logger.error("Error clearing bookings:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to clear bookings"
@@ -793,20 +835,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  //Simplified logging middleware
-  app.use((req, res, next) => {
-    const start = Date.now();
-    const path = req.path;
-
-    res.on("finish", () => {
-      if (path.startsWith("/api")) {
-        const duration = Date.now() - start;
-        log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-      }
-    });
-
-    next();
-  });
 
   // Create and return HTTP server
   const http = await import("http");
@@ -814,7 +842,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return server;
 }
-
-const log = (message: string) => {
-  console.log(message);
-};

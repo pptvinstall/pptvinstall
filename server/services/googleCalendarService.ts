@@ -1,4 +1,5 @@
 import { google, calendar_v3 } from 'googleapis';
+import { logger } from "./loggingService";
 
 // Define the interface for unavailable time slots
 export interface UnavailableTimeSlot {
@@ -15,6 +16,11 @@ export class GoogleCalendarService {
 
   constructor(calendarId: string, apiKey: string) {
     this.calendarId = calendarId;
+    logger.debug('Initializing Google Calendar Service', {
+      calendarIdPresent: !!calendarId,
+      apiKeyPresent: !!apiKey
+    });
+
     this.calendar = google.calendar({
       version: 'v3',
       auth: apiKey
@@ -28,6 +34,7 @@ export class GoogleCalendarService {
     startDate: Date,
     endDate: Date
   ): Promise<{ [key: string]: string[] }> {
+    logger.debug('Fetching blocked time slots', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
     try {
       const response = await this.calendar.events.list({
         calendarId: this.calendarId,
@@ -56,10 +63,10 @@ export class GoogleCalendarService {
           blockedSlots[dateKey].push(timeString);
         }
       }
-
+      logger.debug('Blocked time slots fetched successfully', blockedSlots);
       return blockedSlots;
     } catch (error) {
-      console.error('Error fetching blocked time slots:', error);
+      logger.error('Error fetching blocked time slots:', error);
       return {};
     }
   }
@@ -74,6 +81,13 @@ export class GoogleCalendarService {
     reason: string
   ): Promise<boolean> {
     try {
+      logger.debug('Starting blockTimeSlot operation', {
+        date,
+        startTime,
+        endTime,
+        reason
+      });
+
       // Convert time format (e.g., "6:30 PM") to 24-hour format
       const parseTime = (timeStr: string): { hours: number; minutes: number } => {
         const [time, period] = timeStr.split(' ');
@@ -102,11 +116,17 @@ export class GoogleCalendarService {
 
       // Validate times
       if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-        console.error('Invalid date/time:', { date, startTime, endTime });
+        logger.error('Invalid date/time values', null, {
+          date,
+          startTime,
+          endTime,
+          startDateTime,
+          endDateTime
+        });
         return false;
       }
 
-      console.log('Creating calendar event:', {
+      logger.debug('Creating calendar event', {
         date,
         startTime,
         endTime,
@@ -133,9 +153,20 @@ export class GoogleCalendarService {
         requestBody: event,
       });
 
+      logger.info('Successfully blocked time slot', {
+        date,
+        startTime,
+        endTime
+      });
+
       return true;
     } catch (error) {
-      console.error('Error blocking time slot:', error);
+      logger.error('Error blocking time slot', error as Error, {
+        date,
+        startTime,
+        endTime,
+        reason
+      });
       return false;
     }
   }
@@ -144,14 +175,16 @@ export class GoogleCalendarService {
    * Unblock a previously blocked time slot
    */
   async unblockTimeSlot(eventId: string): Promise<boolean> {
+    logger.debug('Starting unblockTimeSlot operation', { eventId });
     try {
       await this.calendar.events.delete({
         calendarId: this.calendarId,
         eventId: eventId
       });
+      logger.info('Successfully unblocked time slot', { eventId });
       return true;
     } catch (error) {
-      console.error('Error unblocking time slot:', error);
+      logger.error('Error unblocking time slot:', error);
       return false;
     }
   }
@@ -165,6 +198,7 @@ export class GoogleCalendarService {
     endTime: string,
     untilDate: string
   ): Promise<boolean> {
+    logger.debug('Starting setRecurringBlock operation', { dayOfWeek, startTime, endTime, untilDate });
     try {
       // Get day number (0-6) from day name
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -195,10 +229,10 @@ export class GoogleCalendarService {
         calendarId: this.calendarId,
         requestBody: event,
       });
-
+      logger.info('Successfully set recurring block', { dayOfWeek, startTime, endTime, untilDate });
       return true;
     } catch (error) {
-      console.error('Error setting recurring block:', error);
+      logger.error('Error setting recurring block:', error);
       return false;
     }
   }
@@ -213,6 +247,7 @@ export class GoogleCalendarService {
       available: boolean
     }
   }): Promise<boolean> {
+    logger.debug('Starting setBusinessHours operation', businessHours);
     try {
       // First, remove existing business hours events
       const existingEvents = await this.calendar.events.list({
@@ -256,10 +291,10 @@ export class GoogleCalendarService {
           requestBody: event,
         });
       }
-
+      logger.info('Successfully set business hours', businessHours);
       return true;
     } catch (error) {
-      console.error('Error setting business hours:', error);
+      logger.error('Error setting business hours:', error);
       return false;
     }
   }
@@ -276,6 +311,7 @@ export class GoogleCalendarService {
     startDate: Date,
     endDate: Date
   ): Promise<{ [key: string]: string[] }> {
+    logger.debug('Fetching unavailable time slots', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
     try {
       const timeMin = startDate.toISOString();
       const timeMax = endDate.toISOString();
@@ -308,10 +344,10 @@ export class GoogleCalendarService {
           unavailableByDate[dateKey].push(timeString);
         }
       }
-
+      logger.debug('Unavailable time slots fetched successfully', unavailableByDate);
       return unavailableByDate;
     } catch (error) {
-      console.error('Error fetching calendar data:', error);
+      logger.error('Error fetching calendar data:', error);
       return {};
     }
   }
@@ -324,8 +360,11 @@ export class GoogleCalendarService {
     timeSlot: string,
     unavailableSlots: { [key: string]: string[] }
   ): boolean {
+    logger.debug('Checking time slot availability', { date, timeSlot });
     // Check if the time slot is in the unavailable list
-    return !unavailableSlots[date]?.includes(timeSlot);
+    const isAvailable = !unavailableSlots[date]?.includes(timeSlot);
+    logger.debug('Time slot availability', { date, timeSlot, isAvailable });
+    return isAvailable;
   }
 
   /**
@@ -335,6 +374,7 @@ export class GoogleCalendarService {
     date: string,
     reason: string = "Day marked as unavailable"
   ): Promise<boolean> {
+    logger.debug('Starting blockFullDay operation', { date, reason });
     try {
       const event = {
         summary: 'BLOCKED - Full Day',
@@ -354,10 +394,10 @@ export class GoogleCalendarService {
         calendarId: this.calendarId,
         requestBody: event,
       });
-
+      logger.info('Successfully blocked full day', { date, reason });
       return true;
     } catch (error) {
-      console.error('Error blocking full day:', error);
+      logger.error('Error blocking full day:', error);
       return false;
     }
   }
@@ -369,6 +409,7 @@ export class GoogleCalendarService {
     startDate: Date,
     endDate: Date
   ): Promise<string[]> {
+    logger.debug('Fetching blocked days', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
     try {
       const response = await this.calendar.events.list({
         calendarId: this.calendarId,
@@ -386,10 +427,10 @@ export class GoogleCalendarService {
           blockedDays.push(event.start.date);
         }
       }
-
+      logger.debug('Blocked days fetched successfully', blockedDays);
       return blockedDays;
     } catch (error) {
-      console.error('Error fetching blocked days:', error);
+      logger.error('Error fetching blocked days:', error);
       return [];
     }
   }
@@ -399,8 +440,8 @@ export class GoogleCalendarService {
 const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || process.env.VITE_GOOGLE_CALENDAR_ID || '';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY || '';
 
-console.log('API Key Present:', !!GOOGLE_API_KEY);
-console.log('Calendar ID Present:', !!GOOGLE_CALENDAR_ID);
+logger.debug('API Key Present:', !!GOOGLE_API_KEY);
+logger.debug('Calendar ID Present:', !!GOOGLE_CALENDAR_ID);
 
 // Create and export a singleton instance
 export const googleCalendarService = new GoogleCalendarService(
