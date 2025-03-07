@@ -531,7 +531,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="scheduling">
-          <TimeBlocking />
+          <TimeBlocking password={password} />
         </TabsContent>
 
         <TabsContent value="settings">
