@@ -218,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Modify existing /api/admin/availability endpoint to include more options
+  // Modify existing /api/admin/availability endpoint
   app.post("/api/admin/availability", async (req, res) => {
     try {
       const { password, action, data } = req.body;
@@ -234,31 +234,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (action) {
         case 'blockTimeSlot':
           // Block a specific time slot
-          const { date, startTime, endTime, reason } = data;
-          await googleCalendarService.blockTimeSlot(date, startTime, endTime, reason);
+          const { date, timeSlots, reason } = data;
+
+          try {
+            for (const timeSlot of timeSlots) {
+              // Calculate end time (30 minutes after start time)
+              const [time, period] = timeSlot.split(' ');
+              const [hours, minutes] = time.split(':').map(Number);
+              let endHours = hours;
+              let endMinutes = minutes + 30;
+
+              if (endMinutes >= 60) {
+                endHours += 1;
+                endMinutes -= 60;
+              }
+
+              const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${period}`;
+
+              const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
+              if (!success) {
+                throw new Error('Failed to block time slot');
+              }
+            }
+          } catch (error) {
+            console.error('Error blocking time slots:', error);
+            return res.status(500).json({
+              success: false,
+              message: "Failed to block time slots. Please try again."
+            });
+          }
           break;
 
-        case 'unblockTimeSlot':
-          // Unblock a previously blocked time slot
-          const { eventId } = data;
-          await googleCalendarService.unblockTimeSlot(eventId);
-          break;
-
-        case 'setRecurringBlock':
-          // Set a recurring blocked time
-          const { dayOfWeek, recurringStartTime, recurringEndTime, untilDate } = data;
-          await googleCalendarService.setRecurringBlock(
-            dayOfWeek,
-            recurringStartTime,
-            recurringEndTime,
-            untilDate
-          );
-          break;
-
-        case 'setBusinessHours':
-          // Set business hours for specific days
-          const { businessHours } = data;
-          await googleCalendarService.setBusinessHours(businessHours);
+        case 'blockFullDay':
+          // Block an entire day
+          const { date: fullDate, reason: fullDayReason } = data;
+          const fullDaySuccess = await googleCalendarService.blockFullDay(fullDate, fullDayReason);
+          if (!fullDaySuccess) {
+            return res.status(500).json({
+              success: false,
+              message: "Failed to block full day. Please try again."
+            });
+          }
           break;
 
         default:

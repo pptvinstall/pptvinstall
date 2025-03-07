@@ -45,8 +45,8 @@ export function TimeBlocking() {
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
       const response = await apiRequest(
-        "GET", 
-        `/api/admin/blocked-times?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}`
+        "GET",
+        `/api/admin/blocked-times?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${localStorage.getItem('adminPassword')}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch blocked times');
@@ -62,7 +62,7 @@ export function TimeBlocking() {
     queryFn: async () => {
       const response = await apiRequest(
         "GET",
-        `/api/admin/blocked-days?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}`
+        `/api/admin/blocked-days?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${localStorage.getItem('adminPassword')}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch blocked days');
@@ -74,7 +74,7 @@ export function TimeBlocking() {
 
   // Block time mutation
   const blockTimeMutation = useMutation({
-    mutationFn: async (data: { 
+    mutationFn: async (data: {
       action: string;
       date?: string;
       dayOfWeek?: string;
@@ -85,32 +85,37 @@ export function TimeBlocking() {
       reason?: string;
     }) => {
       const response = await apiRequest("POST", "/api/admin/availability", {
+        password: localStorage.getItem('adminPassword'), // Include admin password
         action: data.action,
         data: {
           ...data,
           reason: data.reason || "Blocked by admin"
         }
       });
+
       if (!response.ok) {
-        throw new Error('Failed to block time');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to block time');
       }
+
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/blocked-times'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/blocked-days'] });
       toast({
         title: blockType === "slots" ? "Times Blocked" : "Day Blocked",
-        description: blockType === "slots" 
+        description: blockType === "slots"
           ? "The selected time slots have been blocked successfully."
           : "The selected day has been marked as unavailable.",
       });
       setSelectedTimeSlots([]);
       setBlockReason("");
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to block time. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to block time. Please try again.",
         variant: "destructive"
       });
     }
@@ -124,19 +129,34 @@ export function TimeBlocking() {
 
   // Get appropriate time slots based on the day
   const getTimeSlots = (date: Date | string) => {
-    // For recurring schedule using day name
-    if (typeof date === 'string') {
-      const dayIndex = DAYS_OF_WEEK.indexOf(date);
-      return dayIndex === 0 || dayIndex === 6 ? WEEKEND_TIME_SLOTS : WEEKDAY_TIME_SLOTS;
-    }
+    try {
+      // For recurring schedule using day name
+      if (typeof date === 'string') {
+        const dayIndex = DAYS_OF_WEEK.indexOf(date);
+        return dayIndex === 0 || dayIndex === 6 ? WEEKEND_TIME_SLOTS : WEEKDAY_TIME_SLOTS;
+      }
 
-    // For specific date
-    const dayOfWeek = date.getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6 ? WEEKEND_TIME_SLOTS : WEEKDAY_TIME_SLOTS;
+      // For specific date
+      const dayOfWeek = date.getDay();
+      return dayOfWeek === 0 || dayOfWeek === 6 ? WEEKEND_TIME_SLOTS : WEEKDAY_TIME_SLOTS;
+    } catch (error) {
+      console.error('Error getting time slots:', error);
+      return WEEKDAY_TIME_SLOTS; // Default to weekday slots if there's an error
+    }
   };
 
   // Handle blocking times or full days
   const handleBlock = () => {
+    // Ensure we have a valid date
+    if (!selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (blockType === "full-day") {
       blockTimeMutation.mutate({
         action: 'blockFullDay',
@@ -144,15 +164,26 @@ export function TimeBlocking() {
         reason: blockReason
       });
     } else if (isRecurring) {
+      const now = new Date();
       blockTimeMutation.mutate({
         action: 'setRecurringBlock',
         dayOfWeek: selectedDay,
         startTime: selectedTimeSlots[0],
         endTime: selectedTimeSlots[selectedTimeSlots.length - 1],
-        untilDate: addMonths(new Date(), 3).toISOString(),
+        untilDate: addMonths(now, 3).toISOString(),
         reason: blockReason
       });
     } else {
+      // Ensure we have selected time slots
+      if (selectedTimeSlots.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one time slot",
+          variant: "destructive"
+        });
+        return;
+      }
+
       blockTimeMutation.mutate({
         action: 'blockTimeSlot',
         date: format(selectedDate, "yyyy-MM-dd"),
@@ -220,10 +251,10 @@ export function TimeBlocking() {
                   blocked: (date) => isDateBlocked(date)
                 }}
                 modifiersStyles={{
-                  blocked: { 
-                    backgroundColor: "var(--destructive)", 
+                  blocked: {
+                    backgroundColor: "var(--destructive)",
                     color: "white",
-                    opacity: 0.5 
+                    opacity: 0.5
                   }
                 }}
               />
@@ -266,8 +297,8 @@ export function TimeBlocking() {
                               timeSlots: [slot]
                             });
                           } else {
-                            setSelectedTimeSlots(prev => 
-                              prev.includes(slot) 
+                            setSelectedTimeSlots(prev =>
+                              prev.includes(slot)
                                 ? prev.filter(s => s !== slot)
                                 : [...prev, slot]
                             );
@@ -283,14 +314,14 @@ export function TimeBlocking() {
             </div>
           )}
 
-          <Button 
+          <Button
             className="w-full mt-4 md:col-span-2"
             onClick={handleBlock}
-            disabled={blockTimeMutation.isPending || 
+            disabled={blockTimeMutation.isPending ||
               (blockType === "slots" && selectedTimeSlots.length === 0)}
           >
-            {blockTimeMutation.isPending 
-              ? "Blocking..." 
+            {blockTimeMutation.isPending
+              ? "Blocking..."
               : blockType === "full-day"
                 ? "Block Full Day"
                 : `Block ${isRecurring ? 'Recurring' : 'Selected'} Times`}
