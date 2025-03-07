@@ -26,7 +26,7 @@ interface UsePricingOptions {
   includeRemount?: boolean;
   isHighRise?: boolean;
   generalLaborHours?: number;
-  travelDistance?: number; // in minutes
+  travelDistance?: number;
 }
 
 export function usePricing(
@@ -46,14 +46,10 @@ export function usePricing(
   });
 
   useEffect(() => {
-    // Separate TV installations and unmounting-only services
+    // Separate TV installations by type
     const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
     const unmountOnlyCount = tvInstallations.filter(tv => tv.isUnmountOnly).length;
     const remountOnlyCount = tvInstallations.filter(tv => tv.isRemountOnly).length;
-
-    // Find the first camera installation to get its height (if any)
-    const cameraInstallation = smartHomeInstallations.find(item => item.type === 'camera');
-    const doorbellInstallation = smartHomeInstallations.find(item => item.type === 'doorbell');
 
     // Convert installation data to service options format
     const serviceOptions: ServiceOptions = {
@@ -71,19 +67,19 @@ export function usePricing(
       generalLaborHours: options.generalLaborHours || 0,
       needsUnmount: options.includeUnmount || mountingTvs.some(tv => tv.unmount),
       needsRemount: options.includeRemount || mountingTvs.some(tv => tv.remount),
-      unmountOnlyCount: unmountOnlyCount,
-      remountOnlyCount: remountOnlyCount,
+      unmountOnlyCount,
+      remountOnlyCount,
       travelDistance: options.travelDistance || 0,
       installation: {
-        mountHeight: cameraInstallation?.mountHeight,
-        brickInstallation: doorbellInstallation?.brickInstallation
+        mountHeight: smartHomeInstallations.find(item => item.type === 'camera')?.mountHeight || 0,
+        brickInstallation: smartHomeInstallations.find(item => item.type === 'doorbell')?.brickInstallation || false
       }
     };
 
     // Calculate pricing
     const calculatedPricing = calculatePrice(serviceOptions);
 
-    // Format currency values
+    // Update state with calculated values
     setPricingResult({
       ...calculatedPricing,
       formattedTotal: formatPrice(calculatedPricing.total),
@@ -94,5 +90,4 @@ export function usePricing(
   return pricingResult;
 }
 
-// Export formatPrice function from pricing module
 export { formatPrice } from './pricing';
