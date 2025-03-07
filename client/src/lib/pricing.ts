@@ -19,6 +19,8 @@ export const pricing = {
     camera: 75,
     doorbell: 85,
     floodlight: 125,
+    heightSurcharge: 25, // per 4ft increment above 8ft
+    brickInstallation: 10,
   },
 
   bundles: {
@@ -72,7 +74,7 @@ export function calculatePrice(options: ServiceOptions) {
   const smartHomeItems: Array<{ name: string; price: number }> = [];
   const laborItems: Array<{ name: string; price: number }> = [];
 
-  // TV Mounting
+  // TV Mounting Services
   if (options.tvCount > 0) {
     const baseTvPrice = options.isFireplace ? pricing.tvMounting.fireplace : pricing.tvMounting.base;
     tvMountingItems.push({
@@ -137,10 +139,35 @@ export function calculatePrice(options: ServiceOptions) {
     });
   }
 
+  // Standalone TV Services
+  if (options.unmountOnlyCount > 0) {
+    const unmountFee = options.unmountOnlyCount * pricing.tvMounting.unmount;
+    breakdown.push({
+      category: "TV Unmounting",
+      items: [{
+        name: options.unmountOnlyCount > 1 ? `TV Unmounting Only (${options.unmountOnlyCount})` : "TV Unmounting Only",
+        price: unmountFee
+      }]
+    });
+    basePrice += unmountFee;
+  }
+
+  if (options.remountOnlyCount > 0) {
+    const remountFee = options.remountOnlyCount * pricing.tvMounting.remount;
+    breakdown.push({
+      category: "TV Remounting",
+      items: [{
+        name: options.remountOnlyCount > 1 ? `TV Remounting Only (${options.remountOnlyCount})` : "TV Remounting Only",
+        price: remountFee
+      }]
+    });
+    basePrice += remountFee;
+  }
+
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
-    // Smart cameras
     if (options.smartCameras > 0) {
+      // Base camera price
       const basePrice = options.smartCameras * pricing.smartHome.camera;
       smartHomeItems.push({
         name: `Smart Camera Installation (${options.smartCameras})`,
@@ -148,25 +175,27 @@ export function calculatePrice(options: ServiceOptions) {
       });
       additionalServices += basePrice;
 
-      // Calculate height surcharge if applicable
-      const mountHeight = options.installation?.mountHeight || 0;
-      if (mountHeight > 8) {
-        const heightDifference = mountHeight - 8;
-        const surchargeMultiplier = Math.ceil(heightDifference / 4);
-        const heightSurcharge = surchargeMultiplier * 25 * options.smartCameras;
+      // Height surcharge calculation
+      if (options.installation?.mountHeight) {
+        const height = options.installation.mountHeight;
+        if (height > 8) {
+          const heightDifference = height - 8;
+          const surchargeMultiplier = Math.ceil(heightDifference / 4);
+          const heightSurcharge = surchargeMultiplier * pricing.smartHome.heightSurcharge * options.smartCameras;
 
-        if (heightSurcharge > 0) {
-          smartHomeItems.push({
-            name: `Height Surcharge (${heightDifference}ft above 8ft)`,
-            price: heightSurcharge
-          });
-          additionalServices += heightSurcharge;
+          if (heightSurcharge > 0) {
+            smartHomeItems.push({
+              name: `Height Surcharge (${heightDifference}ft above 8ft)`,
+              price: heightSurcharge
+            });
+            additionalServices += heightSurcharge;
+          }
         }
       }
     }
 
-    // Smart doorbells
     if (options.smartDoorbells > 0) {
+      // Base doorbell price
       const basePrice = options.smartDoorbells * pricing.smartHome.doorbell;
       smartHomeItems.push({
         name: `Smart Doorbell Installation (${options.smartDoorbells})`,
@@ -174,9 +203,9 @@ export function calculatePrice(options: ServiceOptions) {
       });
       additionalServices += basePrice;
 
-      // Add brick installation fee if applicable
+      // Brick installation fee
       if (options.installation?.brickInstallation) {
-        const brickFee = 10 * options.smartDoorbells;
+        const brickFee = pricing.smartHome.brickInstallation * options.smartDoorbells;
         smartHomeItems.push({
           name: 'Brick Installation Fee',
           price: brickFee
@@ -185,7 +214,6 @@ export function calculatePrice(options: ServiceOptions) {
       }
     }
 
-    // Smart floodlights
     if (options.smartFloodlights > 0) {
       const floodlightPrice = options.smartFloodlights * pricing.smartHome.floodlight;
       smartHomeItems.push({
@@ -195,10 +223,12 @@ export function calculatePrice(options: ServiceOptions) {
       additionalServices += floodlightPrice;
     }
 
-    breakdown.push({
-      category: "Smart Home",
-      items: smartHomeItems
-    });
+    if (smartHomeItems.length > 0) {
+      breakdown.push({
+        category: "Smart Home",
+        items: smartHomeItems
+      });
+    }
   }
 
   // Travel Fee
