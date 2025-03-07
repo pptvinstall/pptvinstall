@@ -1,37 +1,37 @@
 // Pricing configuration
 export const pricing = {
   tvMounting: {
-    base: 100, // Base price for TV mounting with customer-provided mount
-    additionalTv: 10, // Discount per additional TV
-    nonDrywall: 50, // Additional for masonry or non-drywall surfaces
-    fireplace: 200, // Base price for fireplace installation
-    highRise: 25, // Additional for high-rise or steel studs
-    unmount: 50, // Price for unmounting a TV
-    remount: 50, // Price for remounting with existing hardware
+    base: 100,
+    additionalTv: 10,
+    nonDrywall: 50,
+    fireplace: 200,
+    highRise: 25,
+    unmount: 50,
+    remount: 50,
   },
 
   electrical: {
-    outletInstallation: 100, // New outlet behind TV (non-fireplace only)
-    additionalOutlet: 10, // Discount per additional outlet
+    outletInstallation: 100,
+    additionalOutlet: 10,
   },
 
   smartHome: {
-    camera: 75, // Per smart security camera
-    doorbell: 85, // Per smart doorbell
-    floodlight: 125, // Per smart floodlight
+    camera: 75,
+    doorbell: 85,
+    floodlight: 125,
   },
 
   bundles: {
-    tvPlusOutlet: 190, // TV mount + outlet relocation
+    tvPlusOutlet: 190,
   },
 
   generalLabor: {
-    hourly: 100, // Per hour for non-standard tasks
-    halfHour: 50, // Per additional 30 minutes
+    hourly: 100,
+    halfHour: 50,
   },
 
   travel: {
-    fee: 20, // For distances requiring >30 min driving
+    fee: 20,
   }
 };
 
@@ -56,21 +56,7 @@ export type ServiceOptions = {
   };
 };
 
-export function calculatePrice(options: ServiceOptions): {
-  basePrice: number;
-  additionalServices: number;
-  discounts: number;
-  travelFee: number;
-  total: number;
-  breakdown: Array<{
-    category: string;
-    items: Array<{
-      name: string;
-      price: number;
-      isDiscount?: boolean;
-    }>;
-  }>;
-} {
+export function calculatePrice(options: ServiceOptions) {
   let basePrice = 0;
   let additionalServices = 0;
   let discounts = 0;
@@ -153,6 +139,7 @@ export function calculatePrice(options: ServiceOptions): {
 
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
+    // Smart cameras
     if (options.smartCameras > 0) {
       const basePrice = options.smartCameras * pricing.smartHome.camera;
       smartHomeItems.push({
@@ -161,6 +148,7 @@ export function calculatePrice(options: ServiceOptions): {
       });
       additionalServices += basePrice;
 
+      // Calculate height surcharge if applicable
       const mountHeight = options.installation?.mountHeight || 0;
       if (mountHeight > 8) {
         const heightDifference = mountHeight - 8;
@@ -177,6 +165,7 @@ export function calculatePrice(options: ServiceOptions): {
       }
     }
 
+    // Smart doorbells
     if (options.smartDoorbells > 0) {
       const basePrice = options.smartDoorbells * pricing.smartHome.doorbell;
       smartHomeItems.push({
@@ -185,6 +174,7 @@ export function calculatePrice(options: ServiceOptions): {
       });
       additionalServices += basePrice;
 
+      // Add brick installation fee if applicable
       if (options.installation?.brickInstallation) {
         const brickFee = 10 * options.smartDoorbells;
         smartHomeItems.push({
@@ -195,6 +185,7 @@ export function calculatePrice(options: ServiceOptions): {
       }
     }
 
+    // Smart floodlights
     if (options.smartFloodlights > 0) {
       const floodlightPrice = options.smartFloodlights * pricing.smartHome.floodlight;
       smartHomeItems.push({
@@ -207,34 +198,6 @@ export function calculatePrice(options: ServiceOptions): {
     breakdown.push({
       category: "Smart Home",
       items: smartHomeItems
-    });
-  }
-
-  // General Labor
-  if (options.generalLaborHours > 0) {
-    const fullHours = Math.floor(options.generalLaborHours);
-    const hasHalfHour = (options.generalLaborHours - fullHours) > 0;
-
-    if (fullHours > 0) {
-      const hourlyPrice = fullHours * pricing.generalLabor.hourly;
-      laborItems.push({
-        name: `General Labor (${fullHours} hour${fullHours > 1 ? 's' : ''})`,
-        price: hourlyPrice
-      });
-      additionalServices += hourlyPrice;
-    }
-
-    if (hasHalfHour) {
-      laborItems.push({
-        name: "General Labor (30 minutes)",
-        price: pricing.generalLabor.halfHour
-      });
-      additionalServices += pricing.generalLabor.halfHour;
-    }
-
-    breakdown.push({
-      category: "General Labor",
-      items: laborItems
     });
   }
 

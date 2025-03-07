@@ -1,15 +1,13 @@
 import * as React from "react"
 import { Button } from "./button"
 import { motion } from "framer-motion"
-import { Plus, Minus } from "lucide-react"
+import { Plus, Minus, MinusCircle, PlusCircle } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
 import { Switch } from "./switch"
 import { Label } from "./label"
-import { Input } from "./input"
 import { Card } from "./card"
 import { Separator } from "./separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu"
-import { MinusCircle, PlusCircle } from "lucide-react";
 
 export type TVInstallation = {
   size: 'small' | 'large';
@@ -20,8 +18,8 @@ export type TVInstallation = {
   highRise: boolean;
   unmount: boolean;
   remount: boolean;
-  isUnmountOnly?: boolean; // Flag to identify unmount-only services
-  isRemountOnly?: boolean; // New flag to identify remount-only services
+  isUnmountOnly?: boolean;
+  isRemountOnly?: boolean;
 };
 
 export type SmartHomeInstallation = {
@@ -43,7 +41,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
   // Auto-save selections whenever they change
   React.useEffect(() => {
-    // Only notify parent if we have any selections
     if (tvInstallations.length > 0 || smartHomeInstallations.length > 0) {
       onServiceSelect({
         tvs: tvInstallations,
@@ -97,7 +94,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
   };
 
   const addTVUnmountingOnly = () => {
-    // Add TV unmounting service without a mounting service
     setTvInstallations(prev => [...prev, {
       size: 'small',
       location: 'standard',
@@ -107,13 +103,12 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       highRise: false,
       unmount: true,
       remount: false,
-      isUnmountOnly: true, // Set this flag to true for unmounting-only services
+      isUnmountOnly: true,
       isRemountOnly: false
     }]);
   };
 
   const addTVRemountingOnly = () => {
-    // Add TV remounting service without a mounting service
     setTvInstallations(prev => [...prev, {
       size: 'small',
       location: 'standard',
@@ -124,16 +119,15 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       unmount: false,
       remount: true,
       isUnmountOnly: false,
-      isRemountOnly: true // Set this flag to true for remounting-only services
+      isRemountOnly: true
     }]);
   };
 
-  // Whether we have any services selected
   const hasSelectionsToConfirm = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
 
   return (
     <div className="space-y-6">
-      {(tvInstallations.length > 0 || smartHomeInstallations.length > 0) && (
+      {hasSelectionsToConfirm && (
         <Card className="p-4">
           <h3 className="font-medium mb-3">Selected Services</h3>
           <div className="space-y-3 text-sm">
@@ -154,7 +148,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   size="sm"
                   onClick={() => removeTvInstallation(index)}
                   className="h-7 w-7 p-0 ml-2"
-                  aria-label="Remove service"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -170,10 +163,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         'Smart Camera'}
                     {device.quantity > 1 && ` (×${device.quantity})`}
                   </span>
-                  {(device.type === 'camera' && device.mountHeight && device.mountHeight > 8) && (
+                  {device.type === 'camera' && device.mountHeight && (
                     <span className="text-xs text-muted-foreground">• {device.mountHeight}ft height</span>
                   )}
-                  {(device.type === 'doorbell' && device.brickInstallation) && (
+                  {device.type === 'doorbell' && device.brickInstallation && (
                     <span className="text-xs text-muted-foreground">• Brick installation</span>
                   )}
                 </div>
@@ -182,7 +175,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                   size="sm"
                   onClick={() => removeSmartHomeInstallation(index)}
                   className="h-7 w-7 p-0 ml-2"
-                  aria-label="Remove service"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -243,7 +235,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 )}
               </div>
 
-              {/* Only show TV mounting options if not a specialized service */}
               {!installation.isUnmountOnly && !installation.isRemountOnly && (
                 <div className="space-y-6">
                   <div>
@@ -360,11 +351,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                     </div>
                   </div>
 
-                  {/* Surface type options and additional options for mounting */}
                   <div>
                     <h5 className="text-sm font-medium mb-3">Additional Options</h5>
                     <div className="space-y-4">
-                      {/* Surface type options */}
                       <div className="flex items-center space-x-2">
                         <Switch
                           checked={installation.masonryWall}
@@ -379,7 +368,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         </Label>
                       </div>
 
-                      {/* High-rise/steel studs option - positioned right after masonry */}
                       <div className="flex items-center space-x-2">
                         <Switch
                           checked={installation.highRise}
@@ -394,7 +382,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         </Label>
                       </div>
 
-                      {/* Only show outlet relocation option for non-fireplace installs */}
                       {installation.location !== 'fireplace' && (
                         <div className="flex items-center space-x-2">
                           <Switch
@@ -407,7 +394,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                         </div>
                       )}
 
-                      {/* Fireplace warning note */}
                       {installation.location === 'fireplace' && (
                         <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
                           Note: For outlet installation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
@@ -418,7 +404,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </div>
               )}
 
-              {/* Show appropriate callout based on service type */}
               {!installation.isUnmountOnly && !installation.isRemountOnly && (
                 <div>
                   <h5 className="text-sm font-medium mb-3">Service Add-ons</h5>
@@ -454,7 +439,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </div>
               )}
 
-              {/* For unmounting-only, show a price info callout */}
               {installation.isUnmountOnly && (
                 <div className="text-sm p-4 bg-muted rounded-lg">
                   <p className="font-medium mb-2">TV Unmounting Only Service</p>
@@ -462,7 +446,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </div>
               )}
 
-              {/* For remounting-only, show a price info callout */}
               {installation.isRemountOnly && (
                 <div className="text-sm p-4 bg-muted rounded-lg">
                   <p className="font-medium mb-2">TV Remounting Only Service</p>
@@ -612,14 +595,12 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
 
                 <div className="mt-4 p-3 bg-muted rounded-md">
                   <h5 className="font-medium text-sm mb-1">Base Price</h5>
-                  <p className="text-lg font-semibold">{
-                    installation.type === 'doorbell' ? '$85' :
+                  <p className="text-lg font-semibold">
+                    {installation.type === 'doorbell' ? '$85' :
                       installation.type === 'floodlight' ? '$125' :
-                        '$75'
-                  }{installation.quantity > 1 ? ` × ${installation.quantity}` : ''}
+                        '$75'}{installation.quantity > 1 ? ` × ${installation.quantity}` : ''}
                   </p>
 
-                  {/* Additional fees display */}
                   {((installation.type === 'doorbell' && installation.brickInstallation) ||
                     (installation.type === 'camera' && installation.mountHeight && installation.mountHeight > 8)) && (
                     <div className="text-xs text-muted-foreground mt-1">
@@ -640,7 +621,6 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        {/* Replaced the Confirm Selection button with a Next button that auto-proceeds */}
         <Button
           onClick={onClose}
           disabled={!hasSelectionsToConfirm}
