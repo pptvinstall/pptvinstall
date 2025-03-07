@@ -23,6 +23,49 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Get all blocked time slots for a date range
+   */
+  async getBlockedTimeSlots(
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ [key: string]: string[] }> {
+    try {
+      const response = await this.calendar.events.list({
+        calendarId: this.calendarId,
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+        q: 'BLOCKED', // Search for events marked as blocked
+        singleEvents: true,
+        orderBy: 'startTime'
+      });
+
+      const blockedSlots: { [key: string]: string[] } = {};
+
+      for (const event of response.data.items || []) {
+        if (event.start?.dateTime) {
+          const eventDate = new Date(event.start.dateTime);
+          const dateKey = eventDate.toISOString().split('T')[0];
+          const timeString = eventDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          if (!blockedSlots[dateKey]) {
+            blockedSlots[dateKey] = [];
+          }
+          blockedSlots[dateKey].push(timeString);
+        }
+      }
+
+      return blockedSlots;
+    } catch (error) {
+      console.error('Error fetching blocked time slots:', error);
+      return {};
+    }
+  }
+
+  /**
    * Block a specific time slot in the calendar
    */
   async blockTimeSlot(
@@ -46,7 +89,6 @@ export class GoogleCalendarService {
           dateTime: endDateTime.toISOString(),
           timeZone: 'America/New_York',
         },
-        // Use a specific color for blocked time slots
         colorId: '11', // Red color
       };
 
@@ -58,6 +100,69 @@ export class GoogleCalendarService {
       return true;
     } catch (error) {
       console.error('Error blocking time slot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Unblock a previously blocked time slot
+   */
+  async unblockTimeSlot(eventId: string): Promise<boolean> {
+    try {
+      await this.calendar.events.delete({
+        calendarId: this.calendarId,
+        eventId: eventId
+      });
+      return true;
+    } catch (error) {
+      console.error('Error unblocking time slot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Set a recurring blocked time slot
+   */
+  async setRecurringBlock(
+    dayOfWeek: string,
+    startTime: string,
+    endTime: string,
+    untilDate: string
+  ): Promise<boolean> {
+    try {
+      // Get day number (0-6) from day name
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayNum = days.indexOf(dayOfWeek.toLowerCase());
+      if (dayNum === -1) throw new Error('Invalid day of week');
+
+      // Create a date for next occurrence of this day
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() + ((7 + dayNum - startDate.getDay()) % 7));
+
+      const event = {
+        summary: 'BLOCKED - Recurring',
+        start: {
+          dateTime: `${startDate.toISOString().split('T')[0]}T${startTime}`,
+          timeZone: 'America/New_York',
+        },
+        end: {
+          dateTime: `${startDate.toISOString().split('T')[0]}T${endTime}`,
+          timeZone: 'America/New_York',
+        },
+        recurrence: [
+          `RRULE:FREQ=WEEKLY;BYDAY=${this.getDayAbbreviation(dayNum)};UNTIL=${untilDate.split('T')[0].replace(/-/g, '')}`
+        ],
+        colorId: '11', // Red color
+      };
+
+      await this.calendar.events.insert({
+        calendarId: this.calendarId,
+        requestBody: event,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error setting recurring block:', error);
       return false;
     }
   }
@@ -153,9 +258,9 @@ export class GoogleCalendarService {
 
       for (const event of events) {
         if (event.start?.dateTime) {
-          const eventStart = new Date(event.start.dateTime);
-          const dateKey = eventStart.toISOString().split('T')[0];
-          const timeString = eventStart.toLocaleTimeString('en-US', {
+          const eventDate = new Date(event.start.dateTime);
+          const dateKey = eventDate.toISOString().split('T')[0];
+          const timeString = eventDate.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true

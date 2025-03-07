@@ -150,7 +150,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add endpoint to manage business hours and blocked time slots
+  // Add endpoint to get blocked time slots
+  app.get("/api/admin/blocked-times", async (req, res) => {
+    try {
+      const { startDate, endDate, password } = req.query;
+
+      // Verify admin password
+      if (password !== adminPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid password" 
+        });
+      }
+
+      // Parse dates
+      const start = startDate ? new Date(startDate as string) : new Date();
+      const end = endDate ? new Date(endDate as string) : new Date(start);
+      end.setMonth(end.getMonth() + 1); // Default to 1 month range if no end date
+
+      // Get blocked slots from Google Calendar
+      const blockedSlots = await googleCalendarService.getBlockedTimeSlots(start, end);
+
+      res.json({
+        success: true,
+        blockedSlots
+      });
+    } catch (error) {
+      console.error("Error fetching blocked time slots:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch blocked time slots"
+      });
+    }
+  });
+
+  // Modify existing /api/admin/availability endpoint to include more options
   app.post("/api/admin/availability", async (req, res) => {
     try {
       const { password, action, data } = req.body;
@@ -168,6 +202,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Block a specific time slot
           const { date, startTime, endTime, reason } = data;
           await googleCalendarService.blockTimeSlot(date, startTime, endTime, reason);
+          break;
+
+        case 'unblockTimeSlot':
+          // Unblock a previously blocked time slot
+          const { eventId } = data;
+          await googleCalendarService.unblockTimeSlot(eventId);
+          break;
+
+        case 'setRecurringBlock':
+          // Set a recurring blocked time
+          const { dayOfWeek, recurringStartTime, recurringEndTime, untilDate } = data;
+          await googleCalendarService.setRecurringBlock(
+            dayOfWeek,
+            recurringStartTime,
+            recurringEndTime,
+            untilDate
+          );
           break;
 
         case 'setBusinessHours':
@@ -435,6 +486,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to cancel booking"
+      });
+    }
+  });
+
+  app.post("/api/bookings/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking ID" 
+        });
+      }
+
+      // Update the booking in the database
+      const result = await db.update(bookings)
+        .set({ status: 'active' })
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Booking not found" 
+        });
+      }
+
+      // Also update in file storage for backward compatibility
+      fileBookings = fileBookings.map(b => {
+        if (b.id === id.toString()) {
+          return { ...b, status: 'active' };
+        }
+        return b;
+      });
+      saveBookings(fileBookings);
+
+      // Send confirmation email
+      try {
+        if (process.env.SENDGRID_API_KEY) {
+          const booking = result[0];
+          await sendBookingConfirmationEmail(booking);
+          console.log("Confirmation email sent successfully");
+        }
+      } catch (error) {
+        console.error("Error sending confirmation:", error);
+        // Don't fail the approval if email fails
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Booking approved successfully" 
+      });
+    } catch (error) {
+      console.error("Error approving booking:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to approve booking"
+      });
+    }
+  });
+
+  app.post("/api/bookings/:id/decline", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking ID" 
+        });
+      }
+
+      // Update the booking in the database
+      const result = await db.update(bookings)
+        .set({ 
+          status: 'cancelled',
+          notes: reason ? `DECLINED - Reason: ${reason}` : 'DECLINED'
+        })
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Booking not found" 
+        });
+      }
+
+      // Also update in file storage for backward compatibility
+      fileBookings = fileBookings.map(b => {
+        if (b.id === id.toString()) {
+          return { ...b, status: 'cancelled', notes: reason ? `DECLINED - Reason: ${reason}` : 'DECLINED' };
+        }
+        return b;
+      });
+      saveBookings(fileBookings);
+
+      res.json({ 
+        success: true, 
+        message: "Booking declined successfully" 
+      });
+    } catch (error) {
+      console.error("Error declining booking:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to decline booking"
+      });
+    }
+  });
+
+  // Update booking details (Quick Edit)
+  app.put("/api/bookings/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking ID" 
+        });
+      }
+
+      // Update the booking in the database
+      const result = await db.update(bookings)
+        .set(updates)
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Booking not found" 
+        });
+      }
+
+      // Also update in file storage for backward compatibility
+      fileBookings = fileBookings.map(b => {
+        if (b.id === id.toString()) {
+          return { ...b, ...updates };
+        }
+        return b;
+      });
+      saveBookings(fileBookings);
+
+      res.json({ 
+        success: true, 
+        message: "Booking updated successfully",
+        booking: result[0]
+      });
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update booking"
       });
     }
   });
