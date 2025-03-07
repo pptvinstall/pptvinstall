@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,16 +40,34 @@ export function TimeBlocking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check admin password on component mount
+  useEffect(() => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      toast({
+        title: "Error",
+        description: "Please log in as admin first",
+        variant: "destructive"
+      });
+    }
+  }, []);
+
   // Fetch blocked times and days
   const { data: blockedTimes = {} } = useQuery({
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
+      const adminPassword = localStorage.getItem('adminPassword');
+      if (!adminPassword) {
+        throw new Error('Admin password not found. Please log in first.');
+      }
+
       const response = await apiRequest(
-        "GET",
-        `/api/admin/blocked-times?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${localStorage.getItem('adminPassword')}`
+        "GET", 
+        `/api/admin/blocked-times?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${adminPassword}`
       );
       if (!response.ok) {
-        throw new Error('Failed to fetch blocked times');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch blocked times');
       }
       const data = await response.json();
       return data.blockedSlots || {};
@@ -60,12 +78,18 @@ export function TimeBlocking() {
   const { data: blockedDays = [] } = useQuery({
     queryKey: ['/api/admin/blocked-days'],
     queryFn: async () => {
+      const adminPassword = localStorage.getItem('adminPassword');
+      if (!adminPassword) {
+        throw new Error('Admin password not found. Please log in first.');
+      }
+
       const response = await apiRequest(
         "GET",
-        `/api/admin/blocked-days?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${localStorage.getItem('adminPassword')}`
+        `/api/admin/blocked-days?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${adminPassword}`
       );
       if (!response.ok) {
-        throw new Error('Failed to fetch blocked days');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch blocked days');
       }
       const data = await response.json();
       return data.blockedDays || [];
@@ -84,8 +108,13 @@ export function TimeBlocking() {
       untilDate?: string;
       reason?: string;
     }) => {
+      const adminPassword = localStorage.getItem('adminPassword');
+      if (!adminPassword) {
+        throw new Error('Admin password not found. Please log in first.');
+      }
+
       const response = await apiRequest("POST", "/api/admin/availability", {
-        password: localStorage.getItem('adminPassword'), // Include admin password
+        password: adminPassword,
         action: data.action,
         data: {
           ...data,

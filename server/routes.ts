@@ -12,6 +12,12 @@ import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from 
 ensureDataDirectory();
 let fileBookings: any[] = loadBookings();
 
+// Add or update the admin authentication helper function
+function verifyAdminPassword(password: string | undefined): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  return password === adminPassword;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   app.get("/api/health", (req, res) => {
@@ -156,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate, password } = req.query;
 
       // Verify admin password
-      if (password !== adminPassword) {
+      if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({ 
           success: false, 
           message: "Invalid password" 
@@ -190,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate, password } = req.query;
 
       // Verify admin password
-      if (password !== adminPassword) {
+      if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({ 
           success: false, 
           message: "Invalid password" 
@@ -223,8 +229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { password, action, data } = req.body;
 
-      // Verify admin password
-      if (password !== adminPassword) {
+      // Verify admin password using the helper function
+      if (!verifyAdminPassword(password)) {
         return res.status(401).json({ 
           success: false, 
           message: "Invalid password" 
@@ -698,14 +704,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoints
-  // Default admin password (for development only, should use env var in production)
-  let adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  // The adminPassword variable is no longer needed here because it's managed by verifyAdminPassword function.
+
 
   // Admin login
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
 
-    if (password === adminPassword) {
+    if (verifyAdminPassword(password)) {
       res.json({ 
         success: true, 
         message: "Login successful" 
@@ -723,20 +729,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { currentPassword, newPassword } = req.body;
 
     // Verify current password
-    if (currentPassword !== adminPassword) {
+    if (verifyAdminPassword(currentPassword)) {
+      // Update password (This updates the environment variable, not a local variable)
+      process.env.ADMIN_PASSWORD = newPassword;
+      res.json({ 
+        success: true, 
+        message: "Password updated successfully" 
+      });
+    } else {
       return res.status(401).json({ 
         success: false, 
         message: "Current password is incorrect" 
       });
     }
-
-    // Update password
-    adminPassword = newPassword;
-
-    res.json({ 
-      success: true, 
-      message: "Password updated successfully" 
-    });
   });
 
   // Clear all bookings
@@ -745,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password } = req.body;
 
       // Verify admin password
-      if (password !== adminPassword) {
+      if (!verifyAdminPassword(password)) {
         return res.status(401).json({ 
           success: false, 
           message: "Invalid password" 
