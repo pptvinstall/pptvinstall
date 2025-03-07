@@ -15,7 +15,16 @@ let fileBookings: any[] = loadBookings();
 // Add or update the admin authentication helper function
 function verifyAdminPassword(password: string | undefined): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  return password === adminPassword;
+
+  if (!password) {
+    console.log('Admin authentication failed: No password provided');
+    return false;
+  }
+
+  const isValid = password === adminPassword;
+  console.log(`Admin authentication ${isValid ? 'successful' : 'failed'}`);
+
+  return isValid;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {

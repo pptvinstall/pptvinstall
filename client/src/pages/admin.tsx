@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   // Filtered bookings with search and status filter
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
-      const matchesSearch = searchTerm === "" || 
+      const matchesSearch = searchTerm === "" ||
         booking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.phone.includes(searchTerm) ||
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
 
       const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
 
-      const matchesDate = !dateFilter || 
+      const matchesDate = !dateFilter ||
         format(new Date(booking.preferredDate), "yyyy-MM-dd") === format(dateFilter, "yyyy-MM-dd");
 
       return matchesSearch && matchesStatus && matchesDate;
@@ -126,6 +126,8 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: () => {
+      // Store the password in localStorage for subsequent API calls
+      localStorage.setItem('adminPassword', password);
       setIsAuthenticated(true);
       toast({
         title: "Login successful",
@@ -133,9 +135,11 @@ export default function AdminDashboard() {
       });
     },
     onError: () => {
+      // Clear any existing stored password on login failure
+      localStorage.removeItem('adminPassword');
       toast({
         title: "Login failed",
-        description: "Invalid password",
+        description: "Invalid password. Please try again.",
         variant: "destructive"
       });
     }
@@ -289,6 +293,25 @@ export default function AdminDashboard() {
     clearBookingsMutation.mutate(password);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminPassword');
+    setIsAuthenticated(false);
+    queryClient.clear(); // Clear any cached data
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
+  };
+
+
+  useEffect(() => {
+    const storedPassword = localStorage.getItem('adminPassword');
+    if (storedPassword) {
+      // Verify the stored password
+      loginMutation.mutate(storedPassword);
+    }
+  }, []);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -304,8 +327,8 @@ export default function AdminDashboard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={loginMutation.isPending}
               >
@@ -321,6 +344,7 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      <Button onClick={handleLogout}>Logout</Button> {/* Added Logout Button */}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
         <TabsList className="mb-4">
@@ -458,8 +482,8 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-sm ${
-                              booking.status === 'cancelled' 
-                                ? 'bg-red-100 text-red-800' 
+                              booking.status === 'cancelled'
+                                ? 'bg-red-100 text-red-800'
                                 : 'bg-green-100 text-green-800'
                             }`}>
                               {booking.status || 'active'}
@@ -569,7 +593,7 @@ export default function AdminDashboard() {
                       />
                     </div>
                   </div>
-                  <Button 
+                  <Button
                     type="submit"
                     disabled={resetPasswordMutation.isPending || !currentPassword || !newPassword || !confirmPassword}
                   >
