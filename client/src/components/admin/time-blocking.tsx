@@ -12,9 +12,18 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const TIME_SLOTS = [
-  "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
+// Define weekday and weekend time slots
+const WEEKDAY_TIME_SLOTS = [
+  "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM",
+  "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM"
+];
+
+const WEEKEND_TIME_SLOTS = [
+  "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM",
+  "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
+  "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
+  "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM",
+  "7:00 PM", "7:30 PM", "8:00 PM"
 ];
 
 const DAYS_OF_WEEK = [
@@ -36,7 +45,7 @@ export function TimeBlocking() {
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
       const startDate = new Date();
-      const endDate = addMonths(startDate, 3); // Get 3 months of data
+      const endDate = addMonths(startDate, 3);
       const response = await apiRequest(
         "GET", 
         `/api/admin/blocked-times?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
@@ -107,6 +116,17 @@ export function TimeBlocking() {
     return blockedTimes[dateStr] || [];
   };
 
+  // Get appropriate time slots based on the day
+  const getTimeSlots = (date: Date | string) => {
+    let dayOfWeek;
+    if (typeof date === 'string') {
+      dayOfWeek = DAYS_OF_WEEK.indexOf(date);
+    } else {
+      dayOfWeek = date.getDay();
+    }
+    return dayOfWeek === 0 || dayOfWeek === 6 ? WEEKEND_TIME_SLOTS : WEEKDAY_TIME_SLOTS;
+  };
+
   // Handle blocking times or full days
   const handleBlock = () => {
     if (!selectedDate) return;
@@ -140,6 +160,9 @@ export function TimeBlocking() {
     const dateStr = format(date, "yyyy-MM-dd");
     return blockedDays.includes(dateStr);
   };
+
+  // Get the time slots to display based on whether we're in recurring mode
+  const displayTimeSlots = isRecurring ? getTimeSlots(selectedDay) : getTimeSlots(selectedDate!);
 
   return (
     <Card>
@@ -215,9 +238,11 @@ export function TimeBlocking() {
           {blockType === "slots" && (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium mb-2">Available Time Slots</h4>
+                <h4 className="text-sm font-medium mb-2">
+                  Available Time Slots {isRecurring ? `(${selectedDay})` : ''}
+                </h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {TIME_SLOTS.map((slot) => {
+                  {displayTimeSlots.map((slot) => {
                     const isBlocked = selectedDate && 
                       getBlockedSlotsForDate(selectedDate).includes(slot);
 
