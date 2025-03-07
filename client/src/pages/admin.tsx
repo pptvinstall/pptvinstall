@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { formatPrice } from "@/lib/pricing";
 import { Download, Search, Filter, SlidersHorizontal } from "lucide-react";
+import { TimeBlocking } from "@/components/admin/time-blocking";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -323,6 +324,7 @@ export default function AdminDashboard() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
         <TabsList className="mb-4">
           <TabsTrigger value="bookings">Bookings</TabsTrigger>
+          <TabsTrigger value="scheduling">Time Blocking</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -521,6 +523,10 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="scheduling">
+          <TimeBlocking />
         </TabsContent>
 
         <TabsContent value="settings">
