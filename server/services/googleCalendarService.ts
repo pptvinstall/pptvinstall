@@ -237,7 +237,7 @@ export class GoogleCalendarService {
    * Fetch unavailable time slots from Google Calendar
    */
   async getUnavailableTimeSlots(
-    startDate: Date, 
+    startDate: Date,
     endDate: Date
   ): Promise<{ [key: string]: string[] }> {
     try {
@@ -290,6 +290,72 @@ export class GoogleCalendarService {
   ): boolean {
     // Check if the time slot is in the unavailable list
     return !unavailableSlots[date]?.includes(timeSlot);
+  }
+
+  /**
+   * Block an entire day
+   */
+  async blockFullDay(
+    date: string,
+    reason: string = "Day marked as unavailable"
+  ): Promise<boolean> {
+    try {
+      const event = {
+        summary: 'BLOCKED - Full Day',
+        description: reason,
+        start: {
+          date: date, // Use date instead of dateTime for all-day events
+          timeZone: 'America/New_York',
+        },
+        end: {
+          date: date,
+          timeZone: 'America/New_York',
+        },
+        colorId: '11', // Red color
+      };
+
+      await this.calendar.events.insert({
+        calendarId: this.calendarId,
+        requestBody: event,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error blocking full day:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all blocked days
+   */
+  async getBlockedDays(
+    startDate: Date,
+    endDate: Date
+  ): Promise<string[]> {
+    try {
+      const response = await this.calendar.events.list({
+        calendarId: this.calendarId,
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+        q: 'BLOCKED - Full Day', // Search for full day blocks
+        singleEvents: true,
+        orderBy: 'startTime'
+      });
+
+      const blockedDays: string[] = [];
+
+      for (const event of response.data.items || []) {
+        if (event.start?.date) { // date property exists for all-day events
+          blockedDays.push(event.start.date);
+        }
+      }
+
+      return blockedDays;
+    } catch (error) {
+      console.error('Error fetching blocked days:', error);
+      return [];
+    }
   }
 }
 

@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TIME_SLOTS = [
   "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
@@ -24,10 +26,12 @@ export function TimeBlocking() {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("Monday");
+  const [blockType, setBlockType] = useState<"slots" | "full-day">("slots");
+  const [blockReason, setBlockReason] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch blocked times
+  // Fetch blocked times and days
   const { data: blockedTimes } = useQuery({
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
@@ -41,6 +45,20 @@ export function TimeBlocking() {
     }
   });
 
+  // Fetch blocked days
+  const { data: blockedDays = [] } = useQuery({
+    queryKey: ['/api/admin/blocked-days'],
+    queryFn: async () => {
+      const startDate = new Date();
+      const endDate = addMonths(startDate, 3);
+      const response = await apiRequest(
+        "GET",
+        `/api/admin/blocked-days?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+      );
+      return response.blockedDays || [];
+    }
+  });
+
   // Block time mutation
   const blockTimeMutation = useMutation({
     mutationFn: async (data: { 
@@ -51,27 +69,32 @@ export function TimeBlocking() {
       endTime?: string;
       timeSlots?: string[];
       untilDate?: string;
+      reason?: string;
     }) => {
       await apiRequest("POST", "/api/admin/availability", {
         action: data.action,
         data: {
           ...data,
-          reason: "Blocked by admin"
+          reason: data.reason || "Blocked by admin"
         }
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/blocked-times'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/blocked-days'] });
       toast({
-        title: "Times Blocked",
-        description: "The selected time slots have been blocked successfully.",
+        title: blockType === "slots" ? "Times Blocked" : "Day Blocked",
+        description: blockType === "slots" 
+          ? "The selected time slots have been blocked successfully."
+          : "The selected day has been marked as unavailable.",
       });
       setSelectedTimeSlots([]);
+      setBlockReason("");
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to block time slots. Please try again.",
+        description: "Failed to block time. Please try again.",
         variant: "destructive"
       });
     }
@@ -84,25 +107,38 @@ export function TimeBlocking() {
     return blockedTimes[dateStr] || [];
   };
 
-  // Handle blocking times
-  const handleBlockTimes = () => {
-    if (!selectedDate || selectedTimeSlots.length === 0) return;
+  // Handle blocking times or full days
+  const handleBlock = () => {
+    if (!selectedDate) return;
 
-    if (isRecurring) {
+    if (blockType === "full-day") {
+      blockTimeMutation.mutate({
+        action: 'blockFullDay',
+        date: format(selectedDate, "yyyy-MM-dd"),
+        reason: blockReason
+      });
+    } else if (isRecurring) {
       blockTimeMutation.mutate({
         action: 'setRecurringBlock',
         dayOfWeek: selectedDay,
         startTime: selectedTimeSlots[0],
         endTime: selectedTimeSlots[selectedTimeSlots.length - 1],
-        untilDate: addMonths(new Date(), 3).toISOString() // Set recurring for 3 months
+        untilDate: addMonths(new Date(), 3).toISOString(), // Set recurring for 3 months
+        reason: blockReason
       });
     } else {
       blockTimeMutation.mutate({
         action: 'blockTimeSlot',
         date: format(selectedDate, "yyyy-MM-dd"),
-        timeSlots: selectedTimeSlots
+        timeSlots: selectedTimeSlots,
+        reason: blockReason
       });
     }
+  };
+
+  const isDateBlocked = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return blockedDays.includes(dateStr);
   };
 
   return (
@@ -111,16 +147,25 @@ export function TimeBlocking() {
         <CardTitle>Block Time Slots</CardTitle>
       </CardHeader>
       <CardContent>
+        <Tabs value={blockType} onValueChange={(value) => setBlockType(value as "slots" | "full-day")} className="mb-6">
+          <TabsList>
+            <TabsTrigger value="slots">Block Time Slots</TabsTrigger>
+            <TabsTrigger value="full-day">Block Full Day</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="recurring"
-                checked={isRecurring}
-                onCheckedChange={setIsRecurring}
-              />
-              <Label htmlFor="recurring">Recurring Schedule</Label>
-            </div>
+            {blockType === "slots" && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="recurring"
+                  checked={isRecurring}
+                  onCheckedChange={setIsRecurring}
+                />
+                <Label htmlFor="recurring">Recurring Schedule</Label>
+              </div>
+            )}
 
             {isRecurring ? (
               <Select value={selectedDay} onValueChange={setSelectedDay}>
@@ -142,60 +187,85 @@ export function TimeBlocking() {
                 onSelect={setSelectedDate}
                 className="rounded-md border"
                 disabled={(date) => date < new Date()}
+                modifiers={{
+                  blocked: (date) => isDateBlocked(date)
+                }}
+                modifiersStyles={{
+                  blocked: { 
+                    backgroundColor: "var(--destructive)", 
+                    color: "white",
+                    opacity: 0.5 
+                  }
+                }}
               />
             )}
+
+            <div>
+              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Input
+                id="reason"
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                placeholder="e.g., Personal Day, Vacation, Holiday"
+                className="mt-1"
+              />
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Available Time Slots</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {TIME_SLOTS.map((slot) => {
-                  const isBlocked = selectedDate && 
-                    getBlockedSlotsForDate(selectedDate).includes(slot);
+          {blockType === "slots" && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-2">Available Time Slots</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {TIME_SLOTS.map((slot) => {
+                    const isBlocked = selectedDate && 
+                      getBlockedSlotsForDate(selectedDate).includes(slot);
 
-                  return (
-                    <Button
-                      key={slot}
-                      variant={isBlocked ? "destructive" : (
-                        selectedTimeSlots.includes(slot) ? "default" : "outline"
-                      )}
-                      size="sm"
-                      onClick={() => {
-                        if (isBlocked) {
-                          blockTimeMutation.mutate({
-                            action: 'unblockTimeSlot',
-                            date: format(selectedDate!, "yyyy-MM-dd"),
-                            timeSlots: [slot]
-                          });
-                        } else {
-                          setSelectedTimeSlots(prev => 
-                            prev.includes(slot) 
-                              ? prev.filter(s => s !== slot)
-                              : [...prev, slot]
-                          );
-                        }
-                      }}
-                    >
-                      {slot}
-                    </Button>
-                  );
-                })}
+                    return (
+                      <Button
+                        key={slot}
+                        variant={isBlocked ? "destructive" : (
+                          selectedTimeSlots.includes(slot) ? "default" : "outline"
+                        )}
+                        size="sm"
+                        onClick={() => {
+                          if (isBlocked) {
+                            blockTimeMutation.mutate({
+                              action: 'unblockTimeSlot',
+                              date: format(selectedDate!, "yyyy-MM-dd"),
+                              timeSlots: [slot]
+                            });
+                          } else {
+                            setSelectedTimeSlots(prev => 
+                              prev.includes(slot) 
+                                ? prev.filter(s => s !== slot)
+                                : [...prev, slot]
+                            );
+                          }
+                        }}
+                      >
+                        {slot}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+          )}
 
-            {selectedTimeSlots.length > 0 && (
-              <Button 
-                className="w-full mt-4"
-                onClick={handleBlockTimes}
-                disabled={blockTimeMutation.isPending}
-              >
-                {blockTimeMutation.isPending 
-                  ? "Blocking..." 
-                  : `Block ${isRecurring ? 'Recurring' : 'Selected'} Times`}
-              </Button>
-            )}
-          </div>
+          <Button 
+            className="w-full mt-4 md:col-span-2"
+            onClick={handleBlock}
+            disabled={blockTimeMutation.isPending || 
+              (blockType === "slots" && selectedTimeSlots.length === 0) ||
+              !selectedDate}
+          >
+            {blockTimeMutation.isPending 
+              ? "Blocking..." 
+              : blockType === "full-day"
+                ? "Block Full Day"
+                : `Block ${isRecurring ? 'Recurring' : 'Selected'} Times`}
+          </Button>
         </div>
       </CardContent>
     </Card>

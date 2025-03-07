@@ -184,6 +184,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add endpoint for fetching blocked days
+  app.get("/api/admin/blocked-days", async (req, res) => {
+    try {
+      const { startDate, endDate, password } = req.query;
+
+      // Verify admin password
+      if (password !== adminPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid password" 
+        });
+      }
+
+      // Parse dates
+      const start = startDate ? new Date(startDate as string) : new Date();
+      const end = endDate ? new Date(endDate as string) : new Date(start);
+      end.setMonth(end.getMonth() + 1); // Default to 1 month range if no end date
+
+      // Get blocked days from Google Calendar
+      const blockedDays = await googleCalendarService.getBlockedDays(start, end);
+
+      res.json({
+        success: true,
+        blockedDays
+      });
+    } catch (error) {
+      console.error("Error fetching blocked days:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch blocked days"
+      });
+    }
+  });
+
   // Modify existing /api/admin/availability endpoint to include more options
   app.post("/api/admin/availability", async (req, res) => {
     try {
