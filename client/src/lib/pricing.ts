@@ -161,16 +161,19 @@ export function calculatePrice(options: ServiceOptions): {
       });
       additionalServices += basePrice;
 
-      if (options.installation?.mountHeight && options.installation.mountHeight > 8) {
-        const heightDifference = options.installation.mountHeight - 8;
+      const mountHeight = options.installation?.mountHeight || 0;
+      if (mountHeight > 8) {
+        const heightDifference = mountHeight - 8;
         const surchargeMultiplier = Math.ceil(heightDifference / 4);
         const heightSurcharge = surchargeMultiplier * 25 * options.smartCameras;
 
-        smartHomeItems.push({
-          name: `Height Surcharge (${heightDifference}ft above 8ft)`,
-          price: heightSurcharge
-        });
-        additionalServices += heightSurcharge;
+        if (heightSurcharge > 0) {
+          smartHomeItems.push({
+            name: `Height Surcharge (${heightDifference}ft above 8ft)`,
+            price: heightSurcharge
+          });
+          additionalServices += heightSurcharge;
+        }
       }
     }
 
