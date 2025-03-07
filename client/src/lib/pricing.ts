@@ -17,8 +17,8 @@ export const pricing = {
 
   smartHome: {
     camera: 75, // Per smart security camera
-    doorbell: 85, // Per smart doorbell (updated from 75 to 85)
-    floodlight: 125, // Per smart floodlight (updated from 100 to 125)
+    doorbell: 85, // Per smart doorbell
+    floodlight: 125, // Per smart floodlight
   },
 
   bundles: {
@@ -47,16 +47,15 @@ export type ServiceOptions = {
   generalLaborHours: number;
   needsUnmount: boolean;
   needsRemount: boolean;
-  unmountOnlyCount: number; // New property for standalone TV unmounting
-  remountOnlyCount: number; // New property for standalone TV remounting
-  travelDistance: number; // in minutes
+  unmountOnlyCount: number;
+  remountOnlyCount: number;
+  travelDistance: number;
   installation: {
-    mountHeight?: number; // Added for camera height surcharge
-    brickInstallation?: boolean; // Added for doorbell brick installation
+    mountHeight?: number;
+    brickInstallation?: boolean;
   };
 };
 
-// Calculate price based on service options
 export function calculatePrice(options: ServiceOptions): {
   basePrice: number;
   additionalServices: number;
@@ -72,33 +71,88 @@ export function calculatePrice(options: ServiceOptions): {
     }>;
   }>;
 } {
+  let basePrice = 0;
+  let additionalServices = 0;
+  let discounts = 0;
+  let travelFee = 0;
+
   const breakdown: Array<{
     category: string;
     items: Array<{ name: string; price: number; isDiscount?: boolean }>;
   }> = [];
 
-  // Initialize prices
-  let basePrice = 0;
-  let additionalServices = 0;
-  let discounts = 0;
-  let tvMountingItems: { name: string; price: number; isDiscount?: boolean }[] = [];
-  let electricalItems: { name: string; price: number; isDiscount?: boolean }[] = [];
-  let smartHomeItems: { name: string; price: number }[] = [];
-  let laborItems: { name: string; price: number }[] = [];
+  const tvMountingItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
+  const electricalItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
+  const smartHomeItems: Array<{ name: string; price: number }> = [];
+  const laborItems: Array<{ name: string; price: number }> = [];
 
-  // TV Mounting (rest of the code is unchanged)
+  // TV Mounting
+  if (options.tvCount > 0) {
+    const baseTvPrice = options.isFireplace ? pricing.tvMounting.fireplace : pricing.tvMounting.base;
+    tvMountingItems.push({
+      name: options.isFireplace ? "Fireplace TV Installation" : "Standard TV Installation",
+      price: baseTvPrice
+    });
+    basePrice += baseTvPrice;
 
-  // Standalone TV Unmounting (rest of the code is unchanged)
+    if (options.tvMountSurface === 'nonDrywall') {
+      const nonDrywallFee = pricing.tvMounting.nonDrywall;
+      tvMountingItems.push({
+        name: "Non-Drywall Surface (masonry/brick/stone)",
+        price: nonDrywallFee
+      });
+      additionalServices += nonDrywallFee;
+    }
 
-  // Standalone TV Remounting (rest of the code is unchanged)
+    if (options.isHighRise) {
+      const highRiseFee = pricing.tvMounting.highRise;
+      tvMountingItems.push({
+        name: "High-Rise/Steel Studs Fee",
+        price: highRiseFee
+      });
+      additionalServices += highRiseFee;
+    }
 
-  // Electrical Work (rest of the code is unchanged)
+    if (options.tvCount > 1) {
+      const additionalTvCount = options.tvCount - 1;
+      const additionalTvBaseCost = additionalTvCount * pricing.tvMounting.base;
+      tvMountingItems.push({
+        name: `Additional TV Installation (${additionalTvCount})`,
+        price: additionalTvBaseCost
+      });
+      basePrice += additionalTvBaseCost;
 
-  // Bundle Discount (rest of the code is unchanged)
+      const multiTvDiscount = additionalTvCount * pricing.tvMounting.additionalTv;
+      if (multiTvDiscount > 0) {
+        tvMountingItems.push({
+          name: "Multi-TV Discount",
+          price: -multiTvDiscount,
+          isDiscount: true
+        });
+        discounts += multiTvDiscount;
+      }
+    }
+
+    if (options.needsUnmount) {
+      const unmountFee = pricing.tvMounting.unmount;
+      tvMountingItems.push({ name: "TV Unmounting", price: unmountFee });
+      additionalServices += unmountFee;
+    }
+
+    if (options.needsRemount) {
+      const remountFee = pricing.tvMounting.remount;
+      tvMountingItems.push({ name: "TV Remounting", price: remountFee });
+      additionalServices += remountFee;
+    }
+
+    breakdown.push({
+      category: "TV Mounting",
+      items: tvMountingItems
+    });
+  }
 
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
-    // Smart cameras with height surcharge calculation
     if (options.smartCameras > 0) {
       const basePrice = options.smartCameras * pricing.smartHome.camera;
       smartHomeItems.push({
@@ -107,8 +161,7 @@ export function calculatePrice(options: ServiceOptions): {
       });
       additionalServices += basePrice;
 
-      // Calculate height surcharge if above 8 feet
-      if (options.installation && options.installation.mountHeight > 8) {
+      if (options.installation?.mountHeight && options.installation.mountHeight > 8) {
         const heightDifference = options.installation.mountHeight - 8;
         const surchargeMultiplier = Math.ceil(heightDifference / 4);
         const heightSurcharge = surchargeMultiplier * 25 * options.smartCameras;
@@ -121,7 +174,6 @@ export function calculatePrice(options: ServiceOptions): {
       }
     }
 
-    // Smart doorbells with brick installation fee
     if (options.smartDoorbells > 0) {
       const basePrice = options.smartDoorbells * pricing.smartHome.doorbell;
       smartHomeItems.push({
@@ -130,8 +182,7 @@ export function calculatePrice(options: ServiceOptions): {
       });
       additionalServices += basePrice;
 
-      // Add brick installation fee if applicable
-      if (options.installation && options.installation.brickInstallation) {
+      if (options.installation?.brickInstallation) {
         const brickFee = 10 * options.smartDoorbells;
         smartHomeItems.push({
           name: 'Brick Installation Fee',
@@ -141,7 +192,6 @@ export function calculatePrice(options: ServiceOptions): {
       }
     }
 
-    // Smart floodlights
     if (options.smartFloodlights > 0) {
       const floodlightPrice = options.smartFloodlights * pricing.smartHome.floodlight;
       smartHomeItems.push({
@@ -151,16 +201,50 @@ export function calculatePrice(options: ServiceOptions): {
       additionalServices += floodlightPrice;
     }
 
-    // Add smart home items to breakdown
     breakdown.push({
       category: "Smart Home",
       items: smartHomeItems
     });
   }
 
-  // General Labor (rest of the code is unchanged)
+  // General Labor
+  if (options.generalLaborHours > 0) {
+    const fullHours = Math.floor(options.generalLaborHours);
+    const hasHalfHour = (options.generalLaborHours - fullHours) > 0;
 
-  // Travel Fee (rest of the code is unchanged)
+    if (fullHours > 0) {
+      const hourlyPrice = fullHours * pricing.generalLabor.hourly;
+      laborItems.push({
+        name: `General Labor (${fullHours} hour${fullHours > 1 ? 's' : ''})`,
+        price: hourlyPrice
+      });
+      additionalServices += hourlyPrice;
+    }
+
+    if (hasHalfHour) {
+      laborItems.push({
+        name: "General Labor (30 minutes)",
+        price: pricing.generalLabor.halfHour
+      });
+      additionalServices += pricing.generalLabor.halfHour;
+    }
+
+    breakdown.push({
+      category: "General Labor",
+      items: laborItems
+    });
+  }
+
+  // Travel Fee
+  if (options.travelDistance > 30) {
+    travelFee = pricing.travel.fee;
+    breakdown.push({
+      category: "Travel",
+      items: [
+        { name: "Travel Fee (>30 minutes)", price: travelFee }
+      ]
+    });
+  }
 
   // Calculate total
   const total = basePrice + additionalServices - discounts + travelFee;
@@ -175,7 +259,6 @@ export function calculatePrice(options: ServiceOptions): {
   };
 }
 
-// Function for formatting prices (rest of the code is unchanged)
 export function formatPrice(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
