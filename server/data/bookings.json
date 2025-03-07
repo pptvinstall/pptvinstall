@@ -32,5 +32,30 @@
     ],
     "id": "59",
     "createdAt": "2025-03-06T22:26:39.043Z"
+  },
+  {
+    "name": "Justin",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4047024748",
+    "streetAddress": "4359 oakleaf cove",
+    "addressLine2": "",
+    "city": "Decatur",
+    "state": "GA",
+    "zipCode": "30034",
+    "notes": "",
+    "serviceType": "Smart Camera at 20ft",
+    "preferredDate": "2025-03-06",
+    "appointmentTime": "6:30 PM",
+    "status": "active",
+    "pricingTotal": 75,
+    "pricingBreakdown": [
+      {
+        "type": "camera",
+        "quantity": 1,
+        "mountHeight": 20
+      }
+    ],
+    "id": "60",
+    "createdAt": "2025-03-07T00:25:40.163Z"
   }
 ]

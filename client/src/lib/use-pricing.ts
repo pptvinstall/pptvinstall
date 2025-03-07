@@ -46,12 +46,16 @@ export function usePricing(
   });
 
   useEffect(() => {
-    // Separate TV installations by type
+    // Get all installations that need pricing
     const mountingTvs = tvInstallations.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
     const unmountOnlyCount = tvInstallations.filter(tv => tv.isUnmountOnly).length;
     const remountOnlyCount = tvInstallations.filter(tv => tv.isRemountOnly).length;
 
-    // Convert installation data to service options format
+    // Find camera and doorbell installations for special pricing
+    const cameraInstallation = smartHomeInstallations.find(item => item.type === 'camera');
+    const doorbellInstallation = smartHomeInstallations.find(item => item.type === 'doorbell');
+
+    // Build service options for price calculation
     const serviceOptions: ServiceOptions = {
       tvCount: mountingTvs.length,
       tvMountSurface: mountingTvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
@@ -59,11 +63,11 @@ export function usePricing(
       isHighRise: options.isHighRise || mountingTvs.some(tv => tv.highRise),
       outletCount: mountingTvs.filter(tv => tv.outletRelocation).length,
       smartCameras: smartHomeInstallations.filter(item => item.type === 'camera')
-                     .reduce((sum, item) => sum + item.quantity, 0),
+        .reduce((sum, item) => sum + (item.quantity || 0), 0),
       smartDoorbells: smartHomeInstallations.filter(item => item.type === 'doorbell')
-                       .reduce((sum, item) => sum + item.quantity, 0),
+        .reduce((sum, item) => sum + (item.quantity || 0), 0),
       smartFloodlights: smartHomeInstallations.filter(item => item.type === 'floodlight')
-                         .reduce((sum, item) => sum + item.quantity, 0),
+        .reduce((sum, item) => sum + (item.quantity || 0), 0),
       generalLaborHours: options.generalLaborHours || 0,
       needsUnmount: options.includeUnmount || mountingTvs.some(tv => tv.unmount),
       needsRemount: options.includeRemount || mountingTvs.some(tv => tv.remount),
@@ -71,21 +75,27 @@ export function usePricing(
       remountOnlyCount,
       travelDistance: options.travelDistance || 0,
       installation: {
-        mountHeight: smartHomeInstallations.find(item => item.type === 'camera')?.mountHeight,
-        brickInstallation: smartHomeInstallations.find(item => item.type === 'doorbell')?.brickInstallation
+        mountHeight: cameraInstallation?.mountHeight,
+        brickInstallation: doorbellInstallation?.brickInstallation
       }
     };
 
-    // Calculate pricing
+    // Calculate and update pricing
     const calculatedPricing = calculatePrice(serviceOptions);
-
-    // Update state with calculated values
     setPricingResult({
       ...calculatedPricing,
       formattedTotal: formatPrice(calculatedPricing.total),
       formattedBasePrice: formatPrice(calculatedPricing.basePrice)
     });
-  }, [tvInstallations, smartHomeInstallations, options]);
+  }, [
+    tvInstallations,
+    smartHomeInstallations,
+    options.includeUnmount,
+    options.includeRemount,
+    options.isHighRise,
+    options.generalLaborHours,
+    options.travelDistance
+  ]);
 
   return pricingResult;
 }
@@ -146,11 +156,11 @@ export function createServiceDescription(
     Object.entries(smartHomeGroups).forEach(([type, items]) => {
       if (items.length === 0) return;
       const typeKey = type as keyof typeof smartHomeMap;
-      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+      const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
       if (totalQuantity === 0) return;
 
       const itemDetails = items.map(item => {
-        if (item.quantity <= 0) return '';
+        if (!item.quantity || item.quantity <= 0) return '';
         return `${smartHomeMap[typeKey].name}${item.quantity > 1 ? ` (×${item.quantity})` : ''}${smartHomeMap[typeKey].details(item)}`;
       }).filter(Boolean);
 
