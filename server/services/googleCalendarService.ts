@@ -15,7 +15,6 @@ export class GoogleCalendarService {
 
   constructor(calendarId: string, apiKey: string) {
     this.calendarId = calendarId;
-
     this.calendar = google.calendar({
       version: 'v3',
       auth: apiKey
@@ -75,8 +74,39 @@ export class GoogleCalendarService {
     reason: string
   ): Promise<boolean> {
     try {
-      const startDateTime = new Date(`${date}T${startTime}`);
-      const endDateTime = new Date(`${date}T${endTime}`);
+      // Convert time format (e.g., "6:30 PM") to 24-hour format
+      const parseTime = (timeStr: string): { hours: number; minutes: number } => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+
+        return { hours, minutes };
+      };
+
+      // Parse start time
+      const startParsed = parseTime(startTime);
+      // Parse end time
+      const endParsed = parseTime(endTime);
+
+      // Create Date objects with proper timezone
+      const startDateTime = new Date(date);
+      startDateTime.setHours(startParsed.hours, startParsed.minutes, 0, 0);
+
+      const endDateTime = new Date(date);
+      endDateTime.setHours(endParsed.hours, endParsed.minutes, 0, 0);
+
+      console.log('Creating calendar event:', {
+        date,
+        startTime,
+        endTime,
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime.toISOString()
+      });
 
       const event = {
         summary: 'BLOCKED - Not Available',
