@@ -90,7 +90,7 @@ export class GoogleCalendarService {
 
       // Parse start time
       const startParsed = parseTime(startTime);
-      // Parse end time
+      // Parse end time - for 30 minute blocks
       const endParsed = parseTime(endTime);
 
       // Create Date objects with proper timezone
@@ -99,6 +99,12 @@ export class GoogleCalendarService {
 
       const endDateTime = new Date(date);
       endDateTime.setHours(endParsed.hours, endParsed.minutes, 0, 0);
+
+      // Validate times
+      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+        console.error('Invalid date/time:', { date, startTime, endTime });
+        return false;
+      }
 
       console.log('Creating calendar event:', {
         date,

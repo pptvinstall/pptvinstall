@@ -86,9 +86,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      res.json({ 
-        success: true, 
-        unavailableSlots 
+      res.json({
+        success: true,
+        unavailableSlots
       });
     } catch (error) {
       console.error("Error fetching calendar availability:", error);
@@ -152,9 +152,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unavailableSlots
       );
 
-      res.json({ 
-        success: true, 
-        isAvailable 
+      res.json({
+        success: true,
+        isAvailable
       });
     } catch (error) {
       console.error("Error checking time slot availability:", error);
@@ -172,9 +172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify admin password
       if (!verifyAdminPassword(password as string)) {
-        return res.status(401).json({ 
-          success: false, 
-          message: "Invalid password" 
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
         });
       }
 
@@ -206,9 +206,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify admin password
       if (!verifyAdminPassword(password as string)) {
-        return res.status(401).json({ 
-          success: false, 
-          message: "Invalid password" 
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
         });
       }
 
@@ -240,9 +240,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify admin password using the helper function
       if (!verifyAdminPassword(password)) {
-        return res.status(401).json({ 
-          success: false, 
-          message: "Invalid password" 
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
         });
       }
 
@@ -265,6 +265,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${period}`;
+
+              console.log('Attempting to block time slot:', {
+                date,
+                startTime: timeSlot,
+                endTime,
+                reason
+              });
 
               const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
               if (!success) {
@@ -369,10 +376,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newBooking = insertedBookings[0];
 
       // Also save to file storage for backward compatibility
-      const bookingWithId = { 
-        ...booking, 
-        id: newBooking.id.toString(), 
-        createdAt: new Date() 
+      const bookingWithId = {
+        ...booking,
+        id: newBooking.id.toString(),
+        createdAt: new Date()
       };
 
       fileBookings.push(bookingWithId);
@@ -391,10 +398,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Return success response
-      res.status(200).json({ 
-        success: true, 
-        message: "Booking confirmed successfully", 
-        booking: bookingWithId 
+      res.status(200).json({
+        success: true,
+        message: "Booking confirmed successfully",
+        booking: bookingWithId
       });
     } catch (error) {
       console.error("Booking validation error:", error);
@@ -459,18 +466,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       if (isNaN(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking ID" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
         });
       }
 
       const result = await db.select().from(bookings).where(eq(bookings.id, id));
 
       if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Booking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
         });
       }
 
@@ -511,15 +518,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { reason } = req.body;
 
       if (isNaN(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking ID" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
         });
       }
 
       // Update the booking in the database
       const result = await db.update(bookings)
-        .set({ 
+        .set({
           status: 'cancelled',
           notes: reason ? `CANCELLED - Reason: ${reason}` : 'CANCELLED'
         })
@@ -527,9 +534,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Booking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
         });
       }
 
@@ -542,9 +549,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
-      res.json({ 
-        success: true, 
-        message: "Booking cancelled successfully" 
+      res.json({
+        success: true,
+        message: "Booking cancelled successfully"
       });
     } catch (error) {
       console.error("Error cancelling booking:", error);
@@ -560,9 +567,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       if (isNaN(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking ID" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
         });
       }
 
@@ -573,9 +580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Booking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
         });
       }
 
@@ -600,9 +607,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Don't fail the approval if email fails
       }
 
-      res.json({ 
-        success: true, 
-        message: "Booking approved successfully" 
+      res.json({
+        success: true,
+        message: "Booking approved successfully"
       });
     } catch (error) {
       console.error("Error approving booking:", error);
@@ -619,15 +626,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { reason } = req.body;
 
       if (isNaN(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking ID" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
         });
       }
 
       // Update the booking in the database
       const result = await db.update(bookings)
-        .set({ 
+        .set({
           status: 'cancelled',
           notes: reason ? `DECLINED - Reason: ${reason}` : 'DECLINED'
         })
@@ -635,9 +642,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Booking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
         });
       }
 
@@ -650,9 +657,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
-      res.json({ 
-        success: true, 
-        message: "Booking declined successfully" 
+      res.json({
+        success: true,
+        message: "Booking declined successfully"
       });
     } catch (error) {
       console.error("Error declining booking:", error);
@@ -670,9 +677,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = req.body;
 
       if (isNaN(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking ID" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
         });
       }
 
@@ -683,9 +690,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Booking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
         });
       }
 
@@ -698,8 +705,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Booking updated successfully",
         booking: result[0]
       });
@@ -721,14 +728,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { password } = req.body;
 
     if (verifyAdminPassword(password)) {
-      res.json({ 
-        success: true, 
-        message: "Login successful" 
+      res.json({
+        success: true,
+        message: "Login successful"
       });
     } else {
-      res.status(401).json({ 
-        success: false, 
-        message: "Invalid password" 
+      res.status(401).json({
+        success: false,
+        message: "Invalid password"
       });
     }
   });
@@ -741,14 +748,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (verifyAdminPassword(currentPassword)) {
       // Update password (This updates the environment variable, not a local variable)
       process.env.ADMIN_PASSWORD = newPassword;
-      res.json({ 
-        success: true, 
-        message: "Password updated successfully" 
+      res.json({
+        success: true,
+        message: "Password updated successfully"
       });
     } else {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Current password is incorrect" 
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect"
       });
     }
   });
@@ -760,9 +767,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify admin password
       if (!verifyAdminPassword(password)) {
-        return res.status(401).json({ 
-          success: false, 
-          message: "Invalid password" 
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
         });
       }
 
@@ -773,9 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileBookings = [];
       saveBookings(fileBookings);
 
-      res.json({ 
-        success: true, 
-        message: "All bookings have been cleared" 
+      res.json({
+        success: true,
+        message: "All bookings have been cleared"
       });
     } catch (error) {
       console.error("Error clearing bookings:", error);
