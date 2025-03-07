@@ -271,17 +271,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             for (const timeSlot of timeSlots) {
               // Calculate end time (30 minutes after start time)
-              const [time, period] = timeSlot.split(' ');
-              const [hours, minutes] = time.split(':').map(Number);
+              const [startTime, period] = timeSlot.split(' ');
+              const [hours, minutes] = startTime.split(':').map(Number);
+
+              // Calculate end time (30 minutes after start)
               let endHours = hours;
               let endMinutes = minutes + 30;
 
+              // Handle minute overflow
               if (endMinutes >= 60) {
                 endHours += 1;
                 endMinutes -= 60;
               }
 
-              const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${period}`;
+              // Handle hour overflow and maintain AM/PM
+              let endPeriod = period;
+              if (endHours === 12) {
+                endPeriod = period === 'AM' ? 'PM' : 'AM';
+                endHours = period === 'AM' ? 12 : 1;
+              } else if (endHours > 12) {
+                endHours -=12;
+                endPeriod = 'PM';
+              }
+
+
+              const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${endPeriod}`;
 
               logger.debug('Processing time slot block', {
                 date,
@@ -293,7 +307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
               if (!success) {
-                throw new Error('Failed to block time slot');
+                logger.error('Failed to block time slot', null, {
+                  date,
+                  timeSlot,
+                  endTime,
+                  requestId: req.requestId
+                });
+                throw new Error(`Failed to block time slot: ${timeSlot}`);
               }
             }
           } catch (error) {

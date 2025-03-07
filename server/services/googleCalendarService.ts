@@ -126,6 +126,15 @@ export class GoogleCalendarService {
         return false;
       }
 
+      // Ensure start time is before end time
+      if (startDateTime >= endDateTime) {
+        logger.error('Invalid time range: start time must be before end time', null, {
+          startDateTime,
+          endDateTime
+        });
+        return false;
+      }
+
       logger.debug('Creating calendar event', {
         date,
         startTime,
