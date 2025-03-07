@@ -28,7 +28,7 @@ const Footer: React.FC = () => {
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <p className="text-muted-foreground">
               Atlanta, GA<br />
-              Email: info@pictureperfecttv.com<br />
+              Email: pptvinstall@gmail.com<br />
               Phone: (678) 263-2859
             </p>
           </div>
