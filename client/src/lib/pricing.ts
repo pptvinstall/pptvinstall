@@ -168,15 +168,15 @@ export function calculatePrice(options: ServiceOptions) {
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
     if (options.smartCameras > 0) {
       // Base camera price
-      const basePrice = options.smartCameras * pricing.smartHome.camera;
+      const basePriceCamera = options.smartCameras * pricing.smartHome.camera;
       smartHomeItems.push({
         name: `Smart Camera Installation (${options.smartCameras})`,
-        price: basePrice
+        price: basePriceCamera
       });
-      additionalServices += basePrice;
+      additionalServices += basePriceCamera;
 
       // Height surcharge calculation
-      if (options.installation?.mountHeight) {
+      if (options.installation?.mountHeight !== undefined) {
         const height = options.installation.mountHeight;
         if (height > 8) {
           const heightDifference = height - 8;
@@ -196,18 +196,18 @@ export function calculatePrice(options: ServiceOptions) {
 
     if (options.smartDoorbells > 0) {
       // Base doorbell price
-      const basePrice = options.smartDoorbells * pricing.smartHome.doorbell;
+      const basePriceDoorbell = options.smartDoorbells * pricing.smartHome.doorbell;
       smartHomeItems.push({
         name: `Smart Doorbell Installation (${options.smartDoorbells})`,
-        price: basePrice
+        price: basePriceDoorbell
       });
-      additionalServices += basePrice;
+      additionalServices += basePriceDoorbell;
 
       // Brick installation fee
       if (options.installation?.brickInstallation) {
         const brickFee = pricing.smartHome.brickInstallation * options.smartDoorbells;
         smartHomeItems.push({
-          name: 'Brick Installation Fee',
+          name: `Brick Installation Fee (${options.smartDoorbells} doorbell${options.smartDoorbells > 1 ? 's' : ''})`,
           price: brickFee
         });
         additionalServices += brickFee;

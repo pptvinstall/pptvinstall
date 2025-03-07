@@ -44,7 +44,12 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
     if (tvInstallations.length > 0 || smartHomeInstallations.length > 0) {
       onServiceSelect({
         tvs: tvInstallations,
-        smartHome: smartHomeInstallations
+        smartHome: smartHomeInstallations.map(installation => ({
+          ...installation,
+          quantity: installation.quantity || 1,
+          mountHeight: installation.type === 'camera' ? (installation.mountHeight || 1) : undefined,
+          brickInstallation: installation.type === 'doorbell' ? (installation.brickInstallation || false) : undefined
+        }))
       });
     }
   }, [tvInstallations, smartHomeInstallations, onServiceSelect]);
@@ -88,9 +93,20 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
   };
 
   const updateSmartHomeInstallation = (index: number, updates: Partial<SmartHomeInstallation>) => {
-    setSmartHomeInstallations(prev => prev.map((inst, i) =>
-      i === index ? { ...inst, ...updates } : inst
-    ));
+    setSmartHomeInstallations(prev => prev.map((inst, i) => {
+      if (i !== index) return inst;
+      const updated = { ...inst, ...updates };
+
+      // Ensure quantity is always at least 1
+      if (updated.quantity < 1) updated.quantity = 1;
+
+      // Ensure mount height is valid for cameras
+      if (updated.type === 'camera' && updated.mountHeight !== undefined) {
+        updated.mountHeight = Math.max(1, Math.min(20, updated.mountHeight));
+      }
+
+      return updated;
+    }));
   };
 
   const addTVUnmountingOnly = () => {
