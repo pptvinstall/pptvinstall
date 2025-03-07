@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface DayBookings {
   [date: string]: Booking[];
@@ -42,7 +43,7 @@ export function BookingCalendar() {
 
   // Group bookings by date
   const bookingsByDate: DayBookings = bookings.reduce((acc: DayBookings, booking: Booking) => {
-    const date = booking.preferredDate;
+    const date = booking.preferredDate.split('T')[0]; // Ensure we only use the date part
     if (!acc[date]) {
       acc[date] = [];
     }
@@ -84,10 +85,33 @@ export function BookingCalendar() {
     }
   });
 
+  // Mutation for updating bookings
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: Partial<Booking> }) => {
+      const response = await apiRequest("PUT", `/api/bookings/${id}`, data);
+      if (!response.ok) {
+        throw new Error('Failed to update booking');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Booking Updated",
+        description: "The booking details have been successfully updated.",
+      });
+    }
+  });
+
   // Function to get bookings for the selected date
   const getSelectedDateBookings = () => {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     return bookingsByDate[dateStr] || [];
+  };
+
+  // Helper function to format time for display
+  const formatTime = (time: string) => {
+    return time;
   };
 
   return (
@@ -127,11 +151,17 @@ export function BookingCalendar() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-medium">{booking.name}</h4>
-                        <p className="text-sm text-muted-foreground">{booking.appointmentTime}</p>
+                        <p className="text-sm text-muted-foreground">{formatTime(booking.appointmentTime)}</p>
                         <p className="text-sm">{booking.serviceType}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Status: <span className={`font-medium ${
+                            booking.status === 'active' ? 'text-green-600' : 
+                            booking.status === 'cancelled' ? 'text-red-600' : 'text-yellow-600'
+                          }`}>{booking.status}</span>
+                        </p>
                       </div>
                       <div className="flex gap-2">
-                        {booking.status === 'pending' && (
+                        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                           <>
                             <Button
                               size="sm"
@@ -184,13 +214,49 @@ export function BookingCalendar() {
               Make quick adjustments to the booking details.
             </DialogDescription>
           </DialogHeader>
-          {/* Edit form will be implemented in the next iteration */}
+          {selectedBooking && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Time</label>
+                <Input
+                  value={selectedBooking.appointmentTime}
+                  onChange={(e) => setSelectedBooking({
+                    ...selectedBooking,
+                    appointmentTime: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Service Type</label>
+                <Input
+                  value={selectedBooking.serviceType}
+                  onChange={(e) => setSelectedBooking({
+                    ...selectedBooking,
+                    serviceType: e.target.value
+                  })}
+                />
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="secondary" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setIsEditDialogOpen(false)}>
-              Save Changes
+            <Button 
+              onClick={() => {
+                if (selectedBooking) {
+                  updateMutation.mutate({
+                    id: selectedBooking.id as string,
+                    data: {
+                      appointmentTime: selectedBooking.appointmentTime,
+                      serviceType: selectedBooking.serviceType
+                    }
+                  });
+                }
+              }}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
