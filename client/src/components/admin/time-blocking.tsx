@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
 
 // Define weekday and weekend time slots
 const WEEKDAY_TIME_SLOTS = [
@@ -39,21 +40,24 @@ export function TimeBlocking() {
   const [blockReason, setBlockReason] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Check admin password on component mount
   useEffect(() => {
     const adminPassword = localStorage.getItem('adminPassword');
     if (!adminPassword) {
       toast({
-        title: "Error",
+        title: "Authentication Required",
         description: "Please log in as admin first",
         variant: "destructive"
       });
+      setLocation('/admin/login');
+      return;
     }
   }, []);
 
   // Fetch blocked times and days
-  const { data: blockedTimes = {} } = useQuery({
+  const { data: blockedTimes = {}, error: blockedTimesError } = useQuery({
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
       const adminPassword = localStorage.getItem('adminPassword');
@@ -65,17 +69,24 @@ export function TimeBlocking() {
         "GET", 
         `/api/admin/blocked-times?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${adminPassword}`
       );
+
       if (!response.ok) {
         const error = await response.json();
+        if (response.status === 401) {
+          localStorage.removeItem('adminPassword');
+          setLocation('/admin/login');
+        }
         throw new Error(error.message || 'Failed to fetch blocked times');
       }
+
       const data = await response.json();
       return data.blockedSlots || {};
-    }
+    },
+    retry: false
   });
 
   // Fetch blocked days
-  const { data: blockedDays = [] } = useQuery({
+  const { data: blockedDays = [], error: blockedDaysError } = useQuery({
     queryKey: ['/api/admin/blocked-days'],
     queryFn: async () => {
       const adminPassword = localStorage.getItem('adminPassword');
@@ -87,13 +98,20 @@ export function TimeBlocking() {
         "GET",
         `/api/admin/blocked-days?startDate=${selectedDate.toISOString()}&endDate=${addMonths(selectedDate, 3).toISOString()}&password=${adminPassword}`
       );
+
       if (!response.ok) {
         const error = await response.json();
+        if (response.status === 401) {
+          localStorage.removeItem('adminPassword');
+          setLocation('/admin/login');
+        }
         throw new Error(error.message || 'Failed to fetch blocked days');
       }
+
       const data = await response.json();
       return data.blockedDays || [];
-    }
+    },
+    retry: false
   });
 
   // Block time mutation
@@ -124,6 +142,11 @@ export function TimeBlocking() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+          localStorage.removeItem('adminPassword');
+          setLocation('/admin/login');
+          throw new Error('Please log in again.');
+        }
         throw new Error(errorData.message || 'Failed to block time');
       }
 
@@ -149,6 +172,16 @@ export function TimeBlocking() {
       });
     }
   });
+
+  // If there are authentication errors, redirect to login
+  useEffect(() => {
+    if (blockedTimesError || blockedDaysError) {
+      const error = blockedTimesError || blockedDaysError;
+      if (error instanceof Error && error.message.includes('Please log in')) {
+        setLocation('/admin/login');
+      }
+    }
+  }, [blockedTimesError, blockedDaysError]);
 
   // Get blocked slots for selected date
   const getBlockedSlotsForDate = (date: Date) => {
