@@ -797,6 +797,8 @@ export function BookingWizard({
                         let description = `${tv.location} installation with ${tv.mountType} mount`;
                         if (tv.outletNeeded) {
                           description += " with wire concealment & outlet";
+                          // Add cost of wire concealment to base price
+                          basePrice += pricing.wire_concealment.standard.price; // +$100
                         }
                         
                         const tvService: TVInstallation = {
