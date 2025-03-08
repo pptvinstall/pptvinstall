@@ -61,43 +61,77 @@ app.use((req, res, next) => {
 let serverInstance: any = null;
 let isShuttingDown = false;
 
+// Debug signal information
+const signalDebug = (signal: string) => {
+  console.error(`[DEBUG] Received signal ${signal}`);
+  console.error(`[DEBUG] Process info: PID=${process.pid}, uptime=${process.uptime()}s`);
+  console.error(`[DEBUG] Memory usage:`, process.memoryUsage());
+  
+  // Capture stack trace to see what was happening when signal was received
+  console.error(`[DEBUG] Stack trace at signal:`, new Error().stack);
+};
+
 // Setup graceful shutdown handlers
-const gracefulShutdown = () => {
+const gracefulShutdown = (signal: string) => {
+  // Log signal type for debugging
+  signalDebug(signal);
+  
   // Prevent multiple shutdown attempts
   if (isShuttingDown) {
-    log('Shutdown already in progress, ignoring additional signal');
+    log(`Shutdown already in progress (triggered by ${signal}), ignoring additional signal`);
     return;
   }
   
   isShuttingDown = true;
-  log('Shutting down gracefully...');
+  log(`Shutting down gracefully... (triggered by ${signal})`);
+
+  // In Replit environment, sometimes it's better not to exit explicitly, 
+  // as Replit's process management will handle the restart
+  if (process.env.REPLIT_ENVIRONMENT === 'true') {
+    log('Running in Replit environment, letting container handle restarts');
+  }
 
   // Only shut down if server exists
   if (serverInstance) {
     try {
-      serverInstance.close(() => {
-        log('Server closed. Process terminating...');
-        // Give time for logs to flush before exiting
-        setTimeout(() => {
-          process.exit(0);
-        }, 500);
+      // Set a handler for server close to track completion
+      serverInstance.close((err?: Error) => {
+        if (err) {
+          console.error('Error during server close:', err);
+        } else {
+          log('Server closed successfully. Process terminating...');
+        }
+        
+        // Only exit if not running in Replit environment
+        if (process.env.REPLIT_ENVIRONMENT !== 'true') {
+          // Give time for logs to flush before exiting
+          setTimeout(() => {
+            process.exit(0);
+          }, 1000);
+        }
       });
 
-      // Force shutdown after timeout
-      setTimeout(() => {
-        log('Forcing server shutdown after timeout');
-        process.exit(1);
-      }, 30000); // 30 second timeout - increased to allow for connections to close
+      // Force shutdown after timeout, but only if needed
+      if (process.env.REPLIT_ENVIRONMENT !== 'true') {
+        setTimeout(() => {
+          log('Forcing server shutdown after timeout');
+          process.exit(1);
+        }, 10000); // Reduced timeout to 10 seconds for faster recovery
+      }
     } catch (error) {
       console.error('Error during server shutdown:', error);
-      process.exit(1);
+      if (process.env.REPLIT_ENVIRONMENT !== 'true') {
+        process.exit(1);
+      }
     }
   } else {
-    log('Server not initialized, exiting after delay');
-    // Small delay to allow for logs to flush
-    setTimeout(() => {
-      process.exit(0);
-    }, 500);
+    log('Server not initialized, logging only without exit');
+    // In Replit, we'll just let the container handle the restart
+    if (process.env.REPLIT_ENVIRONMENT !== 'true') {
+      setTimeout(() => {
+        process.exit(0);
+      }, 1000);
+    }
   }
 };
 
@@ -150,6 +184,32 @@ const gracefulShutdown = () => {
         console.error('Server error:', error);
       }
     });
+    
+    // Add a keep-alive ping to prevent Replit from closing the server due to inactivity
+    // This is especially important for development environments
+    const keepAliveInterval = setInterval(() => {
+      if (isShuttingDown) {
+        clearInterval(keepAliveInterval);
+        return;
+      }
+      
+      // Make a self-request to keep the server alive
+      try {
+        fetch(`http://localhost:${port}/api/health`)
+          .then(() => {
+            if (process.env.NODE_ENV === 'development') {
+              log('Keep-alive ping successful');
+            }
+          })
+          .catch(err => {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Keep-alive ping failed:', err.message);
+            }
+          });
+      } catch (error) {
+        // Ignore fetch errors during shutdown
+      }
+    }, 240000); // Every 4 minutes
 
     server.listen({
       port,
@@ -195,9 +255,13 @@ process.on('uncaughtException', (error) => {
   // For other errors, just log them without shutting down
 });
 
+// Set environment detection
+process.env.REPLIT_ENVIRONMENT = process.env.REPL_ID || process.env.REPL_SLUG ? 'true' : 'false';
+console.log(`Detected environment: ${process.env.REPLIT_ENVIRONMENT === 'true' ? 'Replit' : 'Standard'}`);
+
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
-  // Continuing in case the promise rejection is not critical
+  // Log but don't crash for unhandled rejections
 });
 
 // Force the process to stay alive even when there are errors
@@ -205,6 +269,29 @@ process.on('exit', (code) => {
   console.log(`Process exiting with code: ${code}`);
 });
 
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGHUP', gracefulShutdown);
+// Keep track of signal handlers to avoid memory leaks
+const signalHandlers = new Map();
+
+// Setup signal handlers with maximum listeners to avoid Node warnings
+process.setMaxListeners(20); // Increase max listeners
+
+// Helper function to safely add signal handlers
+const addSignalHandler = (signal: string) => {
+  // Remove existing handler if any
+  if (signalHandlers.has(signal)) {
+    process.removeListener(signal, signalHandlers.get(signal));
+  }
+  
+  // Create handler that passes signal name
+  const handler = () => gracefulShutdown(signal);
+  
+  // Store and add the handler
+  signalHandlers.set(signal, handler);
+  process.on(signal, handler);
+};
+
+// Add handlers for different signals
+addSignalHandler('SIGTERM');
+addSignalHandler('SIGINT');
+addSignalHandler('SIGHUP');
+addSignalHandler('SIGUSR2'); // Used by nodemon and some other tools

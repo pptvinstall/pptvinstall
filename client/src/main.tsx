@@ -45,7 +45,7 @@ const ScrollToTop = () => {
 
 // Animated page wrapper
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="page-transition relative">
+  <div className="page-transition relative" style={{ position: 'relative' }}>
     {children}
   </div>
 );
