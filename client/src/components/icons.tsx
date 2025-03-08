@@ -40,7 +40,7 @@ import {
   Camera,
   Bell,
   Lightbulb,
-  SpeakerHigh,
+  Speaker,
   Plug,
   Search,
   SquareArrowOutUpRight,
@@ -96,6 +96,6 @@ export const Icons = {
   camera: Camera,
   doorbell: Bell,
   lighting: Lightbulb,
-  speaker: SpeakerHigh,
+  speaker: Speaker,
   search: Search
 }
