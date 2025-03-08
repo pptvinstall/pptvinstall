@@ -1,5 +1,8 @@
 import { google, calendar_v3 } from 'googleapis';
 import { logger } from "./loggingService";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Define the interface for unavailable time slots
 export interface UnavailableTimeSlot {
@@ -7,24 +10,98 @@ export interface UnavailableTimeSlot {
   timeSlots: string[]; // Array of time strings like "7:30 PM"
 }
 
+// Get dirname for file storage
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const MOCK_CALENDAR_FILE = path.join(DATA_DIR, 'calendar_mock.json');
+
+// Ensure the directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Initialize mock calendar if it doesn't exist
+if (!fs.existsSync(MOCK_CALENDAR_FILE)) {
+  fs.writeFileSync(MOCK_CALENDAR_FILE, JSON.stringify({
+    blockedTimeSlots: {},
+    blockedDays: []
+  }));
+}
+
+// Mock calendar event type
+type MockCalendarEvent = {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    date?: string;
+    dateTime?: string;
+    timeZone?: string;
+  };
+  end: {
+    date?: string;
+    dateTime?: string;
+    timeZone?: string;
+  };
+  colorId?: string;
+};
+
+// Mock calendar data type
+type MockCalendarData = {
+  blockedTimeSlots: {
+    [date: string]: string[];
+  };
+  blockedDays: string[];
+  events?: MockCalendarEvent[];
+};
+
 /**
  * Service for interacting with Google Calendar API
  */
 export class GoogleCalendarService {
-  private calendar: calendar_v3.Calendar;
+  private calendar: calendar_v3.Calendar | null;
   private calendarId: string;
+  private useMock: boolean;
 
   constructor(calendarId: string, apiKey: string) {
     this.calendarId = calendarId;
+    this.useMock = !calendarId || !apiKey;
+    
     logger.debug('Initializing Google Calendar Service', {
       calendarIdPresent: !!calendarId,
-      apiKeyPresent: !!apiKey
+      apiKeyPresent: !!apiKey,
+      useMock: this.useMock
     });
 
-    this.calendar = google.calendar({
-      version: 'v3',
-      auth: apiKey
-    });
+    if (!this.useMock) {
+      this.calendar = google.calendar({
+        version: 'v3',
+        auth: apiKey
+      });
+    } else {
+      this.calendar = null;
+      logger.info('Using mock calendar service');
+    }
+  }
+  
+  // Helper methods for mock calendar
+  private loadMockCalendar(): MockCalendarData {
+    try {
+      const data = fs.readFileSync(MOCK_CALENDAR_FILE, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      logger.error('Error loading mock calendar:', error);
+      return { blockedTimeSlots: {}, blockedDays: [] };
+    }
+  }
+  
+  private saveMockCalendar(data: MockCalendarData): void {
+    try {
+      fs.writeFileSync(MOCK_CALENDAR_FILE, JSON.stringify(data, null, 2));
+    } catch (error) {
+      logger.error('Error saving mock calendar:', error);
+    }
   }
 
   /**
@@ -35,7 +112,20 @@ export class GoogleCalendarService {
     endDate: Date
   ): Promise<{ [key: string]: string[] }> {
     logger.debug('Fetching blocked time slots', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+    
+    if (this.useMock) {
+      // Use mock data
+      logger.debug('Using mock data for blocked time slots');
+      const mockData = this.loadMockCalendar();
+      logger.debug('Blocked time slots fetched successfully from mock', mockData.blockedTimeSlots);
+      return mockData.blockedTimeSlots;
+    }
+    
     try {
+      if (!this.calendar) {
+        throw new Error('Google Calendar client not initialized');
+      }
+      
       const response = await this.calendar.events.list({
         calendarId: this.calendarId,
         timeMin: startDate.toISOString(),
@@ -88,6 +178,41 @@ export class GoogleCalendarService {
         reason
       });
 
+      // If using mock service, store in local file
+      if (this.useMock) {
+        logger.debug('Using mock calendar service for blockTimeSlot');
+        const mockData = this.loadMockCalendar();
+        
+        // Add the time slot to blocked slots
+        if (!mockData.blockedTimeSlots[date]) {
+          mockData.blockedTimeSlots[date] = [];
+        }
+        
+        // Only add if not already blocked
+        if (!mockData.blockedTimeSlots[date].includes(startTime)) {
+          mockData.blockedTimeSlots[date].push(startTime);
+        }
+        
+        // Sort time slots for consistency
+        mockData.blockedTimeSlots[date].sort();
+        
+        // Save updated mock data
+        this.saveMockCalendar(mockData);
+        
+        logger.info('Successfully blocked time slot in mock calendar', {
+          date,
+          startTime,
+          endTime
+        });
+        
+        return true;
+      }
+
+      // Ensure calendar client is initialized
+      if (!this.calendar) {
+        throw new Error('Google Calendar client not initialized');
+      }
+
       // Convert time format (e.g., "6:30 PM") to 24-hour format
       const parseTime = (timeStr: string): { hours: number; minutes: number } => {
         const [time, period] = timeStr.split(' ');
@@ -116,7 +241,7 @@ export class GoogleCalendarService {
 
       // Validate times
       if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-        logger.error('Invalid date/time values', null, {
+        logger.error('Invalid date/time values', new Error('Invalid date/time'), {
           date,
           startTime,
           endTime,
@@ -128,7 +253,7 @@ export class GoogleCalendarService {
 
       // Ensure start time is before end time
       if (startDateTime >= endDateTime) {
-        logger.error('Invalid time range: start time must be before end time', null, {
+        logger.error('Invalid time range: start time must be before end time', new Error('Invalid time range'), {
           startDateTime,
           endDateTime
         });
@@ -182,9 +307,58 @@ export class GoogleCalendarService {
 
   /**
    * Unblock a previously blocked time slot
+   * In mock mode, eventId should be in format "date|timeSlot" (e.g. "2023-01-01|9:00 AM")
    */
   async unblockTimeSlot(eventId: string): Promise<boolean> {
     logger.debug('Starting unblockTimeSlot operation', { eventId });
+    
+    // Handle mock mode
+    if (this.useMock) {
+      logger.debug('Using mock calendar service for unblockTimeSlot');
+      
+      try {
+        // For mock mode, the eventId should be formatted as "date|timeSlot"
+        const [date, timeSlot] = eventId.split('|');
+        
+        if (!date || !timeSlot) {
+          logger.error('Invalid event ID format for mock unblock', new Error('Invalid format'), { eventId });
+          return false;
+        }
+        
+        const mockData = this.loadMockCalendar();
+        
+        if (mockData.blockedTimeSlots[date]) {
+          // Remove the time slot
+          mockData.blockedTimeSlots[date] = mockData.blockedTimeSlots[date].filter(
+            time => time !== timeSlot
+          );
+          
+          // If no time slots left for this date, remove the date entry
+          if (mockData.blockedTimeSlots[date].length === 0) {
+            delete mockData.blockedTimeSlots[date];
+          }
+          
+          // Save updated mock data
+          this.saveMockCalendar(mockData);
+          
+          logger.info('Successfully unblocked time slot in mock calendar', { date, timeSlot });
+          return true;
+        } else {
+          logger.debug('No blocked time slots found for date', { date });
+          return false;
+        }
+      } catch (error) {
+        logger.error('Error unblocking time slot in mock calendar:', error as Error);
+        return false;
+      }
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return false;
+    }
+    
     try {
       await this.calendar.events.delete({
         calendarId: this.calendarId,
@@ -193,7 +367,7 @@ export class GoogleCalendarService {
       logger.info('Successfully unblocked time slot', { eventId });
       return true;
     } catch (error) {
-      logger.error('Error unblocking time slot:', error);
+      logger.error('Error unblocking time slot:', error as Error);
       return false;
     }
   }
@@ -208,6 +382,41 @@ export class GoogleCalendarService {
     untilDate: string
   ): Promise<boolean> {
     logger.debug('Starting setRecurringBlock operation', { dayOfWeek, startTime, endTime, untilDate });
+    
+    // Use mock if needed
+    if (this.useMock) {
+      logger.debug('Using mock calendar service for setRecurringBlock');
+      
+      try {
+        // Get day number (0-6) from day name
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayNum = days.indexOf(dayOfWeek.toLowerCase());
+        if (dayNum === -1) throw new Error('Invalid day of week');
+        
+        // For mock mode, we would need a more complex implementation to generate all dates
+        // between now and the untilDate for the specific day of week.
+        // This is a simplified version that just logs it happened
+        logger.info('Mock recurring block set successfully', { 
+          dayOfWeek, 
+          startTime, 
+          endTime,
+          untilDate,
+          note: 'Mock mode does not fully implement recurring blocks' 
+        });
+        
+        return true;
+      } catch (error) {
+        logger.error('Error setting recurring block in mock calendar:', error as Error);
+        return false;
+      }
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return false;
+    }
+    
     try {
       // Get day number (0-6) from day name
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -241,7 +450,7 @@ export class GoogleCalendarService {
       logger.info('Successfully set recurring block', { dayOfWeek, startTime, endTime, untilDate });
       return true;
     } catch (error) {
-      logger.error('Error setting recurring block:', error);
+      logger.error('Error setting recurring block:', error as Error);
       return false;
     }
   }
@@ -321,6 +530,21 @@ export class GoogleCalendarService {
     endDate: Date
   ): Promise<{ [key: string]: string[] }> {
     logger.debug('Fetching unavailable time slots', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+    
+    // Use mock data if needed
+    if (this.useMock) {
+      logger.debug('Using mock data for unavailable time slots');
+      const mockData = this.loadMockCalendar();
+      logger.debug('Unavailable time slots fetched successfully from mock', mockData.blockedTimeSlots);
+      return mockData.blockedTimeSlots;
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return {};
+    }
+    
     try {
       const timeMin = startDate.toISOString();
       const timeMax = endDate.toISOString();
@@ -356,7 +580,7 @@ export class GoogleCalendarService {
       logger.debug('Unavailable time slots fetched successfully', unavailableByDate);
       return unavailableByDate;
     } catch (error) {
-      logger.error('Error fetching calendar data:', error);
+      logger.error('Error fetching calendar data:', error as Error);
       return {};
     }
   }
@@ -384,6 +608,32 @@ export class GoogleCalendarService {
     reason: string = "Day marked as unavailable"
   ): Promise<boolean> {
     logger.debug('Starting blockFullDay operation', { date, reason });
+    
+    // Use mock if needed
+    if (this.useMock) {
+      logger.debug('Using mock calendar service for blockFullDay');
+      const mockData = this.loadMockCalendar();
+      
+      // Only add if not already blocked
+      if (!mockData.blockedDays.includes(date)) {
+        mockData.blockedDays.push(date);
+        // Sort for consistency
+        mockData.blockedDays.sort();
+      }
+      
+      // Save updated mock data
+      this.saveMockCalendar(mockData);
+      
+      logger.info('Successfully blocked full day in mock calendar', { date, reason });
+      return true;
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return false;
+    }
+    
     try {
       const event = {
         summary: 'BLOCKED - Full Day',
@@ -406,7 +656,7 @@ export class GoogleCalendarService {
       logger.info('Successfully blocked full day', { date, reason });
       return true;
     } catch (error) {
-      logger.error('Error blocking full day:', error);
+      logger.error('Error blocking full day:', error as Error);
       return false;
     }
   }
@@ -419,6 +669,21 @@ export class GoogleCalendarService {
     endDate: Date
   ): Promise<string[]> {
     logger.debug('Fetching blocked days', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+    
+    // Use mock data if needed
+    if (this.useMock) {
+      logger.debug('Using mock data for blocked days');
+      const mockData = this.loadMockCalendar();
+      logger.debug('Blocked days fetched successfully from mock', mockData.blockedDays);
+      return mockData.blockedDays;
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return [];
+    }
+    
     try {
       const response = await this.calendar.events.list({
         calendarId: this.calendarId,
@@ -439,7 +704,7 @@ export class GoogleCalendarService {
       logger.debug('Blocked days fetched successfully', blockedDays);
       return blockedDays;
     } catch (error) {
-      logger.error('Error fetching blocked days:', error);
+      logger.error('Error fetching blocked days:', error as Error);
       return [];
     }
   }
