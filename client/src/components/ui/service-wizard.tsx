@@ -20,6 +20,7 @@ export type TVInstallation = {
   remount: boolean;
   isUnmountOnly?: boolean;
   isRemountOnly?: boolean;
+  isOutletOnly?: boolean;
 };
 
 export type SmartHomeInstallation = {
@@ -131,6 +132,22 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
       isRemountOnly: true
     }]);
   };
+  
+  const addOutletOnly = () => {
+    setTvInstallations(prev => [...prev, {
+      size: 'small',
+      location: 'standard',
+      mountType: 'none',
+      masonryWall: false,
+      outletRelocation: true,
+      highRise: false,
+      unmount: false,
+      remount: false,
+      isUnmountOnly: false,
+      isRemountOnly: false,
+      isOutletOnly: true
+    }]);
+  };
 
   const hasSelectionsToConfirm = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
 
@@ -211,6 +228,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               <DropdownMenuItem onClick={addTvInstallation}>Add TV Mounting</DropdownMenuItem>
               <DropdownMenuItem onClick={addTVUnmountingOnly}>Add TV Unmounting Only</DropdownMenuItem>
               <DropdownMenuItem onClick={addTVRemountingOnly}>Add TV Remounting Only</DropdownMenuItem>
+              <DropdownMenuItem onClick={addOutletOnly}>Add Outlet Installation Only</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

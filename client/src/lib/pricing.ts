@@ -175,15 +175,15 @@ export function calculatePrice(options: ServiceOptions) {
     // Additional outlets
     if (options.outletCount > 1) {
       const additionalOutletCount = options.outletCount - 1;
-      const additionalOutletPrice = additionalOutletCount * pricing.electrical.additionalOutlet;
+      const additionalOutletPrice = additionalOutletCount * pricing.electrical.outletInstallation; // Use full price for each outlet
       electricalItems.push({
         name: `Additional Outlet Installation (${additionalOutletCount})`,
         price: additionalOutletPrice
       });
       additionalServices += additionalOutletPrice;
 
-      // Multi-outlet discount
-      const multiOutletDiscount = additionalOutletCount * pricing.electrical.additionalOutlet;
+      // Multi-outlet discount (10 per additional outlet)
+      const multiOutletDiscount = additionalOutletCount * 10; // Fixed $10 discount per additional outlet
       if (multiOutletDiscount > 0) {
         electricalItems.push({
           name: "Multi-Outlet Discount",
