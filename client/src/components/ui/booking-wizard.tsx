@@ -445,32 +445,7 @@ const DateTimeSelectionStep = React.memo(
   }
 );
 
-const CustomerDetailsStep = React.memo(
-  ({
-    formData,
-    setFormData,
-    validationErrors,
-  }: {
-    formData: any;
-    setFormData: (data: any) => void;
-    validationErrors: Record<string, string[]>;
-  }) => {
-    const showError = (field: string) => {
-      return validationErrors[field] ? (
-        <p className="text-xs mt-1 text-destructive">
-          {validationErrors[field][0]}
-        </p>
-      ) : null;
-    };
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Your Details</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Please provide your contact and address information
-          </p>
-        </div>
+// CustomerDetailsStep is imported from steps directory
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
