@@ -57,6 +57,33 @@ function getPlainTextConfirmation(booking: any): string {
     day: 'numeric' 
   });
 
+  // Format pricing breakdown in a more readable way
+  let pricingBreakdownText = '';
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown)) {
+    pricingBreakdownText = '\nService Details:';
+    
+    booking.pricingBreakdown.forEach((item, index) => {
+      if (item.type === 'tv') {
+        pricingBreakdownText += `\n${index + 1}. TV ${item.isUnmountOnly ? 'Unmounting' : item.isRemountOnly ? 'Remounting' : 'Installation'}: `;
+        pricingBreakdownText += `${item.size === 'small' ? 'Up to 55"' : 'Over 55"'}`;
+        
+        if (item.location !== 'standard') {
+          pricingBreakdownText += ` (${item.location.charAt(0).toUpperCase() + item.location.slice(1)})`;
+        }
+        
+        if (item.mountType !== 'none') {
+          pricingBreakdownText += ` with ${item.mountType.charAt(0).toUpperCase() + item.mountType.slice(1)} Mount`;
+        }
+      } else {
+        pricingBreakdownText += `\n${index + 1}. ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Installation`;
+        
+        if (item.quantity > 1) {
+          pricingBreakdownText += ` (${item.quantity} units)`;
+        }
+      }
+    });
+  }
+
   let emailText = `
 Booking Confirmation - Picture Perfect TV Install
 
@@ -64,26 +91,37 @@ Dear ${booking.name},
 
 Thank you for choosing Picture Perfect TV Install! Your appointment has been confirmed.
 
-APPOINTMENT DETAILS
+📅 APPOINTMENT DETAILS
 Date: ${formattedDate}
 Time: ${booking.appointmentTime}
 Service: ${booking.serviceType}
 
-LOCATION
+💰 PRICING INFORMATION
+Total: $${booking.pricingTotal || 'To be determined'}
+${pricingBreakdownText}
+
+Note: This is an estimate. Final price may vary based on additional services or special requirements.
+
+📍 LOCATION
 ${booking.streetAddress}
 ${booking.addressLine2 ? booking.addressLine2 + '\n' : ''}${booking.city}, ${booking.state} ${booking.zipCode}
 
-NEXT STEPS
+🔍 NEXT STEPS
 1. Our technician will arrive during your selected time slot
 2. Please ensure the installation area is accessible
 3. Have your TV and any mounting hardware ready if you're providing them
+4. Clear the workspace area for efficient installation
 
-If you need to reschedule or cancel your appointment, please contact us at +16782632859.
+📞 NEED TO MAKE CHANGES?
+If you need to reschedule or have any questions, please call us at: +16782632859
 
 Thank you for choosing Picture Perfect TV Install! We look forward to providing you with excellent service.
 
 Best regards,
 The Picture Perfect TV Install Team
+
+© ${new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.
+Professional TV Mounting Services in Metro Atlanta
   `;
 
   return emailText;
@@ -198,9 +236,29 @@ function getHtmlConfirmation(booking: any): string {
     </div>
 
     <div class="pricing-details">
-      <h2>💰 Estimated Price</h2>
-      <p class="price">${booking.pricingTotal || 'To be determined'}</p>
-      <p class="text-sm" style="color: #666; font-size: 14px;">
+      <h2>💰 Pricing Information</h2>
+      <p class="price">$${booking.pricingTotal || 'To be determined'}</p>
+      ${booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) ? `
+      <div style="margin-top: 15px; font-size: 14px;">
+        <strong>Service Details:</strong>
+        <ul style="padding-left: 20px; margin-top: 5px;">
+          ${booking.pricingBreakdown.map(item => `
+            <li>
+              ${item.type === 'tv' ? 
+                `TV ${item.isUnmountOnly ? 'Unmounting' : item.isRemountOnly ? 'Remounting' : 'Installation'}: 
+                 ${item.size === 'small' ? 'Up to 55"' : 'Over 55"'}
+                 ${item.location !== 'standard' ? ` (${item.location.charAt(0).toUpperCase() + item.location.slice(1)})` : ''}
+                 ${item.mountType !== 'none' ? ` with ${item.mountType.charAt(0).toUpperCase() + item.mountType.slice(1)} Mount` : ''}` 
+                : 
+                `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Installation
+                 ${item.quantity > 1 ? ` (${item.quantity} units)` : ''}`
+              }
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+      ` : ''}
+      <p class="text-sm" style="color: #666; font-size: 14px; margin-top: 10px;">
         This is an estimate. Final price may vary based on additional services or special requirements.
       </p>
     </div>
@@ -294,6 +352,33 @@ function getPlainTextAdminNotification(booking: any): string {
     day: 'numeric' 
   });
 
+  // Format pricing breakdown in a more readable way
+  let pricingBreakdownText = '';
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown)) {
+    pricingBreakdownText = '\nService Details:';
+    
+    booking.pricingBreakdown.forEach((item, index) => {
+      if (item.type === 'tv') {
+        pricingBreakdownText += `\n${index + 1}. TV ${item.isUnmountOnly ? 'Unmounting' : item.isRemountOnly ? 'Remounting' : 'Installation'}: `;
+        pricingBreakdownText += `${item.size === 'small' ? 'Up to 55"' : 'Over 55"'}`;
+        
+        if (item.location !== 'standard') {
+          pricingBreakdownText += ` (${item.location.charAt(0).toUpperCase() + item.location.slice(1)})`;
+        }
+        
+        if (item.mountType !== 'none') {
+          pricingBreakdownText += ` with ${item.mountType.charAt(0).toUpperCase() + item.mountType.slice(1)} Mount`;
+        }
+      } else {
+        pricingBreakdownText += `\n${index + 1}. ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Installation`;
+        
+        if (item.quantity > 1) {
+          pricingBreakdownText += ` (${item.quantity} units)`;
+        }
+      }
+    });
+  }
+
   let emailText = `
 🔔 New Booking Alert - Picture Perfect TV Install
 
@@ -317,8 +402,8 @@ ${booking.addressLine2 ? booking.addressLine2 + '\n' : ''}${booking.city}, ${boo
 ${booking.notes || 'None provided'}
 
 💰 PRICING
-Total: ${booking.pricingTotal || 'Not specified'}
-${booking.pricingBreakdown ? `\nBreakdown: ${booking.pricingBreakdown}` : ''}
+Total: $${booking.pricingTotal || 'Not specified'}
+${pricingBreakdownText}
 
 You can view and manage this booking from the admin dashboard.
   `;
@@ -420,13 +505,25 @@ function getHtmlAdminNotification(booking: any): string {
 
     <div class="pricing-section">
       <h2>💰 Pricing Information</h2>
-      <p><strong>Total:</strong> ${booking.pricingTotal || 'Not specified'}</p>
-      ${booking.pricingBreakdown ? `
-      <div style="margin-top: 10px;">
-        <strong>Breakdown:</strong><br>
-        <pre style="background: #f8fafc; padding: 10px; border-radius: 4px; margin-top: 5px;">
-${JSON.stringify(booking.pricingBreakdown, null, 2)}
-        </pre>
+      <p><strong>Total:</strong> $${booking.pricingTotal || 'Not specified'}</p>
+      ${booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) ? `
+      <div style="margin-top: 15px;">
+        <strong>Service Details:</strong>
+        <ul style="padding-left: 20px; margin-top: 5px;">
+          ${booking.pricingBreakdown.map(item => `
+            <li>
+              ${item.type === 'tv' ? 
+                `TV ${item.isUnmountOnly ? 'Unmounting' : item.isRemountOnly ? 'Remounting' : 'Installation'}: 
+                 ${item.size === 'small' ? 'Up to 55"' : 'Over 55"'}
+                 ${item.location !== 'standard' ? ` (${item.location.charAt(0).toUpperCase() + item.location.slice(1)})` : ''}
+                 ${item.mountType !== 'none' ? ` with ${item.mountType.charAt(0).toUpperCase() + item.mountType.slice(1)} Mount` : ''}` 
+                : 
+                `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Installation
+                 ${item.quantity > 1 ? ` (${item.quantity} units)` : ''}`
+              }
+            </li>
+          `).join('')}
+        </ul>
       </div>
       ` : ''}
     </div>
