@@ -901,9 +901,9 @@ export function BookingWizard({
   };
 
   // Handle pricing update
-  const handlePricingUpdate = (total: number, breakdown: any) => {
+  const handlePricingUpdate = useCallback((total: number, breakdown: any) => {
     setPricingTotal(total);
-  };
+  }, []);
 
   // Function to check if we can proceed to the next step
   const canProceed = useCallback(() => {
