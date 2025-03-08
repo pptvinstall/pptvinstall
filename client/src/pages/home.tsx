@@ -31,6 +31,7 @@ export default function HomePage() {
   const servicesInView = useInView(servicesRef, { once: true, amount: 0.2 });
   const testimonialsInView = useInView(testimonialsRef, { once: true, amount: 0.2 });
   
+  // Using a ref with a container that has position: relative
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
@@ -246,7 +247,7 @@ export default function HomePage() {
       <motion.section 
         ref={showcaseRef}
         className="relative py-20 bg-gradient-to-b from-white to-gray-50"
-        style={{ opacity: showcaseOpacity }}
+        style={{ opacity: showcaseOpacity, position: 'relative' }}
       >
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
@@ -306,7 +307,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Services */}
-      <section ref={servicesRef} className="py-20 bg-gray-50">
+      <section ref={servicesRef} className="py-20 bg-gray-50" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -383,7 +384,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section ref={testimonialsRef} className="py-20 bg-white">
+      <section ref={testimonialsRef} className="py-20 bg-white" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 

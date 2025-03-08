@@ -13,6 +13,7 @@ interface ResponsiveImageProps extends React.ImgHTMLAttributes<HTMLImageElement>
   sizes?: string;
   fadeIn?: boolean;
   placeholderColor?: string;
+  fallbackSrc?: string; // Added to support fallback image source
 }
 
 type ImageManifestEntry = {
@@ -39,6 +40,7 @@ export function ResponsiveImage({
   sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
   fadeIn = true,
   placeholderColor = '#f5f5f5',
+  fallbackSrc,
   ...props
 }: ResponsiveImageProps) {
   const [imageSrc, setImageSrc] = useState<string>(src);
