@@ -31,9 +31,4 @@
     @apply relative;
     position: relative !important;
   }
-  
-  /* Global fix for framer motion scroll containers */
-  [style*="transform"], section, .container, main, .relative {
-    position: relative !important;
-  }
 }

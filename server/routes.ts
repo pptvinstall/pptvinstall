@@ -165,6 +165,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Format date string for consistency
       const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // Check if the selected time is in the past
+      const now = new Date();
+      const selectedDate = new Date(dateStr);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // If the date is today, check if the time has passed
+      if (selectedDate.getTime() === today.getTime()) {
+        // Parse the timeSlot (e.g., "7:30 PM")
+        const isPM = (timeSlot as string).includes('PM');
+        const timeComponents = (timeSlot as string).replace(/ (AM|PM)$/, '').split(':');
+        let hour = parseInt(timeComponents[0], 10);
+        const minute = timeComponents.length > 1 ? parseInt(timeComponents[1], 10) : 0;
+        
+        // Convert to 24-hour format
+        if (isPM && hour < 12) hour += 12;
+        if (!isPM && hour === 12) hour = 0;
+        
+        // Create a date with the selected time for comparison
+        const selectedDateTime = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate(),
+          hour,
+          minute
+        );
+        
+        // Add a 30-minute buffer for booking preparation
+        const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
+        
+        // Check if the selected time is in the past or within the buffer period
+        if (selectedDateTime <= bufferTime) {
+          return res.json({
+            success: true,
+            isAvailable: false,
+            message: "This time slot is no longer available for booking"
+          });
+        }
+      } else if (selectedDate < today) {
+        // If the selected date is in the past
+        return res.json({
+          success: true,
+          isAvailable: false,
+          message: "Cannot book appointments for past dates"
+        });
+      }
 
       try {
         // Check if the time slot is already booked in the database
