@@ -44,3 +44,10 @@
     position: relative !important;
   }
 }
+/* Ensure containers have proper positioning for scroll calculations */
+.scroll-container, 
+[data-radix-scroll-area-viewport],
+.scroll-viewport,
+.container {
+  position: relative;
+}

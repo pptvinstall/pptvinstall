@@ -50,49 +50,71 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+//Error Boundary Component
+const ErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = React.useState(false);
+
+  function handleError() {
+    setHasError(true);
+  }
+
+  if (hasError) {
+    return (
+      <div>
+        <h1>Something went wrong.</h1>
+      </div>
+    );
+  }
+
+  return children;
+};
+
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col">
-        <Nav />
-        <main className="flex-grow">
-          <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>
-            <Router>
-              <ScrollToTop />
-              <Switch>
-                <Route path="/" component={Home} />
-                <Route path="/services">
-                  {() => <PageWrapper><Services /></PageWrapper>}
-                </Route>
-                <Route path="/booking">
-                  {() => <PageWrapper><Booking /></PageWrapper>}
-                </Route>
-                <Route path="/booking-confirmation">
-                  {() => <PageWrapper><BookingConfirmation /></PageWrapper>}
-                </Route>
-                <Route path="/contact">
-                  {() => <PageWrapper><Contact /></PageWrapper>}
-                </Route>
-                <Route path="/faq">
-                  {() => <PageWrapper><FAQ /></PageWrapper>}
-                </Route>
-                <Route path="/dashboard">
-                  {() => <PageWrapper><Dashboard /></PageWrapper>}
-                </Route>
-                <Route path="/admin">
-                  {() => <PageWrapper><Admin /></PageWrapper>}
-                </Route>
-                <Route path="/admin/login">
-                  {() => <PageWrapper><Admin /></PageWrapper>}
-                </Route>
-                <Route component={NotFound} />
-              </Switch>
-            </Router>
-          </Suspense>
-        </main>
-        <Footer />
-      </div>
-      <Toaster />
-    </QueryClientProvider>
+    <ErrorBoundary> {/* Added Error Boundary */}
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen flex flex-col relative"> {/* Added relative positioning */}
+          <Nav />
+          <main className="flex-grow">
+            <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>
+              <Router>
+                <ScrollToTop />
+                <Switch>
+                  <Route path="/" component={Home} />
+                  <Route path="/services">
+                    {() => <PageWrapper><Services /></PageWrapper>}
+                  </Route>
+                  <Route path="/booking">
+                    {() => <PageWrapper><Booking /></PageWrapper>}
+                  </Route>
+                  <Route path="/booking-confirmation">
+                    {() => <PageWrapper><BookingConfirmation /></PageWrapper>}
+                  </Route>
+                  <Route path="/contact">
+                    {() => <PageWrapper><Contact /></PageWrapper>}
+                  </Route>
+                  <Route path="/faq">
+                    {() => <PageWrapper><FAQ /></PageWrapper>}
+                  </Route>
+                  <Route path="/dashboard">
+                    {() => <PageWrapper><Dashboard /></PageWrapper>}
+                  </Route>
+                  <Route path="/admin">
+                    {() => <PageWrapper><Admin /></PageWrapper>}
+                  </Route>
+                  <Route path="/admin/login">
+                    {() => <PageWrapper><Admin /></PageWrapper>}
+                  </Route>
+                  <Route component={NotFound} />
+                </Switch>
+              </Router>
+            </Suspense>
+          </main>
+          <Footer />
+        </div>
+        <Toaster />
+      </QueryClientProvider>
+    </ErrorBoundary> {/* Added Error Boundary */}
   </React.StrictMode>
 );
