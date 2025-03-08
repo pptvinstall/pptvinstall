@@ -185,5 +185,39 @@
         "src": "/assets/optimized/IMG_4282-960.jpg"
       }
     ]
+  },
+  "logo": {
+    "default": "/assets/optimized/logo.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/logo-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/logo-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/logo-960.jpg"
+      }
+    ]
+  },
+  "showcase": {
+    "default": "/assets/optimized/showcase.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/showcase-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/showcase-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/showcase-960.jpg"
+      }
+    ]
   }
 }

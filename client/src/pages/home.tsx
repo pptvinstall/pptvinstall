@@ -23,7 +23,7 @@ export default function Home() {
                   }}
                 >
                   <ResponsiveImage
-                    src="/assets/IMG_3583.jpeg"
+                    src="/assets/logo.jpeg"
                     alt="Picture Perfect TV Install Logo"
                     className="w-full h-full object-contain drop-shadow-sm"
                     priority={true}
@@ -58,7 +58,7 @@ export default function Home() {
       <section className="relative">
         <div className="w-full">
           <ResponsiveImage
-            src="/assets/IMG_1876.jpeg"
+            src="/assets/showcase.jpeg"
             alt="TV Installation Showcase"
             className="w-full object-cover h-[50vh]"
             priority={true}
