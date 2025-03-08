@@ -148,35 +148,61 @@ export default function BookingConfirmation() {
     };
   }, [queryParams]);
 
+  // Define interfaces for service breakdown
+  interface ServiceItem {
+    name: string;
+    details?: string[];
+    price?: number;
+  }
+
+  interface ServiceCategory {
+    category: string;
+    items: ServiceItem[];
+  }
+
+  interface PricingBreakdownItem {
+    type: string;
+    size?: string;
+    location?: string;
+    mountType?: string;
+    masonryWall?: boolean;
+    highRise?: boolean;
+    outletRelocation?: boolean;
+    isUnmountOnly?: boolean;
+    isRemountOnly?: boolean;
+    brickInstallation?: boolean;
+    mountHeight?: number;
+  }
+
   // Process breakdown based on stored pricingBreakdown or fall back to serviceType text
-  const processServiceBreakdown = () => {
+  const processServiceBreakdown = (): ServiceCategory[] => {
     if (!bookingData) return [];
 
     // If we have detailed pricingBreakdown, use that
     if (bookingData.pricingBreakdown && Array.isArray(bookingData.pricingBreakdown)) {
-      const breakdown = [];
+      const breakdown: ServiceCategory[] = [];
 
       // Process TV installations
-      const tvItems = bookingData.pricingBreakdown.filter(item =>
+      const tvItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) =>
         item.type === 'tv' && !item.isUnmountOnly && !item.isRemountOnly
       );
 
       if (tvItems.length > 0) {
         breakdown.push({
           category: 'TV Mounting',
-          items: tvItems.map((tv, index) => ({
+          items: tvItems.map((tv: PricingBreakdownItem, index: number) => ({
             name: `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? `(${tv.mountType})` : ''}`,
             details: [
               tv.masonryWall ? 'Non-Drywall Surface' : null,
               tv.highRise ? 'High-Rise/Steel Studs' : null,
               tv.outletRelocation ? 'With Outlet Installation' : null
-            ].filter(Boolean)
+            ].filter(Boolean) as string[]
           }))
         });
       }
 
       // Process TV unmounting only services
-      const unmountOnlyItems = bookingData.pricingBreakdown.filter(item => item.isUnmountOnly);
+      const unmountOnlyItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) => item.isUnmountOnly);
       if (unmountOnlyItems.length > 0) {
         breakdown.push({
           category: 'TV Unmounting',
@@ -188,7 +214,7 @@ export default function BookingConfirmation() {
       }
 
       // Process TV remounting only services
-      const remountOnlyItems = bookingData.pricingBreakdown.filter(item => item.isRemountOnly);
+      const remountOnlyItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) => item.isRemountOnly);
       if (remountOnlyItems.length > 0) {
         breakdown.push({
           category: 'TV Remounting',
@@ -200,24 +226,24 @@ export default function BookingConfirmation() {
       }
 
       // Process Smart Home devices
-      const smartHomeItems = bookingData.pricingBreakdown.filter(item =>
+      const smartHomeItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) =>
         item.type === 'doorbell' || item.type === 'camera' || item.type === 'floodlight'
       );
 
       if (smartHomeItems.length > 0) {
         breakdown.push({
           category: 'Smart Home',
-          items: smartHomeItems.map(item => {
+          items: smartHomeItems.map((item: PricingBreakdownItem) => {
             const deviceName =
               item.type === 'doorbell' ? 'Smart Doorbell' :
                 item.type === 'floodlight' ? 'Smart Floodlight' : 'Smart Camera';
 
             return {
-              name: `${deviceName}${item.quantity > 1 ? ` (×${item.quantity})` : ''}`,
+              name: `${deviceName}${(item as any).quantity > 1 ? ` (×${(item as any).quantity})` : ''}`,
               details: [
-                item.type === 'camera' && item.mountHeight > 8 ? `at ${item.mountHeight}ft` : null,
+                item.type === 'camera' && item.mountHeight && item.mountHeight > 8 ? `at ${item.mountHeight}ft` : null,
                 item.type === 'doorbell' && item.brickInstallation ? 'on Brick' : null
-              ].filter(Boolean)
+              ].filter(Boolean) as string[]
             };
           })
         });

@@ -74,7 +74,7 @@ export function PriceCalculator({
   }, [pricingData.total, onUpdate]);
 
   return (
-    <Card>
+    <Card className="price-calculator">
       <CardHeader>
         <CardTitle>Price Breakdown</CardTitle>
       </CardHeader>
@@ -166,7 +166,7 @@ export function PriceCalculator({
               <Separator />
               <h3 className="font-medium text-sm">Add Services</h3>
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <h4 className="text-xs font-medium">TV Services</h4>
                   <div className="grid grid-cols-2 gap-1">

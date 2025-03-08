@@ -97,13 +97,13 @@ export function ServiceSelectionGrid({
           </TabsContent>
 
           <TabsContent value="smartHome" className="mt-0 relative">
-            <div style={{ position: 'relative' }}>
-              <ScrollArea className="h-[280px] pr-2" style={{ position: 'relative' }}>
+            <div className="scroll-container">
+              <ScrollArea className="h-[280px] pr-2 scroll-container">
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
                 >
                   {smartHomeInstallations.map((service) => (
                     <motion.div key={service.id} variants={itemVariants}>
