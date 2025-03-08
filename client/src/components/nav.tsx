@@ -86,7 +86,7 @@ export default function Nav() {
         <Link href="/" className="flex items-center space-x-2">
           <div className="w-auto h-12 relative overflow-hidden">
             <ResponsiveImage
-              src="/assets/logo.svg"
+              src="/assets/logo-pptv.jpg"
               alt="Picture Perfect TV Install"
               className="h-full w-auto"
               width={240}
@@ -173,7 +173,7 @@ export default function Nav() {
                   <div className="flex items-center space-x-2">
                     <div className="w-auto h-8 relative overflow-hidden">
                       <ResponsiveImage
-                        src="/assets/logo.svg"
+                        src="/assets/logo-pptv.jpg"
                         alt="Picture Perfect TV Install"
                         className="h-full w-auto"
                         width={160}
