@@ -102,6 +102,7 @@ const PriceCalculator = React.memo(
     onUpdate,
     onRemoveService,
     onAddService,
+    currentStep = 0,
   }: {
     tvs: TVInstallation[];
     smartHome: SmartHomeInstallation[];
@@ -109,6 +110,7 @@ const PriceCalculator = React.memo(
     onUpdate: (total: number, breakdown: any) => void;
     onRemoveService: (type: "tv" | "smartHome", id: string) => void;
     onAddService: () => void;
+    currentStep?: number;
   }) => {
     // Calculate total price
     useEffect(() => {
