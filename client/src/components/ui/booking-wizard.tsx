@@ -51,44 +51,46 @@ const StepIndicator = ({
 }) => {
   return (
     <div className="flex items-center justify-between w-full mb-6">
-      {Array.from({ length: totalSteps }).map((_, index) => (
-        <React.Fragment key={index}>
-          <div
-            className={cn(
-              "rounded-full transition-all duration-200 flex items-center justify-center",
-              currentStep === index
-                ? "bg-primary text-primary-foreground w-8 h-8 shadow-md"
-                : currentStep > index
-                ? "bg-primary/20 text-primary w-7 h-7"
-                : "bg-muted text-muted-foreground w-7 h-7"
-            )}
-          >
-            {currentStep > index ? (
-              <Icons.check className="h-4 w-4" />
-            ) : (
-              <span className="text-sm">{index + 1}</span>
-            )}
-          </div>
-          {index < totalSteps - 1 && (
-            <div className="flex-grow h-0.5 mx-1 relative">
-              <div
-                className="absolute inset-0 bg-muted"
-                aria-hidden="true"
-              ></div>
-              <div
-                className="absolute inset-0 bg-primary transition-all duration-300 ease-in-out"
-                style={{
-                  transform: `scaleX(${
-                    currentStep > index ? 1 : currentStep === index ? 0.5 : 0
-                  })`,
-                  transformOrigin: "left",
-                }}
-                aria-hidden="true"
-              ></div>
+      {Array.from({ length: totalSteps }).map((_, index) => {
+        return (
+          <React.Fragment key={index}>
+            <div
+              className={cn(
+                "rounded-full transition-all duration-200 flex items-center justify-center",
+                currentStep === index
+                  ? "bg-primary text-primary-foreground w-8 h-8 shadow-md"
+                  : currentStep > index
+                  ? "bg-primary/20 text-primary w-7 h-7"
+                  : "bg-muted text-muted-foreground w-7 h-7"
+              )}
+            >
+              {currentStep > index ? (
+                <Icons.check className="h-4 w-4" />
+              ) : (
+                <span className="text-sm">{index + 1}</span>
+              )}
             </div>
-          )}
-        </React.Fragment>
-      ))}
+            {index < totalSteps - 1 && (
+              <div className="flex-grow h-0.5 mx-1 relative">
+                <div
+                  className="absolute inset-0 bg-muted"
+                  aria-hidden="true"
+                ></div>
+                <div
+                  className="absolute inset-0 bg-primary transition-all duration-300 ease-in-out"
+                  style={{
+                    transform: `scaleX(${
+                      currentStep > index ? 1 : currentStep === index ? 0.5 : 0
+                    })`,
+                    transformOrigin: "left",
+                  }}
+                  aria-hidden="true"
+                ></div>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
