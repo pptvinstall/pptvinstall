@@ -5,6 +5,7 @@ import { bookingSchema, bookings } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
 import { googleCalendarService } from "./services/googleCalendarService";
+import { availabilityService } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
@@ -62,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok" });
   });
 
-  // Google Calendar API endpoints with caching
+  // Calendar API endpoints with internal availability service
   app.get("/api/calendar/availability", async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
@@ -89,8 +90,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add caching header for availability data (10 minutes)
       res.setHeader('Cache-Control', 'public, max-age=600');
 
-      // Get unavailable time slots from Google Calendar
-      const unavailableSlots = await googleCalendarService.getUnavailableTimeSlots(start, end);
+      // Get unavailable time slots from internal availability service
+      const blockedSlots = availabilityService.getBlockedTimeSlotsForDateRange(
+        start.toISOString().split('T')[0],
+        end.toISOString().split('T')[0]
+      );
+
+      // Create unavailable slots object with the same format as before
+      const unavailableSlots: { [key: string]: string[] } = { ...blockedSlots };
+
+      // Get blocked days and add all time slots for those days
+      const blockedDays = availabilityService.getBlockedDaysForDateRange(
+        start.toISOString().split('T')[0],
+        end.toISOString().split('T')[0]
+      );
+
+      // Define a standard set of time slots
+      const standardTimeSlots = [
+        "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM",
+        "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM"
+      ];
+
+      // Add all time slots for blocked days
+      for (const blockedDay of blockedDays) {
+        unavailableSlots[blockedDay] = standardTimeSlots;
+      }
 
       // Get existing bookings from the database
       const dbBookings = await db.select().from(bookings).where(
@@ -128,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check specific time slot availability
+  // Check specific time slot availability with internal service
   app.get("/api/calendar/checkTimeSlot", async (req, res) => {
     try {
       const { date, timeSlot } = req.query;
@@ -163,22 +187,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (dbError) {
         // Log the error but don't fail the request
         logger.error("Database error checking bookings:", dbError as Error);
-        // Continue with checking Google Calendar
       }
 
-      // Get data for a 7-day window around the requested date
-      const startDate = new Date(date as string);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 7);
-
-      // Get unavailable time slots from Google Calendar
-      const unavailableSlots = await googleCalendarService.getUnavailableTimeSlots(startDate, endDate);
-
-      // Check if the specific time slot is available
-      const isAvailable = googleCalendarService.isTimeSlotAvailable(
-        date as string,
-        timeSlot as string,
-        unavailableSlots
+      // Check if the specific time slot is available using internal service
+      const isAvailable = availabilityService.isTimeSlotAvailable(
+        dateStr,
+        timeSlot as string
       );
 
       res.json({
@@ -194,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add endpoint to get blocked time slots
+  // Add endpoint to get blocked time slots using internal availability service
   app.get("/api/admin/blocked-times", async (req, res) => {
     try {
       const { startDate, endDate, password } = req.query;
@@ -208,12 +222,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse dates
-      const start = startDate ? new Date(startDate as string) : new Date();
-      const end = endDate ? new Date(endDate as string) : new Date(start);
-      end.setMonth(end.getMonth() + 1); // Default to 1 month range if no end date
+      const start = startDate ? (startDate as string) : new Date().toISOString().split('T')[0];
+      const end = endDate ? (endDate as string) : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0];
 
-      // Get blocked slots from Google Calendar
-      const blockedSlots = await googleCalendarService.getBlockedTimeSlots(start, end);
+      // Get blocked slots from internal availability service
+      const blockedSlots = availabilityService.getBlockedTimeSlotsForDateRange(start, end);
 
       res.json({
         success: true,
@@ -228,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add endpoint for fetching blocked days
+  // Add endpoint for fetching blocked days using internal availability service
   app.get("/api/admin/blocked-days", async (req, res) => {
     try {
       const { startDate, endDate, password } = req.query;
@@ -242,12 +255,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse dates
-      const start = startDate ? new Date(startDate as string) : new Date();
-      const end = endDate ? new Date(endDate as string) : new Date(start);
-      end.setMonth(end.getMonth() + 1); // Default to 1 month range if no end date
+      const start = startDate ? (startDate as string) : new Date().toISOString().split('T')[0];
+      const end = endDate ? (endDate as string) : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0];
 
-      // Get blocked days from Google Calendar
-      const blockedDays = await googleCalendarService.getBlockedDays(start, end);
+      // Get blocked days from internal availability service
+      const blockedDays = availabilityService.getBlockedDaysForDateRange(start, end);
 
       res.json({
         success: true,
@@ -262,18 +274,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Modify existing /api/admin/availability endpoint with better logging
+  // Modify existing /api/admin/availability endpoint to use internal availability service
   app.post("/api/admin/availability", async (req, res) => {
     try {
       const { password, action, data } = req.body;
-      logger.debug('Availability update requested', { action, requestId: req.requestId });
+      logger.debug('Availability update requested', { action });
 
       // Verify admin password using the helper function
       if (!verifyAdminPassword(password)) {
-        logger.auth('Invalid password for availability update', { 
-          action,
-          requestId: req.requestId 
-        });
+        logger.auth('Invalid password for availability update', { action });
         return res.status(401).json({
           success: false,
           message: "Invalid password"
@@ -283,65 +292,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (action) {
         case 'blockTimeSlot':
           const { date, timeSlots, reason } = data;
-          logger.debug('Blocking time slots', { 
-            date, 
-            timeSlots,
-            requestId: req.requestId 
-          });
+          logger.debug('Blocking time slots', { date, timeSlots });
 
           try {
-            for (const timeSlot of timeSlots) {
-              // Calculate end time (30 minutes after start time)
-              const [startTime, period] = timeSlot.split(' ');
-              const [hours, minutes] = startTime.split(':').map(Number);
-
-              // Calculate end time (30 minutes after start)
-              let endHours = hours;
-              let endMinutes = minutes + 30;
-
-              // Handle minute overflow
-              if (endMinutes >= 60) {
-                endHours += 1;
-                endMinutes -= 60;
-              }
-
-              // Handle hour overflow and maintain AM/PM
-              let endPeriod = period;
-              if (endHours === 12) {
-                endPeriod = period === 'AM' ? 'PM' : 'AM';
-                endHours = period === 'AM' ? 12 : 1;
-              } else if (endHours > 12) {
-                endHours -=12;
-                endPeriod = 'PM';
-              }
-
-
-              const endTime = `${endHours}:${endMinutes.toString().padStart(2, '0')} ${endPeriod}`;
-
-              logger.debug('Processing time slot block', {
+            // Use our internal availability service
+            const success = availabilityService.blockTimeSlots(date, timeSlots, reason);
+            
+            if (!success) {
+              logger.error('Failed to block time slots', new Error('Failed to block time slots'), {
                 date,
-                startTime: timeSlot,
-                endTime,
-                reason,
-                requestId: req.requestId
+                timeSlots
               });
-
-              const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
-              if (!success) {
-                logger.error('Failed to block time slot', new Error('Failed to block time slot'), {
-                  date,
-                  timeSlot,
-                  endTime,
-                  requestId: req.requestId
-                });
-                throw new Error(`Failed to block time slot: ${timeSlot}`);
-              }
+              return res.status(500).json({
+                success: false,
+                message: "Failed to block time slots. Please try again."
+              });
             }
           } catch (error) {
             logger.error('Error blocking time slots', error as Error, {
               date,
-              timeSlots,
-              requestId: req.requestId
+              timeSlots
             });
             return res.status(500).json({
               success: false,
@@ -354,15 +324,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { date: fullDate, reason: fullDayReason } = data;
           logger.debug('Blocking full day', { 
             date: fullDate,
-            reason: fullDayReason,
-            requestId: req.requestId 
+            reason: fullDayReason
           });
 
-          const fullDaySuccess = await googleCalendarService.blockFullDay(fullDate, fullDayReason);
+          const fullDaySuccess = availabilityService.blockDay(fullDate, fullDayReason);
           if (!fullDaySuccess) {
             logger.error('Failed to block full day', new Error('Failed to block full day'), {
-              date: fullDate,
-              requestId: req.requestId
+              date: fullDate
             });
             return res.status(500).json({
               success: false,
@@ -373,8 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         default:
           logger.error('Invalid action specified', new Error('Invalid action specified'), {
-            action,
-            requestId: req.requestId
+            action
           });
           return res.status(400).json({
             success: false,
@@ -383,8 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       logger.info('Availability updated successfully', {
-        action,
-        requestId: req.requestId
+        action
       });
 
       res.json({
@@ -392,9 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Availability updated successfully"
       });
     } catch (error) {
-      logger.error('Error updating availability', error as Error, {
-        requestId: req.requestId
-      });
+      logger.error('Error updating availability', error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to update availability"

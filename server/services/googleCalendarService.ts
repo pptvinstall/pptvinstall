@@ -74,15 +74,11 @@ export class GoogleCalendarService {
       useMock: this.useMock
     });
 
-    if (!this.useMock) {
-      this.calendar = google.calendar({
-        version: 'v3',
-        auth: apiKey
-      });
-    } else {
-      this.calendar = null;
-      logger.info('Using mock calendar service');
-    }
+    // For our current implementation, we'll use mock mode since we don't have OAuth credentials
+    // API key alone is not sufficient for write operations to Calendar API
+    this.useMock = true;
+    this.calendar = null;
+    logger.info('Using mock calendar service (API key without OAuth is not sufficient for write operations)');
   }
   
   // Helper methods for mock calendar
