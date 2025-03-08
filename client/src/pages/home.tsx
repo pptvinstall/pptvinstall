@@ -388,7 +388,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
-              className="inline-block px-3 py-1 rounded-full bg-yellow-100 text-yellow-600 text-sm font-medium mb-4"
+              className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
               initial={{ opacity: 0, y: 10 }}
               animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4 }}
@@ -421,13 +421,13 @@ export default function HomePage() {
                 animate={testimonialsInView ? { opacity: 1, scale: 1 } : {}}
                 transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
               >
-                <Card className="h-full border-2 border-gray-100 hover:border-yellow-100 transition-all duration-300">
+                <Card className="h-full border-2 border-gray-100 hover:border-blue-100 transition-all duration-300">
                   <CardContent className="p-6 h-full flex flex-col">
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="bg-yellow-100 p-2 rounded-full">
-                        <Star className="h-5 w-5 text-yellow-500" />
+                      <div className="bg-blue-100 p-2 rounded-full">
+                        <Star className="h-5 w-5 text-blue-500" />
                       </div>
-                      <div className="flex text-yellow-400">
+                      <div className="flex text-blue-400">
                         {[...Array(testimonial.rating)].map((_, i) => (
                           <Star key={i} className="h-4 w-4 fill-current" />
                         ))}
