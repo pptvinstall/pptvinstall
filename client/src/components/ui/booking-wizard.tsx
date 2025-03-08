@@ -470,36 +470,69 @@ export function BookingWizard({
     }
   }, [selectedDate]);
 
-  // Generate time slots based on day of week - memoized to avoid recalculation
+  // Generate time slots based on day of week and current time - memoized to avoid recalculation
   const timeSlots = useMemo(() => {
     if (!selectedDate) return [];
 
     const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6; // 0 is Sunday, 6 is Saturday
-
-    if (isWeekend) {
-      // Weekend slots: 11 AM to 7 PM
-      return [
-        "10:00 AM",
-        "11:00 AM",
-        "12:00 PM",
-        "1:00 PM",
-        "2:00 PM",
-        "3:00 PM",
-        "4:00 PM",
-        "5:00 PM",
-        "6:00 PM",
-        "7:00 PM"
-      ];
-    } else {
-      // Weekday slots: 6:30 PM to 10:30 PM
-      return [
-        "5:30 PM",
-        "6:30 PM",
-        "7:30 PM",
-        "8:30 PM",
-        "9:30 PM"
-      ];
+    
+    // Create base time slots based on day of week
+    let slots = isWeekend 
+      ? [
+          "10:00 AM",
+          "11:00 AM",
+          "12:00 PM",
+          "1:00 PM",
+          "2:00 PM",
+          "3:00 PM",
+          "4:00 PM",
+          "5:00 PM",
+          "6:00 PM",
+          "7:00 PM"
+        ]
+      : [
+          "5:30 PM",
+          "6:30 PM",
+          "7:30 PM",
+          "8:30 PM",
+          "9:30 PM"
+        ];
+    
+    // Check if selected date is today
+    const today = new Date();
+    const isToday = selectedDate.getDate() === today.getDate() && 
+                    selectedDate.getMonth() === today.getMonth() && 
+                    selectedDate.getFullYear() === today.getFullYear();
+    
+    // If it's today, filter out past time slots
+    if (isToday) {
+      const currentHour = today.getHours();
+      const currentMinute = today.getMinutes();
+      
+      // Filter slots based on current time
+      slots = slots.filter(timeStr => {
+        // Parse the time string
+        const isPM = timeStr.includes('PM');
+        const [hourStr, minuteStr] = timeStr.replace(/ (AM|PM)$/, '').split(':');
+        let hour = parseInt(hourStr, 10);
+        const minute = minuteStr ? parseInt(minuteStr, 10) : 0;
+        
+        // Convert to 24-hour format
+        if (isPM && hour < 12) hour += 12;
+        if (!isPM && hour === 12) hour = 0;
+        
+        // Compare with current time
+        if (hour < currentHour) return false;
+        if (hour === currentHour && minute <= currentMinute) return false;
+        
+        // Add a buffer of 30 minutes to allow for appointment setup
+        if (hour === currentHour && minute <= currentMinute + 30) return false;
+        
+        return true;
+      });
     }
+    
+    return slots;
   }, [selectedDate]);
 
   // Memoized function to check if time is already booked
