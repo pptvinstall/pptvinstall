@@ -1,627 +1,869 @@
-import * as React from "react"
-import { Button } from "./button"
-import { motion } from "framer-motion"
-import { Plus, Minus, MinusCircle, PlusCircle } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
-import { Switch } from "./switch"
-import { Label } from "./label"
-import { Card } from "./card"
-import { Separator } from "./separator"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu"
 
-export type TVInstallation = {
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./card";
+import { Label } from "./label";
+import { RadioGroup, RadioGroupItem } from "./radio-group";
+import { Checkbox } from "./checkbox";
+import { Input } from "./input";
+import { Button } from "./button";
+import { pricing } from "@/lib/pricing";
+import { Separator } from "./separator";
+import { cn } from "@/lib/utils";
+
+interface TVInstallation {
+  id: string;
   size: 'small' | 'large';
-  location: 'standard' | 'fireplace' | 'ceiling';
-  mountType: 'fixed' | 'tilt' | 'fullMotion' | 'none';
+  location: 'standard' | 'fireplace';
+  mountType: 'fixed' | 'tilting' | 'full_motion' | 'none' | 'customer';
   masonryWall: boolean;
-  outletRelocation: boolean;
   highRise: boolean;
-  unmount: boolean;
-  remount: boolean;
-  isUnmountOnly?: boolean;
-  isRemountOnly?: boolean;
-  isOutletOnly?: boolean;
-};
-
-export type SmartHomeInstallation = {
-  type: 'doorbell' | 'floodlight' | 'camera';
-  quantity: number;
-  brickInstallation?: boolean;
-  mountHeight?: number;
-};
-
-interface ServiceWizardProps {
-  onServiceSelect: (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => void;
-  onClose: () => void;
+  outletNeeded: boolean;
 }
 
-export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) {
-  const [activeTab, setActiveTab] = React.useState('services');
-  const [tvInstallations, setTvInstallations] = React.useState<TVInstallation[]>([]);
-  const [smartHomeInstallations, setSmartHomeInstallations] = React.useState<SmartHomeInstallation[]>([]);
+interface TVRemovalService {
+  id: string;
+  isUnmountOnly: boolean;
+  isRemountOnly: boolean;
+  count: number;
+}
 
-  // Auto-save selections whenever they change
-  React.useEffect(() => {
-    if (tvInstallations.length > 0 || smartHomeInstallations.length > 0) {
-      onServiceSelect({
-        tvs: tvInstallations,
-        smartHome: smartHomeInstallations.map(installation => ({
-          ...installation,
-          quantity: installation.quantity || 1,
-          brickInstallation: installation.type === 'doorbell' ? (installation.brickInstallation || false) : undefined
-        }))
-      });
+interface SmartHomeDevice {
+  id: string;
+  type: 'doorbell' | 'camera' | 'floodlight';
+  count: number;
+  hasExistingWiring?: boolean;
+}
+
+interface HandymanService {
+  id: string;
+  hours: number;
+  description: string;
+}
+
+export interface ServiceWizardProps {
+  onComplete: (services: {
+    tvInstallations: TVInstallation[];
+    tvRemoval: TVRemovalService | null;
+    smartHomeDevices: SmartHomeDevice[];
+    handymanService: HandymanService | null;
+    estimatedTotal: number;
+  }) => void;
+}
+
+export function ServiceWizard({ onComplete }: ServiceWizardProps) {
+  // State for step management
+  const [currentStep, setCurrentStep] = useState(0);
+  const [estimatedTotal, setEstimatedTotal] = useState(0);
+  
+  // State for TV installations
+  const [tvInstallations, setTvInstallations] = useState<TVInstallation[]>([]);
+  const [newTvSize, setNewTvSize] = useState<'small' | 'large'>('small');
+  const [newTvLocation, setNewTvLocation] = useState<'standard' | 'fireplace'>('standard');
+  const [newTvMountType, setNewTvMountType] = useState<'fixed' | 'tilting' | 'full_motion' | 'none' | 'customer'>('customer');
+  const [newTvMasonryWall, setNewTvMasonryWall] = useState(false);
+  const [newTvHighRise, setNewTvHighRise] = useState(false);
+  const [newTvOutletNeeded, setNewTvOutletNeeded] = useState(false);
+  
+  // State for TV removal (unmount/remount)
+  const [needsTvRemoval, setNeedsTvRemoval] = useState(false);
+  const [tvRemovalType, setTvRemovalType] = useState<'unmount' | 'remount'>('unmount');
+  const [tvRemovalCount, setTvRemovalCount] = useState(1);
+  
+  // State for smart home devices
+  const [smartHomeDevices, setSmartHomeDevices] = useState<SmartHomeDevice[]>([]);
+  const [newDeviceType, setNewDeviceType] = useState<'doorbell' | 'camera' | 'floodlight'>('camera');
+  const [newDeviceCount, setNewDeviceCount] = useState(1);
+  const [hasExistingWiring, setHasExistingWiring] = useState(true);
+  
+  // State for handyman services
+  const [needsHandyman, setNeedsHandyman] = useState(false);
+  const [handymanHours, setHandymanHours] = useState(1);
+  const [handymanDescription, setHandymanDescription] = useState('');
+
+  // Calculate an estimated total whenever services change
+  useEffect(() => {
+    let total = 0;
+    
+    // TV Installations
+    tvInstallations.forEach(tv => {
+      // Base TV mounting price
+      if (tv.location === 'standard') {
+        total += pricing.tv_mounting.standard.price;
+      } else if (tv.location === 'fireplace') {
+        total += pricing.tv_mounting.fireplace.price;
+      }
+      
+      // Add-ons
+      if (tv.masonryWall) {
+        total += pricing.tv_mounting.non_drywall_addon.price;
+      }
+      
+      if (tv.highRise) {
+        total += pricing.tv_mounting.high_rise_addon.price;
+      }
+      
+      // Mount purchases
+      if (tv.mountType !== 'none' && tv.mountType !== 'customer') {
+        const sizeKey = tv.size === 'large' ? 'big' : 'small';
+        const mountKey = `${tv.mountType}_${sizeKey}` as keyof typeof pricing.tv_mounts;
+        total += pricing.tv_mounts[mountKey]?.price || 0;
+      }
+      
+      // Outlet installation
+      if (tv.outletNeeded) {
+        total += pricing.wire_concealment.standard.price;
+      }
+    });
+    
+    // Apply multi-TV discount
+    if (tvInstallations.length > 1) {
+      total -= (tvInstallations.length - 1) * pricing.discounts.multiple_tvs.amount;
     }
-  }, [tvInstallations, smartHomeInstallations, onServiceSelect]);
+    
+    // TV Removal services
+    if (needsTvRemoval) {
+      if (tvRemovalType === 'unmount') {
+        total += tvRemovalCount * pricing.tv_mounting.unmount.price;
+      } else {
+        total += tvRemovalCount * pricing.tv_mounting.existing_mount.price;
+      }
+    }
+    
+    // Smart Home devices
+    smartHomeDevices.forEach(device => {
+      if (device.type === 'camera') {
+        total += device.count * pricing.smart_home.security_camera.price;
+      } else if (device.type === 'doorbell') {
+        total += device.count * pricing.smart_home.doorbell.price;
+      } else if (device.type === 'floodlight' && device.hasExistingWiring) {
+        total += device.count * pricing.smart_home.floodlight.price;
+      }
+    });
+    
+    // Handyman services
+    if (needsHandyman) {
+      const handymanBasePrice = pricing.custom_services.handyman.price;
+      const additionalHalfHours = Math.ceil((handymanHours - 1) * 2);
+      const additionalFee = additionalHalfHours * pricing.custom_services.handyman.half_hour_rate;
+      total += handymanBasePrice + additionalFee;
+    }
+    
+    setEstimatedTotal(total);
+  }, [tvInstallations, needsTvRemoval, tvRemovalType, tvRemovalCount, smartHomeDevices, needsHandyman, handymanHours]);
 
-  const addTvInstallation = () => {
-    setTvInstallations(prev => [...prev, {
-      size: 'small',
-      location: 'standard',
-      mountType: 'none',
-      masonryWall: false,
-      outletRelocation: false,
-      highRise: false,
-      unmount: false,
-      remount: false,
-      isUnmountOnly: false,
-      isRemountOnly: false
-    }]);
-  };
-
-  const removeTvInstallation = (index: number) => {
-    setTvInstallations(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateTvInstallation = (index: number, updates: Partial<TVInstallation>) => {
-    setTvInstallations(prev => prev.map((inst, i) =>
-      i === index ? { ...inst, ...updates } : inst
-    ));
-  };
-
-  const addSmartHomeInstallation = (type: SmartHomeInstallation['type']) => {
-    setSmartHomeInstallations(prev => [...prev, {
-      type,
-      quantity: 1,
-      ...(type === 'doorbell' ? { brickInstallation: false } : {})
-    }]);
-  };
-
-  const removeSmartHomeInstallation = (index: number) => {
-    setSmartHomeInstallations(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateSmartHomeInstallation = (index: number, updates: Partial<SmartHomeInstallation>) => {
-    setSmartHomeInstallations(prev => prev.map((inst, i) => {
-      if (i !== index) return inst;
-      const updated = { ...inst, ...updates };
-
-      // Ensure quantity is always at least 1
-      if (updated.quantity < 1) updated.quantity = 1;
-
-      return updated;
-    }));
-  };
-
-  const addTVUnmountingOnly = () => {
-    setTvInstallations(prev => [...prev, {
-      size: 'small',
-      location: 'standard',
-      mountType: 'none',
-      masonryWall: false,
-      outletRelocation: false,
-      highRise: false,
-      unmount: true,
-      remount: false,
-      isUnmountOnly: true,
-      isRemountOnly: false
-    }]);
-  };
-
-  const addTVRemountingOnly = () => {
-    setTvInstallations(prev => [...prev, {
-      size: 'small',
-      location: 'standard',
-      mountType: 'none',
-      masonryWall: false,
-      outletRelocation: false,
-      highRise: false,
-      unmount: false,
-      remount: true,
-      isUnmountOnly: false,
-      isRemountOnly: true
-    }]);
+  // Handle adding a new TV installation
+  const handleAddTv = () => {
+    const newTv: TVInstallation = {
+      id: `tv-${Date.now()}`,
+      size: newTvSize,
+      location: newTvLocation,
+      mountType: newTvMountType,
+      masonryWall: newTvMasonryWall,
+      highRise: newTvHighRise,
+      outletNeeded: newTvOutletNeeded
+    };
+    
+    setTvInstallations([...tvInstallations, newTv]);
+    
+    // Reset form
+    setNewTvSize('small');
+    setNewTvLocation('standard');
+    setNewTvMountType('customer');
+    setNewTvMasonryWall(false);
+    setNewTvHighRise(false);
+    setNewTvOutletNeeded(false);
   };
   
-  const addOutletOnly = () => {
-    setTvInstallations(prev => [...prev, {
-      size: 'small',
-      location: 'standard',
-      mountType: 'none',
-      masonryWall: false,
-      outletRelocation: true,
-      highRise: false,
-      unmount: false,
-      remount: false,
-      isUnmountOnly: false,
-      isRemountOnly: false,
-      isOutletOnly: true
-    }]);
+  // Handle removing a TV installation
+  const handleRemoveTv = (id: string) => {
+    setTvInstallations(tvInstallations.filter(tv => tv.id !== id));
+  };
+  
+  // Handle adding a smart home device
+  const handleAddSmartDevice = () => {
+    const newDevice: SmartHomeDevice = {
+      id: `device-${Date.now()}`,
+      type: newDeviceType,
+      count: newDeviceCount,
+      hasExistingWiring: newDeviceType === 'floodlight' ? hasExistingWiring : undefined
+    };
+    
+    setSmartHomeDevices([...smartHomeDevices, newDevice]);
+    
+    // Reset form
+    setNewDeviceType('camera');
+    setNewDeviceCount(1);
+    setHasExistingWiring(true);
+  };
+  
+  // Handle removing a smart home device
+  const handleRemoveSmartDevice = (id: string) => {
+    setSmartHomeDevices(smartHomeDevices.filter(device => device.id !== id));
+  };
+  
+  // Navigate to next step
+  const handleNextStep = () => {
+    setCurrentStep(currentStep + 1);
+  };
+  
+  // Navigate to previous step
+  const handlePreviousStep = () => {
+    setCurrentStep(currentStep - 1);
+  };
+  
+  // Complete the wizard
+  const handleComplete = () => {
+    // Create TV removal service if selected
+    let tvRemoval = null;
+    if (needsTvRemoval) {
+      tvRemoval = {
+        id: `removal-${Date.now()}`,
+        isUnmountOnly: tvRemovalType === 'unmount',
+        isRemountOnly: tvRemovalType === 'remount',
+        count: tvRemovalCount
+      };
+    }
+    
+    // Create handyman service if selected
+    let handymanService = null;
+    if (needsHandyman) {
+      handymanService = {
+        id: `handyman-${Date.now()}`,
+        hours: handymanHours,
+        description: handymanDescription
+      };
+    }
+    
+    onComplete({
+      tvInstallations,
+      tvRemoval,
+      smartHomeDevices,
+      handymanService,
+      estimatedTotal
+    });
   };
 
-  const hasSelectionsToConfirm = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
-
   return (
-    <div className="space-y-6">
-      {hasSelectionsToConfirm && (
-        <Card className="p-4">
-          <h3 className="font-medium mb-3">Selected Services</h3>
-          <div className="space-y-3 text-sm">
-            {tvInstallations.map((tv, index) => (
-              <div key={`tv-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
-                <span>
-                  {tv.isUnmountOnly ? 'TV Unmounting Only' :
-                    tv.isRemountOnly ? 'TV Remounting Only' :
-                      tv.isOutletOnly ? 'Outlet Installation Only' :
-                        `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
-                  {tv.masonryWall && ' • Non-Drywall Surface'}
-                  {tv.highRise && ' • High-Rise/Steel Studs'}
-                  {tv.outletRelocation && !tv.isOutletOnly && ' • Outlet Installation'}
-                  {tv.unmount && !tv.isUnmountOnly && ' • With Unmounting'}
-                  {tv.remount && !tv.isRemountOnly && ' • With Remounting'}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTvInstallation(index)}
-                  className="h-7 w-7 p-0 ml-2"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-
-            {smartHomeInstallations.map((device, index) => (
-              <div key={`smart-${index}`} className="flex justify-between items-center p-2 bg-muted/50 rounded-md">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {device.type === 'doorbell' ? 'Smart Doorbell' :
-                      device.type === 'floodlight' ? 'Smart Floodlight' :
-                        'Smart Camera'}
-                    {device.quantity > 1 && ` (×${device.quantity})`}
-                  </span>
-                  {device.type === 'doorbell' && device.brickInstallation && (
-                    <span className="text-xs text-muted-foreground">• Brick installation</span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeSmartHomeInstallation(index)}
-                  className="h-7 w-7 p-0 ml-2"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="services">Add TV Mounting</TabsTrigger>
-          <TabsTrigger value="smarthome">Add Smart Home</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="services" className="space-y-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full py-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="text-center font-medium">Add TV Mounting</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={addTvInstallation}>Add TV Mounting</DropdownMenuItem>
-              <DropdownMenuItem onClick={addTVUnmountingOnly}>Add TV Unmounting Only</DropdownMenuItem>
-              <DropdownMenuItem onClick={addTVRemountingOnly}>Add TV Remounting Only</DropdownMenuItem>
-              <DropdownMenuItem onClick={addOutletOnly}>Add Outlet Installation Only</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {tvInstallations.map((installation, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-card border rounded-lg p-6 space-y-6"
-            >
-              <div className="flex justify-between items-center">
-                <h4 className="text-lg font-semibold">
-                  {installation.isUnmountOnly ?
-                    'TV Unmounting Only' :
-                    installation.isRemountOnly ?
-                      'TV Remounting Only' :
-                      installation.isOutletOnly ?
-                        'Outlet Installation Only' :
-                        `TV Installation ${index + 1}`}
-                </h4>
-                {tvInstallations.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeTvInstallation(index)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              {!installation.isUnmountOnly && !installation.isRemountOnly && !installation.isOutletOnly && (
-                <div className="space-y-6">
-                  <div>
-                    <h5 className="text-sm font-medium mb-3">TV Size</h5>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant={installation.size === 'small' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { size: 'small' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">32" - 55"</div>
-                          <div className="text-xs text-muted-foreground mt-1">Small TV</div>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Select Your Services</CardTitle>
+        <CardDescription>
+          Choose the services you need for your TV installation
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent>
+        {/* Step 1: TV Mounting Services */}
+        {currentStep === 0 && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4">TV Mounting Services</h3>
+              
+              {/* List of already added TVs */}
+              {tvInstallations.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium mb-2">Your TVs:</h4>
+                  <ul className="space-y-2">
+                    {tvInstallations.map((tv, index) => (
+                      <li key={tv.id} className="flex justify-between items-center p-3 bg-muted rounded-md">
+                        <div>
+                          <span className="font-medium">TV {index + 1}:</span>{' '}
+                          <span>{tv.size === 'large' ? '56" or larger' : '32"-55"'}</span>{' '}
+                          <span>({tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'})</span>
+                          {tv.mountType !== 'customer' && tv.mountType !== 'none' && (
+                            <span className="block text-sm">
+                              + {tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilting' ? 'Tilting' : 'Full Motion'} Mount
+                            </span>
+                          )}
+                          {tv.masonryWall && <span className="block text-sm">+ Non-Drywall Surface</span>}
+                          {tv.highRise && <span className="block text-sm">+ High-Rise/Steel Studs</span>}
+                          {tv.outletNeeded && <span className="block text-sm">+ Wire Concealment & Outlet</span>}
                         </div>
-                      </Button>
-                      <Button
-                        variant={installation.size === 'large' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { size: 'large' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">56" or larger</div>
-                          <div className="text-xs text-muted-foreground mt-1">Large TV</div>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="text-sm font-medium mb-3">Mounting Location</h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <Button
-                        variant={installation.location === 'standard' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { location: 'standard' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Standard Wall</div>
-                          <div className="text-xs text-muted-foreground mt-1">$100</div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={installation.location === 'fireplace' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { location: 'fireplace' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Above Fireplace</div>
-                          <div className="text-xs text-muted-foreground mt-1">$200</div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={installation.location === 'ceiling' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { location: 'ceiling' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Ceiling Mount</div>
-                          <div className="text-xs text-muted-foreground mt-1">$175</div>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="text-sm font-medium mb-3">Mount Type (Optional)</h5>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant={installation.mountType === 'fixed' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { mountType: 'fixed' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Fixed Mount</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {installation.size === 'small' ? '$40' : '$60'}
-                          </div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={installation.mountType === 'tilt' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { mountType: 'tilt' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Tilt Mount</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {installation.size === 'small' ? '$50' : '$70'}
-                          </div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={installation.mountType === 'fullMotion' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { mountType: 'fullMotion' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">Full Motion</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {installation.size === 'small' ? '$80' : '$100'}
-                          </div>
-                        </div>
-                      </Button>
-                      <Button
-                        variant={installation.mountType === 'none' ? 'default' : 'outline'}
-                        onClick={() => updateTvInstallation(index, { mountType: 'none' })}
-                        className="h-auto py-3 px-4"
-                      >
-                        <div className="text-center">
-                          <div className="font-medium">No Mount</div>
-                          <div className="text-xs text-muted-foreground mt-1">Customer Provided</div>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="text-sm font-medium mb-3">Additional Options</h5>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={installation.masonryWall}
-                          onCheckedChange={(checked) =>
-                            updateTvInstallation(index, { masonryWall: checked })
-                          }
-                        />
-                        <Label>Non-Drywall Installation (+$50)<br />
-                          <span className="text-xs text-muted-foreground">
-                            Includes brick, concrete, stone, tile, or siding
-                          </span>
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={installation.highRise}
-                          onCheckedChange={(checked) =>
-                            updateTvInstallation(index, { highRise: checked })
-                          }
-                        />
-                        <Label>High-Rise Building / Steel Studs (+$25)<br />
-                          <span className="text-xs text-muted-foreground">
-                            Additional fee for specialized anchors and drill bits
-                          </span>
-                        </Label>
-                      </div>
-
-                      {installation.location !== 'fireplace' && (
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={installation.outletRelocation}
-                            onCheckedChange={(checked) =>
-                              updateTvInstallation(index, { outletRelocation: checked })
-                            }
-                          />
-                          <Label>Outlet Installation (+$100)</Label>
-                        </div>
-                      )}
-
-                      {installation.location === 'fireplace' && (
-                        <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted rounded-lg">
-                          Note: For outlet installation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!installation.isUnmountOnly && !installation.isRemountOnly && !installation.isOutletOnly && (
-                <div>
-                  <h5 className="text-sm font-medium mb-3">Service Add-ons</h5>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={installation.unmount}
-                        onCheckedChange={(checked) =>
-                          updateTvInstallation(index, { unmount: checked })
-                        }
-                      />
-                      <Label>TV Unmounting (+$50)<br />
-                        <span className="text-xs text-muted-foreground">
-                          Remove your existing TV from its current location
-                        </span>
-                      </Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={installation.remount}
-                        onCheckedChange={(checked) =>
-                          updateTvInstallation(index, { remount: checked })
-                        }
-                      />
-                      <Label>TV Remounting (+$50)<br />
-                        <span className="text-xs text-muted-foreground">
-                          If the mount is already on the wall and matching arms are provided
-                        </span>
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {installation.isUnmountOnly && (
-                <div className="text-sm p-4 bg-muted rounded-lg">
-                  <p className="font-medium mb-2">TV Unmounting Only Service</p>
-                  <p className="text-muted-foreground">$50 per TV - Our team will safely remove your TV from its current mount or stand.</p>
-                </div>
-              )}
-
-              {installation.isRemountOnly && (
-                <div className="text-sm p-4 bg-muted rounded-lg">
-                  <p className="font-medium mb-2">TV Remounting Only Service</p>
-                  <p className="text-muted-foreground">$50 per TV - Our team will mount your TV to an existing bracket on the wall (matching arms must be provided).</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleRemoveTv(tv.id)}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
               
-              {installation.isOutletOnly && (
-                <div className="text-sm p-4 bg-muted rounded-lg">
-                  <p className="font-medium mb-2">Outlet Installation Only Service</p>
-                  <p className="text-muted-foreground">$100 per outlet - Includes installing 1 electrical outlet for your TV with an already mounted TV (non-fireplace, drywall only). There must be an existing outlet directly below where you would like the TV outlet installed.</p>
+              {/* TV Form */}
+              <div className="border rounded-md p-4 space-y-4">
+                <h4 className="text-sm font-medium">Add a TV Installation:</h4>
+                
+                {/* TV Size */}
+                <div>
+                  <Label htmlFor="tv-size">TV Size</Label>
+                  <RadioGroup 
+                    id="tv-size" 
+                    className="flex gap-4 mt-2"
+                    value={newTvSize}
+                    onValueChange={(value) => setNewTvSize(value as 'small' | 'large')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="small" id="size-small" />
+                      <Label htmlFor="size-small">32" - 55"</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="large" id="size-large" />
+                      <Label htmlFor="size-large">56" or larger</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              )}
-            </motion.div>
-          ))}
-        </TabsContent>
+                
+                {/* TV Location */}
+                <div>
+                  <Label htmlFor="tv-location">Mounting Location</Label>
+                  <RadioGroup 
+                    id="tv-location" 
+                    className="flex gap-4 mt-2"
+                    value={newTvLocation}
+                    onValueChange={(value) => setNewTvLocation(value as 'standard' | 'fireplace')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="standard" id="location-standard" />
+                      <Label htmlFor="location-standard">Standard Wall (${pricing.tv_mounting.standard.price})</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fireplace" id="location-fireplace" />
+                      <Label htmlFor="location-fireplace">Over Fireplace (${pricing.tv_mounting.fireplace.price})</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {/* TV Mount Type */}
+                <div>
+                  <Label htmlFor="tv-mount">Wall Mount</Label>
+                  <RadioGroup 
+                    id="tv-mount" 
+                    className="grid grid-cols-2 gap-4 mt-2"
+                    value={newTvMountType}
+                    onValueChange={(value) => setNewTvMountType(value as any)}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="customer" id="mount-customer" />
+                      <Label htmlFor="mount-customer">Customer's Mount</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="none" id="mount-none" />
+                      <Label htmlFor="mount-none">No Mount Needed</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fixed" id="mount-fixed" />
+                      <Label htmlFor="mount-fixed">
+                        Fixed Mount
+                        <span className="block text-xs text-muted-foreground">
+                          (${newTvSize === 'small' ? pricing.tv_mounts.fixed_small.price : pricing.tv_mounts.fixed_big.price})
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="tilting" id="mount-tilting" />
+                      <Label htmlFor="mount-tilting">
+                        Tilting Mount
+                        <span className="block text-xs text-muted-foreground">
+                          (${newTvSize === 'small' ? pricing.tv_mounts.tilting_small.price : pricing.tv_mounts.tilting_big.price})
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 col-span-2">
+                      <RadioGroupItem value="full_motion" id="mount-full-motion" />
+                      <Label htmlFor="mount-full-motion">
+                        Full Motion Mount
+                        <span className="block text-xs text-muted-foreground">
+                          (${newTvSize === 'small' ? pricing.tv_mounts.full_motion_small.price : pricing.tv_mounts.full_motion_big.price})
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
 
-        <TabsContent value="smarthome" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button
-              variant="outline"
-              onClick={() => addSmartHomeInstallation('doorbell')}
-              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
-            >
-              <div className="text-center">
-                <div className="font-medium">Smart Doorbell</div>
-                <div className="text-xs text-muted-foreground mt-1">$85</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => addSmartHomeInstallation('floodlight')}
-              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
-            >
-              <div className="text-center">
-                <div className="font-medium">Smart Floodlight</div>
-                <div className="text-xs text-muted-foreground mt-1">$125</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => addSmartHomeInstallation('camera')}
-              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
-            >
-              <div className="text-center">
-                <div className="font-medium">Smart Camera</div>
-                <div className="text-xs text-muted-foreground mt-1">$75</div>
-              </div>
-            </Button>
-          </div>
-
-          {smartHomeInstallations.map((installation, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-card border rounded-lg p-6 space-y-6"
-            >
-              <div className="flex justify-between items-center">
-                <h4 className="text-lg font-semibold">
-                  {installation.type === 'doorbell' ? 'Smart Doorbell' :
-                    installation.type === 'floodlight' ? 'Smart Floodlight' :
-                      'Smart Camera'} Installation
-                </h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeSmartHomeInstallation(index)}
-                  className="h-8 w-8 p-0"
+                {/* Additional Options */}
+                <div className="space-y-2">
+                  <Label>Additional Options</Label>
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="masonry-wall" 
+                      checked={newTvMasonryWall}
+                      onCheckedChange={(checked) => setNewTvMasonryWall(checked === true)}
+                    />
+                    <div className="grid gap-1">
+                      <Label 
+                        htmlFor="masonry-wall"
+                        className="cursor-pointer"
+                      >
+                        Non-Drywall Surface (Brick, Masonry, etc.)
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        Additional ${pricing.tv_mounting.non_drywall_addon.price}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="high-rise" 
+                      checked={newTvHighRise}
+                      onCheckedChange={(checked) => setNewTvHighRise(checked === true)}
+                    />
+                    <div className="grid gap-1">
+                      <Label 
+                        htmlFor="high-rise"
+                        className="cursor-pointer"
+                      >
+                        High-Rise/Steel Stud Mounting
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        Additional ${pricing.tv_mounting.high_rise_addon.price}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="outlet-needed" 
+                      checked={newTvOutletNeeded}
+                      onCheckedChange={(checked) => setNewTvOutletNeeded(checked === true)}
+                      disabled={newTvLocation === 'fireplace'}
+                    />
+                    <div className="grid gap-1">
+                      <Label 
+                        htmlFor="outlet-needed"
+                        className={cn(
+                          "cursor-pointer",
+                          newTvLocation === 'fireplace' && "text-muted-foreground"
+                        )}
+                      >
+                        Wire Concealment & New Outlet Behind TV
+                      </Label>
+                      {newTvLocation === 'fireplace' ? (
+                        <span className="text-xs text-amber-600">
+                          For fireplace installations, contact us first for assessment
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Additional ${pricing.wire_concealment.standard.price}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <Button 
+                  type="button" 
+                  onClick={handleAddTv}
                 >
-                  <Minus className="h-4 w-4" />
+                  Add TV to Order
                 </Button>
               </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Label htmlFor={`quantity-${index}`} className="w-20">Quantity:</Label>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => updateSmartHomeInstallation(index, {
-                        quantity: Math.max(1, installation.quantity - 1)
-                      })}
-                    >
-                      <MinusCircle className="h-4 w-4" />
-                    </Button>
-                    <div className="w-12 text-center font-medium">
-                      {installation.quantity}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => updateSmartHomeInstallation(index, {
-                        quantity: Math.min(10, installation.quantity + 1)
-                      })}
-                    >
-                      <PlusCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
+              
+              {/* TV Removal Services */}
+              <div className="mt-8">
+                <h4 className="text-sm font-medium mb-2">TV Removal Services</h4>
+                
+                <div className="flex items-start space-x-2 mb-4">
+                  <Checkbox 
+                    id="tv-removal-needed" 
+                    checked={needsTvRemoval}
+                    onCheckedChange={(checked) => setNeedsTvRemoval(checked === true)}
+                  />
+                  <Label 
+                    htmlFor="tv-removal-needed"
+                    className="cursor-pointer"
+                  >
+                    I need a TV unmounted or remounted separately
+                  </Label>
                 </div>
-
-                {installation.type === 'doorbell' && (
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={installation.brickInstallation}
-                      onCheckedChange={(checked) =>
-                        updateSmartHomeInstallation(index, { brickInstallation: checked })
-                      }
-                    />
-                    <Label>Brick Installation (+$10)</Label>
+                
+                {needsTvRemoval && (
+                  <div className="border rounded-md p-4 space-y-4">
+                    <RadioGroup 
+                      value={tvRemovalType}
+                      onValueChange={(value) => setTvRemovalType(value as 'unmount' | 'remount')}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="unmount" id="removal-unmount" />
+                        <Label htmlFor="removal-unmount">
+                          Unmount TV from Wall (${pricing.tv_mounting.unmount.price}/TV)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="remount" id="removal-remount" />
+                        <Label htmlFor="removal-remount">
+                          Remount TV on Existing Mount (${pricing.tv_mounting.existing_mount.price}/TV)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                    
+                    <div>
+                      <Label htmlFor="removal-count">Number of TVs</Label>
+                      <Input 
+                        id="removal-count"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={tvRemovalCount}
+                        onChange={(e) => setTvRemovalCount(parseInt(e.target.value) || 1)}
+                        className="mt-1 w-20"
+                      />
+                    </div>
                   </div>
                 )}
-
-                <div className="mt-4 p-3 bg-muted rounded-md">
-                  <h5 className="font-medium text-sm mb-1">Base Price</h5>
-                  <p className="text-lg font-semibold">
-                    {installation.type === 'doorbell' ? '$85' :
-                      installation.type === 'floodlight' ? '$125' :
-                        '$75'}{installation.quantity > 1 ? ` × ${installation.quantity}` : ''}
-                  </p>
-
-                  {installation.type === 'doorbell' && installation.brickInstallation && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      + $10{installation.quantity > 1 ? ` × ${installation.quantity}` : ''} (Brick Installation)
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Step 2: Smart Home Installations */}
+        {currentStep === 1 && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Smart Home Installations</h3>
+              
+              {/* List of already added devices */}
+              {smartHomeDevices.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium mb-2">Your Smart Home Devices:</h4>
+                  <ul className="space-y-2">
+                    {smartHomeDevices.map((device, index) => (
+                      <li key={device.id} className="flex justify-between items-center p-3 bg-muted rounded-md">
+                        <div>
+                          <span className="font-medium">
+                            {device.type === 'camera' ? 'Smart Security Camera' : 
+                             device.type === 'doorbell' ? 'Smart Doorbell' : 
+                             'Smart Floodlight'}
+                          </span>
+                          <span className="ml-1">
+                            (Qty: {device.count})
+                          </span>
+                          {device.type === 'floodlight' && (
+                            <span className="block text-sm">
+                              {device.hasExistingWiring ? 'With existing wiring' : 'No existing wiring (requires assessment)'}
+                            </span>
+                          )}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleRemoveSmartDevice(device.id)}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Smart Home Device Form */}
+              <div className="border rounded-md p-4 space-y-4">
+                <h4 className="text-sm font-medium">Add a Smart Home Device:</h4>
+                
+                {/* Device Type */}
+                <div>
+                  <Label htmlFor="device-type">Device Type</Label>
+                  <RadioGroup 
+                    id="device-type" 
+                    className="grid gap-2 mt-2"
+                    value={newDeviceType}
+                    onValueChange={(value) => setNewDeviceType(value as 'doorbell' | 'camera' | 'floodlight')}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="camera" id="device-camera" />
+                      <Label htmlFor="device-camera">
+                        Smart Security Camera Installation (${pricing.smart_home.security_camera.price})
+                      </Label>
                     </div>
-                  )}
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="doorbell" id="device-doorbell" />
+                      <Label htmlFor="device-doorbell">
+                        Smart Doorbell Installation (${pricing.smart_home.doorbell.price})
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="floodlight" id="device-floodlight" />
+                      <Label htmlFor="device-floodlight">
+                        Smart Floodlight Installation (${pricing.smart_home.floodlight.price})
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {/* Quantity */}
+                <div>
+                  <Label htmlFor="device-count">Quantity</Label>
+                  <Input 
+                    id="device-count"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={newDeviceCount}
+                    onChange={(e) => setNewDeviceCount(parseInt(e.target.value) || 1)}
+                    className="mt-1 w-20"
+                  />
+                </div>
+                
+                {/* Existing Wiring (for floodlights) */}
+                {newDeviceType === 'floodlight' && (
+                  <div>
+                    <Label>Existing Wiring</Label>
+                    <RadioGroup 
+                      value={hasExistingWiring ? 'yes' : 'no'}
+                      onValueChange={(value) => setHasExistingWiring(value === 'yes')}
+                      className="space-y-2 mt-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yes" id="wiring-yes" />
+                        <Label htmlFor="wiring-yes">
+                          Yes, there is existing wiring
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="no" id="wiring-no" />
+                        <Label htmlFor="wiring-no">
+                          No existing wiring (requires assessment)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+                
+                <Button 
+                  type="button" 
+                  onClick={handleAddSmartDevice}
+                  disabled={newDeviceType === 'floodlight' && !hasExistingWiring}
+                >
+                  Add Device to Order
+                </Button>
+                
+                {newDeviceType === 'floodlight' && !hasExistingWiring && (
+                  <p className="text-sm text-amber-600">
+                    Floodlights without existing wiring require an assessment. Please contact us directly.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Step 3: Handyman Services */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Handyman Services</h3>
+              
+              <div className="flex items-start space-x-2 mb-4">
+                <Checkbox 
+                  id="handyman-needed" 
+                  checked={needsHandyman}
+                  onCheckedChange={(checked) => setNeedsHandyman(checked === true)}
+                />
+                <Label 
+                  htmlFor="handyman-needed"
+                  className="cursor-pointer"
+                >
+                  I need general handyman work (shelves, mirrors, furniture assembly, etc.)
+                </Label>
+              </div>
+              
+              {needsHandyman && (
+                <div className="border rounded-md p-4 space-y-4">
+                  <div>
+                    <Label htmlFor="handyman-hours">Estimated Hours</Label>
+                    <div className="flex items-center mt-1">
+                      <Input 
+                        id="handyman-hours"
+                        type="number"
+                        min="1"
+                        step="0.5"
+                        max="8"
+                        value={handymanHours}
+                        onChange={(e) => setHandymanHours(parseFloat(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        First hour: ${pricing.custom_services.handyman.price}, 
+                        then ${pricing.custom_services.handyman.half_hour_rate}/30 min
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="handyman-description">Description of Work Needed</Label>
+                    <Input 
+                      id="handyman-description"
+                      placeholder="Brief description of handyman work needed"
+                      value={handymanDescription}
+                      onChange={(e) => setHandymanDescription(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Step 4: Review & Submit */}
+        {currentStep === 3 && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Review Your Services</h3>
+              
+              {/* Services Summary */}
+              <div className="space-y-4">
+                {/* TV Installations */}
+                {tvInstallations.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">TV Installations:</h4>
+                    <ul className="space-y-2">
+                      {tvInstallations.map((tv, index) => (
+                        <li key={tv.id} className="p-3 bg-muted rounded-md">
+                          <div className="font-medium">TV {index + 1}</div>
+                          <div className="text-sm">
+                            Size: {tv.size === 'large' ? '56" or larger' : '32"-55"'}
+                          </div>
+                          <div className="text-sm">
+                            Location: {tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}
+                          </div>
+                          {tv.mountType !== 'customer' && tv.mountType !== 'none' && (
+                            <div className="text-sm">
+                              Mount: {tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilting' ? 'Tilting' : 'Full Motion'}
+                            </div>
+                          )}
+                          {tv.masonryWall && <div className="text-sm">Non-Drywall Surface: Yes</div>}
+                          {tv.highRise && <div className="text-sm">High-Rise/Steel Studs: Yes</div>}
+                          {tv.outletNeeded && <div className="text-sm">Wire Concealment & Outlet: Yes</div>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* TV Removal */}
+                {needsTvRemoval && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">TV Removal:</h4>
+                    <div className="p-3 bg-muted rounded-md">
+                      <div className="text-sm">
+                        Service: {tvRemovalType === 'unmount' ? 'Unmount TV from Wall' : 'Remount TV on Existing Mount'}
+                      </div>
+                      <div className="text-sm">
+                        Number of TVs: {tvRemovalCount}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Smart Home Devices */}
+                {smartHomeDevices.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Smart Home Installations:</h4>
+                    <ul className="space-y-2">
+                      {smartHomeDevices.map((device) => (
+                        <li key={device.id} className="p-3 bg-muted rounded-md">
+                          <div className="font-medium">
+                            {device.type === 'camera' ? 'Smart Security Camera' : 
+                             device.type === 'doorbell' ? 'Smart Doorbell' : 
+                             'Smart Floodlight'}
+                          </div>
+                          <div className="text-sm">
+                            Quantity: {device.count}
+                          </div>
+                          {device.type === 'floodlight' && (
+                            <div className="text-sm">
+                              Existing Wiring: {device.hasExistingWiring ? 'Yes' : 'No (requires assessment)'}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Handyman Services */}
+                {needsHandyman && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Handyman Services:</h4>
+                    <div className="p-3 bg-muted rounded-md">
+                      <div className="text-sm">
+                        Estimated Hours: {handymanHours}
+                      </div>
+                      <div className="text-sm">
+                        Description: {handymanDescription || 'Not provided'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Service Restrictions */}
+                {(tvInstallations.some(tv => tv.location === 'fireplace' && tv.outletNeeded) || 
+                  smartHomeDevices.some(device => device.type === 'floodlight' && !device.hasExistingWiring)) && (
+                  <div className="p-3 bg-amber-50 text-amber-800 rounded-md">
+                    <h4 className="font-medium mb-1">Important Note:</h4>
+                    <ul className="text-sm space-y-1 list-disc pl-4">
+                      {tvInstallations.some(tv => tv.location === 'fireplace' && tv.outletNeeded) && (
+                        <li>Wire concealment above a fireplace requires an outlet assessment.</li>
+                      )}
+                      {smartHomeDevices.some(device => device.type === 'floodlight' && !device.hasExistingWiring) && (
+                        <li>Smart floodlights without existing wiring need an assessment.</li>
+                      )}
+                      <li>Someone will contact you about these services separately.</li>
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Estimated Total */}
+                <div className="p-4 bg-primary/10 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Estimated Total:</span>
+                    <span className="text-xl font-bold">${estimatedTotal}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Final price may vary based on assessment. Payment due after installation.
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-between pt-4">
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          onClick={onClose}
-          disabled={!hasSelectionsToConfirm}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+      
+      <CardFooter className="flex justify-between">
+        {currentStep > 0 ? (
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handlePreviousStep}
+          >
+            Back
+          </Button>
+        ) : (
+          <div></div>
+        )}
+        
+        {currentStep < 3 ? (
+          <Button 
+            type="button" 
+            onClick={handleNextStep}
+          >
+            Continue
+          </Button>
+        ) : (
+          <Button 
+            type="button" 
+            onClick={handleComplete}
+          >
+            Complete
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 }

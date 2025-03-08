@@ -1,18 +1,19 @@
-
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { DateTimeStep } from "@/components/steps/date-time-step";
+import { CustomerDetailsStep } from "@/components/steps/customer-details-step";
+import { ReviewBookingStep } from "@/components/steps/review-booking-step";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ServiceWizard } from "@/components/ui/service-wizard";
+import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "./scroll-area";
-import { Calendar } from "./calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./card";
-import { Button } from "./button";
 import { ServiceSelectionGrid } from "./service-selection-grid";
 import {
   Select,
@@ -26,13 +27,11 @@ import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Label } from "./label";
 import { Checkbox } from "./checkbox";
-import { Separator } from "./separator";
-import { LoadingSpinner } from "./loading-spinner";
 import { Icons } from "../icons";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
-import { cn } from "@/lib/utils";
+
 
 type BookingWizardProps = {
   onSubmit: (data: any) => Promise<any>;
@@ -41,7 +40,6 @@ type BookingWizardProps = {
   isLoadingBookings?: boolean;
 };
 
-// Step indicator component
 const StepIndicator = ({
   currentStep,
   totalSteps,
@@ -49,11 +47,9 @@ const StepIndicator = ({
   currentStep: number;
   totalSteps: number;
 }) => {
-  // Create a connected step indicator without using React.Fragment
   const steps = [];
-  
+
   for (let i = 0; i < totalSteps; i++) {
-    // Add the step indicator circle
     steps.push(
       <div
         key={`step-${i}`}
@@ -73,8 +69,7 @@ const StepIndicator = ({
         )}
       </div>
     );
-    
-    // Add the connecting line (except after the last step)
+
     if (i < totalSteps - 1) {
       steps.push(
         <div key={`connector-${i}`} className="flex-grow h-0.5 mx-1 relative">
@@ -96,7 +91,7 @@ const StepIndicator = ({
       );
     }
   }
-  
+
   return (
     <div className="flex items-center justify-between w-full mb-6">
       {steps}
@@ -104,7 +99,6 @@ const StepIndicator = ({
   );
 };
 
-// Price Calculator component
 const PriceCalculator = React.memo(
   ({
     tvs,
@@ -123,7 +117,6 @@ const PriceCalculator = React.memo(
     onAddService: () => void;
     currentStep?: number;
   }) => {
-    // Calculate total price
     useEffect(() => {
       const tvCost = tvs.reduce(
         (acc, service) => acc + (service.basePrice || 0),
@@ -163,41 +156,41 @@ const PriceCalculator = React.memo(
             <div className="relative">
               <ScrollArea className="max-h-[200px] pr-3 relative">
                 <div className="space-y-3">
-                {allServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="flex justify-between items-center group"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{service.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {service.description}
-                      </p>
+                  {allServices.map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex justify-between items-center group"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{service.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {service.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">
+                          ${service.basePrice}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() =>
+                            onRemoveService(
+                              "type" in service && service.type.includes("mount")
+                                ? "tv"
+                                : "smartHome",
+                              service.id
+                            )
+                          }
+                          title="Remove service"
+                        >
+                          <Icons.trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium">
-                        ${service.basePrice}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() =>
-                          onRemoveService(
-                            "type" in service && service.type.includes("mount")
-                              ? "tv"
-                              : "smartHome",
-                            service.id
-                          )
-                        }
-                        title="Remove service"
-                      >
-                        <Icons.trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               </ScrollArea>
             </div>
           ) : (
@@ -242,7 +235,7 @@ const PriceCalculator = React.memo(
   }
 );
 
-// Step 1 component - Service Selection
+
 const ServiceSelectionStep = React.memo(
   ({
     onServiceSelect,
@@ -253,7 +246,6 @@ const ServiceSelectionStep = React.memo(
     ) => void;
     onContinue: () => void;
   }) => {
-    // Sample TV installation services
     const tvInstallations: TVInstallation[] = [
       {
         id: "tv-mount-1",
@@ -299,7 +291,6 @@ const ServiceSelectionStep = React.memo(
       },
     ];
 
-    // Sample Smart Home installation services
     const smartHomeInstallations: SmartHomeInstallation[] = [
       {
         id: "smart-camera-1",
@@ -345,7 +336,6 @@ const ServiceSelectionStep = React.memo(
   }
 );
 
-// Step 2 component - Date & Time Selection
 const DateTimeSelectionStep = React.memo(
   ({
     selectedDate,
@@ -381,7 +371,6 @@ const DateTimeSelectionStep = React.memo(
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 disabled={(date) => {
-                  // Disable dates in the past
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   return date < today;
@@ -456,7 +445,6 @@ const DateTimeSelectionStep = React.memo(
   }
 );
 
-// Step 3 component - Customer Details
 const CustomerDetailsStep = React.memo(
   ({
     formData,
@@ -467,7 +455,6 @@ const CustomerDetailsStep = React.memo(
     setFormData: (data: any) => void;
     validationErrors: Record<string, string[]>;
   }) => {
-    // Helper to show validation errors
     const showError = (field: string) => {
       return validationErrors[field] ? (
         <p className="text-xs mt-1 text-destructive">
@@ -672,7 +659,6 @@ const CustomerDetailsStep = React.memo(
   }
 );
 
-// Step 4 component - Review & Book
 const ReviewBookingStep = React.memo(
   ({
     tvInstallations,
@@ -801,14 +787,9 @@ export function BookingWizard({
     notes: "",
     consentToContact: false
   });
-  // State to track time slot availability
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
-  // State for validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
-  
   const { toast } = useToast();
-  
-  // Define steps
   const steps = [
     "Service Selection",
     "Date & Time",
@@ -816,12 +797,10 @@ export function BookingWizard({
     "Review & Book"
   ];
 
-  // Auto-scroll to top when changing steps
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Get time slots
   const timeSlots = [
     "9:00 AM",
     "10:00 AM",
@@ -835,14 +814,11 @@ export function BookingWizard({
     "6:00 PM"
   ];
 
-  // Function to check if a time slot is available
   const checkTimeSlotAvailability = useCallback(
     (date: string, time: string) => {
-      // Check current date/time - can't book in the past
       const now = new Date();
       const selectedDateTime = new Date(`${date}T${time.replace(/AM|PM/, '')}`);
-      
-      // Add timezone correction
+
       selectedDateTime.setHours(
         time.includes("PM") && !time.startsWith("12") 
           ? selectedDateTime.getHours() + 12 
@@ -850,16 +826,13 @@ export function BookingWizard({
           ? 0
           : selectedDateTime.getHours()
       );
-      
-      // Add 30 minute buffer for bookings
+
       const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
-      
-      // Slots in the past (or within buffer) are not available
+
       if (selectedDateTime <= bufferTime) {
         return false;
       }
 
-      // Check existing bookings - this check is extracted to avoid dependency issues
       if (existingBookings && existingBookings.length > 0) {
         const isBooked = existingBookings.some(booking => {
           const bookingDate = booking.preferredDate ? 
@@ -868,62 +841,50 @@ export function BookingWizard({
         });
         return !isBooked;
       }
-      
+
       return true;
     },
     [existingBookings]
   );
-  
-  // Effect to update availability cache when needed
+
   useEffect(() => {
-    // Only run this if we have a selected date
     if (!selectedDate) return;
-    
+
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    
-    // Update availability for all time slots for this date
+
     const updatedAvailability: Record<string, boolean> = {};
-    
-    // Memoize this calculation to prevent infinite update loops
-    const dateStrFinal = dateStr; // Create a final version that won't change in this render cycle
-    
+    const dateStrFinal = dateStr; 
+
     timeSlots.forEach(time => {
       const key = `${dateStrFinal}-${time}`;
       updatedAvailability[key] = checkTimeSlotAvailability(dateStrFinal, time);
     });
-    
-    // Use a callback form of setState to ensure we're not creating a loop
+
     setTimeSlotAvailability(prev => {
-      // Check if the values are actually different to prevent unnecessary updates
       let isDifferent = false;
       Object.entries(updatedAvailability).forEach(([key, value]) => {
         if (prev[key] !== value) {
           isDifferent = true;
         }
       });
-      
-      // Only update if values changed
+
       return isDifferent ? { ...prev, ...updatedAvailability } : prev;
     });
   }, [selectedDate, timeSlots, checkTimeSlotAvailability]);
-  
-  // Function to check if a time slot is available (uses cached values)
+
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}-${time}`;
-      
-      // Use cached value if available
+
       if (timeSlotAvailability[key] !== undefined) {
         return timeSlotAvailability[key];
       }
-      
-      // Fallback to direct calculation
+
       return checkTimeSlotAvailability(date, time);
     },
     [timeSlotAvailability, checkTimeSlotAvailability]
   );
 
-  // Handle service selection
   const handleServiceSelect = (
     type: "tv" | "smartHome",
     service: TVInstallation | SmartHomeInstallation
@@ -935,7 +896,6 @@ export function BookingWizard({
     }
   };
 
-  // Handle service removal
   const handleRemoveService = (type: "tv" | "smartHome", id: string) => {
     if (type === "tv") {
       setTvInstallations(prev => prev.filter(service => service.id !== id));
@@ -944,21 +904,17 @@ export function BookingWizard({
     }
   };
 
-  // Handle "Add More Services" button click
   const handleAddService = () => {
-    setCurrentStep(0); // Go back to service selection step
+    setCurrentStep(0); 
   };
 
-  // Handle pricing update
   const handlePricingUpdate = useCallback((total: number, breakdown: any) => {
     setPricingTotal(total);
   }, []);
 
-  // Validate customer details form - define first to avoid circular dependency
   const validateCustomerDetails = useCallback(() => {
     const errors: Record<string, string[]> = {};
 
-    // Required fields
     if (!formData.name.trim()) {
       errors.name = ["Name is required"];
     }
@@ -991,38 +947,34 @@ export function BookingWizard({
       errors.zipCode = ["Please enter a valid ZIP code"];
     }
 
-    // Important: Only update validation errors if they've changed
-    // This prevents unnecessary re-renders
     const errorsString = JSON.stringify(errors);
     const currentErrorsString = JSON.stringify(validationErrors);
-    
+
     if (errorsString !== currentErrorsString) {
       setValidationErrors(errors);
     }
-    
+
     return Object.keys(errors).length === 0;
   }, [formData, validationErrors]);
 
-  // Define a standalone function to check eligibility to proceed for basic steps
   const checkBasicProceedEligibility = (step: number, 
     tvs: TVInstallation[], 
     smartHomes: SmartHomeInstallation[], 
     date?: Date, 
     time?: string) => {
-    
+
     switch (step) {
-      case 0: // Service Selection
+      case 0: 
         return tvs.length > 0 || smartHomes.length > 0;
-      case 1: // Date & Time
+      case 1: 
         return date !== undefined && time !== undefined;
-      case 2: // Customer Details - don't validate in render cycle
+      case 2: 
         return true;
       default:
         return true;
     }
   };
 
-  // Store the basic proceed check in a memoized value
   const canProceedBasicValue = useMemo(() => {
     return checkBasicProceedEligibility(
       currentStep, 
@@ -1033,18 +985,14 @@ export function BookingWizard({
     );
   }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime]);
 
-  // Define the final canProceed function that uses the basic check or validation as needed
   const canProceed = useCallback(() => {
-    // Special case for customer details step
     if (currentStep === 2) {
       return validateCustomerDetails();
     }
-    
-    // For other steps, use the memoized value
+
     return canProceedBasicValue;
   }, [currentStep, canProceedBasicValue, validateCustomerDetails]);
 
-  // Submit the form
   const handleSubmit = useCallback(async () => {
     if (!canProceed()) {
       toast({
@@ -1055,13 +1003,9 @@ export function BookingWizard({
     }
 
     try {
-      // Combine all services
       const allServices = [...tvInstallations, ...smartHomeInstallations];
-      
-      // Format services as string for server
       const serviceType = allServices.map(service => service.name).join('; ');
-      
-      // Prepare submission data
+
       const bookingData = {
         ...formData,
         serviceType,
@@ -1078,7 +1022,6 @@ export function BookingWizard({
         }
       };
 
-      // Submit booking
       await onSubmit(bookingData);
     } catch (error) {
       console.error("Error submitting booking:", error);
@@ -1100,30 +1043,23 @@ export function BookingWizard({
     toast
   ]);
 
-  // Handle next button click with validation
   const handleNextClick = useCallback(() => {
     if (currentStep === 2) {
-      // For customer details step, run validation explicitly
       if (validateCustomerDetails()) {
         setCurrentStep(3);
       }
-      // If validation fails, the error state will be updated and errors displayed
     } else if (currentStep < steps.length - 1) {
-      // For other steps, proceed normally
       setCurrentStep((prev) => prev + 1);
     } else {
-      // For final step, submit the form
       handleSubmit();
     }
   }, [currentStep, handleSubmit, validateCustomerDetails, steps.length]);
 
-  // Use passed bookings or fetched bookings as fallback
   const allBookings = existingBookings.length > 0 ? existingBookings : [];
   const isBookingsLoading = isLoadingBookings || false;
-  
-  const isCalendarLoading = false; // Placeholder for actual calendar loading state
 
-  // Animation variants for page transitions
+  const isCalendarLoading = false; 
+
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -1133,10 +1069,8 @@ export function BookingWizard({
   return (
     <div className="w-full booking-wizard-container mx-auto">
       <div className="space-y-6">
-        {/* Steps progress */}
         <StepIndicator currentStep={currentStep} totalSteps={steps.length} />
 
-        {/* Main content area */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -1146,24 +1080,16 @@ export function BookingWizard({
             variants={pageVariants}
             transition={{ duration: 0.3 }}
           >
-            {/* Step Content */}
             <div className="booking-step-grid grid grid-cols-1 md:grid-cols-5 gap-6">
-              {/* Main Content Column */}
               <Card className="md:col-span-3 p-6 wizard-step">
                 {currentStep === 0 && (
-                  <ServiceSelectionStep
-                    onServiceSelect={handleServiceSelect}
-                    onContinue={() => {
-                      // Move to next step after service selection is confirmed
-                      if (canProceed()) {
-                        setCurrentStep(1);
-                      }
-                    }}
+                  <ServiceWizard
+                    onComplete={handleServiceSelection}
                   />
                 )}
 
                 {currentStep === 1 && (
-                  <DateTimeSelectionStep
+                  <DateTimeStep
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     selectedTime={selectedTime}
@@ -1194,13 +1120,11 @@ export function BookingWizard({
                 )}
               </Card>
 
-              {/* Sidebar: Price Breakdown + Service Management */}
               <div className="md:col-span-2 space-y-6">
-                {/* Price Calculator with service management capabilities */}
                 <PriceCalculator
                   tvs={tvInstallations}
                   smartHome={smartHomeInstallations}
-                  distance={0} // Default distance, could be calculated based on zip code
+                  distance={0} 
                   onUpdate={handlePricingUpdate}
                   onRemoveService={handleRemoveService}
                   onAddService={handleAddService}
