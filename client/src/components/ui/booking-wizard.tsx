@@ -297,21 +297,21 @@ const ServiceSelectionStep = React.memo(
         name: "Security Camera Installation",
         description: "Install and setup of security cameras",
         type: "camera",
-        basePrice: 99,
+        basePrice: 75, // $75 per camera as per pricing.ts
       },
       {
         id: "smart-doorbell-1",
         name: "Smart Doorbell Installation",
         description: "Install and configure video doorbell",
         type: "doorbell",
-        basePrice: 79,
+        basePrice: 85, // $85 per doorbell as per pricing.ts
       },
       {
         id: "smart-light-1",
-        name: "Smart Lighting Setup",
-        description: "Installation of smart lighting systems",
-        type: "lighting",
-        basePrice: 89,
+        name: "Smart Floodlight Installation",
+        description: "Installation of smart floodlight (existing wiring)",
+        type: "floodlight",
+        basePrice: 125, // $125 per floodlight as per pricing.ts
       },
     ];
 
@@ -784,12 +784,22 @@ export function BookingWizard({
                       });
                       
                       services.smartHomeDevices.forEach(device => {
+                        // Set the correct price based on device type
+                        let price = 0;
+                        if (device.type === 'camera') {
+                          price = 75; // $75 as per pricing.ts
+                        } else if (device.type === 'doorbell') {
+                          price = 85; // $85 as per pricing.ts
+                        } else if (device.type === 'floodlight') {
+                          price = 125; // $125 as per pricing.ts
+                        }
+                        
                         const deviceService: SmartHomeInstallation = {
                           id: device.id,
                           name: `Smart ${device.type === 'camera' ? 'Camera' : device.type === 'doorbell' ? 'Doorbell' : 'Floodlight'} Installation`,
                           description: `Installation of smart ${device.type}`,
                           type: device.type,
-                          basePrice: 89 // Default price, would be calculated properly in a real app
+                          basePrice: price // Use correct price from pricing.ts
                         };
                         handleServiceSelect("smartHome", deviceService);
                       });
