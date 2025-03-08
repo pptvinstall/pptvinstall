@@ -171,7 +171,7 @@ export default function HomePage() {
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-gray-200">
                       <ResponsiveImage 
-                        src={`/assets/logo.jpeg`} 
+                        src={`/assets/logo.svg`} 
                         alt={`Happy Customer ${i}`}
                         className="w-full h-full object-cover"
                       />
@@ -381,7 +381,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section ref={testimonialsRef} className="scroll-container py-20 bg-white">
+      <section ref={testimonialsRef} className="scroll-container relative py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -448,7 +448,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="scroll-container py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white">
+      <section className="scroll-container relative py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2 
@@ -493,7 +493,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="scroll-container py-20 bg-gray-50">
+      <section className="scroll-container relative py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
