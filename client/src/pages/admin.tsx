@@ -52,7 +52,7 @@ export default function AdminDashboard() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [activeTab, setActiveTab] = useState("bookings");
+  const [activeTab, setActiveTab] = useState<string>("bookings");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -350,7 +350,7 @@ export default function AdminDashboard() {
         <TabsList className="mb-4">
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           <TabsTrigger value="bookings">List View</TabsTrigger>
-          <TabsTrigger value="scheduling">Time Blocking</TabsTrigger>
+          <TabsTrigger value="time-blocking">Time Blocking</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 

@@ -31,7 +31,11 @@ const DAYS_OF_WEEK = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ];
 
-export function TimeBlocking() {
+interface TimeBlockingProps {
+  password?: string;
+}
+
+export function TimeBlocking({ password }: TimeBlockingProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isRecurring, setIsRecurring] = useState(false);
