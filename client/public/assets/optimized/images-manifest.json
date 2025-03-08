@@ -1,0 +1,189 @@
+{
+  "IMG_1025": {
+    "default": "/assets/optimized/IMG_1025.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1025-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1025-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1025-960.jpg"
+      }
+    ]
+  },
+  "IMG_1040": {
+    "default": "/assets/optimized/IMG_1040.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1040-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1040-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1040-960.jpg"
+      }
+    ]
+  },
+  "IMG_1064": {
+    "default": "/assets/optimized/IMG_1064.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1064-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1064-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1064-960.jpg"
+      }
+    ]
+  },
+  "IMG_1154": {
+    "default": "/assets/optimized/IMG_1154.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1154-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1154-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1154-960.jpg"
+      }
+    ]
+  },
+  "IMG_1317": {
+    "default": "/assets/optimized/IMG_1317.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1317-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1317-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1317-960.jpg"
+      }
+    ]
+  },
+  "IMG_1336": {
+    "default": "/assets/optimized/IMG_1336.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1336-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1336-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1336-960.jpg"
+      }
+    ]
+  },
+  "IMG_1876": {
+    "default": "/assets/optimized/IMG_1876.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1876-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1876-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1876-960.jpg"
+      }
+    ]
+  },
+  "IMG_1878": {
+    "default": "/assets/optimized/IMG_1878.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_1878-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_1878-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_1878-960.jpg"
+      }
+    ]
+  },
+  "IMG_3582": {
+    "default": "/assets/optimized/IMG_3582.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_3582-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_3582-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_3582-960.jpg"
+      }
+    ]
+  },
+  "IMG_3583": {
+    "default": "/assets/optimized/IMG_3583.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_3583-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_3583-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_3583-960.jpg"
+      }
+    ]
+  },
+  "IMG_4282": {
+    "default": "/assets/optimized/IMG_4282.jpg",
+    "responsive": [
+      {
+        "width": 320,
+        "src": "/assets/optimized/IMG_4282-320.jpg"
+      },
+      {
+        "width": 640,
+        "src": "/assets/optimized/IMG_4282-640.jpg"
+      },
+      {
+        "width": 960,
+        "src": "/assets/optimized/IMG_4282-960.jpg"
+      }
+    ]
+  }
+}
