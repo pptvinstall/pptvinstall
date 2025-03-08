@@ -827,15 +827,10 @@ export function BookingWizard({
   ];
 
   // Function to check if a time slot is available
-  const isTimeSlotAvailable = useCallback(
+  const checkTimeSlotAvailability = useCallback(
     (date: string, time: string) => {
       const key = `${date}-${time}`;
       
-      // Check if we've already determined availability for this slot
-      if (timeSlotAvailability[key] !== undefined) {
-        return timeSlotAvailability[key];
-      }
-
       // Check current date/time - can't book in the past
       const now = new Date();
       const selectedDateTime = new Date(`${date}T${time.replace(/AM|PM/, '')}`);
@@ -854,10 +849,6 @@ export function BookingWizard({
       
       // Slots in the past (or within buffer) are not available
       if (selectedDateTime <= bufferTime) {
-        setTimeSlotAvailability(prev => ({
-          ...prev,
-          [key]: false
-        }));
         return false;
       }
 
@@ -867,15 +858,46 @@ export function BookingWizard({
         return bookingDate === date && booking.appointmentTime === time && booking.status === 'active';
       });
 
-      // Update availability cache
-      setTimeSlotAvailability(prev => ({
-        ...prev,
-        [key]: !isBooked
-      }));
-
       return !isBooked;
     },
-    [existingBookings, timeSlotAvailability]
+    [existingBookings]
+  );
+  
+  // Effect to update availability cache when needed
+  useEffect(() => {
+    // Only run this if we have a selected date
+    if (!selectedDate) return;
+    
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    // Update availability for all time slots for this date
+    const updatedAvailability: Record<string, boolean> = {};
+    
+    timeSlots.forEach(time => {
+      const key = `${dateStr}-${time}`;
+      updatedAvailability[key] = checkTimeSlotAvailability(dateStr, time);
+    });
+    
+    setTimeSlotAvailability(prev => ({
+      ...prev,
+      ...updatedAvailability
+    }));
+  }, [selectedDate, existingBookings, checkTimeSlotAvailability, timeSlots]);
+  
+  // Function to check if a time slot is available (uses cached values)
+  const isTimeSlotAvailable = useCallback(
+    (date: string, time: string) => {
+      const key = `${date}-${time}`;
+      
+      // Use cached value if available
+      if (timeSlotAvailability[key] !== undefined) {
+        return timeSlotAvailability[key];
+      }
+      
+      // Fallback to direct calculation
+      return checkTimeSlotAvailability(date, time);
+    },
+    [timeSlotAvailability, checkTimeSlotAvailability]
   );
 
   // Handle service selection
