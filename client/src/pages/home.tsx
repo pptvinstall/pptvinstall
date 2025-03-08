@@ -230,7 +230,7 @@ export default function HomePage() {
         className="relative py-20 bg-gradient-to-b from-white to-gray-50"
         style={{ opacity: showcaseOpacity, position: 'relative' }}
       >
-        <div className="container mx-auto px-4">
+        <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -287,7 +287,7 @@ export default function HomePage() {
         ref={servicesRef} 
         className="relative py-20 bg-gray-50"
         style={{ position: 'relative' }}>
-        <div className="container mx-auto px-4">
+        <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
               className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
@@ -367,7 +367,7 @@ export default function HomePage() {
         ref={testimonialsRef} 
         className="relative py-20 bg-white"
         style={{ position: 'relative' }}>
-        <div className="container mx-auto px-4">
+        <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
               className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
@@ -436,7 +436,7 @@ export default function HomePage() {
       <section 
         className="relative py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white"
         style={{ position: 'relative' }}>
-        <div className="container mx-auto px-4">
+        <div className="container relative mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -483,7 +483,7 @@ export default function HomePage() {
       <section 
         className="relative py-20 bg-gray-50"
         style={{ position: 'relative' }}>
-        <div className="container mx-auto px-4">
+        <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
               className="text-3xl md:text-4xl font-bold mb-4"
@@ -495,7 +495,7 @@ export default function HomePage() {
               Why Choose Us
             </motion.h2>
             <motion.p 
-              className="text-lg text-gray-600"
+              className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
