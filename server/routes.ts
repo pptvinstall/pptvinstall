@@ -1,4 +1,4 @@
-import { type Express, Request, Response } from "express";
+import { type Express, Request as ExpressRequest, Response } from "express";
 import { type Server } from "http";
 import { db } from "./db";
 import { bookingSchema, bookings } from "@shared/schema";
@@ -8,6 +8,11 @@ import { googleCalendarService } from "./services/googleCalendarService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
+
+// Extend Express Request type to include requestId
+interface Request extends ExpressRequest {
+  requestId?: string;
+}
 
 // Load bookings from storage
 ensureDataDirectory();
@@ -317,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               const success = await googleCalendarService.blockTimeSlot(date, timeSlot, endTime, reason);
               if (!success) {
-                logger.error('Failed to block time slot', null, {
+                logger.error('Failed to block time slot', new Error('Failed to block time slot'), {
                   date,
                   timeSlot,
                   endTime,
@@ -349,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const fullDaySuccess = await googleCalendarService.blockFullDay(fullDate, fullDayReason);
           if (!fullDaySuccess) {
-            logger.error('Failed to block full day', null, {
+            logger.error('Failed to block full day', new Error('Failed to block full day'), {
               date: fullDate,
               requestId: req.requestId
             });
@@ -361,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         default:
-          logger.error('Invalid action specified', null, {
+          logger.error('Invalid action specified', new Error('Invalid action specified'), {
             action,
             requestId: req.requestId
           });
