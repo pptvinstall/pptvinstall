@@ -17,8 +17,12 @@ export default function BookingConfirmation() {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
   useEffect(() => {
+    // Create a flag to prevent state updates if component unmounts
+    let isActive = true;
+    
     async function fetchData() {
       try {
+        if (!isActive) return;
         setLoading(true);
 
         // Get booking ID from URL or session storage
@@ -75,13 +79,20 @@ export default function BookingConfirmation() {
           data.appointmentTime = rawAppointmentTime;
         }
 
+        // Check if component is still mounted before updating state
+        if (!isActive) return;
+        
         // Set the booking data
         console.log("Final booking data being used:", data);
         setBookingData(data);
 
+        // Store these values instead of setting state within the same effect
+        let formattedTimeValue = null;
+        let formattedDateValue = null;
+
         // Format time if available - USE THE RAW TIME STRING WITHOUT CONVERSION
         if (data?.appointmentTime) {
-          setFormattedTime(data.appointmentTime);
+          formattedTimeValue = data.appointmentTime;
         }
 
         // Format date if available - USE THE RAW DATE STRING WITHOUT CONVERSION
@@ -91,7 +102,7 @@ export default function BookingConfirmation() {
             if (rawBookingDate) {
               console.log("Using raw booking date from session storage:", rawBookingDate);
               // Format it directly without any timezone conversion
-              const dateParts = rawBookingDate.split('-');
+              const dateParts = rawBookingDate.split('T')[0].split('-');
               if (dateParts.length === 3) {
                 const year = parseInt(dateParts[0]);
                 const month = parseInt(dateParts[1]) - 1; // Months are 0-indexed in JS Date
@@ -99,30 +110,42 @@ export default function BookingConfirmation() {
 
                 // Create the date with the exact components to avoid timezone issues
                 const date = new Date(year, month, day);
-                setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+                formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
               } else {
-                setFormattedDate(rawBookingDate);
+                formattedDateValue = rawBookingDate;
               }
             } else {
               // Make sure we use the rawPreferredDate if available to avoid timezone issues
               // Use parseISO which is more reliable with timezone handling
               const date = parseISO(data.preferredDate);
-              setFormattedDate(format(date, "EEEE, MMMM d, yyyy"));
+              formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
             }
           } catch (e) {
             console.error("Error formatting date:", e);
-            setFormattedDate("Date not available");
+            formattedDateValue = "Date not available";
           }
         }
+        
+        // Only update these states if component is still mounted
+        if (isActive) {
+          setFormattedTime(formattedTimeValue);
+          setFormattedDate(formattedDateValue);
+          setLoading(false);
+        }
       } catch (err) {
+        if (!isActive) return;
         console.error("Error in booking confirmation:", err);
         setError(err instanceof Error ? err : new Error("Unknown error"));
-      } finally {
         setLoading(false);
       }
     }
 
     fetchData();
+    
+    // Cleanup function to prevent state updates if component unmounts
+    return () => {
+      isActive = false;
+    };
   }, [queryParams]);
 
   // Process breakdown based on stored pricingBreakdown or fall back to serviceType text

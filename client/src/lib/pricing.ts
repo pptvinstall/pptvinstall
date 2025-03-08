@@ -187,7 +187,7 @@ export function calculatePrice(options: ServiceOptions) {
   // TV Mounting Services
   if (options.tvCount > 0) {
     // Determine base mounting price based on conditions
-    let baseTvOption = 'standard';
+    let baseTvOption: keyof typeof pricing.tv_mounting = 'standard';
     
     if (options.isFireplace) {
       baseTvOption = options.tvMountSurface === 'nonDrywall' ? 'fireplace_brick' : 'fireplace';
