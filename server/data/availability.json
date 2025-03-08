@@ -1,5 +1,21 @@
 {
-  "blockedTimeSlots": [],
+  "blockedTimeSlots": [
+    {
+      "date": "2025-03-07",
+      "time": "10:00 PM",
+      "reason": "Blocked by admin"
+    },
+    {
+      "date": "2025-03-07",
+      "time": "10:30 PM",
+      "reason": "Blocked by admin"
+    },
+    {
+      "date": "2025-03-07",
+      "time": "9:30 PM",
+      "reason": "Blocked by admin"
+    }
+  ],
   "blockedDays": [],
-  "lastUpdated": "2025-03-08T02:02:43.823Z"
+  "lastUpdated": "2025-03-08T02:06:44.560Z"
 }
