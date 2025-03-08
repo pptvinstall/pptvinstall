@@ -85,7 +85,7 @@ export default function Nav() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <div className="w-auto h-12 relative overflow-hidden">
-            <img
+            <ResponsiveImage
               src="/assets/logo.svg"
               alt="Picture Perfect TV Install"
               className="h-full w-auto"
@@ -172,7 +172,7 @@ export default function Nav() {
                 <SheetTitle className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="w-auto h-8 relative overflow-hidden">
-                      <img
+                      <ResponsiveImage
                         src="/assets/logo.svg"
                         alt="Picture Perfect TV Install"
                         className="h-full w-auto"
