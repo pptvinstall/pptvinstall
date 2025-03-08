@@ -793,102 +793,16 @@ export function BookingWizard({
           )}
         </Card>
 
-        {/* Sidebar: Service Summary + Pricing */}
+        {/* Sidebar: Price Breakdown + Service Management */}
         <div className="md:col-span-2 space-y-6">
-          {/* Only show service summary if services are selected */}
-          {(tvInstallations.length > 0 || smartHomeInstallations.length > 0) && (
-            <>
-              {/* Selected Services */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle>Selected Services</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {/* TV Installations */}
-                    {tvInstallations.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">TV Services</h4>
-                        <ul className="text-sm space-y-2">
-                          {tvInstallations.map((tv, index) => (
-                            <li key={`tv-${index}`} className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <div className="pl-2 relative">
-                                  {tv.isUnmountOnly ? 'TV Unmounting Only' :
-                                   tv.isRemountOnly ? 'TV Remounting Only' :
-                                   tv.isOutletOnly ? 'Outlet Installation Only' :
-                                   `TV Installation ${index + 1} ${tv.size === 'large' ? '(56"+)' : '(32"-55")'}`}
-                                  {!tv.isUnmountOnly && !tv.isRemountOnly && !tv.isOutletOnly && (
-                                    <span className="block text-xs text-muted-foreground">
-                                      {tv.location === 'standard' ? 'Standard Wall' : 
-                                       tv.location === 'fireplace' ? 'Above Fireplace' : 
-                                       'Ceiling Mount'}
-                                      {tv.mountType !== 'none' && ` • ${tv.mountType} Mount`}
-                                      {tv.masonryWall && ' • Non-Drywall'}
-                                      {tv.outletRelocation && ' • With Outlet'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveService('tv', index)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {/* Smart Home Installations */}
-                    {smartHomeInstallations.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Smart Home</h4>
-                        <ul className="text-sm space-y-2">
-                          {smartHomeInstallations.map((device, index) => (
-                            <li key={`smart-${index}`} className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <div className="pl-2 relative">
-                                  {device.type === 'doorbell' ? 'Smart Doorbell' :
-                                   device.type === 'floodlight' ? 'Smart Floodlight' :
-                                   'Smart Camera'} {device.quantity > 1 && `(×${device.quantity})`}
-                                  <span className="block text-xs text-muted-foreground">
-                                    {device.type === 'doorbell' && device.brickInstallation && 'Brick Installation'}
-                                    {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 && 
-                                     `${device.mountHeight}ft height`}
-                                  </span>
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveService('smartHome', index)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* Price Calculator - always show this */}
+          {/* Price Calculator with service management capabilities */}
           <PriceCalculator
             tvs={tvInstallations}
             smartHome={smartHomeInstallations}
             distance={0} // Default distance, could be calculated based on zip code
             onUpdate={handlePricingUpdate}
             onRemoveService={handleRemoveService}
+            onAddService={handleAddService}
           />
 
           <div className="flex justify-between">

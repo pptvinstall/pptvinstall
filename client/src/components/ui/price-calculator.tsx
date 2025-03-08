@@ -3,7 +3,7 @@ import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
 import { Button } from "./button"
-import { Trash2 } from "lucide-react"
+import { Trash2, Plus, Tv, Camera, BellRing, LampFloor, PowerCircle } from "lucide-react"
 import { pricing, calculatePrice, formatPrice, type ServiceOptions } from "@/lib/pricing"
 import type { TVInstallation, SmartHomeInstallation } from "./service-wizard"
 
@@ -19,6 +19,7 @@ interface PriceCalculatorProps {
   };
   onUpdate?: (total: number) => void;
   onRemoveService?: (type: 'tv' | 'smartHome', index: number) => void;
+  onAddService?: (type: 'tv' | 'smartHome', subtype: string) => void;
 }
 
 export function PriceCalculator({ 
@@ -27,7 +28,8 @@ export function PriceCalculator({
   distance, 
   additionalOptions = {},
   onUpdate,
-  onRemoveService
+  onRemoveService,
+  onAddService
 }: PriceCalculatorProps) {
   // Keep track of user-toggled options
   const [options, setOptions] = React.useState({
@@ -157,6 +159,91 @@ export function PriceCalculator({
           <div className="text-xs text-muted-foreground italic mt-2">
             * Prices are estimates. Final pricing may vary based on site conditions.
           </div>
+
+          {/* Add Services Buttons */}
+          {onAddService && (
+            <div className="mt-6 space-y-4">
+              <Separator />
+              <h3 className="font-medium text-sm">Add Services</h3>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium">TV Services</h4>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('tv', 'standard')}
+                    >
+                      <Tv className="h-4 w-4 mb-1" />
+                      TV Installation
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('tv', 'unmount')}
+                    >
+                      <Tv className="h-4 w-4 mb-1" />
+                      TV Unmounting
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('tv', 'remount')}
+                    >
+                      <Tv className="h-4 w-4 mb-1" />
+                      TV Remounting
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('tv', 'outlet')}
+                    >
+                      <PowerCircle className="h-4 w-4 mb-1" />
+                      Outlet Only
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium">Smart Home</h4>
+                  <div className="grid grid-cols-3 gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('smartHome', 'camera')}
+                    >
+                      <Camera className="h-4 w-4 mb-1" />
+                      Camera
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('smartHome', 'doorbell')}
+                    >
+                      <BellRing className="h-4 w-4 mb-1" />
+                      Doorbell
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
+                      onClick={() => onAddService('smartHome', 'floodlight')}
+                    >
+                      <LampFloor className="h-4 w-4 mb-1" />
+                      Floodlight
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
       </CardContent>
     </Card>
