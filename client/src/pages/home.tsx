@@ -34,13 +34,15 @@ export default function HomePage() {
   // Using a ref with a container that has position: relative
   const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
-    offset: ["start start", "end start"]
+    offset: ["start start", "end start"],
+    layoutEffect: false
   });
   
   // Add a scroll progress tracker for the showcase section
   const { scrollYProgress: showcaseScrollProgress } = useScroll({
     target: showcaseRef,
-    offset: ["start start", "end start"]
+    offset: ["start start", "end start"],
+    layoutEffect: false
   });
   
   const showcaseOpacity = useTransform(heroScrollProgress, [0, 0.5], [1, 0.7]);
@@ -112,10 +114,11 @@ export default function HomePage() {
 
   return (
     <div className="scroll-container overflow-x-hidden relative">
-      {/* Hero Section */}
+      {/* Hero Section - Adding position: relative to fix useScroll warning */}
       <section 
         ref={heroRef}
         className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
+        style={{ position: 'relative' }}
       >
         <div className="absolute inset-0 z-0 opacity-10">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-400/20" />
@@ -248,11 +251,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Showcase Image */}
+      {/* Showcase Image - Adding position: relative to fix useScroll warning */}
       <motion.section 
         ref={showcaseRef}
         className="relative py-20 bg-gradient-to-b from-white to-gray-50"
-        style={{ opacity: showcaseOpacity }}
+        style={{ opacity: showcaseOpacity, position: 'relative' }}
       >
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
