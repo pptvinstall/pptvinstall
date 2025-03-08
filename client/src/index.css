@@ -140,8 +140,27 @@
 .container,
 .scroll-area-container,
 .scroll-area-viewport,
-.radix-scroll-area {
+.radix-scroll-area,
+[role="dialog"],
+.service-selection-grid,
+.booking-step-grid,
+.wizard-step {
   position: relative !important;
+}
+
+/* Global fix for Radix UI ScrollArea */
+[data-radix-scroll-area-viewport] {
+  position: relative !important;
+}
+
+/* Ensure all possible scroll containers have proper positioning */
+.scroll-area-root,
+.scroll-area-viewport,
+[data-radix-scroll-area],
+[data-radix-scroll-area-viewport],
+.sticky-scroll-container {
+  position: relative !important;
+  overflow: auto;
 }
 
 /* Desktop Responsive Fixes */

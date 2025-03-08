@@ -253,13 +253,13 @@ export default function BookingConfirmation() {
     }
 
     // Fallback: Parse from serviceType string
-    const serviceTypeBreakdown = [];
+    const serviceTypeBreakdown: ServiceCategory[] = [];
 
     if (bookingData.serviceType) {
       // Split by semicolons for major categories, then by commas for individual items
       const serviceCategories = bookingData.serviceType.split(';');
 
-      serviceCategories.forEach(category => {
+      serviceCategories.forEach((category: string) => {
         const trimmedCategory = category.trim();
         if (!trimmedCategory) return;
 
@@ -514,11 +514,11 @@ export default function BookingConfirmation() {
             <h3 className="font-medium text-lg">Service Details</h3>
 
             {serviceBreakdown.length > 0 ? (
-              serviceBreakdown.map((category, index) => (
+              serviceBreakdown.map((category: ServiceCategory, index: number) => (
                 <div key={index} className="space-y-3">
                   <h4 className="font-medium">{category.category}</h4>
                   <ul className="space-y-2">
-                    {category.items.map((item, itemIndex) => (
+                    {category.items.map((item: ServiceItem, itemIndex: number) => (
                       <li key={itemIndex} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
                         <span>{item.name}</span>
                         {item.details && item.details.length > 0 && (
