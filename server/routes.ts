@@ -4,8 +4,7 @@ import { db } from "./db";
 import { bookingSchema, bookings } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
-import { googleCalendarService } from "./services/googleCalendarService";
-import { availabilityService } from "./services/availabilityService";
+import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
@@ -375,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if this time slot is already booked
       const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
-      logger.debug("Checking for existing bookings on date:", dateStr, "and time:", booking.appointmentTime);
+      logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
 
       const existingBookings = await db.select().from(bookings).where(
         and(
@@ -454,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.error("Booking validation error:", error as Error);
 
       if (error instanceof ZodError) {
-        logger.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
+        logger.error("Zod validation errors:", new Error(JSON.stringify(error.errors, null, 2)));
         return res.status(400).json({
           success: false,
           message: "Invalid booking data",
@@ -462,8 +461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      logger.error("Booking submission error details:", error instanceof Error ? error.message : String(error));
-      logger.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace available');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const stackTrace = error instanceof Error ? error.stack : 'No stack trace available';
+      
+      logger.error(`Booking submission error details: ${errorMessage}`, error instanceof Error ? error : new Error(errorMessage));
+      logger.debug(`Stack trace: ${stackTrace}`);
 
       res.status(500).json({
         success: false,
