@@ -742,18 +742,17 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API
 
 // Check if these are valid keys or just placeholders
 const isPlaceholder = (value: string) => {
-  return value.includes('your_') || value === '';
+  return value.includes('your_') || value === '' || value.includes('here');
 };
 
 // Determine if we should use real credentials or mock mode
 const useRealCredentials = !isPlaceholder(GOOGLE_CALENDAR_ID) && !isPlaceholder(GOOGLE_API_KEY);
 
-logger.debug(`API Key Present: ${!!GOOGLE_API_KEY}`, {});
-logger.debug(`Calendar ID Present: ${!!GOOGLE_CALENDAR_ID}`, {});
-logger.debug(`Using real credentials: ${useRealCredentials}`, {
-  calendarIdIsPlaceholder: isPlaceholder(GOOGLE_CALENDAR_ID),
-  apiKeyIsPlaceholder: isPlaceholder(GOOGLE_API_KEY)
-});
+logger.debug(`API Key: "${GOOGLE_API_KEY}"`, {});
+logger.debug(`Calendar ID: "${GOOGLE_CALENDAR_ID}"`, {});
+logger.debug(`API Key is placeholder: ${isPlaceholder(GOOGLE_API_KEY)}`, {});
+logger.debug(`Calendar ID is placeholder: ${isPlaceholder(GOOGLE_CALENDAR_ID)}`, {});
+logger.debug(`Using real credentials: ${useRealCredentials}`, {});
 
 // Create and export a singleton instance
 // Force mock mode if we have placeholder keys
