@@ -161,7 +161,7 @@ const PriceCalculator = React.memo(
         <CardContent className="pb-2 relative">
           {allServices.length > 0 ? (
             <div className="relative">
-              <ScrollArea className="max-h-[200px] pr-3">
+              <ScrollArea className="max-h-[200px] pr-3 relative">
                 <div className="space-y-3">
                 {allServices.map((service) => (
                   <div
@@ -991,9 +991,17 @@ export function BookingWizard({
       errors.zipCode = ["Please enter a valid ZIP code"];
     }
 
-    setValidationErrors(errors);
+    // Important: Only update validation errors if they've changed
+    // This prevents unnecessary re-renders
+    const errorsString = JSON.stringify(errors);
+    const currentErrorsString = JSON.stringify(validationErrors);
+    
+    if (errorsString !== currentErrorsString) {
+      setValidationErrors(errors);
+    }
+    
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, validationErrors]);
 
   // Submit the form
   const handleSubmit = useCallback(async () => {
@@ -1168,7 +1176,7 @@ export function BookingWizard({
 
                   <Button
                     onClick={handleNextClick}
-                    disabled={isSubmitting || !canProceed()}
+                    disabled={isSubmitting || (currentStep < steps.length - 1 && !canProceed())}
                   >
                     {isSubmitting
                       ? "Processing..."
