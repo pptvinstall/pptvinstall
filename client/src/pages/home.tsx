@@ -32,13 +32,19 @@ export default function HomePage() {
   const testimonialsInView = useInView(testimonialsRef, { once: true, amount: 0.2 });
   
   // Using a ref with a container that has position: relative
-  const { scrollYProgress } = useScroll({
+  const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
   
-  const showcaseOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0.7]);
-  const showcaseScale = useTransform(scrollYProgress, [0, 0.5], [1, 1.05]);
+  // Add a scroll progress tracker for the showcase section
+  const { scrollYProgress: showcaseScrollProgress } = useScroll({
+    target: showcaseRef,
+    offset: ["start start", "end start"]
+  });
+  
+  const showcaseOpacity = useTransform(heroScrollProgress, [0, 0.5], [1, 0.7]);
+  const showcaseScale = useTransform(heroScrollProgress, [0, 0.5], [1, 1.05]);
   
   // Simulate loading
   useEffect(() => {
