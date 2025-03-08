@@ -740,11 +740,24 @@ export class GoogleCalendarService {
 const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || process.env.VITE_GOOGLE_CALENDAR_ID || '';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY || '';
 
+// Check if these are valid keys or just placeholders
+const isPlaceholder = (value: string) => {
+  return value.includes('your_') || value === '';
+};
+
+// Determine if we should use real credentials or mock mode
+const useRealCredentials = !isPlaceholder(GOOGLE_CALENDAR_ID) && !isPlaceholder(GOOGLE_API_KEY);
+
 logger.debug(`API Key Present: ${!!GOOGLE_API_KEY}`, {});
 logger.debug(`Calendar ID Present: ${!!GOOGLE_CALENDAR_ID}`, {});
+logger.debug(`Using real credentials: ${useRealCredentials}`, {
+  calendarIdIsPlaceholder: isPlaceholder(GOOGLE_CALENDAR_ID),
+  apiKeyIsPlaceholder: isPlaceholder(GOOGLE_API_KEY)
+});
 
 // Create and export a singleton instance
+// Force mock mode if we have placeholder keys
 export const googleCalendarService = new GoogleCalendarService(
-  GOOGLE_CALENDAR_ID,
-  GOOGLE_API_KEY
+  useRealCredentials ? GOOGLE_CALENDAR_ID : '',
+  useRealCredentials ? GOOGLE_API_KEY : ''
 );
