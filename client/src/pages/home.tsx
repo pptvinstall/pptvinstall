@@ -313,7 +313,10 @@ export default function HomePage() {
       </motion.section>
 
       {/* Services */}
-      <section ref={servicesRef} className="relative py-20 bg-gray-50">
+      <section 
+        ref={servicesRef} 
+        className="relative py-20 bg-gray-50"
+        style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -390,7 +393,10 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section ref={testimonialsRef} className="relative py-20 bg-white">
+      <section 
+        ref={testimonialsRef} 
+        className="relative py-20 bg-white"
+        style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -457,7 +463,9 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="relative py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white">
+      <section 
+        className="relative py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white"
+        style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2 
