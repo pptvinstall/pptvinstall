@@ -9,6 +9,15 @@
     --trust-blue-dark: #1e40af;  /* Dark blue for primary elements */
     --trust-blue-medium: #3b82f6; /* Medium blue for secondary elements */
     --trust-blue-light: #93c5fd; /* Light blue for accents */
+    
+    /* Shadow variables */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    
+    /* Animation variables */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   * {
@@ -16,12 +25,17 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground scroll-smooth;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
   }
 }
 
 /* Gradient text utilities */
 @layer utilities {
+  /* Text gradients */
   .text-gradient-primary {
     @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-800 bg-clip-text text-transparent;
   }
@@ -30,18 +44,66 @@
     @apply bg-gradient-to-r from-brand-blue-400 to-brand-blue-600 bg-clip-text text-transparent;
   }
   
-  /* Trust badge styles */
+  /* Shadows with hover effects */
+  .shadow-card {
+    @apply shadow-md transition-all duration-300 hover:shadow-lg;
+  }
+  
+  /* Button hover effects */
+  .btn-hover-effect {
+    @apply transform transition-transform duration-300 hover:scale-105 active:scale-95;
+  }
+  
+  /* Trust badge styles - enhanced */
   .trust-badge {
-    @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200;
+    @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shadow-sm transition-all duration-200 hover:bg-blue-100;
   }
   
   .trust-badge-icon {
     @apply text-blue-600;
   }
   
+  /* Enhanced section styles */
+  .section-padding {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+  
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold mb-4 leading-tight;
+  }
+  
+  .section-subtitle {
+    @apply text-lg text-blue-600 mb-8;
+  }
+  
+  /* Scroll container positioning */
   .scroll-container {
     @apply relative;
     position: relative !important;
+  }
+  
+  /* Card styles */
+  .feature-card {
+    @apply p-6 rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg hover:border-blue-200;
+  }
+  
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 }
 /* Ensure containers have proper positioning for scroll calculations */
