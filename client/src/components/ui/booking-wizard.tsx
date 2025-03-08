@@ -775,25 +775,43 @@ export function BookingWizard({
                     onComplete={(services) => {
                       // Convert from ServiceWizard format to our format
                       services.tvInstallations.forEach(tv => {
+                        // Calculate the correct price based on location and size
+                        let basePrice = pricing.tv_mounting.standard.price; // $100 default
+                        
+                        // If it's a fireplace location, use fireplace price
+                        if (tv.location === 'fireplace') {
+                          basePrice = pricing.tv_mounting.fireplace.price; // $200
+                        }
+                        
+                        // Add masonry wall cost if needed
+                        if (tv.masonryWall) {
+                          basePrice += pricing.tv_mounting.non_drywall_addon.price; // +$50
+                        }
+                        
+                        // Add high-rise cost if needed
+                        if (tv.highRise) {
+                          basePrice += pricing.tv_mounting.high_rise_addon.price; // +$25
+                        }
+                        
                         const tvService: TVInstallation = {
                           id: tv.id,
                           name: `TV Installation (${tv.size === 'small' ? 'Small' : 'Large'})`,
                           description: `${tv.location} installation with ${tv.mountType} mount`,
                           type: 'mount',
-                          basePrice: 129 // Default price, would be calculated properly in a real app
+                          basePrice: basePrice // Using correctly calculated price from pricing.ts
                         };
                         handleServiceSelect("tv", tvService);
                       });
                       
                       services.smartHomeDevices.forEach(device => {
-                        // Set the correct price based on device type
+                        // Set the correct price based on device type from pricing.ts
                         let price = 0;
                         if (device.type === 'camera') {
-                          price = 75; // $75 as per pricing.ts
+                          price = pricing.smart_home.security_camera.price; // $75
                         } else if (device.type === 'doorbell') {
-                          price = 85; // $85 as per pricing.ts
+                          price = pricing.smart_home.doorbell.price; // $85
                         } else if (device.type === 'floodlight') {
-                          price = 125; // $125 as per pricing.ts
+                          price = pricing.smart_home.floodlight.price; // $125
                         }
                         
                         const deviceService: SmartHomeInstallation = {
