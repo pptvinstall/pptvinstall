@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "./scroll-area";
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { motion } from "framer-motion";
+import { pricing } from "@/lib/pricing";
 
 interface ServiceGridProps {
   onServiceSelect: (
@@ -44,6 +45,20 @@ export function ServiceSelectionGrid({
       y: 0,
       opacity: 1,
     },
+  };
+  
+  // Function to get correct price from pricing.ts
+  const getPriceForSmartHome = (type: string): number => {
+    switch (type) {
+      case "camera":
+        return pricing.smart_home.security_camera.price; // $75
+      case "doorbell":
+        return pricing.smart_home.doorbell.price; // $85
+      case "floodlight":
+        return pricing.smart_home.floodlight.price; // $125
+      default:
+        return 0;
+    }
   };
 
   return (
@@ -105,17 +120,29 @@ export function ServiceSelectionGrid({
                   animate="visible"
                   className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
                 >
-                  {smartHomeInstallations.map((service) => (
-                    <motion.div key={service.id} variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title={service.name}
-                        description={service.description}
-                        icon={<SmartHomeServiceIcon type={service.type} />}
-                        price={service.basePrice}
-                        onClick={() => onServiceSelect("smartHome", service)}
-                      />
-                    </motion.div>
-                  ))}
+                  {smartHomeInstallations.map((service) => {
+                    // Get the correct price from pricing.ts file
+                    const correctPrice = getPriceForSmartHome(service.type);
+                    
+                    return (
+                      <motion.div key={service.id} variants={itemVariants} className="w-full">
+                        <ServiceCard
+                          title={service.name}
+                          description={service.description}
+                          icon={<SmartHomeServiceIcon type={service.type} />}
+                          price={correctPrice}
+                          onClick={() => {
+                            // Create an updated service with the correct price
+                            const updatedService = {
+                              ...service,
+                              basePrice: correctPrice
+                            };
+                            onServiceSelect("smartHome", updatedService);
+                          }}
+                        />
+                      </motion.div>
+                    );
+                  })}
                 </motion.div>
               </ScrollArea>
             </div>
