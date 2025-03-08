@@ -27,34 +27,34 @@ export default function HomePage() {
   const showcaseRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const testimonialsRef = useRef<HTMLDivElement>(null);
-  
+
   const servicesInView = useInView(servicesRef, { once: true, amount: 0.2 });
   const testimonialsInView = useInView(testimonialsRef, { once: true, amount: 0.2 });
-  
+
   // Using a ref with a container that has position: relative
   const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
-  
+
   // Add a scroll progress tracker for the showcase section
   const { scrollYProgress: showcaseScrollProgress } = useScroll({
     target: showcaseRef,
     offset: ["start start", "end start"]
   });
-  
+
   const showcaseOpacity = useTransform(heroScrollProgress, [0, 0.5], [1, 0.7]);
   const showcaseScale = useTransform(heroScrollProgress, [0, 0.5], [1, 1.05]);
-  
+
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoaded(true);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, []);
-  
+
   const services = [
     {
       title: "TV Mounting",
@@ -81,7 +81,7 @@ export default function HomePage() {
       features: ["Digital signage", "Conference rooms", "Entertainment systems"]
     }
   ];
-  
+
   const testimonials = [
     {
       text: "Excellent service! They mounted my TV above the fireplace and concealed all the wires. Very professional and clean work.",
@@ -102,7 +102,7 @@ export default function HomePage() {
       rating: 5
     }
   ];
-  
+
   const benefits = [
     { icon: Trophy, title: "Experience", text: "Years of professional installation expertise" },
     { icon: Shield, title: "Guaranteed", text: "Satisfaction guaranteed on every job" },
@@ -122,7 +122,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-400/20" />
           <div className="h-full w-full bg-[url('/assets/pattern-bg.svg')] bg-repeat opacity-20" />
         </div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -137,7 +137,7 @@ export default function HomePage() {
               >
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Available Now in Metro Atlanta
               </Badge>
-              
+
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 tracking-tight">
                 <span className="block">Professional</span>
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-500">
@@ -145,11 +145,11 @@ export default function HomePage() {
                 </span>
                 <span className="block">Done Right</span>
               </h1>
-              
+
               <p className="text-lg md:text-xl text-blue-600 mb-8 max-w-xl mx-auto lg:mx-0">
                 Expert mounting, cable concealment, and perfect positioning for TVs of all sizes. Servicing the entire Metro Atlanta area.
               </p>
-              
+
               <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
                 <Link href="/booking">
                   <Button size="lg" className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white transition-all">
@@ -172,10 +172,10 @@ export default function HomePage() {
                   <span>(678) 263-2859</span>
                 </Button>
               </div>
-              
+
 
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -198,7 +198,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Floating badges */}
               <motion.div 
                 className="absolute -top-4 -right-4 bg-white rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1.5"
@@ -209,7 +209,7 @@ export default function HomePage() {
                 <Shield className="h-4 w-4 text-blue-600" />
                 <span className="text-sm font-medium text-blue-600">Licensed & Insured</span>
               </motion.div>
-              
+
               <motion.div 
                 className="absolute -bottom-4 -left-4 bg-white rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1.5"
                 initial={{ y: 20, opacity: 0 }}
@@ -249,33 +249,34 @@ export default function HomePage() {
               We provide professional TV mounting and smart home installation services throughout Metro Atlanta
             </motion.p>
           </div>
-          
+
           <motion.div 
             className="relative mx-auto rounded-xl overflow-hidden shadow-2xl"
             style={{ scale: showcaseScale }}
           >
             <div className="w-full h-[60vh] bg-gray-200"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-            
+
             {/* Stats overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-black/80 to-transparent">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-white">
-                <div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-white relative">
+                <div className="text-center relative z-10">
                   <div className="text-3xl md:text-4xl font-bold">250+</div>
                   <div className="text-sm md:text-base opacity-80">Happy Customers</div>
                 </div>
-                <div>
+                <div className="text-center relative z-10">
                   <div className="text-3xl md:text-4xl font-bold">500+</div>
                   <div className="text-sm md:text-base opacity-80">TVs Mounted</div>
                 </div>
-                <div>
-                  <div className="text-3xl md:text-4xl font-bold">5★</div>
+                <div className="text-center relative z-10">
+                  <div className="text-3xl md:text-4xl font-bold">5<span className="text-yellow-500">★</span></div>
                   <div className="text-sm md:text-base opacity-80">Average Rating</div>
                 </div>
-                <div>
+                <div className="text-center relative z-10">
                   <div className="text-3xl md:text-4xl font-bold">100%</div>
                   <div className="text-sm md:text-base opacity-80">Satisfaction</div>
                 </div>
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-700/70 to-gray-900/90 rounded-lg"></div>
               </div>
             </div>
           </motion.div>
@@ -314,7 +315,7 @@ export default function HomePage() {
               From basic TV mounting to complete smart home solutions, we have you covered
             </motion.p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {services.map((service, index) => (
               <motion.div
@@ -335,7 +336,7 @@ export default function HomePage() {
                     <p className="text-blue-600 mb-4">
                       {service.description}
                     </p>
-                    
+
                     <ul className="mb-6 space-y-2 mt-auto">
                       {service.features.map((feature, i) => (
                         <li key={i} className="flex items-center gap-2">
@@ -344,7 +345,7 @@ export default function HomePage() {
                         </li>
                       ))}
                     </ul>
-                    
+
                     <Link href={service.link} className="mt-auto">
                       <Button 
                         variant="ghost" 
@@ -394,7 +395,7 @@ export default function HomePage() {
               Don't just take our word for it - hear from our satisfied customers
             </motion.p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <motion.div
@@ -415,11 +416,11 @@ export default function HomePage() {
                         ))}
                       </div>
                     </div>
-                    
+
                     <p className="text-blue-600 mb-6 flex-grow">
                       "{testimonial.text}"
                     </p>
-                    
+
                     <div className="mt-auto">
                       <p className="font-semibold text-blue-600">{testimonial.name}</p>
                       <p className="text-sm text-blue-600">{testimonial.location}</p>
@@ -504,7 +505,7 @@ export default function HomePage() {
               We're committed to providing the highest quality service with attention to every detail
             </motion.p>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
               <motion.div
@@ -526,7 +527,7 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
-          
+
           <div className="mt-12 text-center">
             <Link href="/services">
               <Button variant="outline" className="border-blue-200 hover:bg-blue-50">
