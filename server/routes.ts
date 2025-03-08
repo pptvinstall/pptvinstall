@@ -15,7 +15,17 @@ let fileBookings: any[] = loadBookings();
 
 // Add or update the admin authentication helper function
 function verifyAdminPassword(password: string | undefined): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  // TEMPORARY FIX: Hardcoded password as there seems to be an issue with environment variables
+  // TODO: Fix environment variable loading and remove hardcoded password
+  const adminPassword = "PictureP3rfectTV2025";
+  
+  // Debug log to see if environment variable is correctly loaded
+  logger.debug('Admin password verification', {
+    envVarSet: !!process.env.ADMIN_PASSWORD,
+    envPasswordValue: process.env.ADMIN_PASSWORD || 'not set',
+    usingHardcoded: true,
+    providedPasswordLength: password?.length || 0
+  });
 
   if (!password) {
     logger.auth('Admin authentication failed: No password provided');
