@@ -48,8 +48,9 @@ export function TimeBlocking({ password }: TimeBlockingProps) {
 
   // Check admin password on component mount
   useEffect(() => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
+    const storedPassword = localStorage.getItem('adminPassword');
+    // Use either the passed password prop or the stored password
+    if (!storedPassword && !password) {
       toast({
         title: "Authentication Required",
         description: "Please log in as admin first",
@@ -58,13 +59,19 @@ export function TimeBlocking({ password }: TimeBlockingProps) {
       setLocation('/admin/login');
       return;
     }
-  }, []);
+    
+    // If password prop is provided but not stored, save it to localStorage
+    if (password && !storedPassword) {
+      localStorage.setItem('adminPassword', password);
+    }
+  }, [password, toast, setLocation]);
 
   // Fetch blocked times and days
   const { data: blockedTimes = {}, error: blockedTimesError } = useQuery({
     queryKey: ['/api/admin/blocked-times'],
     queryFn: async () => {
-      const adminPassword = localStorage.getItem('adminPassword');
+      // Use provided password prop or get from localStorage
+      const adminPassword = password || localStorage.getItem('adminPassword');
       if (!adminPassword) {
         throw new Error('Admin password not found. Please log in first.');
       }
@@ -93,7 +100,8 @@ export function TimeBlocking({ password }: TimeBlockingProps) {
   const { data: blockedDays = [], error: blockedDaysError } = useQuery({
     queryKey: ['/api/admin/blocked-days'],
     queryFn: async () => {
-      const adminPassword = localStorage.getItem('adminPassword');
+      // Use provided password prop or get from localStorage
+      const adminPassword = password || localStorage.getItem('adminPassword');
       if (!adminPassword) {
         throw new Error('Admin password not found. Please log in first.');
       }
@@ -126,7 +134,8 @@ export function TimeBlocking({ password }: TimeBlockingProps) {
       timeSlots?: string[];
       reason?: string;
     }) => {
-      const adminPassword = localStorage.getItem('adminPassword');
+      // Use provided password prop or get from localStorage
+      const adminPassword = password || localStorage.getItem('adminPassword');
       if (!adminPassword) {
         throw new Error('Admin password not found. Please log in first.');
       }
@@ -181,7 +190,7 @@ export function TimeBlocking({ password }: TimeBlockingProps) {
         setLocation('/admin/login');
       }
     }
-  }, [blockedTimesError, blockedDaysError]);
+  }, [blockedTimesError, blockedDaysError, setLocation]);
 
   // Get blocked slots for selected date
   const getBlockedSlotsForDate = (date: Date) => {
