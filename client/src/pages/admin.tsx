@@ -554,7 +554,7 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="scheduling">
+        <TabsContent value="time-blocking">
           <TimeBlocking password={password} />
         </TabsContent>
 
