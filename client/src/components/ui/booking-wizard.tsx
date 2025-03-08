@@ -838,13 +838,11 @@ export function BookingWizard({
   // Function to check if a time slot is available
   const checkTimeSlotAvailability = useCallback(
     (date: string, time: string) => {
-      const key = `${date}-${time}`;
-      
       // Check current date/time - can't book in the past
       const now = new Date();
       const selectedDateTime = new Date(`${date}T${time.replace(/AM|PM/, '')}`);
       
-      // Add timezone correction (assuming this is needed based on your logs)
+      // Add timezone correction
       selectedDateTime.setHours(
         time.includes("PM") && !time.startsWith("12") 
           ? selectedDateTime.getHours() + 12 
@@ -861,13 +859,17 @@ export function BookingWizard({
         return false;
       }
 
-      // Check existing bookings
-      const isBooked = existingBookings.some(booking => {
-        const bookingDate = new Date(booking.preferredDate).toISOString().split('T')[0];
-        return bookingDate === date && booking.appointmentTime === time && booking.status === 'active';
-      });
-
-      return !isBooked;
+      // Check existing bookings - this check is extracted to avoid dependency issues
+      if (existingBookings && existingBookings.length > 0) {
+        const isBooked = existingBookings.some(booking => {
+          const bookingDate = booking.preferredDate ? 
+            new Date(booking.preferredDate).toISOString().split('T')[0] : null;
+          return bookingDate === date && booking.appointmentTime === time && booking.status === 'active';
+        });
+        return !isBooked;
+      }
+      
+      return true;
     },
     [existingBookings]
   );
@@ -882,16 +884,28 @@ export function BookingWizard({
     // Update availability for all time slots for this date
     const updatedAvailability: Record<string, boolean> = {};
     
+    // Memoize this calculation to prevent infinite update loops
+    const dateStrFinal = dateStr; // Create a final version that won't change in this render cycle
+    
     timeSlots.forEach(time => {
-      const key = `${dateStr}-${time}`;
-      updatedAvailability[key] = checkTimeSlotAvailability(dateStr, time);
+      const key = `${dateStrFinal}-${time}`;
+      updatedAvailability[key] = checkTimeSlotAvailability(dateStrFinal, time);
     });
     
-    setTimeSlotAvailability(prev => ({
-      ...prev,
-      ...updatedAvailability
-    }));
-  }, [selectedDate, existingBookings, checkTimeSlotAvailability, timeSlots]);
+    // Use a callback form of setState to ensure we're not creating a loop
+    setTimeSlotAvailability(prev => {
+      // Check if the values are actually different to prevent unnecessary updates
+      let isDifferent = false;
+      Object.entries(updatedAvailability).forEach(([key, value]) => {
+        if (prev[key] !== value) {
+          isDifferent = true;
+        }
+      });
+      
+      // Only update if values changed
+      return isDifferent ? { ...prev, ...updatedAvailability } : prev;
+    });
+  }, [selectedDate, timeSlots, checkTimeSlotAvailability]);
   
   // Function to check if a time slot is available (uses cached values)
   const isTimeSlotAvailable = useCallback(

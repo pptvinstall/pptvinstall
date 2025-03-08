@@ -167,36 +167,42 @@
 @media (min-width: 768px) {
   /* Main container for booking wizard */
   .booking-wizard-container {
-    max-width: 85%;
+    max-width: 95%; 
+    width: 100%;
     margin: 0 auto;
+    position: relative !important;
   }
   
   /* Grid layout for booking steps */
   .booking-step-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 3fr 2fr !important; /* Fixed ratio for desktop */
     gap: 1.5rem;
-    align-items: flex-start;
+    align-items: stretch;
+    width: 100%;
   }
   
   /* Service selection grid for desktop */
   .service-selection-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 1rem;
+    width: 100%;
   }
   
   /* Form layout for customer details */
   .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
   }
   
   /* Price calculator for desktop */
   .price-calculator {
     display: flex;
     flex-direction: column;
+    height: auto;
+    min-height: 300px;
   }
   
   /* Calendar container */
@@ -210,5 +216,23 @@
   /* Better spacing for steps */
   .wizard-step {
     padding: 1.5rem;
+    height: 100%;
+  }
+  
+  /* Fix main step container */
+  .md\:col-span-3 {
+    grid-column: span 3 / span 3 !important;
+  }
+  
+  /* Fix sidebar container */
+  .md\:col-span-2 {
+    grid-column: span 2 / span 2 !important;
+  }
+  
+  /* ScrollArea fixes */
+  [data-radix-scroll-area-viewport] {
+    position: relative !important;
+    height: auto !important;
+    min-height: 280px;
   }
 }

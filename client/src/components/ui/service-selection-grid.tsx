@@ -78,10 +78,10 @@ export function ServiceSelectionGrid({
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
                 >
                   {tvInstallations.map((service) => (
-                    <motion.div key={service.id} variants={itemVariants}>
+                    <motion.div key={service.id} variants={itemVariants} className="w-full">
                       <ServiceCard
                         title={service.name}
                         description={service.description}
@@ -103,10 +103,10 @@ export function ServiceSelectionGrid({
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
                 >
                   {smartHomeInstallations.map((service) => (
-                    <motion.div key={service.id} variants={itemVariants}>
+                    <motion.div key={service.id} variants={itemVariants} className="w-full">
                       <ServiceCard
                         title={service.name}
                         description={service.description}
