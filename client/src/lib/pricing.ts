@@ -174,6 +174,7 @@ export const pricing: Pricing = {
     },
     fireplace_warning: {
       name: "Wire Concealment Above Fireplace",
+      price: 0, // Price will be determined after assessment
       restriction: true,
       description: "Requires pictures of the nearest outlet for pricing."
     }
@@ -198,6 +199,7 @@ export const pricing: Pricing = {
     },
     floodlight_no_wiring: {
       name: "Smart Floodlight Installation (No Wiring)",
+      price: 0, // Price will be determined after assessment
       restriction: true,
       description: "Requires assessment for proper pricing."
     }

@@ -793,10 +793,16 @@ export function BookingWizard({
                           basePrice += pricing.tv_mounting.high_rise_addon.price; // +$25
                         }
                         
+                        // Create description that includes wire concealment information if selected
+                        let description = `${tv.location} installation with ${tv.mountType} mount`;
+                        if (tv.outletNeeded) {
+                          description += " with wire concealment & outlet";
+                        }
+                        
                         const tvService: TVInstallation = {
                           id: tv.id,
                           name: `TV Installation (${tv.size === 'small' ? 'Small' : 'Large'})`,
-                          description: `${tv.location} installation with ${tv.mountType} mount`,
+                          description: description,
                           type: 'mount',
                           basePrice: basePrice // Using correctly calculated price from pricing.ts
                         };

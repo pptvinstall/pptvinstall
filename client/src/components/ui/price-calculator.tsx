@@ -71,14 +71,14 @@ export function PriceCalculator({
     onUpdate?.(totalPrice);
   }, [tvs, smartHome, distance, onUpdate]);
   
-  // Get prices for each device type
+  // Get prices for each device type directly from pricing.ts
   const getPriceForDeviceType = (type: string) => {
     if (type === 'camera') {
-      return 75; // $75 per camera
+      return pricing.smart_home.security_camera.price;
     } else if (type === 'doorbell') {
-      return 85; // $85 per doorbell
+      return pricing.smart_home.doorbell.price;
     } else if (type === 'floodlight') {
-      return 125; // $125 per floodlight
+      return pricing.smart_home.floodlight.price;
     }
     return 0;
   };
