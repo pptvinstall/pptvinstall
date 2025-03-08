@@ -4,8 +4,11 @@
 
 @layer base {
   :root {
-    --brand-primary: theme(colors.brand.blue.500);
-    --brand-accent: theme(colors.brand.red.500);
+    --brand-primary: theme(colors.brand.blue.700);
+    --brand-accent: theme(colors.brand.blue.500);
+    --trust-blue-dark: #1e40af;  /* Dark blue for primary elements */
+    --trust-blue-medium: #3b82f6; /* Medium blue for secondary elements */
+    --trust-blue-light: #93c5fd; /* Light blue for accents */
   }
 
   * {
@@ -24,7 +27,16 @@
   }
 
   .text-gradient-accent {
-    @apply bg-gradient-to-r from-brand-red-500 to-brand-red-700 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-blue-400 to-brand-blue-600 bg-clip-text text-transparent;
+  }
+  
+  /* Trust badge styles */
+  .trust-badge {
+    @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200;
+  }
+  
+  .trust-badge-icon {
+    @apply text-blue-600;
   }
   
   .scroll-container {
