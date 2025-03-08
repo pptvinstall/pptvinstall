@@ -147,7 +147,8 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
     if (needsHandyman) {
       const handymanBasePrice = pricing.custom_services.handyman.price;
       const additionalHalfHours = Math.ceil((handymanHours - 1) * 2);
-      const additionalFee = additionalHalfHours * pricing.custom_services.handyman.half_hour_rate;
+      const halfHourRate = pricing.custom_services.handyman.half_hour_rate || 50; // Fallback to 50 if not defined
+      const additionalFee = additionalHalfHours * halfHourRate;
       total += handymanBasePrice + additionalFee;
     }
     

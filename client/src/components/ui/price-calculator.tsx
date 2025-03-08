@@ -86,6 +86,7 @@ export function PriceCalculator({
   // Calculate total for display
   const calculateTotal = () => {
     let total = 0;
+    let discounts = 0;
     
     // Add TV installations
     tvs.forEach(tv => {
@@ -96,6 +97,12 @@ export function PriceCalculator({
         total += pricing.wire_concealment.standard.price;
       }
     });
+    
+    // Apply multiple TV discount
+    if (tvs.length > 1) {
+      discounts = pricing.discounts.multiple_tvs.amount * (tvs.length - 1);
+      total -= discounts;
+    }
     
     // Add smart home devices
     smartHome.forEach(device => {
@@ -141,6 +148,15 @@ export function PriceCalculator({
         });
       }
     });
+    
+    // Add multiple TV discount if applicable
+    if (tvs.length > 1) {
+      items.push({
+        name: pricing.discounts.multiple_tvs.name,
+        description: `Discount for ${tvs.length - 1} additional TVs`,
+        price: -(pricing.discounts.multiple_tvs.amount * (tvs.length - 1))
+      });
+    }
     
     // Add camera installations
     const cameras = smartHome.filter(item => item.type === 'camera');
@@ -203,7 +219,9 @@ export function PriceCalculator({
                     <p className="text-xs text-muted-foreground">{item.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium">${item.price}</span>
+                    <span className={`font-medium ${item.price < 0 ? 'text-green-600' : ''}`}>
+                      ${Math.abs(item.price).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -214,7 +232,7 @@ export function PriceCalculator({
             {/* Total */}
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span className="text-primary">${totalAmount}</span>
+              <span className="text-primary">${totalAmount.toFixed(2)}</span>
             </div>
             
             {/* Add More Services button */}

@@ -477,7 +477,7 @@ export function calculatePrice(options: any) {
     // Additional time charged at half-hour increments
     if (options.handymanHours > 1) {
       const additionalHalfHours = Math.ceil((options.handymanHours - 1) * 2);
-      handymanFee += additionalHalfHours * handymanService.half_hour_rate;
+      handymanFee += additionalHalfHours * (handymanService.half_hour_rate || 50); // Fallback to 50 if not defined
     }
     
     breakdown.push({
