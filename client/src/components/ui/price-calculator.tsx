@@ -36,10 +36,10 @@ export function PriceCalculator({
   
   // Calculate pricing based on selections
   React.useEffect(() => {
-    // Use the pricing from the pricing.ts file
-    const cameraPrice = 89;   // $89 per camera
-    const doorbellPrice = 89; // $89 per doorbell
-    const floodlightPrice = 89; // $89 per floodlight
+    // Use the correct prices from the pricing.ts file
+    const cameraPrice = 75;   // $75 per camera
+    const doorbellPrice = 85; // $85 per doorbell
+    const floodlightPrice = 125; // $125 per floodlight
     
     // Calculate total based on services
     let totalPrice = 0;
@@ -66,7 +66,14 @@ export function PriceCalculator({
   
   // Get prices for each device type
   const getPriceForDeviceType = (type: string) => {
-    return 89; // Updated price for all smart home devices ($89)
+    if (type === 'camera') {
+      return 75; // $75 per camera
+    } else if (type === 'doorbell') {
+      return 85; // $85 per doorbell
+    } else if (type === 'floodlight') {
+      return 125; // $125 per floodlight
+    }
+    return 0;
   };
   
   // Calculate total for display
