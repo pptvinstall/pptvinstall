@@ -173,27 +173,7 @@ export default function HomePage() {
                 </Button>
               </div>
               
-              <div className="mt-10 flex items-center justify-center lg:justify-start">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-gray-200">
-                      <ResponsiveImage 
-                        src={`/assets/logo.svg`} 
-                        alt={`Happy Customer ${i}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="ml-4">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-600">Trusted by 250+ customers</p>
-                </div>
-              </div>
+
             </motion.div>
             
             <motion.div

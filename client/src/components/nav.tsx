@@ -82,17 +82,11 @@ export default function Nav() {
       isScrolled ? "bg-background/95 backdrop-blur shadow-sm" : "bg-background"
     )}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
+        {/* Text Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-auto h-12 relative overflow-hidden">
-            <ResponsiveImage
-              src="/assets/logo-pptv.jpg"
-              alt="Picture Perfect TV Install"
-              className="h-full w-auto"
-              width={240}
-              height={60}
-            />
-          </div>
+          <h1 className="text-xl font-bold text-gray-900">
+            Picture Perfect TV Install
+          </h1>
         </Link>
 
         {/* Desktop Navigation */}
@@ -171,15 +165,9 @@ export default function Nav() {
               <SheetHeader className="p-4 border-b">
                 <SheetTitle className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-auto h-8 relative overflow-hidden">
-                      <ResponsiveImage
-                        src="/assets/logo-pptv.jpg"
-                        alt="Picture Perfect TV Install"
-                        className="h-full w-auto"
-                        width={160}
-                        height={40}
-                      />
-                    </div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Picture Perfect TV Install
+                    </h2>
                   </div>
                   <SheetClose asChild>
                     <Button variant="ghost" size="icon">
