@@ -1,36 +1,147 @@
-// Pricing configuration
+// Pricing configuration based on updated structure
 export const pricing = {
-  tvMounting: {
-    base: 100,
-    additionalTv: 10,
-    nonDrywall: 50,
-    fireplace: 200,
-    highRise: 25,
-    unmount: 50,
-    remount: 50,
+  // TV Mounting Services
+  tv_mounting: {
+    standard: {
+      name: "Standard TV Mounting (Customer's Mount)",
+      price: 100,
+      description: "Mounting a TV on drywall with a customer-provided mount, any size."
+    },
+    fireplace: {
+      name: "Over Fireplace TV Mounting",
+      price: 200,
+      description: "Mounting a TV above a fireplace (non-brick/masonry)."
+    },
+    brick_masonry: {
+      name: "Non-Drywall TV Mounting (Brick/Masonry)",
+      price: 150,
+      description: "Mounting a TV on a brick or masonry wall."
+    },
+    fireplace_brick: {
+      name: "Over Fireplace TV Mounting (Brick/Masonry)",
+      price: 250,
+      description: "Mounting a TV above a fireplace on brick/masonry."
+    },
+    high_rise: {
+      name: "High-Rise/Steel Stud Mounting",
+      price: 125,
+      description: "Mounting a TV in a high-rise or on steel studs, requiring special anchors."
+    },
+    existing_mount: {
+      name: "Remount on Existing Wall Mount (Arms Provided)",
+      price: 50,
+      description: "Reattaching a TV to an existing mount with matching arms."
+    },
+    unmount: {
+      name: "TV Unmounting Service",
+      price: 50,
+      description: "Removing a mounted TV from the wall."
+    }
   },
 
-  electrical: {
-    outletInstallation: 100,
-    additionalOutlet: 10,
+  // TV Mounts for Sale
+  tv_mounts: {
+    fixed_small: {
+      name: "Fixed Mount (32\"-55\")",
+      price: 50,
+      description: "Fixed-position mount for small to medium TVs."
+    },
+    fixed_big: {
+      name: "Fixed Mount (56\"+)",
+      price: 65,
+      description: "Fixed-position mount for large TVs."
+    },
+    tilting_small: {
+      name: "Tilting Mount (32\"-55\")",
+      price: 65,
+      description: "Tilting mount for small to medium TVs."
+    },
+    tilting_big: {
+      name: "Tilting Mount (56\"+)",
+      price: 80,
+      description: "Tilting mount for large TVs."
+    },
+    full_motion_small: {
+      name: "Full Motion Mount (32\"-55\")",
+      price: 90,
+      description: "Full-motion/swivel mount for small to medium TVs."
+    },
+    full_motion_big: {
+      name: "Full Motion Mount (56\"+)",
+      price: 120,
+      description: "Full-motion/swivel mount for large TVs."
+    }
   },
 
-  smartHome: {
-    camera: 75,
-    doorbell: 85,
-    floodlight: 125,
-    brickInstallation: 10,
+  // Wire Concealment & Outlet Installation
+  wire_concealment: {
+    standard: {
+      name: "Wire Concealment & New Outlet Installation",
+      price: 100,
+      description: "Installing a new outlet behind the TV by tapping into an existing one below."
+    },
+    additional: {
+      name: "Additional Outlet Installation",
+      price: 90,
+      description: "Each additional outlet installation at the same location."
+    },
+    fireplace_warning: {
+      name: "Wire Concealment Above Fireplace",
+      restriction: true,
+      description: "Must provide pictures of the nearest outlet for pricing."
+    }
   },
 
-  bundles: {
-    tvPlusOutlet: 190,
+  // Smart Home Installation
+  smart_home: {
+    security_camera: {
+      name: "Smart Security Camera Install",
+      price: 75,
+      description: "Installing a smart security camera."
+    },
+    doorbell: {
+      name: "Smart Doorbell Install",
+      price: 85,
+      description: "Installing a smart video doorbell."
+    },
+    floodlight: {
+      name: "Smart Floodlight Install (Existing Wiring)",
+      price: 125,
+      description: "Installing a smart floodlight with existing wiring."
+    },
+    floodlight_no_wiring: {
+      name: "Smart Floodlight Install (No Existing Wiring)",
+      restriction: true,
+      description: "Requires additional assessment for wiring and junction box installation."
+    }
   },
 
-  generalLabor: {
-    hourly: 100,
-    halfHour: 50,
+  // Custom Services (Hourly Rate)
+  custom_services: {
+    handyman: {
+      name: "General Handyman Work",
+      price: 100,
+      description: "Includes mounting shelves, mirrors, furniture assembly, etc. $50 for each additional 30 minutes."
+    }
   },
 
+  // Discounts
+  discounts: {
+    multiple_tvs: {
+      name: "$10 Off Each Additional TV Mounting",
+      amount: 10
+    },
+    multiple_outlets: {
+      name: "$10 Off Each Additional Outlet Install",
+      amount: 10
+    },
+    mount_bundle: {
+      name: "$5 Off Each Additional Mount Purchased",
+      amount: 5
+    }
+  },
+
+  // Legacy pricing for backward compatibility
   travel: {
     fee: 20,
   }
@@ -68,50 +179,46 @@ export function calculatePrice(options: ServiceOptions) {
   }> = [];
 
   const tvMountingItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
-  const electricalItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
+  const tvMountItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
+  const wireItems: Array<{ name: string; price: number; isDiscount?: boolean }> = [];
   const smartHomeItems: Array<{ name: string; price: number }> = [];
   const laborItems: Array<{ name: string; price: number }> = [];
 
   // TV Mounting Services
   if (options.tvCount > 0) {
-    const baseTvPrice = options.isFireplace ? pricing.tvMounting.fireplace : pricing.tvMounting.base;
+    // Determine base mounting price based on conditions
+    let baseTvOption = 'standard';
+    
+    if (options.isFireplace) {
+      baseTvOption = options.tvMountSurface === 'nonDrywall' ? 'fireplace_brick' : 'fireplace';
+    } else if (options.tvMountSurface === 'nonDrywall') {
+      baseTvOption = 'brick_masonry';
+    } else if (options.isHighRise) {
+      baseTvOption = 'high_rise';
+    }
+    
+    const baseService = pricing.tv_mounting[baseTvOption];
     tvMountingItems.push({
-      name: options.isFireplace ? "Fireplace TV Installation" : "Standard TV Installation",
-      price: baseTvPrice
+      name: baseService.name,
+      price: baseService.price
     });
-    basePrice += baseTvPrice;
+    basePrice += baseService.price;
 
-    if (options.tvMountSurface === 'nonDrywall') {
-      const nonDrywallFee = pricing.tvMounting.nonDrywall;
-      tvMountingItems.push({
-        name: "Non-Drywall Surface (masonry/brick/stone)",
-        price: nonDrywallFee
-      });
-      additionalServices += nonDrywallFee;
-    }
-
-    if (options.isHighRise) {
-      const highRiseFee = pricing.tvMounting.highRise;
-      tvMountingItems.push({
-        name: "High-Rise/Steel Studs Fee",
-        price: highRiseFee
-      });
-      additionalServices += highRiseFee;
-    }
-
+    // Additional TVs with discount
     if (options.tvCount > 1) {
       const additionalTvCount = options.tvCount - 1;
-      const additionalTvBaseCost = additionalTvCount * pricing.tvMounting.base;
+      const additionalTvBaseCost = additionalTvCount * pricing.tv_mounting.standard.price;
       tvMountingItems.push({
         name: `Additional TV Installation (${additionalTvCount})`,
         price: additionalTvBaseCost
       });
       basePrice += additionalTvBaseCost;
 
-      const multiTvDiscount = additionalTvCount * pricing.tvMounting.additionalTv;
+      // Apply multi-TV discount
+      const multiTvDiscount = additionalTvCount * pricing.discounts.multiple_tvs.amount;
       if (multiTvDiscount > 0) {
         tvMountingItems.push({
-          name: "Multi-TV Discount",
+          name: pricing.discounts.multiple_tvs.name,
           price: -multiTvDiscount,
           isDiscount: true
         });
@@ -119,16 +226,24 @@ export function calculatePrice(options: ServiceOptions) {
       }
     }
 
+    // Unmounting service
     if (options.needsUnmount) {
-      const unmountFee = pricing.tvMounting.unmount;
-      tvMountingItems.push({ name: "TV Unmounting", price: unmountFee });
-      additionalServices += unmountFee;
+      const unmountService = pricing.tv_mounting.unmount;
+      tvMountingItems.push({ 
+        name: unmountService.name, 
+        price: unmountService.price 
+      });
+      additionalServices += unmountService.price;
     }
 
+    // Remounting service
     if (options.needsRemount) {
-      const remountFee = pricing.tvMounting.remount;
-      tvMountingItems.push({ name: "TV Remounting", price: remountFee });
-      additionalServices += remountFee;
+      const remountService = pricing.tv_mounting.existing_mount;
+      tvMountingItems.push({ 
+        name: remountService.name, 
+        price: remountService.price 
+      });
+      additionalServices += remountService.price;
     }
 
     breakdown.push({
@@ -139,11 +254,12 @@ export function calculatePrice(options: ServiceOptions) {
 
   // Standalone TV Services
   if (options.unmountOnlyCount > 0) {
-    const unmountFee = options.unmountOnlyCount * pricing.tvMounting.unmount;
+    const unmountService = pricing.tv_mounting.unmount;
+    const unmountFee = options.unmountOnlyCount * unmountService.price;
     breakdown.push({
       category: "TV Unmounting",
       items: [{
-        name: options.unmountOnlyCount > 1 ? `TV Unmounting Only (${options.unmountOnlyCount})` : "TV Unmounting Only",
+        name: options.unmountOnlyCount > 1 ? `${unmountService.name} (${options.unmountOnlyCount})` : unmountService.name,
         price: unmountFee
       }]
     });
@@ -151,42 +267,45 @@ export function calculatePrice(options: ServiceOptions) {
   }
 
   if (options.remountOnlyCount > 0) {
-    const remountFee = options.remountOnlyCount * pricing.tvMounting.remount;
+    const remountService = pricing.tv_mounting.existing_mount;
+    const remountFee = options.remountOnlyCount * remountService.price;
     breakdown.push({
       category: "TV Remounting",
       items: [{
-        name: options.remountOnlyCount > 1 ? `TV Remounting Only (${options.remountOnlyCount})` : "TV Remounting Only",
+        name: options.remountOnlyCount > 1 ? `${remountService.name} (${options.remountOnlyCount})` : remountService.name,
         price: remountFee
       }]
     });
     basePrice += remountFee;
   }
 
-  // Electrical Work
+  // Wire Concealment & Outlet Installation
   if (options.outletCount > 0) {
     // First outlet installation
-    const firstOutletPrice = pricing.electrical.outletInstallation;
-    electricalItems.push({
-      name: "Outlet Installation",
-      price: firstOutletPrice
+    const firstOutletService = pricing.wire_concealment.standard;
+    wireItems.push({
+      name: firstOutletService.name,
+      price: firstOutletService.price
     });
-    additionalServices += firstOutletPrice;
+    additionalServices += firstOutletService.price;
 
     // Additional outlets
     if (options.outletCount > 1) {
       const additionalOutletCount = options.outletCount - 1;
-      const additionalOutletPrice = additionalOutletCount * pricing.electrical.outletInstallation; // Use full price for each outlet
-      electricalItems.push({
-        name: `Additional Outlet Installation (${additionalOutletCount})`,
+      const additionalOutletService = pricing.wire_concealment.additional;
+      const additionalOutletPrice = additionalOutletCount * additionalOutletService.price;
+      
+      wireItems.push({
+        name: `${additionalOutletService.name} (${additionalOutletCount})`,
         price: additionalOutletPrice
       });
       additionalServices += additionalOutletPrice;
 
-      // Multi-outlet discount (10 per additional outlet)
-      const multiOutletDiscount = additionalOutletCount * 10; // Fixed $10 discount per additional outlet
+      // Multi-outlet discount
+      const multiOutletDiscount = additionalOutletCount * pricing.discounts.multiple_outlets.amount;
       if (multiOutletDiscount > 0) {
-        electricalItems.push({
-          name: "Multi-Outlet Discount",
+        wireItems.push({
+          name: pricing.discounts.multiple_outlets.name,
           price: -multiOutletDiscount,
           isDiscount: true
         });
@@ -194,55 +313,40 @@ export function calculatePrice(options: ServiceOptions) {
       }
     }
 
-    // Add electrical items to breakdown
-    if (electricalItems.length > 0) {
+    // Add wire concealment items to breakdown
+    if (wireItems.length > 0) {
       breakdown.push({
-        category: "Electrical Work",
-        items: electricalItems
+        category: "Wire Concealment & Outlets",
+        items: wireItems
       });
-    }
-
-    // Apply bundle discount for TV + outlet combination
-    if (options.tvCount > 0 && !options.isFireplace) {
-      const standardPrice = pricing.tvMounting.base + pricing.electrical.outletInstallation;
-      const bundlePrice = pricing.bundles.tvPlusOutlet;
-      const bundleSavings = standardPrice - bundlePrice;
-
-      if (bundleSavings > 0) {
-        breakdown.push({
-          category: "Bundle Discount",
-          items: [{
-            name: "TV Mount + Outlet Bundle",
-            price: -bundleSavings,
-            isDiscount: true
-          }]
-        });
-        discounts += bundleSavings;
-      }
     }
   }
 
   // Smart Home Installations
   if (options.smartCameras > 0 || options.smartDoorbells > 0 || options.smartFloodlights > 0) {
     if (options.smartCameras > 0) {
-      const basePriceCamera = options.smartCameras * pricing.smartHome.camera;
+      const cameraService = pricing.smart_home.security_camera;
+      const basePriceCamera = options.smartCameras * cameraService.price;
       smartHomeItems.push({
-        name: `Smart Camera Installation (${options.smartCameras})`,
+        name: options.smartCameras > 1 ? `${cameraService.name} (${options.smartCameras})` : cameraService.name,
         price: basePriceCamera
       });
       additionalServices += basePriceCamera;
     }
 
     if (options.smartDoorbells > 0) {
-      const basePriceDoorbell = options.smartDoorbells * pricing.smartHome.doorbell;
+      const doorbellService = pricing.smart_home.doorbell;
+      const basePriceDoorbell = options.smartDoorbells * doorbellService.price;
       smartHomeItems.push({
-        name: `Smart Doorbell Installation (${options.smartDoorbells})`,
+        name: options.smartDoorbells > 1 ? `${doorbellService.name} (${options.smartDoorbells})` : doorbellService.name,
         price: basePriceDoorbell
       });
       additionalServices += basePriceDoorbell;
 
+      // Add brick installation fee if needed
       if (options.installation?.brickInstallation) {
-        const brickFee = pricing.smartHome.brickInstallation * options.smartDoorbells;
+        // Using a fixed price for brick installation (not in new pricing, so using a fixed amount)
+        const brickFee = 10 * options.smartDoorbells;
         smartHomeItems.push({
           name: `Brick Installation Fee (${options.smartDoorbells} doorbell${options.smartDoorbells > 1 ? 's' : ''})`,
           price: brickFee
@@ -252,9 +356,10 @@ export function calculatePrice(options: ServiceOptions) {
     }
 
     if (options.smartFloodlights > 0) {
-      const floodlightPrice = options.smartFloodlights * pricing.smartHome.floodlight;
+      const floodlightService = pricing.smart_home.floodlight;
+      const floodlightPrice = options.smartFloodlights * floodlightService.price;
       smartHomeItems.push({
-        name: `Smart Floodlight Installation (${options.smartFloodlights})`,
+        name: options.smartFloodlights > 1 ? `${floodlightService.name} (${options.smartFloodlights})` : floodlightService.name,
         price: floodlightPrice
       });
       additionalServices += floodlightPrice;
@@ -264,6 +369,24 @@ export function calculatePrice(options: ServiceOptions) {
       breakdown.push({
         category: "Smart Home",
         items: smartHomeItems
+      });
+    }
+  }
+
+  // General Handyman Work
+  if (options.generalLaborHours > 0) {
+    const handymanService = pricing.custom_services.handyman;
+    const hoursPrice = Math.ceil(options.generalLaborHours * 2) / 2 * handymanService.price;
+    laborItems.push({
+      name: `${handymanService.name} (${options.generalLaborHours} ${options.generalLaborHours === 1 ? 'hour' : 'hours'})`,
+      price: hoursPrice
+    });
+    additionalServices += hoursPrice;
+    
+    if (laborItems.length > 0) {
+      breakdown.push({
+        category: "Additional Services",
+        items: laborItems
       });
     }
   }
