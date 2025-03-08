@@ -60,6 +60,12 @@ class Logger {
     }
   }
 
+  warn(message: string, context?: LogContext) {
+    const logMessage = this.formatMessage(LogLevel.INFO, `WARNING: ${message}`, context);
+    infoStream.write(logMessage);
+    console.warn(logMessage.trim());
+  }
+
   auth(message: string, context?: LogContext) {
     const logMessage = this.formatMessage(LogLevel.AUTH, message, context);
     authStream.write(logMessage);

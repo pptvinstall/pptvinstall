@@ -807,7 +807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Admin login
-  app.post("/api/admin/login", (req, res) => {
+  app.post("/api/admin/login", (req: Request, res: Response) => {
     const { password } = req.body;
 
     if (verifyAdminPassword(password)) {
@@ -824,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset admin password
-  app.post("/api/admin/reset-password", (req, res) => {
+  app.post("/api/admin/reset-password", (req: Request, res: Response) => {
     const { currentPassword, newPassword } = req.body;
 
     // Verify current password
@@ -844,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clear all bookings
-  app.post("/api/admin/clear-bookings", async (req, res) => {
+  app.post("/api/admin/clear-bookings", async (req: Request, res: Response) => {
     try {
       const { password } = req.body;
 
