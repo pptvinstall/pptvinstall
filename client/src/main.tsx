@@ -82,6 +82,9 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/admin">
                   {() => <PageWrapper><Admin /></PageWrapper>}
                 </Route>
+                <Route path="/admin/login">
+                  {() => <PageWrapper><Admin /></PageWrapper>}
+                </Route>
                 <Route component={NotFound} />
               </Switch>
             </Router>
