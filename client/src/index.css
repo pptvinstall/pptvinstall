@@ -26,4 +26,9 @@
   .text-gradient-accent {
     @apply bg-gradient-to-r from-brand-red-500 to-brand-red-700 bg-clip-text text-transparent;
   }
+  
+  .scroll-container {
+    @apply relative;
+    position: relative !important;
+  }
 }

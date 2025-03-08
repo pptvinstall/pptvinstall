@@ -109,8 +109,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section 
         ref={heroRef}
-        className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
-        style={{ position: 'relative' }}
+        className="scroll-container relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
       >
         <div className="absolute inset-0 z-0 opacity-10">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20" />
@@ -247,8 +246,8 @@ export default function HomePage() {
       {/* Showcase Image */}
       <motion.section 
         ref={showcaseRef}
-        className="relative py-20 bg-gradient-to-b from-white to-gray-50"
-        style={{ opacity: showcaseOpacity, position: 'relative' }}
+        className="scroll-container relative py-20 bg-gradient-to-b from-white to-gray-50"
+        style={{ opacity: showcaseOpacity }}
       >
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
@@ -308,7 +307,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Services */}
-      <section ref={servicesRef} className="py-20 bg-gray-50" style={{ position: 'relative' }}>
+      <section ref={servicesRef} className="scroll-container py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -385,7 +384,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section ref={testimonialsRef} className="py-20 bg-white" style={{ position: 'relative' }}>
+      <section ref={testimonialsRef} className="scroll-container py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span 
@@ -452,7 +451,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-gradient-to-r from-red-600 to-red-500 text-white">
+      <section className="scroll-container py-20 bg-gradient-to-r from-red-600 to-red-500 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2 
