@@ -200,10 +200,10 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full py-6 flex flex-col items-center"
+                className="w-full py-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
               >
-                <Plus className="h-5 w-5 mb-2" />
-                <span className="text-center">Add TV Mounting</span>
+                <Plus className="h-4 w-4" />
+                <span className="text-center font-medium">Add TV Mounting</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -466,7 +466,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('doorbell')}
-              className="h-auto py-4 px-4 flex flex-col items-center"
+              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
             >
               <div className="text-center">
                 <div className="font-medium">Smart Doorbell</div>
@@ -476,7 +476,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('floodlight')}
-              className="h-auto py-4 px-4 flex flex-col items-center"
+              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
             >
               <div className="text-center">
                 <div className="font-medium">Smart Floodlight</div>
@@ -486,7 +486,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
             <Button
               variant="outline"
               onClick={() => addSmartHomeInstallation('camera')}
-              className="h-auto py-4 px-4 flex flex-col items-center"
+              className="h-auto py-4 px-4 flex flex-col items-center rounded-xl bg-gray-50 border-gray-100 hover:bg-gray-100 hover:border-gray-200 transition-all shadow-sm"
             >
               <div className="text-center">
                 <div className="font-medium">Smart Camera</div>
