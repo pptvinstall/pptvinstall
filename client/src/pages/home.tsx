@@ -1,16 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
-import { 
-  ArrowRight, 
-  Monitor, 
-  Shield, 
-  Star, 
-  Wrench, 
-  CheckCircle, 
-  Tv, 
-  Camera, 
-  Home, 
+import {
+  ArrowRight,
+  Monitor,
+  Shield,
+  Star,
+  Wrench,
+  CheckCircle,
+  Tv,
+  Camera,
+  Home,
   Clock,
   Trophy,
   PhoneCall
@@ -74,7 +74,7 @@ export default function HomePage() {
     },
     {
       title: "Commercial",
-      icon: Monitor, 
+      icon: Monitor,
       color: "text-green-500",
       description: "Professional installation for businesses and offices",
       link: "/services#commercial",
@@ -113,7 +113,7 @@ export default function HomePage() {
   return (
     <div className="scroll-container overflow-x-hidden relative">
       {/* Hero Section with position: relative for useScroll */}
-      <section 
+      <section
         ref={heroRef}
         className="min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
         style={{ position: 'relative' }}
@@ -131,46 +131,41 @@ export default function HomePage() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="text-center lg:text-left"
             >
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className="mb-4 px-3 py-1 text-sm bg-white/80 backdrop-blur-sm border-blue-200 text-blue-600 rounded-full inline-flex items-center gap-1"
               >
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Available Now in Metro Atlanta
               </Badge>
 
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 tracking-tight">
-                <span className="block">Professional</span>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-500">
-                  TV Installation
-                </span>
-                <span className="block">Done Right</span>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-brand-blue-800 via-brand-blue-600 to-brand-blue-500 drop-shadow-sm">
+                Professional TV Mounting & Smart Home Installation
               </h1>
 
-              <p className="text-lg md:text-xl text-blue-600 mb-8 max-w-xl mx-auto lg:mx-0">
-                Expert mounting, cable concealment, and perfect positioning for TVs of all sizes. Servicing the entire Metro Atlanta area.
+              <p className="text-xl lg:text-2xl text-brand-blue-600 mb-8 max-w-2xl">
+                Expert installation services with flawless results in Metro Atlanta
               </p>
 
-              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/booking">
-                  <Button size="lg" className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white transition-all">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="min-w-[180px] shadow-lg shadow-brand-blue-500/20 bg-gradient-to-r from-brand-blue-600 to-brand-blue-500 hover:from-brand-blue-500 hover:to-brand-blue-400 transition-all duration-300 button-glow"
+                  >
                     Book Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <Link href="/services">
-                  <Button variant="outline" size="lg" className="border-blue-200 hover:bg-blue-50 transition-all">
-                    View Services
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="min-w-[180px] border-2 border-brand-blue-200 hover:bg-brand-blue-50 hover:border-brand-blue-300 transition-all duration-300"
+                  >
+                    Our Services
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  size="lg" 
-                  className="flex items-center gap-2"
-                  onClick={() => window.location.href = "tel:+16782632859"}
-                >
-                  <PhoneCall className="h-4 w-4 text-blue-600" />
-                  <span>(678) 263-2859</span>
-                </Button>
               </div>
 
 
@@ -200,7 +195,7 @@ export default function HomePage() {
               </div>
 
               {/* Floating badges */}
-              <motion.div 
+              <motion.div
                 className="absolute -top-4 -right-4 bg-white rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1.5"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -210,7 +205,7 @@ export default function HomePage() {
                 <span className="text-sm font-medium text-blue-600">Licensed & Insured</span>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="absolute -bottom-4 -left-4 bg-white rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1.5"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -225,14 +220,14 @@ export default function HomePage() {
       </section>
 
       {/* Showcase Image section with position: relative for useScroll */}
-      <motion.section 
+      <motion.section
         ref={showcaseRef}
         className="py-20 bg-gradient-to-b from-white to-gray-50"
         style={{ opacity: showcaseOpacity, position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <motion.h2 
+            <motion.h2
               className="text-3xl md:text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -240,8 +235,8 @@ export default function HomePage() {
             >
               Expert TV Installation Services
             </motion.h2>
-            <motion.p 
-              className="text-lg text-blue-600" 
+            <motion.p
+              className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -250,7 +245,7 @@ export default function HomePage() {
             </motion.p>
           </div>
 
-          <motion.div 
+          <motion.div
             className="relative mx-auto rounded-xl overflow-hidden shadow-2xl"
             style={{ scale: showcaseScale }}
           >
@@ -284,77 +279,60 @@ export default function HomePage() {
       </motion.section>
 
       {/* Services */}
-      <section 
-        ref={servicesRef} 
-        className="relative py-20 bg-gray-50"
-        style={{ position: 'relative' }}>
+      <section
+        ref={servicesRef}
+        className="relative py-16 lg:py-24 bg-gradient-to-b from-white to-brand-blue-50/30"
+        style={{ position: 'relative' }}
+      >
         <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <motion.span 
-              className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={servicesInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.4 }}
-            >
-              Our Services
-            </motion.span>
-            <motion.h2 
-              className="text-3xl md:text-4xl font-bold mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={servicesInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              Professional Installation Services
-            </motion.h2>
-            <motion.p 
-              className="text-lg text-blue-600"
-              initial={{ opacity: 0, y: 20 }}
-              animate={servicesInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              From basic TV mounting to complete smart home solutions, we have you covered
-            </motion.p>
+            <h2 className="section-title text-3xl lg:text-4xl font-bold">Our Premium Services</h2>
+            <p className="text-brand-blue-600 text-lg">
+              Professional TV mounting and smart home installation services
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
             {services.map((service, index) => (
               <motion.div
-                key={service.title}
+                key={index}
                 initial={{ opacity: 0, y: 30 }}
                 animate={servicesInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+                transition={{ duration: 0.5, delay: index * 0.15 }}
               >
-                <Card className="h-full border-2 hover:border-blue-200 transition-all duration-300 group overflow-hidden relative">
-                  <CardContent className="pt-6 pb-4 h-full flex flex-col">
-                    <div className={cn("w-12 h-12 flex items-center justify-center rounded-lg mb-4", 
-                      service.color === "text-blue-600" ? "bg-blue-100" : 
-                      service.color === "text-blue-500" ? "bg-blue-100" : "bg-green-100"
-                    )}>
-                      <service.icon className={cn("h-6 w-6", service.color)} />
+                <Card className="h-full hover:shadow-xl transition-all duration-500 border-2 border-brand-blue-100 hover:border-brand-blue-200 overflow-hidden group bg-white">
+                  <CardContent className="pt-8 pb-6 px-6">
+                    <div className="mb-6 flex justify-center">
+                      <div className="p-4 rounded-full bg-gradient-to-br from-brand-blue-50 to-brand-blue-100 shadow-md group-hover:shadow-lg transition-all duration-300 transform group-hover:scale-110">
+                        <service.icon className={`h-8 w-8 ${service.color} group-hover:text-brand-blue-600 transition-colors duration-300`} />
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold mb-2 text-blue-600">{service.title}</h3>
-                    <p className="text-blue-600 mb-4">
-                      {service.description}
-                    </p>
 
-                    <ul className="mb-6 space-y-2 mt-auto">
+                    <h3 className="text-xl font-bold text-center mb-4 text-brand-blue-700 group-hover:text-brand-blue-600 transition-colors duration-300">{service.title}</h3>
+                    <p className="text-center text-gray-600 mb-6">{service.description}</p>
+
+                    <ul className="space-y-3 mb-8">
                       {service.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                          <span className="text-sm text-blue-600">{feature}</span>
+                        <li key={i} className="flex items-center gap-3">
+                          <div className="h-5 w-5 rounded-full bg-brand-blue-50 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="h-4 w-4 text-brand-blue-500" />
+                          </div>
+                          <span className="text-sm text-gray-600">{feature}</span>
                         </li>
                       ))}
                     </ul>
 
-                    <Link href={service.link} className="mt-auto">
-                      <Button 
-                        variant="ghost" 
-                        className="group-hover:translate-x-1 transition-transform p-0 h-auto flex items-center text-blue-600"
-                      >
-                        Learn more
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="text-center mt-auto">
+                      <Link href={service.link}>
+                        <Button
+                          variant="outline"
+                          className="border-brand-blue-200 hover:bg-brand-blue-50 button-glow group-hover:border-brand-blue-300 transition-all duration-300"
+                        >
+                          Learn More
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -364,13 +342,14 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section 
-        ref={testimonialsRef} 
+      <section
+        ref={testimonialsRef}
         className="relative py-20 bg-white"
-        style={{ position: 'relative' }}>
+        style={{ position: 'relative' }}
+      >
         <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <motion.span 
+            <motion.span
               className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
               initial={{ opacity: 0, y: 10 }}
               animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
@@ -378,7 +357,7 @@ export default function HomePage() {
             >
               Testimonials
             </motion.span>
-            <motion.h2 
+            <motion.h2
               className="text-3xl md:text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
@@ -386,7 +365,7 @@ export default function HomePage() {
             >
               What Our Customers Say
             </motion.h2>
-            <motion.p 
+            <motion.p
               className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
@@ -434,12 +413,13 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section 
+      <section
         className="relative py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white"
-        style={{ position: 'relative' }}>
+        style={{ position: 'relative' }}
+      >
         <div className="container relative mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <motion.h2 
+            <motion.h2
               className="text-3xl md:text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -448,7 +428,7 @@ export default function HomePage() {
             >
               Ready for Picture Perfect Installation?
             </motion.h2>
-            <motion.p 
+            <motion.p
               className="text-xl mb-8 opacity-90"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -481,12 +461,13 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us */}
-      <section 
+      <section
         className="relative py-20 bg-gray-50"
-        style={{ position: 'relative' }}>
+        style={{ position: 'relative' }}
+      >
         <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <motion.h2 
+            <motion.h2
               className="text-3xl md:text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -495,7 +476,7 @@ export default function HomePage() {
             >
               Why Choose Us
             </motion.h2>
-            <motion.p 
+            <motion.p
               className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}

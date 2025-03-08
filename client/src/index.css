@@ -4,20 +4,47 @@
 
 @layer base {
   :root {
-    --brand-primary: theme(colors.brand.blue.700);
-    --brand-accent: theme(colors.brand.blue.500);
-    --trust-blue-dark: #1e40af;  /* Dark blue for primary elements */
-    --trust-blue-medium: #3b82f6; /* Medium blue for secondary elements */
-    --trust-blue-light: #93c5fd; /* Light blue for accents */
-    
-    /* Shadow variables */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    
-    /* Animation variables */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --background: 210 33% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 213 94% 59%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.875rem;
+
+    --brand-blue-50: 213 100% 98%;
+    --brand-blue-100: 214 95% 93%;
+    --brand-blue-200: 213 94% 87%;
+    --brand-blue-300: 213 94% 78%;
+    --brand-blue-400: 213 94% 68%;
+    --brand-blue-500: 213 94% 59%;
+    --brand-blue-600: 217 91% 50%;
+    --brand-blue-700: 221 70% 40%;
+    --brand-blue-800: 224 64% 33%;
+    --brand-blue-900: 226 57% 21%;
+    --brand-blue-950: 227 64% 15%;
   }
 
   * {
@@ -27,7 +54,7 @@
   body {
     @apply font-sans antialiased bg-background text-foreground scroll-smooth;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
   }
@@ -43,64 +70,64 @@
   .text-gradient-accent {
     @apply bg-gradient-to-r from-brand-blue-400 to-brand-blue-600 bg-clip-text text-transparent;
   }
-  
+
   /* Shadows with hover effects */
   .shadow-card {
     @apply shadow-md transition-all duration-300 hover:shadow-lg;
   }
-  
+
   /* Button hover effects */
   .btn-hover-effect {
     @apply transform transition-transform duration-300 hover:scale-105 active:scale-95;
   }
-  
+
   /* Trust badge styles - enhanced */
   .trust-badge {
     @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shadow-sm transition-all duration-200 hover:bg-blue-100;
   }
-  
+
   .trust-badge-icon {
     @apply text-blue-600;
   }
-  
+
   /* Enhanced section styles */
   .section-padding {
     @apply py-12 md:py-16 lg:py-20;
   }
-  
+
   .section-title {
     @apply text-3xl md:text-4xl font-bold mb-4 leading-tight;
   }
-  
+
   .section-subtitle {
     @apply text-lg text-blue-600 mb-8;
   }
-  
+
   /* Scroll container positioning */
   .scroll-container {
     @apply relative;
     position: relative !important;
   }
-  
+
   /* Card styles */
   .feature-card {
     @apply p-6 rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg hover:border-blue-200;
   }
-  
+
   /* Animation utilities */
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
-  
+
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  
+
   .animate-slide-up {
     animation: slideUp 0.6s ease-out;
   }
-  
+
   @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
