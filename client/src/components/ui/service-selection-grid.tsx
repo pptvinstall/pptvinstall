@@ -72,49 +72,53 @@ export function ServiceSelectionGrid({
           </TabsList>
 
           <TabsContent value="tv" className="mt-0 relative">
-            <ScrollArea className="h-[280px] pr-2">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
-              >
-                {tvInstallations.map((service) => (
-                  <motion.div key={service.id} variants={itemVariants}>
-                    <ServiceCard
-                      title={service.name}
-                      description={service.description}
-                      icon={<TVServiceIcon type={service.type} />}
-                      price={service.basePrice}
-                      onClick={() => onServiceSelect("tv", service)}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
-            </ScrollArea>
+            <div className="relative">
+              <ScrollArea className="h-[280px] pr-2">
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                >
+                  {tvInstallations.map((service) => (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <ServiceCard
+                        title={service.name}
+                        description={service.description}
+                        icon={<TVServiceIcon type={service.type} />}
+                        price={service.basePrice}
+                        onClick={() => onServiceSelect("tv", service)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
           <TabsContent value="smartHome" className="mt-0 relative">
-            <ScrollArea className="h-[280px] pr-2">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
-              >
-                {smartHomeInstallations.map((service) => (
-                  <motion.div key={service.id} variants={itemVariants}>
-                    <ServiceCard
-                      title={service.name}
-                      description={service.description}
-                      icon={<SmartHomeServiceIcon type={service.type} />}
-                      price={service.basePrice}
-                      onClick={() => onServiceSelect("smartHome", service)}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
-            </ScrollArea>
+            <div className="relative">
+              <ScrollArea className="h-[280px] pr-2">
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                >
+                  {smartHomeInstallations.map((service) => (
+                    <motion.div key={service.id} variants={itemVariants}>
+                      <ServiceCard
+                        title={service.name}
+                        description={service.description}
+                        icon={<SmartHomeServiceIcon type={service.type} />}
+                        price={service.basePrice}
+                        onClick={() => onServiceSelect("smartHome", service)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </ScrollArea>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
