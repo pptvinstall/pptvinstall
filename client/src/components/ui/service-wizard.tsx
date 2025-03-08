@@ -248,7 +248,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                       'TV Remounting Only' :
                       installation.isOutletOnly ?
                         'Outlet Installation Only' :
-                        `TV ${index + 1}`}
+                        `TV Installation ${index + 1}`}
                 </h4>
                 {tvInstallations.length > 1 && (
                   <Button
@@ -483,7 +483,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
               {installation.isOutletOnly && (
                 <div className="text-sm p-4 bg-muted rounded-lg">
                   <p className="font-medium mb-2">Outlet Installation Only Service</p>
-                  <p className="text-muted-foreground">$100 per outlet - Our team will install a new power outlet behind your TV location or anywhere in your home.</p>
+                  <p className="text-muted-foreground">$100 per outlet - Includes installing 1 electrical outlet for your TV with an already mounted TV (non-fireplace, drywall only). There must be an existing outlet directly below where you would like the TV outlet installed.</p>
                 </div>
               )}
             </motion.div>
