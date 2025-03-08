@@ -26,6 +26,7 @@ export type SmartHomeInstallation = {
   type: 'doorbell' | 'floodlight' | 'camera';
   quantity: number;
   brickInstallation?: boolean;
+  mountHeight?: number;
 };
 
 interface ServiceWizardProps {

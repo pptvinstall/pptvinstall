@@ -568,6 +568,15 @@ export function BookingWizard({
     setTvInstallations(services.tvs);
     setSmartHomeInstallations(services.smartHome);
   }, []);
+  
+  // Handle service removal from price calculator
+  const handleRemoveService = useCallback((type: 'tv' | 'smartHome', index: number) => {
+    if (type === 'tv') {
+      setTvInstallations(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setSmartHomeInstallations(prev => prev.filter((_, i) => i !== index));
+    }
+  }, []);
 
   // Update pricing totals
   const handlePricingUpdate = useCallback((total: number) => {
@@ -788,6 +797,7 @@ export function BookingWizard({
             smartHome={smartHomeInstallations}
             distance={0} // Default distance, could be calculated based on zip code
             onUpdate={handlePricingUpdate}
+            onRemoveService={handleRemoveService}
           />
 
           <div className="flex justify-between">
