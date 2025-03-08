@@ -184,12 +184,7 @@ export default function HomePage() {
             >
               <div className="absolute inset-0 bg-gradient-radial from-transparent via-gray-50/80 to-white/90 rounded-3xl"></div>
               <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-gray-100">
-                <ResponsiveImage
-                  src="/assets/showcase.jpeg"
-                  alt="TV Installation Showcase"
-                  className="w-full aspect-[4/3] object-cover"
-                  fallbackSrc="/assets/IMG_1878.jpeg"
-                />
+                <div className="w-full aspect-[4/3] bg-gray-100"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                 <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
                   <div className="flex items-start gap-2">
@@ -197,8 +192,8 @@ export default function HomePage() {
                       <CheckCircle className="h-4 w-4" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-sm">Picture Perfect Results</h3>
-                      <p className="text-xs text-gray-600">Professional TV mounting with flawless wire concealment</p>
+                      <h3 className="font-medium text-sm text-blue-600">Picture Perfect Results</h3>
+                      <p className="text-xs text-blue-600">Professional TV mounting with flawless wire concealment</p>
                     </div>
                   </div>
                 </div>
@@ -259,12 +254,7 @@ export default function HomePage() {
             className="relative mx-auto rounded-xl overflow-hidden shadow-2xl"
             style={{ scale: showcaseScale }}
           >
-            <ResponsiveImage
-              src="/assets/showcase.jpeg"
-              alt="TV Installation Showcase"
-              className="w-full object-cover h-[60vh]"
-              fallbackSrc="/assets/IMG_1878.jpeg"
-            />
+            <div className="w-full h-[60vh] bg-gray-200"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             
             {/* Stats overlay */}
