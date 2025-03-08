@@ -105,7 +105,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="scroll-container overflow-x-hidden">
+    <div className="scroll-container overflow-x-hidden relative">
       {/* Hero Section */}
       <section 
         ref={heroRef}
