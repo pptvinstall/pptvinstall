@@ -110,6 +110,7 @@ export default function HomePage() {
       <section 
         ref={heroRef}
         className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
+        style={{ position: 'relative' }}
       >
         <div className="absolute inset-0 z-0 opacity-10">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20" />
