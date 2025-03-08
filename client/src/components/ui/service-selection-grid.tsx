@@ -72,8 +72,8 @@ export function ServiceSelectionGrid({
           </TabsList>
 
           <TabsContent value="tv" className="mt-0 relative">
-            <div className="relative">
-              <ScrollArea className="h-[280px] pr-2 relative">
+            <div style={{ position: 'relative' }}>
+              <ScrollArea className="h-[280px] pr-2" style={{ position: 'relative' }}>
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
@@ -97,8 +97,8 @@ export function ServiceSelectionGrid({
           </TabsContent>
 
           <TabsContent value="smartHome" className="mt-0 relative">
-            <div className="relative">
-              <ScrollArea className="h-[280px] pr-2 relative">
+            <div style={{ position: 'relative' }}>
+              <ScrollArea className="h-[280px] pr-2" style={{ position: 'relative' }}>
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"

@@ -989,30 +989,46 @@ export function BookingWizard({
     return Object.keys(errors).length === 0;
   }, [formData, validationErrors]);
 
-  // Function to check if we can proceed to the next step
-  // Memoize the result to prevent needless re-renders
-  const canProceedValue = useMemo(() => {
-    switch (currentStep) {
+  // Define a standalone function to check eligibility to proceed for basic steps
+  const checkBasicProceedEligibility = (step: number, 
+    tvs: TVInstallation[], 
+    smartHomes: SmartHomeInstallation[], 
+    date?: Date, 
+    time?: string) => {
+    
+    switch (step) {
       case 0: // Service Selection
-        return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
+        return tvs.length > 0 || smartHomes.length > 0;
       case 1: // Date & Time
-        return selectedDate !== undefined && selectedTime !== undefined;
-      case 2: // Customer Details
-        return true; // Don't validate in the render cycle
+        return date !== undefined && time !== undefined;
+      case 2: // Customer Details - don't validate in render cycle
+        return true;
       default:
         return true;
     }
+  };
+
+  // Store the basic proceed check in a memoized value
+  const canProceedBasicValue = useMemo(() => {
+    return checkBasicProceedEligibility(
+      currentStep, 
+      tvInstallations, 
+      smartHomeInstallations, 
+      selectedDate, 
+      selectedTime
+    );
   }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime]);
-  
-  // Function to check if we can proceed to the next step
+
+  // Define the final canProceed function that uses the basic check or validation as needed
   const canProceed = useCallback(() => {
-    // For customer details step, run full validation
+    // Special case for customer details step
     if (currentStep === 2) {
       return validateCustomerDetails();
     }
+    
     // For other steps, use the memoized value
-    return canProceedValue;
-  }, [currentStep, canProceedValue, validateCustomerDetails]);
+    return canProceedBasicValue;
+  }, [currentStep, canProceedBasicValue, validateCustomerDetails]);
 
   // Submit the form
   const handleSubmit = useCallback(async () => {
