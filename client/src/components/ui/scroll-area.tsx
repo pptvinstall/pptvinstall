@@ -10,7 +10,8 @@ const ScrollArea = React.forwardRef<
   // Create a style object with explicit positioning
   const containerStyle = {
     position: 'relative' as const,
-    overflow: 'hidden' as const
+    overflow: 'hidden' as const,
+    contain: 'layout' as const
   };
   
   const viewportStyle = {
@@ -19,22 +20,27 @@ const ScrollArea = React.forwardRef<
     width: '100%' as const
   };
   
+  // Add a wrapper div with explicit positioning to prevent the warning
   return (
-    <ScrollAreaPrimitive.Root
-      ref={ref}
-      className={cn("relative overflow-hidden", className)}
-      style={containerStyle}
-      {...props}
-    >
-      <ScrollAreaPrimitive.Viewport 
-        className="h-full w-full rounded-[inherit]" 
-        style={viewportStyle}
+    <div className="scroll-area-wrapper relative">
+      <ScrollAreaPrimitive.Root
+        ref={ref}
+        className={cn("relative overflow-hidden", className)}
+        style={containerStyle}
+        {...props}
       >
-        {children}
-      </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
+        <ScrollAreaPrimitive.Viewport 
+          className="h-full w-full rounded-[inherit] relative" 
+          style={viewportStyle}
+        >
+          <div className="relative">
+            {children}
+          </div>
+        </ScrollAreaPrimitive.Viewport>
+        <ScrollBar />
+        <ScrollAreaPrimitive.Corner />
+      </ScrollAreaPrimitive.Root>
+    </div>
   );
 })
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
