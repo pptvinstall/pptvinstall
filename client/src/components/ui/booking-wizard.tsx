@@ -1,430 +1,766 @@
-import * as React from "react"
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion } from "framer-motion"
-import { Calendar } from "./calendar"
-import { TimeSlot } from "./time-slot"
-import { Button } from "./button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./card"
-import { ServiceWizard, type TVInstallation, type SmartHomeInstallation } from "./service-wizard"
-import { PriceCalculator } from "./price-calculator"
-import { Input } from "./input"
-import { Textarea } from "./textarea"
-import { Checkbox } from "./checkbox"
-import { Label } from "./label"
-import { Trash2 } from "lucide-react"
-import { format } from "date-fns"
-import { useQuery } from '@tanstack/react-query';
-import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
-import { createServiceDescription } from "@/lib/use-pricing";
-import { bookingSchema } from "@shared/schema";
 
-// Environment variables
-const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const GOOGLE_CALENDAR_ID = import.meta.env.VITE_GOOGLE_CALENDAR_ID;
+import React, { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "./scroll-area";
+import { Calendar } from "./calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./card";
+import { Button } from "./button";
+import { ServiceSelectionGrid } from "./service-selection-grid";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
+import { Input } from "./input";
+import { Textarea } from "./textarea";
+import { Label } from "./label";
+import { Checkbox } from "./checkbox";
+import { Separator } from "./separator";
+import { LoadingSpinner } from "./loading-spinner";
+import { Icons } from "../icons";
+import { Badge } from "./badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
+import { cn } from "@/lib/utils";
 
-const steps = [
-  "Choose Services",
-  "Select Date & Time",
-  "Your Details",
-  "Review & Book"
-] as const;
-
-interface BookingWizardProps {
-  onSubmit: (data: any) => void;
+type BookingWizardProps = {
+  onSubmit: (data: any) => Promise<any>;
   isSubmitting: boolean;
   existingBookings?: any[];
   isLoadingBookings?: boolean;
-}
+};
 
-// Step 1 component - Choose Services
-const ServiceSelectionStep = React.memo(({ onServiceSelect, onContinue }: {
-  onServiceSelect: (services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => void;
-  onContinue: () => void;
-}) => (
-  <ServiceWizard
-    onServiceSelect={onServiceSelect}
-    onClose={onContinue}
-  />
-));
-
-// Step 2 component - Date & Time Selection
-const DateTimeSelectionStep = React.memo(({
-  selectedDate,
-  setSelectedDate,
-  selectedTime,
-  setSelectedTime,
-  isBookingsLoading,
-  timeSlots,
-  isTimeSlotAvailable
+// Step indicator component
+const StepIndicator = ({
+  currentStep,
+  totalSteps,
 }: {
-  selectedDate: Date | undefined;
-  setSelectedDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
-  selectedTime: string | undefined;
-  setSelectedTime: React.Dispatch<React.SetStateAction<string | undefined>>;
-  isBookingsLoading: boolean;
-  timeSlots: string[];
-  isTimeSlotAvailable: (time: string) => boolean | undefined;
-}) => (
-  <div className="space-y-6">
-    <div className="space-y-2">
-      <h3 className="text-lg font-medium">Select a Date</h3>
-      <p className="text-sm text-muted-foreground">
-        Choose a preferred date for your installation.
-      </p>
+  currentStep: number;
+  totalSteps: number;
+}) => {
+  return (
+    <div className="flex items-center justify-between w-full mb-6">
+      {Array.from({ length: totalSteps }).map((_, index) => (
+        <React.Fragment key={index}>
+          <div
+            className={cn(
+              "rounded-full transition-all duration-200 flex items-center justify-center",
+              currentStep === index
+                ? "bg-primary text-primary-foreground w-8 h-8 shadow-md"
+                : currentStep > index
+                ? "bg-primary/20 text-primary w-7 h-7"
+                : "bg-muted text-muted-foreground w-7 h-7"
+            )}
+          >
+            {currentStep > index ? (
+              <Icons.check className="h-4 w-4" />
+            ) : (
+              <span className="text-sm">{index + 1}</span>
+            )}
+          </div>
+          {index < totalSteps - 1 && (
+            <div className="flex-grow h-0.5 mx-1 relative">
+              <div
+                className="absolute inset-0 bg-muted"
+                aria-hidden="true"
+              ></div>
+              <div
+                className="absolute inset-0 bg-primary transition-all duration-300 ease-in-out"
+                style={{
+                  transform: `scaleX(${
+                    currentStep > index ? 1 : currentStep === index ? 0.5 : 0
+                  })`,
+                  transformOrigin: "left",
+                }}
+                aria-hidden="true"
+              ></div>
+            </div>
+          )}
+        </React.Fragment>
+      ))}
     </div>
+  );
+};
 
-    <Calendar
-      mode="single"
-      selected={selectedDate}
-      onSelect={(date) => {
-        setSelectedDate(date);
-        setSelectedTime(undefined); // Reset time when date changes
-      }}
-      className="rounded-md border mx-auto"
-      disabled={(date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return date < today;
-      }}
-    />
+// Price Calculator component
+const PriceCalculator = React.memo(
+  ({
+    tvs,
+    smartHome,
+    distance = 0,
+    onUpdate,
+    onRemoveService,
+    onAddService,
+  }: {
+    tvs: TVInstallation[];
+    smartHome: SmartHomeInstallation[];
+    distance: number;
+    onUpdate: (total: number, breakdown: any) => void;
+    onRemoveService: (type: "tv" | "smartHome", id: string) => void;
+    onAddService: () => void;
+  }) => {
+    // Calculate total price
+    useEffect(() => {
+      const tvCost = tvs.reduce(
+        (acc, service) => acc + (service.basePrice || 0),
+        0
+      );
+      const smartHomeCost = smartHome.reduce(
+        (acc, service) => acc + (service.basePrice || 0),
+        0
+      );
+      const distanceFee = distance > 30 ? (distance - 30) * 2 : 0;
+      const totalCost = tvCost + smartHomeCost + distanceFee;
 
-    {selectedDate && (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-4"
-      >
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Select a Time Slot</h3>
-          <p className="text-sm text-muted-foreground">
-            Available time slots for {format(selectedDate, "EEEE, MMMM d, yyyy")}.
+      const breakdown = {
+        tv: tvCost,
+        smartHome: smartHomeCost,
+        distanceFee,
+        total: totalCost,
+      };
+
+      onUpdate(totalCost, breakdown);
+    }, [tvs, smartHome, distance, onUpdate]);
+
+    const allServices = [...tvs, ...smartHome];
+
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Pricing Summary</span>
+            <Badge variant="outline" className="font-normal text-xs">
+              {allServices.length} {allServices.length === 1 ? "item" : "items"}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2">
+          {allServices.length > 0 ? (
+            <ScrollArea className="max-h-[200px] pr-3">
+              <div className="space-y-3">
+                {allServices.map((service) => (
+                  <div
+                    key={service.id}
+                    className="flex justify-between items-center group"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{service.name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {service.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">
+                        ${service.basePrice}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() =>
+                          onRemoveService(
+                            "type" in service && service.type.includes("mount")
+                              ? "tv"
+                              : "smartHome",
+                            service.id
+                          )
+                        }
+                        title="Remove service"
+                      >
+                        <Icons.trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+              <div className="rounded-full bg-muted p-3">
+                <Icons.fileX className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="text-sm font-medium">No services selected</div>
+              <div className="text-xs text-muted-foreground">
+                Add services to see pricing details
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col pt-0">
+          {allServices.length > 0 && (
+            <div className="w-full">
+              <Separator className="my-2" />
+              <div className="flex justify-between items-center py-2">
+                <span className="font-semibold">Total</span>
+                <span className="font-bold text-xl text-primary">
+                  $
+                  {allServices
+                    .reduce((acc, service) => acc + service.basePrice, 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            className="w-full mt-2"
+            onClick={onAddService}
+            disabled={allServices.length === 0 && currentStep > 0}
+          >
+            <Icons.add className="mr-2 h-4 w-4" />
+            {allServices.length === 0 ? "Add Services" : "Add More Services"}
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+);
+
+// Step 1 component - Service Selection
+const ServiceSelectionStep = React.memo(
+  ({
+    onServiceSelect,
+  }: {
+    onServiceSelect: (
+      type: "tv" | "smartHome",
+      service: TVInstallation | SmartHomeInstallation
+    ) => void;
+    onContinue: () => void;
+  }) => {
+    // Sample TV installation services
+    const tvInstallations: TVInstallation[] = [
+      {
+        id: "tv-mount-1",
+        name: "TV Wall Mounting (Up to 55\")",
+        description: "Standard wall mounting for TVs up to 55 inches",
+        type: "mount",
+        basePrice: 99,
+      },
+      {
+        id: "tv-mount-2",
+        name: "TV Wall Mounting (56-75\")",
+        description: "Standard wall mounting for TVs 56-75 inches",
+        type: "mount",
+        basePrice: 129,
+      },
+      {
+        id: "tv-mount-3",
+        name: "TV Wall Mounting (76\"+ or Heavy)",
+        description: "Wall mounting for TVs 76 inches and larger or heavy TVs",
+        type: "mount",
+        basePrice: 199,
+      },
+      {
+        id: "tv-unmount-1",
+        name: "TV Unmounting",
+        description: "Removal of an existing TV from wall mount",
+        type: "unmount",
+        basePrice: 49,
+      },
+      {
+        id: "tv-remount-1",
+        name: "TV Remounting",
+        description: "Moving an existing TV to a new location",
+        type: "remount",
+        basePrice: 149,
+      },
+      {
+        id: "tv-outlet-1",
+        name: "In-Wall Power Outlet",
+        description: "Professional installation of in-wall power management",
+        type: "outlet",
+        basePrice: 149,
+      },
+    ];
+
+    // Sample Smart Home installation services
+    const smartHomeInstallations: SmartHomeInstallation[] = [
+      {
+        id: "smart-camera-1",
+        name: "Security Camera Installation",
+        description: "Install and setup of security cameras",
+        type: "camera",
+        basePrice: 99,
+      },
+      {
+        id: "smart-doorbell-1",
+        name: "Smart Doorbell Installation",
+        description: "Install and configure video doorbell",
+        type: "doorbell",
+        basePrice: 79,
+      },
+      {
+        id: "smart-light-1",
+        name: "Smart Lighting Setup",
+        description: "Installation of smart lighting systems",
+        type: "lighting",
+        basePrice: 89,
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl font-bold tracking-tight mb-2">
+            Book Your Installation
+          </h1>
+          <p className="text-muted-foreground">
+            Choose from our professional installation services
           </p>
         </div>
 
-        {isBookingsLoading ? (
-          <div className="text-center py-4 animate-pulse">
-            <p className="text-muted-foreground">Loading available time slots...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {timeSlots.map((time) => {
-              // Get availability status (true, false, or undefined if checking)
-              const availability = isTimeSlotAvailable(time);
+        <ServiceSelectionGrid
+          onServiceSelect={onServiceSelect}
+          tvInstallations={tvInstallations}
+          smartHomeInstallations={smartHomeInstallations}
+        />
+      </div>
+    );
+  }
+);
 
-              // Only show the time slot if it's available or we're still checking
-              if (availability === false) return null; // Don't render unavailable slots
+// Step 2 component - Date & Time Selection
+const DateTimeSelectionStep = React.memo(
+  ({
+    selectedDate,
+    setSelectedDate,
+    selectedTime,
+    setSelectedTime,
+    isBookingsLoading,
+    timeSlots,
+    isTimeSlotAvailable,
+  }: {
+    selectedDate: Date | undefined;
+    setSelectedDate: (date: Date | undefined) => void;
+    selectedTime: string | undefined;
+    setSelectedTime: (time: string | undefined) => void;
+    isBookingsLoading: boolean;
+    timeSlots: string[];
+    isTimeSlotAvailable: (date: string, time: string) => boolean;
+  }) => {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Select Date & Time</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose a preferred date and time for your installation
+          </p>
+        </div>
 
-              return (
-                <TimeSlot
-                  key={time}
-                  time={time}
-                  available={true} // If we're rendering it, it's either available or checking
-                  selected={selectedTime === time}
-                  loading={availability === undefined} // Show loading state if undefined
-                  onClick={() => {
-                    setSelectedTime(time);
-                    console.log("Time selected (raw string):", time);
-                  }}
-                />
-              );
-            })}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <Card className="md:col-span-3">
+            <CardContent className="pt-6">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={(date) => {
+                  // Disable dates in the past
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return date < today;
+                }}
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">
+                Available Time Slots
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isBookingsLoading ? (
+                <div className="flex justify-center py-6">
+                  <LoadingSpinner />
+                </div>
+              ) : !selectedDate ? (
+                <div className="text-center py-6 text-sm text-muted-foreground">
+                  Please select a date first
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {timeSlots.map((time) => {
+                    const isAvailable = isTimeSlotAvailable(
+                      format(selectedDate, "yyyy-MM-dd"),
+                      time
+                    );
+                    return (
+                      <Button
+                        key={time}
+                        variant={
+                          selectedTime === time ? "default" : "outline"
+                        }
+                        className={cn(
+                          "w-full justify-center",
+                          !isAvailable &&
+                            "opacity-50 cursor-not-allowed hover:bg-background hover:text-foreground"
+                        )}
+                        onClick={() => {
+                          if (isAvailable) {
+                            setSelectedTime(time);
+                          }
+                        }}
+                        disabled={!isAvailable}
+                      >
+                        {time}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {selectedDate && selectedTime && (
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <p className="font-medium">
+              Your appointment:{" "}
+              <span className="font-bold">
+                {format(selectedDate, "EEEE, MMMM d, yyyy")} at {selectedTime}
+              </span>
+            </p>
           </div>
         )}
-      </motion.div>
-    )}
-  </div>
-));
+      </div>
+    );
+  }
+);
 
 // Step 3 component - Customer Details
-const CustomerDetailsStep = React.memo(({
-  formData,
-  setFormData,
-  validationErrors
-}: {
-  formData: any;
-  setFormData: React.Dispatch<React.SetStateAction<any>>;
-  validationErrors: Record<string, string[]>;
-}) => (
-  <div className="space-y-6">
-    <div className="space-y-2">
-      <h3 className="text-lg font-medium">Contact Information</h3>
-      <p className="text-sm text-muted-foreground">
-        Please provide your contact details so we can confirm your booking.
-      </p>
-    </div>
+const CustomerDetailsStep = React.memo(
+  ({
+    formData,
+    setFormData,
+    validationErrors,
+  }: {
+    formData: any;
+    setFormData: (data: any) => void;
+    validationErrors: Record<string, string[]>;
+  }) => {
+    // Helper to show validation errors
+    const showError = (field: string) => {
+      return validationErrors[field] ? (
+        <p className="text-xs mt-1 text-destructive">
+          {validationErrors[field][0]}
+        </p>
+      ) : null;
+    };
 
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Your full name"
-          className={validationErrors.name ? "border-red-500" : ""}
-        />
-        {validationErrors.name && (
-          <p className="text-sm text-red-500">{validationErrors.name[0]}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="your.email@example.com"
-            className={validationErrors.email ? "border-red-500" : ""}
-          />
-          {validationErrors.email && (
-            <p className="text-sm text-red-500">{validationErrors.email[0]}</p>
-          )}
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Your Details</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Please provide your contact and address information
+          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input
-            id="phone"
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="(123) 456-7890"
-            className={validationErrors.phone ? "border-red-500" : ""}
-          />
-          {validationErrors.phone && (
-            <p className="text-sm text-red-500">{validationErrors.phone[0]}</p>
-          )}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name" className="text-sm font-medium">
+                Full Name*
+              </Label>
+              <Input
+                id="name"
+                placeholder="John Smith"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className={validationErrors.name ? "border-destructive" : ""}
+              />
+              {showError("name")}
+            </div>
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email Address*
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@example.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className={validationErrors.email ? "border-destructive" : ""}
+              />
+              {showError("email")}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="phone" className="text-sm font-medium">
+              Phone Number*
+            </Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="(123) 456-7890"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+              className={validationErrors.phone ? "border-destructive" : ""}
+            />
+            {showError("phone")}
+          </div>
+
+          <div>
+            <Label htmlFor="streetAddress" className="text-sm font-medium">
+              Street Address*
+            </Label>
+            <Input
+              id="streetAddress"
+              placeholder="123 Main St"
+              value={formData.streetAddress}
+              onChange={(e) =>
+                setFormData({ ...formData, streetAddress: e.target.value })
+              }
+              className={
+                validationErrors.streetAddress ? "border-destructive" : ""
+              }
+            />
+            {showError("streetAddress")}
+          </div>
+
+          <div>
+            <Label htmlFor="addressLine2" className="text-sm font-medium">
+              Apartment, Suite, etc. (optional)
+            </Label>
+            <Input
+              id="addressLine2"
+              placeholder="Apt #123"
+              value={formData.addressLine2}
+              onChange={(e) =>
+                setFormData({ ...formData, addressLine2: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="city" className="text-sm font-medium">
+                City*
+              </Label>
+              <Input
+                id="city"
+                placeholder="Los Angeles"
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+                className={validationErrors.city ? "border-destructive" : ""}
+              />
+              {showError("city")}
+            </div>
+            <div>
+              <Label htmlFor="state" className="text-sm font-medium">
+                State*
+              </Label>
+              <Select
+                value={formData.state}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, state: value })
+                }
+              >
+                <SelectTrigger
+                  id="state"
+                  className={validationErrors.state ? "border-destructive" : ""}
+                >
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {[
+                      "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+                      "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+                      "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+                      "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+                      "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+                    ].map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {showError("state")}
+            </div>
+            <div>
+              <Label htmlFor="zipCode" className="text-sm font-medium">
+                ZIP Code*
+              </Label>
+              <Input
+                id="zipCode"
+                placeholder="90001"
+                value={formData.zipCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, zipCode: e.target.value })
+                }
+                className={validationErrors.zipCode ? "border-destructive" : ""}
+              />
+              {showError("zipCode")}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="notes" className="text-sm font-medium">
+              Additional Notes (optional)
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Any special instructions or requests..."
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="consent"
+              checked={formData.consentToContact}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, consentToContact: checked === true })
+              }
+            />
+            <Label
+              htmlFor="consent"
+              className="text-sm leading-tight"
+            >
+              I consent to receive text messages about my appointment details, promotions, and service updates.
+            </Label>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div className="space-y-2">
-      <h3 className="text-lg font-medium">Installation Address</h3>
-      <p className="text-sm text-muted-foreground">
-        Where will we be performing the installation service?
-      </p>
-    </div>
-
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="streetAddress">Street Address</Label>
-        <Input
-          id="streetAddress"
-          value={formData.streetAddress}
-          onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
-          placeholder="123 Main Street"
-          className={validationErrors.streetAddress ? "border-red-500" : ""}
-        />
-        {validationErrors.streetAddress && (
-          <p className="text-sm text-red-500">{validationErrors.streetAddress[0]}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
-        <Input
-          id="addressLine2"
-          value={formData.addressLine2}
-          onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-          placeholder="Apt, Suite, Unit, etc."
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input
-            id="city"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            placeholder="Atlanta"
-            className={validationErrors.city ? "border-red-500" : ""}
-          />
-          {validationErrors.city && (
-            <p className="text-sm text-red-500">{validationErrors.city[0]}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="state">State</Label>
-          <Input
-            id="state"
-            value={formData.state}
-            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-            placeholder="GA"
-            className={validationErrors.state ? "border-red-500" : ""}
-          />
-          {validationErrors.state && (
-            <p className="text-sm text-red-500">{validationErrors.state[0]}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="zipCode">ZIP Code</Label>
-        <Input
-          id="zipCode"
-          value={formData.zipCode}
-          onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-          placeholder="30303"
-          className={validationErrors.zipCode ? "border-red-500" : ""}
-        />
-        {validationErrors.zipCode && (
-          <p className="text-sm text-red-500">{validationErrors.zipCode[0]}</p>
-        )}
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="notes">Special Instructions (Optional)</Label>
-      <Textarea
-        id="notes"
-        value={formData.notes}
-        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-        placeholder="Any specific instructions or details about the installation location"
-        className="min-h-[100px]"
-      />
-    </div>
-
-    <div className="flex items-start space-x-2">
-      <Checkbox
-        id="consent"
-        checked={formData.consentToContact}
-        onCheckedChange={(checked) =>
-          setFormData({ ...formData, consentToContact: checked === true })
-        }
-      />
-      <Label
-        htmlFor="consent"
-        className="text-sm leading-tight"
-      >
-        I consent to receive text messages about my appointment details, promotions, and service updates.
-      </Label>
-    </div>
-  </div>
-));
+    );
+  }
+);
 
 // Step 4 component - Review & Book
-const ReviewBookingStep = React.memo(({
-  tvInstallations,
-  smartHomeInstallations,
-  selectedDate,
-  selectedTime,
-  formData,
-  pricingTotal
-}: {
-  tvInstallations: TVInstallation[];
-  smartHomeInstallations: SmartHomeInstallation[];
-  selectedDate: Date | undefined;
-  selectedTime: string | undefined;
-  formData: any;
-  pricingTotal: number;
-}) => (
-  <div className="space-y-6">
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Installation Details</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <h4 className="text-sm font-medium">Date & Time</h4>
-            <p className="text-sm mt-1">
-              {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")} at <span className="font-medium">{selectedTime}</span>
-            </p>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium">Total Price</h4>
-            <p className="text-sm mt-1">
-              <span className="font-medium">${pricingTotal}</span>
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-medium">Services</h4>
-          <ul className="text-sm mt-1 space-y-1">
-            {tvInstallations.map((tv, index) => (
-              <li key={`tv-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
-                {tv.isUnmountOnly ? 'TV Unmounting Only' :
-                  tv.isRemountOnly ? 'TV Remounting Only' :
-                    `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} 
-                     ${tv.mountType !== 'none' && ` (${tv.mountType})`}
-                     ${tv.masonryWall && ' on non-drywall surface'}
-                     ${tv.outletRelocation && ' with outlet installation'}`}
-              </li>
-            ))}
-            {smartHomeInstallations.map((device, index) => (
-              <li key={`smart-${index}`} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
-                {device.type === 'doorbell' ? 'Smart Doorbell' :
-                  device.type === 'floodlight' ? 'Smart Floodlight' :
-                    'Smart Camera'} {device.quantity > 1 && `(×${device.quantity})`}
-                {device.type === 'camera' && device.mountHeight && device.mountHeight > 8 &&
-                  ` at ${device.mountHeight}ft`}
-                {device.type === 'doorbell' && device.brickInstallation && ' (on Brick)'}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Contact Information</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <h4 className="text-sm font-medium">Name</h4>
-            <p className="text-sm mt-1">{formData.name}</p>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium">Phone</h4>
-            <p className="text-sm mt-1">{formData.phone}</p>
-          </div>
-        </div>
-        <div>
-          <h4 className="text-sm font-medium">Email</h4>
-          <p className="text-sm mt-1">{formData.email}</p>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Installation Address</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm">
-          {formData.streetAddress}<br />
-          {formData.addressLine2 && <>{formData.addressLine2}<br /></>}
-          {formData.city}, {formData.state} {formData.zipCode}
+const ReviewBookingStep = React.memo(
+  ({
+    tvInstallations,
+    smartHomeInstallations,
+    selectedDate,
+    selectedTime,
+    formData,
+    pricingTotal,
+  }: {
+    tvInstallations: TVInstallation[];
+    smartHomeInstallations: SmartHomeInstallation[];
+    selectedDate: Date | undefined;
+    selectedTime: string | undefined;
+    formData: any;
+    pricingTotal: number;
+  }) => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Review Your Booking</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Please review your information before confirming
         </p>
-      </CardContent>
-    </Card>
+      </div>
 
-    {formData.notes && (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>Special Instructions</CardTitle>
+          <CardTitle>Installation Details</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm">{formData.notes}</p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <h4 className="text-sm font-medium">Date & Time</h4>
+              <p className="text-sm mt-1">
+                {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")} at <span className="font-medium">{selectedTime}</span>
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium">Total Price</h4>
+              <p className="text-sm mt-1">
+                <span className="font-medium">${pricingTotal}</span>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium">Services</h4>
+            <div className="mt-1 space-y-1">
+              {[...tvInstallations, ...smartHomeInstallations].map((service) => (
+                <div key={service.id} className="flex justify-between text-sm">
+                  <span>{service.name}</span>
+                  <span>${service.basePrice}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
-    )}
 
-    <div className="text-sm space-y-2">
-      <p>
-        By clicking "Confirm Booking", you agree to our <a href="/terms" className="text-primary underline">Terms of Service</a> and acknowledge our <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
-      </p>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Contact Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div>
+              <h4 className="font-medium">Name</h4>
+              <p>{formData.name}</p>
+            </div>
+            <div>
+              <h4 className="font-medium">Email</h4>
+              <p>{formData.email}</p>
+            </div>
+            <div>
+              <h4 className="font-medium">Phone</h4>
+              <p>{formData.phone}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Installation Address</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm">
+            <p>{formData.streetAddress}</p>
+            {formData.addressLine2 && <p>{formData.addressLine2}</p>}
+            <p>
+              {formData.city}, {formData.state} {formData.zipCode}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="text-sm space-y-2">
+        <p>
+          By clicking "Confirm Booking", you agree to our <a href="/terms" className="text-primary underline">Terms of Service</a> and acknowledge our <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
+        </p>
+      </div>
     </div>
-  </div>
-));
+  )
+);
 
 export function BookingWizard({
   onSubmit,
@@ -454,327 +790,229 @@ export function BookingWizard({
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   // State for validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  
+  const { toast } = useToast();
+  
+  // Define steps
+  const steps = [
+    "Service Selection",
+    "Date & Time",
+    "Your Details",
+    "Review & Book"
+  ];
 
   // Auto-scroll to top when changing steps
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Get calendar availability data
-  const { isTimeSlotAvailable: checkCalendarSlotAvailable, isLoading: isCalendarLoading } = useCalendarAvailability();
+  // Get time slots
+  const timeSlots = [
+    "9:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "12:00 PM",
+    "1:00 PM",
+    "2:00 PM",
+    "3:00 PM",
+    "4:00 PM",
+    "5:00 PM",
+    "6:00 PM"
+  ];
 
-  // Effect to update availabilities when date changes
-  useEffect(() => {
-    if (selectedDate) {
-      // Reset availability when date changes
-      setTimeSlotAvailability({});
-    }
-  }, [selectedDate]);
-
-  // Generate time slots based on day of week - memoized to avoid recalculation
-  const timeSlots = useMemo(() => {
-    if (!selectedDate) return [];
-
-    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6; // 0 is Sunday, 6 is Saturday
-
-    if (isWeekend) {
-      // Weekend slots: 11 AM to 7 PM
-      return [
-        "10:00 AM",
-        "11:00 AM",
-        "12:00 PM",
-        "1:00 PM",
-        "2:00 PM",
-        "3:00 PM",
-        "4:00 PM",
-        "5:00 PM",
-        "6:00 PM",
-        "7:00 PM"
-      ];
-    } else {
-      // Weekday slots: 6:30 PM to 10:30 PM
-      return [
-        "5:30 PM",
-        "6:30 PM",
-        "7:30 PM",
-        "8:30 PM",
-        "9:30 PM"
-      ];
-    }
-  }, [selectedDate]);
-
-  // Memoized function to check if time is already booked
-  const isTimeBooked = useCallback((dateString: string, time: string) => {
-    // Make sure allBookings is defined and is an array before using .some()
-    if (!existingBookings || !Array.isArray(existingBookings)) {
-      return false; // Return false if no bookings exist yet
-    }
-    return existingBookings.some(
-      (booking) => booking.preferredDate === dateString && booking.appointmentTime === time
-    );
-  }, [existingBookings]);
-
-  // Check time slot availability and update state - handles async Google Calendar checking
-  const checkTimeSlotAvailability = useCallback(async (dateString: string, time: string) => {
-    // First check our existing bookings (synchronous)
-    if (isTimeBooked(dateString, time)) {
-      setTimeSlotAvailability(prev => ({
-        ...prev,
-        [`${dateString}-${time}`]: false
-      }));
-      return false;
-    }
-
-    try {
-      // Then check Google Calendar availability (async)
-      const isAvailable = await checkCalendarSlotAvailable(dateString, time);
-
-      // Update the state with the result
-      setTimeSlotAvailability(prev => ({
-        ...prev,
-        [`${dateString}-${time}`]: isAvailable
-      }));
-
-      return isAvailable;
-    } catch (error) {
-      console.error("Error checking time slot availability:", error);
-      // Default to available if there's an error
-      setTimeSlotAvailability(prev => ({
-        ...prev,
-        [`${dateString}-${time}`]: true
-      }));
-      return true;
-    }
-  }, [isTimeBooked, checkCalendarSlotAvailable]);
-
-  // Check if a time slot is available - consults the local state for up-to-date availability
-  const isTimeSlotAvailable = useCallback((time: string) => {
-    if (!selectedDate) return true; // Always available if no date is selected
-
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    const key = `${dateString}-${time}`;
-
-    // If we haven't checked this slot yet, trigger a check and default to unknown (showing loading state)
-    if (timeSlotAvailability[key] === undefined) {
-      // Trigger an async check that will update the state
-      checkTimeSlotAvailability(dateString, time);
-      return undefined; // Return undefined to indicate "checking"
-    }
-
-    // Return the known availability
-    return timeSlotAvailability[key];
-  }, [selectedDate, timeSlotAvailability, checkTimeSlotAvailability]);
-
-  const handleServiceSelect = useCallback((services: { tvs: TVInstallation[], smartHome: SmartHomeInstallation[] }) => {
-    setTvInstallations(services.tvs);
-    setSmartHomeInstallations(services.smartHome);
-  }, []);
-  
-  // Handle service removal from price calculator
-  const handleRemoveService = useCallback((type: 'tv' | 'smartHome', index: number) => {
-    if (type === 'tv') {
-      setTvInstallations(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setSmartHomeInstallations(prev => prev.filter((_, i) => i !== index));
-    }
-  }, []);
-  
-  // Handle adding services directly from price breakdown
-  const handleAddService = useCallback((type: 'tv' | 'smartHome', subtype: string) => {
-    if (type === 'tv') {
-      if (subtype === 'standard') {
-        // Add a standard TV mounting
-        setTvInstallations(prev => [
-          ...prev, 
-          {
-            size: 'small',
-            location: 'standard',
-            mountType: 'tilt',
-            masonryWall: false,
-            outletRelocation: false,
-            highRise: false,
-            unmount: false,
-            remount: false,
-            isUnmountOnly: false,
-            isRemountOnly: false,
-            isOutletOnly: false
-          }
-        ]);
-      } else if (subtype === 'unmount') {
-        // Add TV unmounting only service
-        setTvInstallations(prev => [
-          ...prev, 
-          {
-            size: 'small',
-            location: 'standard',
-            mountType: 'none',
-            masonryWall: false,
-            outletRelocation: false,
-            highRise: false,
-            unmount: false,
-            remount: false,
-            isUnmountOnly: true,
-            isRemountOnly: false,
-            isOutletOnly: false
-          }
-        ]);
-      } else if (subtype === 'remount') {
-        // Add TV remounting only service
-        setTvInstallations(prev => [
-          ...prev, 
-          {
-            size: 'small',
-            location: 'standard',
-            mountType: 'none',
-            masonryWall: false,
-            outletRelocation: false,
-            highRise: false,
-            unmount: false,
-            remount: false,
-            isUnmountOnly: false,
-            isRemountOnly: true,
-            isOutletOnly: false
-          }
-        ]);
-      } else if (subtype === 'outlet') {
-        // Add outlet-only installation
-        setTvInstallations(prev => [
-          ...prev, 
-          {
-            size: 'small',
-            location: 'standard',
-            mountType: 'none',
-            masonryWall: false,
-            outletRelocation: false,
-            highRise: false,
-            unmount: false,
-            remount: false,
-            isUnmountOnly: false,
-            isRemountOnly: false,
-            isOutletOnly: true
-          }
-        ]);
+  // Function to check if a time slot is available
+  const isTimeSlotAvailable = useCallback(
+    (date: string, time: string) => {
+      const key = `${date}-${time}`;
+      
+      // Check if we've already determined availability for this slot
+      if (timeSlotAvailability[key] !== undefined) {
+        return timeSlotAvailability[key];
       }
-    } else if (type === 'smartHome') {
-      if (['camera', 'doorbell', 'floodlight'].includes(subtype)) {
-        // Add smart home device
-        setSmartHomeInstallations(prev => [
-          ...prev, 
-          {
-            type: subtype as 'camera' | 'doorbell' | 'floodlight',
-            quantity: 1,
-            brickInstallation: false
-          }
-        ]);
-      }
-    }
-  }, []);
 
-  // Update pricing totals
-  const handlePricingUpdate = useCallback((total: number) => {
+      // Check current date/time - can't book in the past
+      const now = new Date();
+      const selectedDateTime = new Date(`${date}T${time.replace(/AM|PM/, '')}`);
+      
+      // Add timezone correction (assuming this is needed based on your logs)
+      selectedDateTime.setHours(
+        time.includes("PM") && !time.startsWith("12") 
+          ? selectedDateTime.getHours() + 12 
+          : time.includes("AM") && time.startsWith("12")
+          ? 0
+          : selectedDateTime.getHours()
+      );
+      
+      // Add 30 minute buffer for bookings
+      const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
+      
+      // Slots in the past (or within buffer) are not available
+      if (selectedDateTime <= bufferTime) {
+        setTimeSlotAvailability(prev => ({
+          ...prev,
+          [key]: false
+        }));
+        return false;
+      }
+
+      // Check existing bookings
+      const isBooked = existingBookings.some(booking => {
+        const bookingDate = new Date(booking.preferredDate).toISOString().split('T')[0];
+        return bookingDate === date && booking.appointmentTime === time && booking.status === 'active';
+      });
+
+      // Update availability cache
+      setTimeSlotAvailability(prev => ({
+        ...prev,
+        [key]: !isBooked
+      }));
+
+      return !isBooked;
+    },
+    [existingBookings, timeSlotAvailability]
+  );
+
+  // Handle service selection
+  const handleServiceSelect = (
+    type: "tv" | "smartHome",
+    service: TVInstallation | SmartHomeInstallation
+  ) => {
+    if (type === "tv") {
+      setTvInstallations(prev => [...prev, service as TVInstallation]);
+    } else {
+      setSmartHomeInstallations(prev => [...prev, service as SmartHomeInstallation]);
+    }
+  };
+
+  // Handle service removal
+  const handleRemoveService = (type: "tv" | "smartHome", id: string) => {
+    if (type === "tv") {
+      setTvInstallations(prev => prev.filter(service => service.id !== id));
+    } else {
+      setSmartHomeInstallations(prev => prev.filter(service => service.id !== id));
+    }
+  };
+
+  // Handle "Add More Services" button click
+  const handleAddService = () => {
+    setCurrentStep(0); // Go back to service selection step
+  };
+
+  // Handle pricing update
+  const handlePricingUpdate = (total: number, breakdown: any) => {
     setPricingTotal(total);
-  }, []);
+  };
 
-  // Validate the customer details form data
-  const validateCustomerDetails = useCallback(() => {
-    // Create a subset of the bookingSchema with only the customer fields
-    const customerSchema = bookingSchema.pick({
-      name: true,
-      email: true,
-      phone: true,
-      streetAddress: true,
-      city: true,
-      state: true,
-      zipCode: true
-    });
-
-    // Validate the form data
-    const result = customerSchema.safeParse(formData);
-
-    if (!result.success) {
-      // Extract error messages
-      const fieldErrors = result.error.flatten().fieldErrors;
-      setValidationErrors(fieldErrors);
-      return false;
-    }
-
-    // Clear validation errors if validation succeeds
-    setValidationErrors({});
-    return true;
-  }, [formData]);
-
-  // Check if user can proceed to next step
+  // Function to check if we can proceed to the next step
   const canProceed = useCallback(() => {
     switch (currentStep) {
-      case 0:
+      case 0: // Service Selection
         return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
-      case 1:
-        return selectedDate && selectedTime;
-      case 2:
-        // Don't call validateCustomerDetails directly here as it can cause infinite renders
-        // Instead just check if the required fields have values
-        return !!formData.name && !!formData.email && !!formData.phone &&
-          !!formData.streetAddress && !!formData.city && !!formData.state && !!formData.zipCode;
+      case 1: // Date & Time
+        return selectedDate !== undefined && selectedTime !== undefined;
+      case 2: // Customer Details
+        return validateCustomerDetails();
       default:
         return true;
     }
-  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData]);
+  }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime]);
 
-  // Handle form submission
-  const handleSubmit = useCallback(() => {
-    console.log("Starting booking submission");
-    // Create service description using the utility function
-    const serviceDescription = createServiceDescription(tvInstallations, smartHomeInstallations);
+  // Validate customer details form
+  const validateCustomerDetails = useCallback(() => {
+    const errors: Record<string, string[]> = {};
 
-    // CRITICAL: Store the raw date value without any modification
-    // We use yyyy-MM-dd format to ensure the date is preserved exactly as selected
-    const rawDateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-    console.log("Raw date string:", rawDateString);
-    console.log("Selected time:", selectedTime);
+    // Required fields
+    if (!formData.name.trim()) {
+      errors.name = ["Name is required"];
+    }
 
-    // Create lists of smart home items by type
-    const smartHomeItems = smartHomeInstallations.flatMap(item =>
-      Array(item.quantity).fill(item.type === 'doorbell' ? 'doorbell' :
-        item.type === 'floodlight' ? 'floodlight' : 'camera')
-    );
+    if (!formData.email.trim()) {
+      errors.email = ["Email is required"];
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = ["Please enter a valid email address"];
+    }
 
-    // Prepare the booking data payload
-    const bookingData = {
-      ...formData,
-      serviceType: serviceDescription,
-      preferredDate: rawDateString,
-      appointmentTime: selectedTime, // Store raw time string directly
-      smartHomeItems: smartHomeItems, // Add this for better tracking of selected services
-      pricingTotal: pricingTotal,
-      pricingBreakdown: [
-        ...tvInstallations.map(tv => ({
-          type: 'tv',
-          size: tv.size,
-          location: tv.location,
-          mountType: tv.mountType,
-          masonryWall: tv.masonryWall,
-          outletRelocation: tv.outletRelocation,
-          highRise: tv.highRise,
-          isUnmountOnly: tv.isUnmountOnly || false,
-          isRemountOnly: tv.isRemountOnly || false
-        })),
-        ...smartHomeInstallations.map(item => ({
-          type: item.type,
-          quantity: item.quantity,
-          mountHeight: item.mountHeight,
-          brickInstallation: item.brickInstallation
-        }))
-      ]
-    };
+    if (!formData.phone.trim()) {
+      errors.phone = ["Phone number is required"];
+    }
 
-    console.log("Submitting booking data:", bookingData);
-    // Submit booking data
-    onSubmit(bookingData);
-  }, [tvInstallations, smartHomeInstallations, selectedDate, selectedTime, formData, onSubmit, pricingTotal]);
+    if (!formData.streetAddress.trim()) {
+      errors.streetAddress = ["Street address is required"];
+    }
 
-  // Use passed bookings or fetched bookings as fallback
-  const allBookings = existingBookings.length > 0 ? existingBookings : [];
-  const isBookingsLoading = isLoadingBookings || isCalendarLoading;
+    if (!formData.city.trim()) {
+      errors.city = ["City is required"];
+    }
+
+    if (!formData.state) {
+      errors.state = ["State is required"];
+    }
+
+    if (!formData.zipCode.trim()) {
+      errors.zipCode = ["ZIP code is required"];
+    } else if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode.trim())) {
+      errors.zipCode = ["Please enter a valid ZIP code"];
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [formData]);
+
+  // Submit the form
+  const handleSubmit = useCallback(async () => {
+    if (!canProceed()) {
+      toast({
+        title: "Please complete all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Combine all services
+      const allServices = [...tvInstallations, ...smartHomeInstallations];
+      
+      // Format services as string for server
+      const serviceType = allServices.map(service => service.name).join('; ');
+      
+      // Prepare submission data
+      const bookingData = {
+        ...formData,
+        serviceType,
+        preferredDate: selectedDate?.toISOString(),
+        appointmentTime: selectedTime,
+        status: 'active',
+        pricingTotal,
+        pricingBreakdown: {
+          services: allServices.map(service => ({
+            name: service.name,
+            price: service.basePrice
+          })),
+          total: pricingTotal
+        }
+      };
+
+      // Submit booking
+      await onSubmit(bookingData);
+    } catch (error) {
+      console.error("Error submitting booking:", error);
+      toast({
+        title: "Error submitting booking",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    }
+  }, [
+    canProceed,
+    formData,
+    tvInstallations,
+    smartHomeInstallations,
+    selectedDate,
+    selectedTime,
+    pricingTotal,
+    onSubmit,
+    toast
+  ]);
 
   // Handle next button click with validation
   const handleNextClick = useCallback(() => {
@@ -791,132 +1029,121 @@ export function BookingWizard({
       // For final step, submit the form
       handleSubmit();
     }
-  }, [currentStep, handleSubmit, validateCustomerDetails]);
+  }, [currentStep, handleSubmit, validateCustomerDetails, steps.length]);
+
+  // Use passed bookings or fetched bookings as fallback
+  const allBookings = existingBookings.length > 0 ? existingBookings : [];
+  const isBookingsLoading = isLoadingBookings || false;
+  
+  const isCalendarLoading = false; // Placeholder for actual calendar loading state
+
+  // Animation variants for page transitions
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    in: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Progress Steps */}
-      <div className="flex justify-between">
-        {steps.map((step, index) => (
-          <div
-            key={step}
-            className={`flex items-center ${
-              index < steps.length - 1 ? "flex-1" : ""
-            }`}
+    <div className="w-full max-w-6xl mx-auto">
+      <div className="space-y-6">
+        {/* Steps progress */}
+        <StepIndicator currentStep={currentStep} totalSteps={steps.length} />
+
+        {/* Main content area */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial="initial"
+            animate="in"
+            exit="exit"
+            variants={pageVariants}
+            transition={{ duration: 0.3 }}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0.5 }}
-              animate={{
-                scale: index <= currentStep ? 1 : 0.9,
-                opacity: index <= currentStep ? 1 : 0.5
-              }}
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                index <= currentStep
-                  ? "bg-primary text-white"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {index + 1}
-            </motion.div>
-            <div className="ml-2 hidden sm:block">
-              <p className={`text-sm font-medium ${
-                index <= currentStep ? "text-foreground" : "text-muted-foreground"
-              }`}>
-                {step}
-              </p>
+            {/* Step Content */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              {/* Main Content Column */}
+              <Card className="md:col-span-3 p-6">
+                {currentStep === 0 && (
+                  <ServiceSelectionStep
+                    onServiceSelect={handleServiceSelect}
+                    onContinue={() => {
+                      // Move to next step after service selection is confirmed
+                      if (canProceed()) {
+                        setCurrentStep(1);
+                      }
+                    }}
+                  />
+                )}
+
+                {currentStep === 1 && (
+                  <DateTimeSelectionStep
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    selectedTime={selectedTime}
+                    setSelectedTime={setSelectedTime}
+                    isBookingsLoading={isBookingsLoading}
+                    timeSlots={timeSlots}
+                    isTimeSlotAvailable={isTimeSlotAvailable}
+                  />
+                )}
+
+                {currentStep === 2 && (
+                  <CustomerDetailsStep
+                    formData={formData}
+                    setFormData={setFormData}
+                    validationErrors={validationErrors}
+                  />
+                )}
+
+                {currentStep === 3 && (
+                  <ReviewBookingStep
+                    tvInstallations={tvInstallations}
+                    smartHomeInstallations={smartHomeInstallations}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    formData={formData}
+                    pricingTotal={pricingTotal}
+                  />
+                )}
+              </Card>
+
+              {/* Sidebar: Price Breakdown + Service Management */}
+              <div className="md:col-span-2 space-y-6">
+                {/* Price Calculator with service management capabilities */}
+                <PriceCalculator
+                  tvs={tvInstallations}
+                  smartHome={smartHomeInstallations}
+                  distance={0} // Default distance, could be calculated based on zip code
+                  onUpdate={handlePricingUpdate}
+                  onRemoveService={handleRemoveService}
+                  onAddService={handleAddService}
+                />
+
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
+                    disabled={currentStep === 0}
+                  >
+                    Previous
+                  </Button>
+
+                  <Button
+                    onClick={handleNextClick}
+                    disabled={isSubmitting || !canProceed()}
+                  >
+                    {isSubmitting
+                      ? "Processing..."
+                      : currentStep === steps.length - 1
+                        ? "Confirm Booking"
+                        : "Next"}
+                  </Button>
+                </div>
+              </div>
             </div>
-            {index < steps.length - 1 && (
-              <div
-                className={`flex-1 h-[2px] mx-2 ${
-                  index < currentStep ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Step Content */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {/* Main Content Column */}
-        <Card className="md:col-span-3 p-6">
-          {currentStep === 0 && (
-            <ServiceSelectionStep
-              onServiceSelect={handleServiceSelect}
-              onContinue={() => {
-                // Move to next step after service selection is confirmed
-                if (canProceed()) {
-                  setCurrentStep(1);
-                }
-              }}
-            />
-          )}
-
-          {currentStep === 1 && (
-            <DateTimeSelectionStep
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              selectedTime={selectedTime}
-              setSelectedTime={setSelectedTime}
-              isBookingsLoading={isBookingsLoading}
-              timeSlots={timeSlots}
-              isTimeSlotAvailable={isTimeSlotAvailable}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <CustomerDetailsStep
-              formData={formData}
-              setFormData={setFormData}
-              validationErrors={validationErrors}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <ReviewBookingStep
-              tvInstallations={tvInstallations}
-              smartHomeInstallations={smartHomeInstallations}
-              selectedDate={selectedDate}
-              selectedTime={selectedTime}
-              formData={formData}
-              pricingTotal={pricingTotal}
-            />
-          )}
-        </Card>
-
-        {/* Sidebar: Price Breakdown + Service Management */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Price Calculator with service management capabilities */}
-          <PriceCalculator
-            tvs={tvInstallations}
-            smartHome={smartHomeInstallations}
-            distance={0} // Default distance, could be calculated based on zip code
-            onUpdate={handlePricingUpdate}
-            onRemoveService={handleRemoveService}
-            onAddService={handleAddService}
-          />
-
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
-              disabled={currentStep === 0}
-            >
-              Previous
-            </Button>
-
-            <Button
-              onClick={handleNextClick}
-              disabled={isSubmitting || !canProceed()}
-            >
-              {isSubmitting
-                ? "Processing..."
-                : currentStep === steps.length - 1
-                  ? "Confirm Booking"
-                  : "Next"}
-            </Button>
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
