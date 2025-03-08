@@ -61,7 +61,7 @@ export function ResponsiveImage({
         setIsWebpSupported(webpSup);
       }
     };
-    
+
     checkWebpSupport();
   }, []);
 
@@ -81,21 +81,21 @@ export function ResponsiveImage({
         // Only load the manifest once
         if (imageManifest === null) {
           const response = await fetch('/assets/optimized/images-manifest.json');
-          
+
           if (!response.ok) {
             throw new Error('Failed to load image manifest');
           }
-          
+
           const manifest = await response.json();
           setImageManifest(manifest);
-          
+
           // If imageName exists in manifest, update imageInfo
           if (imageName && manifest[imageName]) {
             setImageInfo(manifest[imageName]);
             setImageSrc(isWebpSupported ? manifest[imageName].webp : manifest[imageName].default);
           } else {
             // Fallback to original if not in manifest
-            setImageSrc(src);
+            setImageSrc(src || fallbackSrc || ''); // Use fallbackSrc if available
           }
         } else if (imageName && imageManifest[imageName]) {
           // Manifest already loaded
@@ -103,25 +103,25 @@ export function ResponsiveImage({
           setImageSrc(isWebpSupported ? imageManifest[imageName].webp : imageManifest[imageName].default);
         } else {
           // Image not in manifest
-          setImageSrc(src);
+          setImageSrc(src || fallbackSrc || ''); // Use fallbackSrc if available
         }
-        
+
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading optimized image:', err);
-        setImageSrc(src); // Fallback to original
+        setImageSrc(fallbackSrc || ''); // Use fallbackSrc if available
         setError(err as Error);
         setIsLoading(false);
       }
     }
 
     loadImageManifest();
-  }, [src, useOptimized, imageManifest, imageName, isWebpSupported]);
+  }, [src, useOptimized, imageManifest, imageName, isWebpSupported, fallbackSrc]);
 
   // Generate srcset for responsive images
   const srcSet = useMemo(() => {
     if (!imageInfo) return '';
-    
+
     return imageInfo.responsive
       .map(size => `${isWebpSupported ? size.webp : size.jpg} ${size.width}w`)
       .join(', ');
@@ -137,15 +137,15 @@ export function ResponsiveImage({
     backgroundColor: placeholderColor,
     width: width || '100%',
     height: height || 0,
-    aspectRatio: imageInfo?.width && imageInfo?.height 
-      ? `${imageInfo.width} / ${imageInfo.height}` 
+    aspectRatio: imageInfo?.width && imageInfo?.height
+      ? `${imageInfo.width} / ${imageInfo.height}`
       : 'auto',
   };
 
   return (
-    <div 
+    <div
       className={cn(
-        "relative overflow-hidden", 
+        "relative overflow-hidden",
         !height && !imageInfo?.height && "min-h-[100px]",
         className
       )}
@@ -156,9 +156,9 @@ export function ResponsiveImage({
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       )}
-      
+
       {error && console.error('Image loading error:', error)}
-      
+
       <picture>
         {/* If WebP is supported and we have responsive sizes, add source for WebP */}
         {isWebpSupported && imageInfo?.responsive && (
@@ -168,7 +168,7 @@ export function ResponsiveImage({
             sizes={sizes}
           />
         )}
-        
+
         {/* Always include standard format sources for fallback */}
         {imageInfo?.responsive && (
           <source
@@ -177,9 +177,9 @@ export function ResponsiveImage({
             sizes={sizes}
           />
         )}
-        
+
         <img
-          src={imageSrc}
+          src={imageSrc || fallbackSrc || ''} //Added fallbackSrc
           alt={alt}
           width={width || imageInfo?.width}
           height={height || imageInfo?.height}
@@ -197,6 +197,12 @@ export function ResponsiveImage({
           loading={priority ? "eager" : "lazy"}
           srcSet={!imageInfo?.responsive ? undefined : srcSet}
           sizes={!imageInfo?.responsive ? undefined : sizes}
+          onError={(e) => {
+            // Prevent broken image icons by setting a default image or removing src
+            if (!imageSrc && !fallbackSrc) {
+              e.currentTarget.style.display = 'none';
+            }
+          }}
           {...props}
         />
       </picture>
