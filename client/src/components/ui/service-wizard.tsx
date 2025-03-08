@@ -131,12 +131,14 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
     
     // Smart Home devices
     smartHomeDevices.forEach(device => {
+      // Use fixed price of $89 for all smart home devices to match price-calculator.tsx
+      const smartHomeDevicePrice = 89;
       if (device.type === 'camera') {
-        total += device.count * pricing.smart_home.security_camera.price;
+        total += device.count * smartHomeDevicePrice;
       } else if (device.type === 'doorbell') {
-        total += device.count * pricing.smart_home.doorbell.price;
+        total += device.count * smartHomeDevicePrice;
       } else if (device.type === 'floodlight' && device.hasExistingWiring) {
-        total += device.count * pricing.smart_home.floodlight.price;
+        total += device.count * smartHomeDevicePrice;
       }
     });
     
