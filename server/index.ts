@@ -61,10 +61,12 @@ app.use((req, res, next) => {
 let serverInstance: any = null;
 
 // Setup graceful shutdown handlers
-const setupGracefulShutdown = (server: any) => {
-  const gracefulShutdown = () => {
-    log('Shutting down gracefully...');
-    server.close(() => {
+const gracefulShutdown = () => {
+  log('Shutting down gracefully...');
+
+  // Only shut down if server exists
+  if (serverInstance) {
+    serverInstance.close(() => {
       log('Server closed. Process terminating...');
       process.exit(0);
     });
@@ -73,18 +75,11 @@ const setupGracefulShutdown = (server: any) => {
     setTimeout(() => {
       log('Forcing server shutdown after timeout');
       process.exit(1);
-    }, 10000); // 10 second timeout
-  };
-
-  // Listen for termination signals
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-
-  // Catch uncaught exceptions
-  process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-    gracefulShutdown();
-  });
+    }, 30000); // 30 second timeout - increased to allow for connections to close
+  } else {
+    log('Server not initialized, exiting immediately');
+    process.exit(0);
+  }
 };
 
 // Main application startup
@@ -123,7 +118,7 @@ const setupGracefulShutdown = (server: any) => {
     }
 
     // Setup graceful shutdown
-    setupGracefulShutdown(server);
+    //setupGracefulShutdown(server);
 
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client
@@ -158,3 +153,20 @@ const setupGracefulShutdown = (server: any) => {
     process.exit(1);
   }
 })();
+
+// Log uncaught exceptions but don't shut down unless truly necessary
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Only shutdown for severe errors that would prevent the server from functioning
+  if (error.message && (
+    error.message.includes('EADDRINUSE') || 
+    error.message.includes('EACCES') || 
+    error.message.includes('cannot bind to port')
+  )) {
+    gracefulShutdown();
+  }
+  // For other errors, just log them without shutting down
+});
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
