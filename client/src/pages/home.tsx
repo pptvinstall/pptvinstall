@@ -34,15 +34,13 @@ export default function HomePage() {
   // Using a ref with a container that has position: relative
   const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
-    offset: ["start start", "end start"],
-    layoutEffect: false
+    offset: ["start start", "end start"]
   });
   
   // Add a scroll progress tracker for the showcase section
   const { scrollYProgress: showcaseScrollProgress } = useScroll({
     target: showcaseRef,
-    offset: ["start start", "end start"],
-    layoutEffect: false
+    offset: ["start start", "end start"]
   });
   
   const showcaseOpacity = useTransform(heroScrollProgress, [0, 0.5], [1, 0.7]);

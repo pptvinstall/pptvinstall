@@ -70,9 +70,6 @@ export function AutoSlideshow() {
                 src={installation.image}
                 alt={installation.title}
                 className="w-full h-full object-cover"
-                useOptimized={true}
-                quality="high"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
               />
             </div>
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
