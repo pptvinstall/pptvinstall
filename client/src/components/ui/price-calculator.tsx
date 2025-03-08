@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
 import { Button } from "./button"
 import { Trash2, Plus, Tv, Camera, BellRing, LampFloor, PowerCircle } from "lucide-react"
-import { formatPrice, type ServiceOptions } from "@/lib/pricing"
+import { formatPrice, type ServiceOptions, pricing } from "@/lib/pricing"
 import type { TVInstallation, SmartHomeInstallation } from "@/types/booking"
 
 interface PriceCalculatorProps {
@@ -36,17 +36,24 @@ export function PriceCalculator({
   
   // Calculate pricing based on selections
   React.useEffect(() => {
-    // Use the correct prices from the pricing.ts file
-    const cameraPrice = 75;   // $75 per camera
-    const doorbellPrice = 85; // $85 per doorbell
-    const floodlightPrice = 125; // $125 per floodlight
+    // Import pricing directly from pricing.ts
+    const cameraPrice = pricing.smart_home.security_camera.price;   // $75 per camera
+    const doorbellPrice = pricing.smart_home.doorbell.price; // $85 per doorbell
+    const floodlightPrice = pricing.smart_home.floodlight.price; // $125 per floodlight
+    const wirePrice = pricing.wire_concealment.standard.price; // $100 per wire concealment
     
     // Calculate total based on services
     let totalPrice = 0;
     
-    // Add TV installation prices
+    // Add TV installation prices with wire concealment
     tvs.forEach(tv => {
+      // Add base price for TV installation
       totalPrice += tv.basePrice;
+      
+      // Add wire concealment price if needed (from tv.description)
+      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
+        totalPrice += wirePrice;
+      }
     });
     
     // Add smart home device prices
@@ -79,9 +86,28 @@ export function PriceCalculator({
   // Calculate total for display
   const calculateTotal = () => {
     let total = 0;
-    smartHome.forEach(device => {
-      total += getPriceForDeviceType(device.type);
+    
+    // Add TV installations
+    tvs.forEach(tv => {
+      total += tv.basePrice;
+      
+      // Add wire concealment
+      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
+        total += pricing.wire_concealment.standard.price;
+      }
     });
+    
+    // Add smart home devices
+    smartHome.forEach(device => {
+      if (device.type === 'camera') {
+        total += pricing.smart_home.security_camera.price;
+      } else if (device.type === 'doorbell') {
+        total += pricing.smart_home.doorbell.price;
+      } else if (device.type === 'floodlight') {
+        total += pricing.smart_home.floodlight.price;
+      }
+    });
+    
     return total;
   };
   
@@ -98,13 +124,31 @@ export function PriceCalculator({
   const serviceDescriptions = (): ServiceItem[] => {
     const items: ServiceItem[] = [];
     
+    // Add TV installations
+    tvs.forEach((tv, index) => {
+      items.push({
+        name: tv.name || `TV Installation ${index + 1}`,
+        description: tv.description || "Standard TV installation",
+        price: tv.basePrice
+      });
+      
+      // Add wire concealment as a separate line item if needed
+      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
+        items.push({
+          name: "Wire Concealment & Outlet",
+          description: `Wire concealment for TV ${index + 1}`,
+          price: pricing.wire_concealment.standard.price
+        });
+      }
+    });
+    
     // Add camera installations
     const cameras = smartHome.filter(item => item.type === 'camera');
     if (cameras.length > 0) {
       items.push({
         name: "Smart Camera Installation",
         description: "Installation of smart camera",
-        price: getPriceForDeviceType('camera')
+        price: pricing.smart_home.security_camera.price
       });
     }
     
@@ -114,7 +158,7 @@ export function PriceCalculator({
       items.push({
         name: "Smart Doorbell Installation",
         description: "Installation of smart doorbell",
-        price: getPriceForDeviceType('doorbell')
+        price: pricing.smart_home.doorbell.price
       });
     }
     
@@ -124,7 +168,7 @@ export function PriceCalculator({
       items.push({
         name: "Smart Floodlight Installation",
         description: "Installation of smart floodlight",
-        price: getPriceForDeviceType('floodlight')
+        price: pricing.smart_home.floodlight.price
       });
     }
     
