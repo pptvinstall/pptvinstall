@@ -446,9 +446,6 @@ const DateTimeSelectionStep = React.memo(
 );
 
 // CustomerDetailsStep is imported from steps directory
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name" className="text-sm font-medium">
                 Full Name*
