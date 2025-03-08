@@ -105,7 +105,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="scroll-container overflow-x-hidden">
       {/* Hero Section */}
       <section 
         ref={heroRef}
@@ -496,7 +496,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-20 bg-gray-50">
+      <section className="scroll-container py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.h2 
