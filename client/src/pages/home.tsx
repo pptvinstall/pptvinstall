@@ -146,7 +146,7 @@ export default function HomePage() {
                 <span className="block">Done Right</span>
               </h1>
               
-              <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0">
+              <p className="text-lg md:text-xl text-blue-600 mb-8 max-w-xl mx-auto lg:mx-0">
                 Expert mounting, cable concealment, and perfect positioning for TVs of all sizes. Servicing the entire Metro Atlanta area.
               </p>
               
@@ -206,8 +206,8 @@ export default function HomePage() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
               >
-                <Shield className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">Licensed & Insured</span>
+                <Shield className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-600">Licensed & Insured</span>
               </motion.div>
               
               <motion.div 
@@ -216,8 +216,8 @@ export default function HomePage() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
               >
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">Same-Day Available</span>
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-600">Same-Day Available</span>
               </motion.div>
             </motion.div>
           </div>
@@ -241,7 +241,7 @@ export default function HomePage() {
               Expert TV Installation Services
             </motion.h2>
             <motion.p 
-              className="text-lg text-gray-600" 
+              className="text-lg text-blue-600" 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -306,7 +306,7 @@ export default function HomePage() {
               Professional Installation Services
             </motion.h2>
             <motion.p 
-              className="text-lg text-gray-600"
+              className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               animate={servicesInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -331,16 +331,16 @@ export default function HomePage() {
                     )}>
                       <service.icon className={cn("h-6 w-6", service.color)} />
                     </div>
-                    <h3 className="text-xl font-bold mb-2">{service.title}</h3>
-                    <p className="text-gray-600 mb-4">
+                    <h3 className="text-xl font-bold mb-2 text-blue-600">{service.title}</h3>
+                    <p className="text-blue-600 mb-4">
                       {service.description}
                     </p>
                     
                     <ul className="mb-6 space-y-2 mt-auto">
                       {service.features.map((feature, i) => (
                         <li key={i} className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{feature}</span>
+                          <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <span className="text-sm text-blue-600">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -386,7 +386,7 @@ export default function HomePage() {
               What Our Customers Say
             </motion.h2>
             <motion.p 
-              className="text-lg text-gray-600"
+              className="text-lg text-blue-600"
               initial={{ opacity: 0, y: 20 }}
               animate={testimonialsInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -407,22 +407,22 @@ export default function HomePage() {
                   <CardContent className="p-6 h-full flex flex-col">
                     <div className="flex items-start gap-4 mb-4">
                       <div className="bg-blue-100 p-2 rounded-full">
-                        <Star className="h-5 w-5 text-blue-500" />
+                        <Star className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="flex text-blue-400">
+                      <div className="flex text-blue-600">
                         {[...Array(testimonial.rating)].map((_, i) => (
                           <Star key={i} className="h-4 w-4 fill-current" />
                         ))}
                       </div>
                     </div>
                     
-                    <p className="text-gray-600 mb-6 flex-grow">
+                    <p className="text-blue-600 mb-6 flex-grow">
                       "{testimonial.text}"
                     </p>
                     
                     <div className="mt-auto">
-                      <p className="font-semibold">{testimonial.name}</p>
-                      <p className="text-sm text-gray-500">{testimonial.location}</p>
+                      <p className="font-semibold text-blue-600">{testimonial.name}</p>
+                      <p className="text-sm text-blue-600">{testimonial.location}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -519,8 +519,8 @@ export default function HomePage() {
                     <div className="mx-auto w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
                       <benefit.icon className="h-6 w-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-bold mb-2">{benefit.title}</h3>
-                    <p className="text-gray-600">{benefit.text}</p>
+                    <h3 className="text-lg font-bold mb-2 text-blue-600">{benefit.title}</h3>
+                    <p className="text-blue-600">{benefit.text}</p>
                   </CardContent>
                 </Card>
               </motion.div>
