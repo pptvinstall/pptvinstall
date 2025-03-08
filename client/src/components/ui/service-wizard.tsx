@@ -162,10 +162,11 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 <span>
                   {tv.isUnmountOnly ? 'TV Unmounting Only' :
                     tv.isRemountOnly ? 'TV Remounting Only' :
-                      `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
+                      tv.isOutletOnly ? 'Outlet Installation Only' :
+                        `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'standard' ? 'Standard' : tv.location === 'fireplace' ? 'Fireplace' : 'Ceiling'} ${tv.mountType !== 'none' ? ` (${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilt' ? 'Tilt' : 'Full Motion'})` : ''}`}
                   {tv.masonryWall && ' • Non-Drywall Surface'}
                   {tv.highRise && ' • High-Rise/Steel Studs'}
-                  {tv.outletRelocation && ' • Outlet Installation'}
+                  {tv.outletRelocation && !tv.isOutletOnly && ' • Outlet Installation'}
                   {tv.unmount && !tv.isUnmountOnly && ' • With Unmounting'}
                   {tv.remount && !tv.isRemountOnly && ' • With Remounting'}
                 </span>
@@ -245,7 +246,9 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                     'TV Unmounting Only' :
                     installation.isRemountOnly ?
                       'TV Remounting Only' :
-                      `TV ${index + 1}`}
+                      installation.isOutletOnly ?
+                        'Outlet Installation Only' :
+                        `TV ${index + 1}`}
                 </h4>
                 {tvInstallations.length > 1 && (
                   <Button
@@ -259,7 +262,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 )}
               </div>
 
-              {!installation.isUnmountOnly && !installation.isRemountOnly && (
+              {!installation.isUnmountOnly && !installation.isRemountOnly && !installation.isOutletOnly && (
                 <div className="space-y-6">
                   <div>
                     <h5 className="text-sm font-medium mb-3">TV Size</h5>
@@ -428,7 +431,7 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 </div>
               )}
 
-              {!installation.isUnmountOnly && !installation.isRemountOnly && (
+              {!installation.isUnmountOnly && !installation.isRemountOnly && !installation.isOutletOnly && (
                 <div>
                   <h5 className="text-sm font-medium mb-3">Service Add-ons</h5>
                   <div className="space-y-4">
@@ -474,6 +477,13 @@ export function ServiceWizard({ onServiceSelect, onClose }: ServiceWizardProps) 
                 <div className="text-sm p-4 bg-muted rounded-lg">
                   <p className="font-medium mb-2">TV Remounting Only Service</p>
                   <p className="text-muted-foreground">$50 per TV - Our team will mount your TV to an existing bracket on the wall (matching arms must be provided).</p>
+                </div>
+              )}
+              
+              {installation.isOutletOnly && (
+                <div className="text-sm p-4 bg-muted rounded-lg">
+                  <p className="font-medium mb-2">Outlet Installation Only Service</p>
+                  <p className="text-muted-foreground">$100 per outlet - Our team will install a new power outlet behind your TV location or anywhere in your home.</p>
                 </div>
               )}
             </motion.div>
