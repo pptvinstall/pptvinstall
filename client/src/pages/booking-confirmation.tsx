@@ -410,13 +410,10 @@ export default function BookingConfirmation() {
       const quantityMatch = doorbellSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      let doorbellPrice = 85 * quantity;
+      // Updated price to $89 per smart doorbell to match price-calculator.tsx
+      let doorbellPrice = 89 * quantity;
 
-      // Check for brick installation
-      if (doorbellSection.includes('Brick') || doorbellSection.includes('brick')) {
-        doorbellPrice += 10 * quantity;
-      }
-
+      // No additional charge for brick installation (included in base price)
       totalPrice += doorbellPrice;
     }
 
@@ -429,7 +426,8 @@ export default function BookingConfirmation() {
       const quantityMatch = floodlightSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      totalPrice += 125 * quantity;
+      // Updated price to $89 per smart floodlight to match price-calculator.tsx
+      totalPrice += 89 * quantity;
     }
 
     // Smart camera
@@ -441,16 +439,10 @@ export default function BookingConfirmation() {
       const quantityMatch = cameraSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      let cameraPrice = 75 * quantity;
+      // Updated price to $89 per smart camera to match price-calculator.tsx
+      let cameraPrice = 89 * quantity;
 
-      // Check for height surcharge
-      const heightMatch = cameraSection.match(/at (\d+)ft/);
-      if (heightMatch && parseInt(heightMatch[1]) > 8) {
-        const height = parseInt(heightMatch[1]);
-        const surcharge = Math.ceil((height - 8) / 4) * 25;
-        cameraPrice += surcharge * quantity;
-      }
-
+      // No additional height surcharge (included in base price)
       totalPrice += cameraPrice;
     }
 
