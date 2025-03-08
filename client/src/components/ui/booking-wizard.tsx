@@ -149,8 +149,9 @@ const PriceCalculator = React.memo(
         </CardHeader>
         <CardContent className="pb-2 relative">
           {allServices.length > 0 ? (
-            <ScrollArea className="max-h-[200px] pr-3">
-              <div className="space-y-3">
+            <div className="relative">
+              <ScrollArea className="max-h-[200px] pr-3">
+                <div className="space-y-3">
                 {allServices.map((service) => (
                   <div
                     key={service.id}
@@ -186,7 +187,8 @@ const PriceCalculator = React.memo(
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+              </ScrollArea>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
               <div className="rounded-full bg-muted p-3">
