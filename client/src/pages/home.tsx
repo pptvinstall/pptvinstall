@@ -201,6 +201,7 @@ export default function HomePage() {
                   src="/assets/showcase.jpeg"
                   alt="TV Installation Showcase"
                   className="w-full aspect-[4/3] object-cover"
+                  fallbackSrc="/assets/IMG_1878.jpeg"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                 <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
@@ -275,6 +276,7 @@ export default function HomePage() {
               src="/assets/showcase.jpeg"
               alt="TV Installation Showcase"
               className="w-full object-cover h-[60vh]"
+              fallbackSrc="/assets/IMG_1878.jpeg"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             
