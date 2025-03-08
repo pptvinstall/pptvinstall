@@ -137,6 +137,9 @@
 .scroll-container, 
 [data-radix-scroll-area-viewport],
 .scroll-viewport,
-.container {
-  position: relative;
+.container,
+.scroll-area-container,
+.scroll-area-viewport,
+.radix-scroll-area {
+  position: relative !important;
 }
