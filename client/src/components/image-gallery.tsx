@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ResponsiveImage } from "@/components/ui/responsive-image";
 
 const installations = [
   {
@@ -77,14 +78,13 @@ export function ImageGallery() {
             }}
           >
             <div className="aspect-video relative">
-              <img
+              <ResponsiveImage
                 src={install.image}
                 alt={install.title}
-                className="object-cover w-full h-full"
+                className="object-cover"
                 loading={index < 3 ? "eager" : "lazy"} // Only eagerly load first visible images
-                decoding="async"
-                width="400"
-                height="225"
+                width={400}
+                height={225}
               />
             </div>
             <CardContent className="p-4">
@@ -104,14 +104,13 @@ export function ImageGallery() {
           </DialogHeader>
           <div className="relative">
             <div className="relative aspect-video">
-              <img
+              <ResponsiveImage
                 src={installations[currentImageIndex].image}
                 alt={installations[currentImageIndex].title}
-                className="object-contain w-full h-full"
+                className="object-contain"
                 loading="eager" // Modal images should load immediately when requested
-                decoding="async"
-                width="800" 
-                height="450"
+                width={800}
+                height={450}
               />
             </div>
             <Button

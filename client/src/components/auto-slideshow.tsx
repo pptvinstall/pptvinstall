@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
+import { ResponsiveImage } from "@/components/ui/responsive-image";
 
 const installations = [
   {
@@ -63,11 +64,13 @@ export function AutoSlideshow() {
               index === currentIndex ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <img
-              src={installation.image}
-              alt={installation.title}
-              className="w-full h-full object-cover"
-            />
+            <div className="relative w-full h-full">
+              <ResponsiveImage
+                src={installation.image}
+                alt={installation.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
               <h3 className="text-white text-xl font-bold mb-2">
                 {installation.title}
