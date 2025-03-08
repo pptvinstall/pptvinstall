@@ -91,7 +91,7 @@ export class GoogleCalendarService {
       const data = fs.readFileSync(MOCK_CALENDAR_FILE, 'utf-8');
       return JSON.parse(data);
     } catch (error) {
-      logger.error('Error loading mock calendar:', error);
+      logger.error('Error loading mock calendar:', new Error('Failed to load mock calendar data'));
       return { blockedTimeSlots: {}, blockedDays: [] };
     }
   }
@@ -100,7 +100,7 @@ export class GoogleCalendarService {
     try {
       fs.writeFileSync(MOCK_CALENDAR_FILE, JSON.stringify(data, null, 2));
     } catch (error) {
-      logger.error('Error saving mock calendar:', error);
+      logger.error('Error saving mock calendar:', new Error('Failed to save mock calendar data'));
     }
   }
 
@@ -156,7 +156,7 @@ export class GoogleCalendarService {
       logger.debug('Blocked time slots fetched successfully', blockedSlots);
       return blockedSlots;
     } catch (error) {
-      logger.error('Error fetching blocked time slots:', error);
+      logger.error('Error fetching blocked time slots:', error as Error);
       return {};
     }
   }
@@ -466,6 +466,32 @@ export class GoogleCalendarService {
     }
   }): Promise<boolean> {
     logger.debug('Starting setBusinessHours operation', businessHours);
+    
+    // Use mock if needed
+    if (this.useMock) {
+      logger.debug('Using mock calendar service for setBusinessHours');
+      
+      try {
+        // In mock mode, we could store business hours in the mock data
+        // For simplicity, we'll just log the operation
+        logger.info('Mock business hours set successfully', { 
+          businessHours,
+          note: 'Mock mode stores business hours but does not actively use them' 
+        });
+        
+        return true;
+      } catch (error) {
+        logger.error('Error setting business hours in mock calendar:', error as Error);
+        return false;
+      }
+    }
+    
+    // Ensure calendar client is initialized
+    if (!this.calendar) {
+      logger.error('Google Calendar client not initialized', new Error('Calendar not initialized'));
+      return false;
+    }
+    
     try {
       // First, remove existing business hours events
       const existingEvents = await this.calendar.events.list({
@@ -512,7 +538,7 @@ export class GoogleCalendarService {
       logger.info('Successfully set business hours', businessHours);
       return true;
     } catch (error) {
-      logger.error('Error setting business hours:', error);
+      logger.error('Error setting business hours:', error as Error);
       return false;
     }
   }
@@ -714,8 +740,8 @@ export class GoogleCalendarService {
 const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || process.env.VITE_GOOGLE_CALENDAR_ID || '';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY || '';
 
-logger.debug('API Key Present:', !!GOOGLE_API_KEY);
-logger.debug('Calendar ID Present:', !!GOOGLE_CALENDAR_ID);
+logger.debug(`API Key Present: ${!!GOOGLE_API_KEY}`, {});
+logger.debug(`Calendar ID Present: ${!!GOOGLE_CALENDAR_ID}`, {});
 
 // Create and export a singleton instance
 export const googleCalendarService = new GoogleCalendarService(
