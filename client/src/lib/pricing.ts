@@ -27,7 +27,71 @@ export interface ServiceOptions {
 }
 
 // Pricing configuration based on the new price list
-export const pricing = {
+// Define types for pricing items for stronger type checking
+type PricingItem = {
+  name: string;
+  price: number;
+  description: string;
+  restriction?: boolean;
+  hourly?: boolean;
+  minimum?: number;
+  half_hour_rate?: number;
+};
+
+type DiscountItem = {
+  name: string;
+  amount: number;
+};
+
+// Type for the pricing object
+export type Pricing = {
+  tv_mounting: {
+    standard: PricingItem;
+    fireplace: PricingItem;
+    non_drywall_addon: PricingItem;
+    high_rise_addon: PricingItem;
+    existing_mount: PricingItem;
+    unmount: PricingItem;
+    [key: string]: PricingItem;
+  };
+  tv_mounts: {
+    fixed_small: PricingItem;
+    fixed_big: PricingItem;
+    tilting_small: PricingItem;
+    tilting_big: PricingItem;
+    full_motion_small: PricingItem;
+    full_motion_big: PricingItem;
+    [key: string]: PricingItem;
+  };
+  wire_concealment: {
+    standard: PricingItem;
+    additional: PricingItem;
+    fireplace_warning: PricingItem;
+    [key: string]: PricingItem;
+  };
+  smart_home: {
+    security_camera: PricingItem;
+    doorbell: PricingItem;
+    floodlight: PricingItem;
+    floodlight_no_wiring: PricingItem;
+    [key: string]: PricingItem;
+  };
+  custom_services: {
+    handyman: PricingItem;
+    [key: string]: PricingItem;
+  };
+  discounts: {
+    multiple_tvs: DiscountItem;
+    multiple_outlets: DiscountItem;
+    mount_bundle: DiscountItem;
+    [key: string]: DiscountItem;
+  };
+  travel: {
+    fee: number;
+  };
+};
+
+export const pricing: Pricing = {
   // TV Mounting Services
   tv_mounting: {
     standard: {
@@ -93,11 +157,6 @@ export const pricing = {
       name: "Full Motion Mount (56\"+)",
       price: 120,
       description: "Full-motion/swivel mount for large TVs."
-    },
-    [key: string]: { 
-      name: string;
-      price: number;
-      description: string;
     }
   },
 
