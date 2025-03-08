@@ -115,76 +115,65 @@ export default function HomePage() {
       {/* Hero Section with position: relative for useScroll */}
       <section
         ref={heroRef}
-        className="min-h-[85vh] flex items-center bg-white py-16 lg:py-24"
+        className="min-h-screen flex items-center bg-white pt-16 pb-8"
         style={{ position: 'relative' }}
       >
-        <div className="absolute inset-0 z-0 opacity-10">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-400/20" />
+        <div className="absolute inset-0 z-0 opacity-5">
           <div className="h-full w-full bg-[url('/assets/pattern-bg.svg')] bg-repeat opacity-20" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="flex flex-col items-center text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="text-center lg:text-left"
             >
-              <Badge
-                variant="outline"
-                className="mb-4 px-3 py-1 text-sm bg-white/80 backdrop-blur-sm border-blue-200 text-blue-600 rounded-full inline-flex items-center gap-1"
-              >
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Available Now in Metro Atlanta
-              </Badge>
+              <div className="inline-flex items-center justify-center gap-1 px-4 py-1.5 mb-6 rounded-full bg-white border border-blue-100">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-sm text-blue-600">Available Now in Metro Atlanta</span>
+              </div>
 
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-blue-600">
-                Professional TV Mounting & Smart Home Installation
+              <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-blue-600">
+                Professional TV<br />Mounting & Smart<br />Home Installation
               </h1>
 
-              <p className="text-xl lg:text-2xl text-blue-600 mb-8 max-w-2xl">
-                Expert installation services with flawless results in Metro Atlanta
+              <p className="text-lg text-blue-600 mb-8">
+                Expert installation services with flawless<br />results in Metro Atlanta
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/booking">
+              <div className="flex flex-col gap-4 items-center">
+                <Link href="/booking" className="w-full max-w-xs">
                   <Button
-                    variant="default"
                     size="lg"
-                    className="min-w-[180px] bg-blue-600 hover:bg-blue-700 transition-all duration-300"
+                    className="bg-blue-600 hover:bg-blue-700 w-full h-12 flex items-center justify-center gap-2"
                   >
-                    Book Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <span>Book Now</span>
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/services">
+                <Link href="/services" className="w-full max-w-xs">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="min-w-[180px] border-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                    className="w-full bg-white hover:bg-gray-50 border-blue-200 text-blue-600 h-12"
                   >
                     Our Services
                   </Button>
                 </Link>
               </div>
-            </motion.div>
 
-            <div className="flex justify-center">
-              <div className="flex flex-col gap-4">
-                {/* Feature badges */}
-                <div className="flex justify-center gap-3">
-                  <div className="bg-white rounded-full shadow-md px-3 py-1.5 flex items-center gap-1.5 border border-gray-100">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">Licensed & Insured</span>
-                  </div>
-                  
-                  <div className="bg-white rounded-full shadow-md px-3 py-1.5 flex items-center gap-1.5 border border-gray-100">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">Same-Day Available</span>
-                  </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-8">
+                <div className="flex items-center px-4 py-2 bg-white rounded-full shadow-sm">
+                  <Clock className="h-4 w-4 text-blue-500 mr-2" />
+                  <span className="text-sm">Same-Day Available</span>
+                </div>
+                <div className="flex items-center px-4 py-2 bg-white rounded-full shadow-sm">
+                  <Shield className="h-4 w-4 text-blue-500 mr-2" />
+                  <span className="text-sm">License & Insured</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
