@@ -1,6 +1,9 @@
-import { type Booking, type ContactMessage } from "@shared/schema";
+import { type Booking, type ContactMessage, type InsertBooking, type InsertContactMessage } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Since bookings and contactMessages tables are not exported from schema
 // We'll use local file system storage instead
@@ -121,13 +124,10 @@ export class FileSystemStorage implements IStorage {
   }
 }
 
-export const storage = new FileSystemStorage();
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+export const storage = new FileSystemStorage();
 
 // Storage path for bookings
 const STORAGE_DIR = path.join(__dirname, 'data');
