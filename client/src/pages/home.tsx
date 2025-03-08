@@ -112,10 +112,10 @@ export default function HomePage() {
 
   return (
     <div className="scroll-container overflow-x-hidden relative">
-      {/* Hero Section - Adding position: relative to fix useScroll warning */}
+      {/* Hero Section with position: relative for useScroll */}
       <section 
         ref={heroRef}
-        className="relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
+        className="min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
         style={{ position: 'relative' }}
       >
         <div className="absolute inset-0 z-0 opacity-10">
@@ -224,10 +224,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Showcase Image - Adding position: relative to fix useScroll warning */}
+      {/* Showcase Image section with position: relative for useScroll */}
       <motion.section 
         ref={showcaseRef}
-        className="relative py-20 bg-gradient-to-b from-white to-gray-50"
+        className="py-20 bg-gradient-to-b from-white to-gray-50"
         style={{ opacity: showcaseOpacity, position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
