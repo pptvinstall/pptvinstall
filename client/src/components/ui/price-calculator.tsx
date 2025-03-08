@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card"
 import { Separator } from "./separator"
 import { Button } from "./button"
 import { Trash2, Plus, Tv, Camera, BellRing, LampFloor, PowerCircle } from "lucide-react"
-import { pricing, calculatePrice, formatPrice, type ServiceOptions } from "@/lib/pricing"
-import type { TVInstallation, SmartHomeInstallation } from "./service-wizard"
+import { formatPrice, type ServiceOptions } from "@/lib/pricing"
+import type { TVInstallation, SmartHomeInstallation } from "@/types/booking"
 
 interface PriceCalculatorProps {
   tvs: TVInstallation[];
@@ -31,220 +31,162 @@ export function PriceCalculator({
   onRemoveService,
   onAddService
 }: PriceCalculatorProps) {
-  // Keep track of user-toggled options
-  const [options, setOptions] = React.useState({
-    generalLaborHours: additionalOptions.generalLaborHours || 0
-  });
-
+  // Calculate total number of items
+  const totalItems = tvs.length + smartHome.length;
+  
   // Calculate pricing based on selections
-  const pricingData = React.useMemo(() => {
-    // Count different TV service types separately
-    const mountingTvs = tvs.filter(tv => !tv.isUnmountOnly && !tv.isRemountOnly);
-    const unmountOnlyCount = tvs.filter(tv => tv.isUnmountOnly).length;
-    const remountOnlyCount = tvs.filter(tv => tv.isRemountOnly).length;
-
-    // Convert UI data model to pricing service options
-    const serviceOptions: ServiceOptions = {
-      tvCount: mountingTvs.length,
-      tvMountSurface: mountingTvs.some(tv => tv.masonryWall) ? 'nonDrywall' : 'drywall',
-      isFireplace: mountingTvs.some(tv => tv.location === 'fireplace'),
-      isHighRise: mountingTvs.some(tv => tv.highRise),
-      outletCount: mountingTvs.filter(tv => tv.outletRelocation).length,
-      smartCameras: smartHome.filter(item => item.type === 'camera').reduce((sum, item) => sum + item.quantity, 0),
-      smartDoorbells: smartHome.filter(item => item.type === 'doorbell').reduce((sum, item) => sum + item.quantity, 0),
-      smartFloodlights: smartHome.filter(item => item.type === 'floodlight').reduce((sum, item) => sum + item.quantity, 0),
-      generalLaborHours: options.generalLaborHours,
-      needsUnmount: mountingTvs.some(tv => tv.unmount),
-      needsRemount: mountingTvs.some(tv => tv.remount),
-      unmountOnlyCount: unmountOnlyCount, // Pass the count of unmount-only TVs
-      remountOnlyCount: remountOnlyCount, // Pass the count of remount-only TVs
-      travelDistance: distance,
-      installation: {
-        brickInstallation: smartHome.some(item => item.type === 'doorbell' && item.brickInstallation)
-      }
-    };
-
-    // Calculate price breakdown
-    return calculatePrice(serviceOptions);
-  }, [tvs, smartHome, distance, options]);
-
-  // Update parent component with pricing data
   React.useEffect(() => {
-    onUpdate?.(pricingData.total);
-  }, [pricingData.total, onUpdate]);
+    // For smart home devices, use the updated pricing from the screenshots
+    const cameraPrice = 95;   // $95 per camera
+    const doorbellPrice = 95; // $95 per doorbell
+    const floodlightPrice = 95; // $95 per floodlight
+    
+    // Calculate total based on services
+    let totalPrice = 0;
+    
+    // Add TV installation prices
+    tvs.forEach(tv => {
+      totalPrice += tv.basePrice;
+    });
+    
+    // Add smart home device prices
+    smartHome.forEach(device => {
+      if (device.type === 'camera') {
+        totalPrice += cameraPrice;
+      } else if (device.type === 'doorbell') {
+        totalPrice += doorbellPrice;
+      } else if (device.type === 'floodlight') {
+        totalPrice += floodlightPrice;
+      }
+    });
+    
+    // Update parent component with pricing total
+    onUpdate?.(totalPrice);
+  }, [tvs, smartHome, distance, onUpdate]);
+  
+  // Get prices for each device type
+  const getPriceForDeviceType = (type: string) => {
+    return 95; // Updated price for all smart home devices
+  };
+  
+  // Calculate total for display
+  const calculateTotal = () => {
+    let total = 0;
+    smartHome.forEach(device => {
+      total += getPriceForDeviceType(device.type);
+    });
+    return total;
+  };
+  
+  const totalAmount = calculateTotal();
+  
+  // Define service item type
+  interface ServiceItem {
+    name: string;
+    description: string;
+    price: number;
+  }
+  
+  // Create service item descriptions
+  const serviceDescriptions = (): ServiceItem[] => {
+    const items: ServiceItem[] = [];
+    
+    // Add camera installations
+    const cameras = smartHome.filter(item => item.type === 'camera');
+    if (cameras.length > 0) {
+      items.push({
+        name: "Smart Camera Installation",
+        description: "Installation of smart camera",
+        price: getPriceForDeviceType('camera')
+      });
+    }
+    
+    // Add doorbell installations
+    const doorbells = smartHome.filter(item => item.type === 'doorbell');
+    if (doorbells.length > 0) {
+      items.push({
+        name: "Smart Doorbell Installation",
+        description: "Installation of smart doorbell",
+        price: getPriceForDeviceType('doorbell')
+      });
+    }
+    
+    // Add floodlight installations
+    const floodlights = smartHome.filter(item => item.type === 'floodlight');
+    if (floodlights.length > 0) {
+      items.push({
+        name: "Smart Floodlight Installation",
+        description: "Installation of smart floodlight",
+        price: getPriceForDeviceType('floodlight')
+      });
+    }
+    
+    return items;
+  };
+  
+  const serviceItems = serviceDescriptions();
 
   return (
     <Card className="price-calculator">
-      <CardHeader>
-        <CardTitle>Price Breakdown</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex justify-between items-center">
+          <span>Pricing Summary</span>
+          {totalItems > 0 && (
+            <span className="text-sm font-normal">{totalItems} items</span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-6"
-        >
-          {/* Display price breakdown by category */}
-          {pricingData.breakdown.map((category, index) => (
-            <div key={index} className="space-y-3">
-              <h3 className="font-medium text-lg">{category.category}</h3>
-              <div className="space-y-2">
-                {category.items.map((item, itemIndex) => {
-                  // Determine the type and index for removal based on the item name
-                  const isTV = category.category === 'TV Mounting' || 
-                               category.category === 'TV Unmounting' || 
-                               category.category === 'TV Remounting';
-                  const isSmartHome = category.category === 'Smart Home';
-                  
-                  // Get index from item name (if possible)
-                  let serviceIndex = -1;
-                  if (isTV) {
-                    const tvMatch = item.name.match(/TV (\d+)/);
-                    if (tvMatch) {
-                      serviceIndex = parseInt(tvMatch[1]) - 1;
-                    } else if (item.name.includes('Unmounting Only')) {
-                      // Find the first unmount-only TV
-                      serviceIndex = tvs.findIndex(tv => tv.isUnmountOnly);
-                    } else if (item.name.includes('Remounting Only')) {
-                      // Find the first remount-only TV
-                      serviceIndex = tvs.findIndex(tv => tv.isRemountOnly);
-                    }
-                  } else if (isSmartHome) {
-                    // Find matching smart home device
-                    if (item.name.includes('Doorbell')) {
-                      serviceIndex = smartHome.findIndex(item => item.type === 'doorbell');
-                    } else if (item.name.includes('Floodlight')) {
-                      serviceIndex = smartHome.findIndex(item => item.type === 'floodlight');
-                    } else if (item.name.includes('Camera')) {
-                      serviceIndex = smartHome.findIndex(item => item.type === 'camera');
-                    }
-                  }
-                  
-                  const canRemove = (isTV || isSmartHome) && serviceIndex >= 0 && !item.isDiscount;
-                  
-                  return (
-                    <div key={itemIndex} className={`flex justify-between items-center ${item.isDiscount ? "text-green-600 dark:text-green-500" : ""}`}>
-                      <span className="text-sm">{item.name}</span>
-                      <div className="flex items-center">
-                        <span className="font-medium mr-2">{formatPrice(item.price)}</span>
-                        {canRemove && onRemoveService && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={() => onRemoveService(isTV ? 'tv' : 'smartHome', serviceIndex)}
-                          >
-                            <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {index < pricingData.breakdown.length - 1 && <Separator className="my-4" />}
+        {totalItems > 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+          >
+            {/* Display individual services */}
+            <div className="space-y-4">
+              {serviceItems.map((item, index) => (
+                <div key={index} className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium">${item.price}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-
-          <Separator className="my-4" />
-
-          {/* Total without deposit */}
-          <div className="space-y-2">
+            
+            <Separator />
+            
+            {/* Total */}
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span>{formatPrice(pricingData.total)}</span>
+              <span className="text-primary">${totalAmount}</span>
+            </div>
+            
+            {/* Add More Services button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => onAddService?.('smartHome', 'camera')}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add More Services
+            </Button>
+          </motion.div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+            <div className="rounded-full bg-muted p-3">
+              <Plus className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="text-sm font-medium">No services selected</div>
+            <div className="text-xs text-muted-foreground">
+              Add services to see pricing details
             </div>
           </div>
-
-          <div className="text-xs text-muted-foreground italic mt-2">
-            * Prices are estimates. Final pricing may vary based on site conditions.
-          </div>
-
-          {/* Add Services Buttons */}
-          {onAddService && (
-            <div className="mt-6 space-y-4">
-              <Separator />
-              <h3 className="font-medium text-sm">Add Services</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <h4 className="text-xs font-medium">TV Services</h4>
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('tv', 'standard')}
-                    >
-                      <Tv className="h-4 w-4 mb-1" />
-                      TV Installation
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('tv', 'unmount')}
-                    >
-                      <Tv className="h-4 w-4 mb-1" />
-                      TV Unmounting
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('tv', 'remount')}
-                    >
-                      <Tv className="h-4 w-4 mb-1" />
-                      TV Remounting
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('tv', 'outlet')}
-                    >
-                      <PowerCircle className="h-4 w-4 mb-1" />
-                      Outlet Only
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="text-xs font-medium">Smart Home</h4>
-                  <div className="grid grid-cols-3 gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('smartHome', 'camera')}
-                    >
-                      <Camera className="h-4 w-4 mb-1" />
-                      Camera
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('smartHome', 'doorbell')}
-                    >
-                      <BellRing className="h-4 w-4 mb-1" />
-                      Doorbell
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-auto py-2 flex flex-col items-center justify-center text-xs"
-                      onClick={() => onAddService('smartHome', 'floodlight')}
-                    >
-                      <LampFloor className="h-4 w-4 mb-1" />
-                      Floodlight
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </motion.div>
+        )}
       </CardContent>
     </Card>
   );

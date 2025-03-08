@@ -1,9 +1,24 @@
-import React from "react";
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { User, Home, Mail, Phone, Info } from "lucide-react";
 
 interface CustomerDetailsStepProps {
   formData: any;
@@ -15,257 +30,255 @@ export const CustomerDetailsStep = React.memo(
   ({ formData, setFormData, validationErrors }: CustomerDetailsStepProps) => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
+      setFormData({ ...formData, [name]: value });
     };
 
-    const handleSelectChange = (name: string, value: string) => {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    };
-
-    const handleCheckboxChange = (checked: boolean) => {
-      setFormData({
-        ...formData,
-        consentToContact: checked,
-      });
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, checked } = e.target;
+      setFormData({ ...formData, [name]: checked });
     };
 
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Your Details</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Please provide your contact and installation address
-          </p>
-        </div>
+      <Card className="w-full mt-4">
+        <CardHeader>
+          <CardTitle>Customer Information</CardTitle>
+          <CardDescription>
+            Please provide your contact and address details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center">
+                <User className="mr-2 h-5 w-5" />
+                Personal Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium">
+                    Full Name
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name || ""}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    className={validationErrors.name ? "border-destructive" : ""}
+                  />
+                  {validationErrors.name && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.name[0]}
+                    </p>
+                  )}
+                </div>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Enter your full name"
-                className={validationErrors.name ? "border-destructive" : ""}
-              />
-              {validationErrors.name && (
-                <p className="text-xs text-destructive">
-                  {validationErrors.name[0]}
-                </p>
-              )}
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email Address
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email || ""}
+                      onChange={handleInputChange}
+                      placeholder="john.doe@example.com"
+                      className={validationErrors.email ? "border-destructive" : ""}
+                    />
+                  </div>
+                  {validationErrors.email && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.email[0]}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="text-sm font-medium">
+                    Phone Number
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone || ""}
+                      onChange={handleInputChange}
+                      placeholder="(555) 123-4567"
+                      className={validationErrors.phone ? "border-destructive" : ""}
+                    />
+                  </div>
+                  {validationErrors.phone && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.phone[0]}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter your email address"
-                className={validationErrors.email ? "border-destructive" : ""}
-              />
-              {validationErrors.email && (
-                <p className="text-xs text-destructive">
-                  {validationErrors.email[0]}
-                </p>
-              )}
+            {/* Address Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center">
+                <Home className="mr-2 h-5 w-5" />
+                Service Address
+              </h3>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="streetAddress" className="text-sm font-medium">
+                    Street Address
+                  </label>
+                  <Input
+                    id="streetAddress"
+                    name="streetAddress"
+                    value={formData.streetAddress || ""}
+                    onChange={handleInputChange}
+                    placeholder="123 Main St"
+                    className={validationErrors.streetAddress ? "border-destructive" : ""}
+                  />
+                  {validationErrors.streetAddress && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.streetAddress[0]}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="addressLine2" className="text-sm font-medium">
+                    Apartment, Suite, Unit, etc. (optional)
+                  </label>
+                  <Input
+                    id="addressLine2"
+                    name="addressLine2"
+                    value={formData.addressLine2 || ""}
+                    onChange={handleInputChange}
+                    placeholder="Apt 4B"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="city" className="text-sm font-medium">
+                    City
+                  </label>
+                  <Input
+                    id="city"
+                    name="city"
+                    value={formData.city || ""}
+                    onChange={handleInputChange}
+                    placeholder="Atlanta"
+                    className={validationErrors.city ? "border-destructive" : ""}
+                  />
+                  {validationErrors.city && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.city[0]}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="state" className="text-sm font-medium">
+                    State
+                  </label>
+                  <Input
+                    id="state"
+                    name="state"
+                    value={formData.state || ""}
+                    onChange={handleInputChange}
+                    placeholder="GA"
+                    className={validationErrors.state ? "border-destructive" : ""}
+                  />
+                  {validationErrors.state && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.state[0]}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="zipCode" className="text-sm font-medium">
+                    ZIP Code
+                  </label>
+                  <Input
+                    id="zipCode"
+                    name="zipCode"
+                    value={formData.zipCode || ""}
+                    onChange={handleInputChange}
+                    placeholder="30303"
+                    className={validationErrors.zipCode ? "border-destructive" : ""}
+                  />
+                  {validationErrors.zipCode && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.zipCode[0]}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="Enter your phone number"
-                className={validationErrors.phone ? "border-destructive" : ""}
-              />
-              {validationErrors.phone && (
-                <p className="text-xs text-destructive">
-                  {validationErrors.phone[0]}
-                </p>
-              )}
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center">
+                <Info className="mr-2 h-5 w-5" />
+                Additional Information
+              </h3>
+              
+              <div className="space-y-2">
+                <label htmlFor="notes" className="text-sm font-medium">
+                  Special Instructions or Notes (optional)
+                </label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes || ""}
+                  onChange={handleInputChange}
+                  placeholder="Any specific details about your installation needs..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex items-start space-x-2 pt-2">
+                <Checkbox
+                  id="consentToContact"
+                  name="consentToContact"
+                  checked={formData.consentToContact || false}
+                  onCheckedChange={(checked) => 
+                    setFormData({ 
+                      ...formData, 
+                      consentToContact: checked === true 
+                    })
+                  }
+                  className={validationErrors.consentToContact ? "border-destructive" : ""}
+                />
+                <div className="space-y-1 leading-none">
+                  <label
+                    htmlFor="consentToContact"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    I agree to be contacted about my appointment
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    We may contact you via email or phone regarding your booking.
+                  </p>
+                  {validationErrors.consentToContact && (
+                    <p className="text-sm text-destructive">
+                      {validationErrors.consentToContact[0]}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="streetAddress">Street Address</Label>
-            <Input
-              id="streetAddress"
-              name="streetAddress"
-              value={formData.streetAddress}
-              onChange={handleInputChange}
-              placeholder="Enter your street address"
-              className={validationErrors.streetAddress ? "border-destructive" : ""}
-            />
-            {validationErrors.streetAddress && (
-              <p className="text-xs text-destructive">
-                {validationErrors.streetAddress[0]}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
-            <Input
-              id="addressLine2"
-              name="addressLine2"
-              value={formData.addressLine2}
-              onChange={handleInputChange}
-              placeholder="Apartment, suite, unit, etc."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                placeholder="Enter your city"
-                className={validationErrors.city ? "border-destructive" : ""}
-              />
-              {validationErrors.city && (
-                <p className="text-xs text-destructive">{validationErrors.city[0]}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Select
-                name="state"
-                value={formData.state}
-                onValueChange={(value) => handleSelectChange("state", value)}
-              >
-                <SelectTrigger
-                  id="state"
-                  className={validationErrors.state ? "border-destructive" : ""}
-                >
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="AL">Alabama</SelectItem>
-                  <SelectItem value="AK">Alaska</SelectItem>
-                  <SelectItem value="AZ">Arizona</SelectItem>
-                  <SelectItem value="AR">Arkansas</SelectItem>
-                  <SelectItem value="CA">California</SelectItem>
-                  <SelectItem value="CO">Colorado</SelectItem>
-                  <SelectItem value="CT">Connecticut</SelectItem>
-                  <SelectItem value="DE">Delaware</SelectItem>
-                  <SelectItem value="FL">Florida</SelectItem>
-                  <SelectItem value="GA">Georgia</SelectItem>
-                  <SelectItem value="HI">Hawaii</SelectItem>
-                  <SelectItem value="ID">Idaho</SelectItem>
-                  <SelectItem value="IL">Illinois</SelectItem>
-                  <SelectItem value="IN">Indiana</SelectItem>
-                  <SelectItem value="IA">Iowa</SelectItem>
-                  <SelectItem value="KS">Kansas</SelectItem>
-                  <SelectItem value="KY">Kentucky</SelectItem>
-                  <SelectItem value="LA">Louisiana</SelectItem>
-                  <SelectItem value="ME">Maine</SelectItem>
-                  <SelectItem value="MD">Maryland</SelectItem>
-                  <SelectItem value="MA">Massachusetts</SelectItem>
-                  <SelectItem value="MI">Michigan</SelectItem>
-                  <SelectItem value="MN">Minnesota</SelectItem>
-                  <SelectItem value="MS">Mississippi</SelectItem>
-                  <SelectItem value="MO">Missouri</SelectItem>
-                  <SelectItem value="MT">Montana</SelectItem>
-                  <SelectItem value="NE">Nebraska</SelectItem>
-                  <SelectItem value="NV">Nevada</SelectItem>
-                  <SelectItem value="NH">New Hampshire</SelectItem>
-                  <SelectItem value="NJ">New Jersey</SelectItem>
-                  <SelectItem value="NM">New Mexico</SelectItem>
-                  <SelectItem value="NY">New York</SelectItem>
-                  <SelectItem value="NC">North Carolina</SelectItem>
-                  <SelectItem value="ND">North Dakota</SelectItem>
-                  <SelectItem value="OH">Ohio</SelectItem>
-                  <SelectItem value="OK">Oklahoma</SelectItem>
-                  <SelectItem value="OR">Oregon</SelectItem>
-                  <SelectItem value="PA">Pennsylvania</SelectItem>
-                  <SelectItem value="RI">Rhode Island</SelectItem>
-                  <SelectItem value="SC">South Carolina</SelectItem>
-                  <SelectItem value="SD">South Dakota</SelectItem>
-                  <SelectItem value="TN">Tennessee</SelectItem>
-                  <SelectItem value="TX">Texas</SelectItem>
-                  <SelectItem value="UT">Utah</SelectItem>
-                  <SelectItem value="VT">Vermont</SelectItem>
-                  <SelectItem value="VA">Virginia</SelectItem>
-                  <SelectItem value="WA">Washington</SelectItem>
-                  <SelectItem value="WV">West Virginia</SelectItem>
-                  <SelectItem value="WI">Wisconsin</SelectItem>
-                  <SelectItem value="WY">Wyoming</SelectItem>
-                </SelectContent>
-              </Select>
-              {validationErrors.state && (
-                <p className="text-xs text-destructive">{validationErrors.state[0]}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">ZIP Code</Label>
-              <Input
-                id="zipCode"
-                name="zipCode"
-                value={formData.zipCode}
-                onChange={handleInputChange}
-                placeholder="Enter ZIP code"
-                className={validationErrors.zipCode ? "border-destructive" : ""}
-              />
-              {validationErrors.zipCode && (
-                <p className="text-xs text-destructive">
-                  {validationErrors.zipCode[0]}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              placeholder="Any special instructions or requests for the installation?"
-              className="min-h-[100px]"
-            />
-          </div>
-
-          <div className="flex items-start space-x-2 pt-4">
-            <Checkbox
-              id="consentToContact"
-              checked={formData.consentToContact}
-              onCheckedChange={handleCheckboxChange}
-            />
-            <div className="grid gap-1.5 leading-none">
-              <label
-                htmlFor="consentToContact"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Permission to Contact
-              </label>
-              <p className="text-xs text-muted-foreground">
-                I consent to receive text messages and emails about my appointment. 
-                You can opt out at any time.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     );
   }
 );

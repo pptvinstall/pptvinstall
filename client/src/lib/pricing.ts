@@ -1,4 +1,31 @@
 
+// Format price for display
+export function formatPrice(price: number): string {
+  return `$${price.toFixed(0)}`;
+}
+
+// Interface for service options when calculating price
+export interface ServiceOptions {
+  tvCount?: number;
+  tvMountSurface?: 'drywall' | 'nonDrywall';
+  isFireplace?: boolean;
+  isHighRise?: boolean;
+  outletCount?: number;
+  smartCameras?: number;
+  smartDoorbells?: number;
+  smartFloodlights?: number;
+  generalLaborHours?: number;
+  needsUnmount?: boolean;
+  needsRemount?: boolean;
+  unmountOnlyCount?: number;
+  remountOnlyCount?: number;
+  travelDistance?: number;
+  installation?: {
+    brickInstallation?: boolean;
+    [key: string]: boolean | undefined;
+  };
+}
+
 // Pricing configuration based on the new price list
 export const pricing = {
   // TV Mounting Services
@@ -66,6 +93,11 @@ export const pricing = {
       name: "Full Motion Mount (56\"+)",
       price: 120,
       description: "Full-motion/swivel mount for large TVs."
+    },
+    [key: string]: { 
+      name: string;
+      price: number;
+      description: string;
     }
   },
 
