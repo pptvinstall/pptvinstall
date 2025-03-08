@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -447,109 +447,7 @@ const DateTimeSelectionStep = React.memo(
 
 // CustomerDetailsStep component moved to client/src/components/steps/customer-details-step.tsx
 
-const ReviewBookingStep = React.memo(
-  ({
-    tvInstallations,
-    smartHomeInstallations,
-    selectedDate,
-    selectedTime,
-    formData,
-    pricingTotal,
-  }: {
-    tvInstallations: TVInstallation[];
-    smartHomeInstallations: SmartHomeInstallation[];
-    selectedDate: Date | undefined;
-    selectedTime: string | undefined;
-    formData: any;
-    pricingTotal: number;
-  }) => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Review Your Booking</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Please review your information before confirming
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Installation Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <h4 className="text-sm font-medium">Date & Time</h4>
-              <p className="text-sm mt-1">
-                {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")} at <span className="font-medium">{selectedTime}</span>
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium">Total Price</h4>
-              <p className="text-sm mt-1">
-                <span className="font-medium">${pricingTotal}</span>
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium">Services</h4>
-            <div className="mt-1 space-y-1">
-              {[...tvInstallations, ...smartHomeInstallations].map((service) => (
-                <div key={service.id} className="flex justify-between text-sm">
-                  <span>{service.name}</span>
-                  <span>${service.basePrice}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Contact Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div>
-              <h4 className="font-medium">Name</h4>
-              <p>{formData.name}</p>
-            </div>
-            <div>
-              <h4 className="font-medium">Email</h4>
-              <p>{formData.email}</p>
-            </div>
-            <div>
-              <h4 className="font-medium">Phone</h4>
-              <p>{formData.phone}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Installation Address</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm">
-            <p>{formData.streetAddress}</p>
-            {formData.addressLine2 && <p>{formData.addressLine2}</p>}
-            <p>
-              {formData.city}, {formData.state} {formData.zipCode}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="text-sm space-y-2">
-        <p>
-          By clicking "Confirm Booking", you agree to our <a href="/terms" className="text-primary underline">Terms of Service</a> and acknowledge our <a href="/privacy" className="text-primary underline">Privacy Policy</a>.
-        </p>
-      </div>
-    </div>
-  )
-);
+// ReviewBookingStep component moved to client/src/components/steps/review-booking-step.tsx
 
 export function BookingWizard({
   onSubmit,
@@ -872,7 +770,30 @@ export function BookingWizard({
               <Card className="md:col-span-3 p-6 wizard-step">
                 {currentStep === 0 && (
                   <ServiceWizard
-                    onComplete={handleServiceSelection}
+                    onComplete={(services) => {
+                      // Convert from ServiceWizard format to our format
+                      services.tvInstallations.forEach(tv => {
+                        const tvService: TVInstallation = {
+                          id: tv.id,
+                          name: `TV Installation (${tv.size === 'small' ? 'Small' : 'Large'})`,
+                          description: `${tv.location} installation with ${tv.mountType} mount`,
+                          type: 'mount',
+                          basePrice: 129 // Default price, would be calculated properly in a real app
+                        };
+                        handleServiceSelect("tv", tvService);
+                      });
+                      
+                      services.smartHomeDevices.forEach(device => {
+                        const deviceService: SmartHomeInstallation = {
+                          id: device.id,
+                          name: `Smart ${device.type === 'camera' ? 'Camera' : device.type === 'doorbell' ? 'Doorbell' : 'Floodlight'} Installation`,
+                          description: `Installation of smart ${device.type}`,
+                          type: device.type,
+                          basePrice: 89 // Default price, would be calculated properly in a real app
+                        };
+                        handleServiceSelect("smartHome", deviceService);
+                      });
+                    }}
                   />
                 )}
 
@@ -900,6 +821,8 @@ export function BookingWizard({
                   <ReviewBookingStep
                     tvInstallations={tvInstallations}
                     smartHomeInstallations={smartHomeInstallations}
+                    tvRemovalService={null}
+                    handymanService={null}
                     selectedDate={selectedDate}
                     selectedTime={selectedTime}
                     formData={formData}

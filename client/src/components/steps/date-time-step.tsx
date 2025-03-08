@@ -1,8 +1,8 @@
 import React from "react";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   setSelectedTime,
   isBookingsLoading,
   timeSlots,
-  isTimeSlotAvailable
+  isTimeSlotAvailable,
 }) => {
   return (
     <div className="space-y-6">
