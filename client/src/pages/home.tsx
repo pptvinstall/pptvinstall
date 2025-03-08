@@ -53,7 +53,7 @@ export default function HomePage() {
     {
       title: "TV Mounting",
       icon: Tv,
-      color: "text-red-500",
+      color: "text-blue-600",
       description: "Expert TV mounting for all sizes and surfaces",
       link: "/services#tv-mounting",
       features: ["Concealed wiring", "Precise leveling", "Secure installation"]
@@ -112,7 +112,7 @@ export default function HomePage() {
         className="scroll-container relative min-h-[85vh] flex items-center bg-gradient-to-b from-gray-50 to-white py-16 lg:py-24"
       >
         <div className="absolute inset-0 z-0 opacity-10">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-400/20" />
           <div className="h-full w-full bg-[url('/assets/pattern-bg.svg')] bg-repeat opacity-20" />
         </div>
         
@@ -126,14 +126,14 @@ export default function HomePage() {
             >
               <Badge 
                 variant="outline" 
-                className="mb-4 px-3 py-1 text-sm bg-white/80 backdrop-blur-sm border-red-200 text-red-600 rounded-full inline-flex items-center gap-1"
+                className="mb-4 px-3 py-1 text-sm bg-white/80 backdrop-blur-sm border-blue-200 text-blue-600 rounded-full inline-flex items-center gap-1"
               >
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Available Now in Metro Atlanta
               </Badge>
               
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 tracking-tight">
                 <span className="block">Professional</span>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-red-500">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-500">
                   TV Installation
                 </span>
                 <span className="block">Done Right</span>
@@ -145,7 +145,7 @@ export default function HomePage() {
               
               <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
                 <Link href="/booking">
-                  <Button size="lg" className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white transition-all">
+                  <Button size="lg" className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white transition-all">
                     Book Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -161,7 +161,7 @@ export default function HomePage() {
                   className="flex items-center gap-2"
                   onClick={() => window.location.href = "tel:+16782632859"}
                 >
-                  <PhoneCall className="h-4 w-4 text-red-500" />
+                  <PhoneCall className="h-4 w-4 text-blue-600" />
                   <span>(678) 263-2859</span>
                 </Button>
               </div>
@@ -207,7 +207,7 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                 <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
                   <div className="flex items-start gap-2">
-                    <div className="p-2 rounded-full bg-red-100 text-red-600">
+                    <div className="p-2 rounded-full bg-blue-100 text-blue-600">
                       <CheckCircle className="h-4 w-4" />
                     </div>
                     <div>
@@ -347,7 +347,7 @@ export default function HomePage() {
                 <Card className="h-full border-2 hover:border-blue-200 transition-all duration-300 group overflow-hidden relative">
                   <CardContent className="pt-6 pb-4 h-full flex flex-col">
                     <div className={cn("w-12 h-12 flex items-center justify-center rounded-lg mb-4", 
-                      service.color === "text-red-500" ? "bg-red-100" : 
+                      service.color === "text-blue-600" ? "bg-blue-100" : 
                       service.color === "text-blue-500" ? "bg-blue-100" : "bg-green-100"
                     )}>
                       <service.icon className={cn("h-6 w-6", service.color)} />
@@ -451,7 +451,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="scroll-container py-20 bg-gradient-to-r from-red-600 to-red-500 text-white">
+      <section className="scroll-container py-20 bg-gradient-to-r from-blue-700 to-blue-600 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2 
@@ -480,7 +480,7 @@ export default function HomePage() {
               className="flex flex-wrap gap-4 justify-center"
             >
               <Link href="/booking">
-                <Button size="lg" variant="secondary" className="bg-white text-red-600 hover:bg-gray-100">
+                <Button size="lg" variant="secondary" className="bg-white text-blue-700 hover:bg-gray-100">
                   Book Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
