@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "./scroll-area";
@@ -941,18 +941,30 @@ export function BookingWizard({
   }, []);
 
   // Function to check if we can proceed to the next step
-  const canProceed = useCallback(() => {
+  // Function to check if we can proceed to the next step
+  // Memoize the result to prevent needless re-renders
+  const canProceedValue = useMemo(() => {
     switch (currentStep) {
       case 0: // Service Selection
         return tvInstallations.length > 0 || smartHomeInstallations.length > 0;
       case 1: // Date & Time
         return selectedDate !== undefined && selectedTime !== undefined;
       case 2: // Customer Details
-        return validateCustomerDetails();
+        return true; // Don't validate in the render cycle
       default:
         return true;
     }
   }, [currentStep, tvInstallations, smartHomeInstallations, selectedDate, selectedTime]);
+  
+  // Function to check if we can proceed to the next step
+  const canProceed = useCallback(() => {
+    // For customer details step, run full validation
+    if (currentStep === 2) {
+      return validateCustomerDetails();
+    }
+    // For other steps, use the memoized value
+    return canProceedValue;
+  }, [currentStep, canProceedValue, validateCustomerDetails]);
 
   // Validate customer details form
   const validateCustomerDetails = useCallback(() => {

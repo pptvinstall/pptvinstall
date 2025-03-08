@@ -98,7 +98,7 @@ export function ServiceSelectionGrid({
 
           <TabsContent value="smartHome" className="mt-0 relative">
             <div className="relative">
-              <ScrollArea className="h-[280px] pr-2">
+              <ScrollArea className="h-[280px] pr-2 relative">
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
