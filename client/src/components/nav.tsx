@@ -84,13 +84,13 @@ export default function Nav() {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-auto h-10 relative overflow-hidden">
+          <div className="w-auto h-12 relative overflow-hidden">
             <img
-              src="/assets/logo.jpeg"
+              src="/assets/logo.svg"
               alt="Picture Perfect TV Install"
-              className="h-full"
-              width={200}
-              height={50}
+              className="h-full w-auto"
+              width={240}
+              height={60}
             />
           </div>
         </Link>
@@ -173,9 +173,9 @@ export default function Nav() {
                   <div className="flex items-center space-x-2">
                     <div className="w-auto h-8 relative overflow-hidden">
                       <img
-                        src="/assets/logo.jpeg"
+                        src="/assets/logo.svg"
                         alt="Picture Perfect TV Install"
-                        className="h-full"
+                        className="h-full w-auto"
                         width={160}
                         height={40}
                       />
