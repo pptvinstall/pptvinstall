@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { ArrowRight, Monitor, Shield, Star, Wrench, CheckCircle } from "lucide-react";
+import { ResponsiveImage } from "@/components/ui/responsive-image";
 
 export default function Home() {
   return (
@@ -14,18 +15,20 @@ export default function Home() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-radial from-transparent via-gray-50/80 to-white/90 rounded-3xl"></div>
                 <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/50 rounded-3xl backdrop-blur-[1px]"></div>
-                <img
-                  src="/images/logo.jpeg"
-                  alt="Picture Perfect TV Install Logo"
-                  className="mx-auto w-40 h-auto object-contain relative z-10 drop-shadow-sm"
+                <div
+                  className="relative z-10 mx-auto w-40 h-40"
                   style={{
                     maskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)',
                     WebkitMaskImage: 'radial-gradient(circle at center, black 60%, transparent 80%)'
                   }}
-                  width="160"
-                  height="160"
-                  loading="eager"
-                />
+                >
+                  <ResponsiveImage
+                    src="/assets/IMG_3583.jpeg"
+                    alt="Picture Perfect TV Install Logo"
+                    className="w-full h-full object-contain drop-shadow-sm"
+                    priority={true}
+                  />
+                </div>
               </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gradient-primary">
@@ -54,14 +57,11 @@ export default function Home() {
       {/* Showcase Image */}
       <section className="relative">
         <div className="w-full">
-          <img
-            src="/images/showcase.jpeg"
+          <ResponsiveImage
+            src="/assets/IMG_1876.jpeg"
             alt="TV Installation Showcase"
-            className="w-full"
-            loading="eager"
-            decoding="async"
-            width="1280"
-            height="720"
+            className="w-full object-cover h-[50vh]"
+            priority={true}
           />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
         </div>
