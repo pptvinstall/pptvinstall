@@ -84,17 +84,15 @@ export default function Nav() {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-10 h-10 relative overflow-hidden rounded-full">
-            <ResponsiveImage
-              src="/assets/logo.jpeg"
+          <div className="w-auto h-10 relative overflow-hidden">
+            <img
+              src="/logo.svg"
               alt="Picture Perfect TV Install"
-              className="w-full h-full object-cover"
-              priority={true}
+              className="h-full"
+              width={200}
+              height={50}
             />
           </div>
-          <span className="text-lg font-bold hidden sm:inline-block">
-            Picture Perfect TV
-          </span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -111,7 +109,7 @@ export default function Nav() {
                     <link.icon className="h-4 w-4 mr-1" />
                     {link.name}
                     {link.badge && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                         {link.badge}
                       </span>
                     )}
@@ -154,7 +152,7 @@ export default function Nav() {
           <Button 
             variant="default" 
             size="sm"
-            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+            className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
             onClick={() => window.location.href = "tel:+16782632859"}
           >
             <PhoneCall className="mr-2 h-4 w-4" />
@@ -173,14 +171,15 @@ export default function Nav() {
               <SheetHeader className="p-4 border-b">
                 <SheetTitle className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 relative overflow-hidden rounded-full">
-                      <ResponsiveImage
-                        src="/assets/logo.jpeg"
+                    <div className="w-auto h-8 relative overflow-hidden">
+                      <img
+                        src="/logo.svg"
                         alt="Picture Perfect TV Install"
-                        className="w-full h-full object-cover"
+                        className="h-full"
+                        width={160}
+                        height={40}
                       />
                     </div>
-                    <span className="text-lg font-semibold">Menu</span>
                   </div>
                   <SheetClose asChild>
                     <Button variant="ghost" size="icon">
@@ -204,7 +203,7 @@ export default function Nav() {
                             <link.icon className="h-4 w-4 mr-2" />
                             {link.name}
                             {link.badge && (
-                              <span className="absolute top-0 right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                              <span className="absolute top-0 right-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                                 {link.badge}
                               </span>
                             )}
@@ -246,7 +245,7 @@ export default function Nav() {
               
               <div className="mt-auto p-4 border-t">
                 <Button 
-                  className="w-full bg-gradient-to-r from-red-500 to-red-600"
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
                   onClick={() => {
                     window.location.href = "tel:+16782632859";
                     setIsOpen(false);
