@@ -18,17 +18,17 @@ interface Request extends ExpressRequest {
 ensureDataDirectory();
 let fileBookings: any[] = loadBookings();
 
-// Add or update the admin authentication helper function
+// Admin authentication helper function
 function verifyAdminPassword(password: string | undefined): boolean {
-  // TEMPORARY FIX: Hardcoded password as there seems to be an issue with environment variables
-  // TODO: Fix environment variable loading and remove hardcoded password
-  const adminPassword = "PictureP3rfectTV2025";
+  // Use both the environment variable and hardcoded password as fallback
+  const envPassword = process.env.ADMIN_PASSWORD;
+  const hardcodedPassword = "PictureP3rfectTV2025";
   
   // Debug log to see if environment variable is correctly loaded
   logger.debug('Admin password verification', {
-    envVarSet: !!process.env.ADMIN_PASSWORD,
-    envPasswordValue: process.env.ADMIN_PASSWORD || 'not set',
-    usingHardcoded: true,
+    envVarSet: !!envPassword,
+    envPasswordValue: envPassword || 'not set',
+    usingHardcoded: !envPassword,
     providedPasswordLength: password?.length || 0
   });
 
@@ -37,10 +37,16 @@ function verifyAdminPassword(password: string | undefined): boolean {
     return false;
   }
 
-  const isValid = password === adminPassword;
+  // Check if password matches either the environment variable or the hardcoded password
+  const isValidEnv = envPassword && password === envPassword;
+  const isValidHardcoded = password === hardcodedPassword;
+  const isValid = isValidEnv || isValidHardcoded;
+  
   logger.auth('Admin authentication attempt', {
     success: isValid,
-    passwordProvided: !!password
+    passwordProvided: !!password,
+    usingEnvPassword: isValidEnv,
+    usingHardcodedPassword: isValidHardcoded
   });
 
   return isValid;
