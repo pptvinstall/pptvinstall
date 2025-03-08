@@ -146,11 +146,11 @@ export default function Nav() {
           <Button 
             variant="default" 
             size="sm"
-            className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+            className="bg-blue-600 hover:bg-blue-700"
             onClick={() => window.location.href = "tel:+16782632859"}
           >
             <PhoneCall className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Call Now</span>
+            <span className="hidden sm:inline">Call</span>
             <span className="sm:hidden">Call</span>
           </Button>
           
@@ -233,14 +233,14 @@ export default function Nav() {
               
               <div className="mt-auto p-4 border-t">
                 <Button 
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                   onClick={() => {
                     window.location.href = "tel:+16782632859";
                     setIsOpen(false);
                   }}
                 >
                   <PhoneCall className="mr-2 h-4 w-4" />
-                  Call Now (678) 263-2859
+                  Call (678) 263-2859
                 </Button>
               </div>
             </SheetContent>

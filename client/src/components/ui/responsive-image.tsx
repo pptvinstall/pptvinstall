@@ -34,9 +34,9 @@ export function ResponsiveImage({
   const [isVisible, setIsVisible] = useState(false);
   const [optimizedSrc, setOptimizedSrc] = useState(src); // Added state for optimized source
 
-  // Determine if we should use the optimized image
+  // Just use the direct source without trying optimized version
   useEffect(() => {
-    setOptimizedSrc(src.startsWith('/assets/') ? `/optimized-assets/${src.split('/').pop()}` : src);
+    setOptimizedSrc(src);
   }, [src]);
 
 

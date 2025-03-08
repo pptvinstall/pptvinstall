@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'wouter';
-import { ResponsiveImage } from '@/components/ui/responsive-image';
 
 const Footer: React.FC = () => {
   return (
@@ -27,22 +26,11 @@ const Footer: React.FC = () => {
 
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
-            <div className="flex items-center mb-4">
-              <div className="w-16 h-16 mr-4 rounded-full overflow-hidden">
-                <ResponsiveImage
-                  src="/assets/logo-pptv-circle.png"
-                  alt="Picture Perfect TV Install"
-                  className="w-full h-full object-cover"
-                  width={64}
-                  height={64}
-                />
-              </div>
-              <p className="text-muted-foreground">
-                Atlanta, GA<br />
-                Email: pptvinstall@gmail.com<br />
-                Phone: (678) 263-2859
-              </p>
-            </div>
+            <p className="text-muted-foreground">
+              Atlanta, GA<br />
+              Email: pptvinstall@gmail.com<br />
+              Phone: (678) 263-2859
+            </p>
           </div>
         </div>
         <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
