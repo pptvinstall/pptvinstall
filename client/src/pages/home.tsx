@@ -180,6 +180,7 @@ export default function HomePage() {
 
       {/* Showcase section */}
       <section
+        ref={showcaseRef}
         className="py-16 bg-white"
         style={{ position: 'relative' }}
       >
@@ -216,13 +217,13 @@ export default function HomePage() {
       {/* Services */}
       <section
         ref={servicesRef}
-        className="relative py-16 lg:py-24 bg-gradient-to-b from-white to-brand-blue-50/30"
+        className="relative py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50/30"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="section-title text-3xl lg:text-4xl font-bold">Our Premium Services</h2>
-            <p className="text-brand-blue-600 text-lg">
+            <p className="text-blue-600 text-lg">
               Professional TV mounting and smart home installation services
             </p>
           </div>
