@@ -111,7 +111,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="scroll-container overflow-x-hidden relative">
+    <div className="scroll-container overflow-x-hidden relative" style={{ position: 'relative' }}>
       {/* Hero Section with position: relative for useScroll */}
       <section
         ref={heroRef}
@@ -181,7 +181,7 @@ export default function HomePage() {
       {/* Showcase section */}
       <section
         ref={showcaseRef}
-        className="py-16 bg-white"
+        className="py-12 bg-white"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
@@ -191,21 +191,21 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mx-auto max-w-xl bg-gray-100 rounded-xl p-4">
-            <div className="grid grid-cols-2 gap-1 relative">
-              <div className="bg-gray-200 rounded-lg p-6 text-center">
+          <div className="mx-auto max-w-xl bg-gray-100 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-2 gap-px relative">
+              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
                 <div className="text-3xl md:text-4xl font-bold text-gray-800">250+</div>
                 <div className="text-sm md:text-base text-gray-700">Happy Customers</div>
               </div>
-              <div className="bg-gray-200 rounded-lg p-6 text-center">
+              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
                 <div className="text-3xl md:text-4xl font-bold text-gray-800">500+</div>
                 <div className="text-sm md:text-base text-gray-700">TVs Mounted</div>
               </div>
-              <div className="bg-gray-200 rounded-lg p-6 text-center">
+              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
                 <div className="text-3xl md:text-4xl font-bold text-gray-800">5<span className="text-yellow-500">★</span></div>
                 <div className="text-sm md:text-base text-gray-700">Average Rating</div>
               </div>
-              <div className="bg-gray-200 rounded-lg p-6 text-center">
+              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
                 <div className="text-3xl md:text-4xl font-bold text-gray-800">100%</div>
                 <div className="text-sm md:text-base text-gray-700">Satisfaction</div>
               </div>
