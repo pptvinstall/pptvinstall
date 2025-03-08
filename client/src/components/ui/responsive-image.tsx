@@ -32,11 +32,13 @@ export function ResponsiveImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [optimizedSrc, setOptimizedSrc] = useState(src); // Added state for optimized source
 
   // Determine if we should use the optimized image
-  const optimizedSrc = src.startsWith('/assets/') 
-    ? `/optimized-assets/${src.split('/').pop()}` 
-    : src;
+  useEffect(() => {
+    setOptimizedSrc(src.startsWith('/assets/') ? `/optimized-assets/${src.split('/').pop()}` : src);
+  }, [src]);
+
 
   useEffect(() => {
     // Simple visibility detection - more advanced would use IntersectionObserver
@@ -52,20 +54,21 @@ export function ResponsiveImage({
   };
 
   const handleError = () => {
-    setError(true);
     console.error(`Failed to load image: ${optimizedSrc}`);
-    // Fallback to original source if optimized version fails
-    if (optimizedSrc !== src) {
+
+    // If optimized image fails, try original source as fallback
+    if (optimizedSrc !== src && src) {
       console.log(`Falling back to original source: ${src}`);
+      setOptimizedSrc(src);
+    } else {
+      setError(true);
     }
   };
 
-  const aspectRatioStyle = aspectRatio 
-    ? { aspectRatio } 
-    : {};
+  const aspectRatioStyle = aspectRatio ? { aspectRatio } : {};
 
   return (
-    <div 
+    <div
       className={cn(
         "relative overflow-hidden",
         isLoaded ? "bg-transparent" : "bg-gradient-to-r from-gray-100 to-gray-50",
@@ -85,7 +88,7 @@ export function ResponsiveImage({
 
       {isVisible && (
         <img
-          src={error ? src : optimizedSrc}
+          src={optimizedSrc} // Use optimizedSrc
           alt={alt}
           width={width}
           height={height}
