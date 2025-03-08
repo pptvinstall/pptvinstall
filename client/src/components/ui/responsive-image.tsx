@@ -16,40 +16,39 @@ export function ResponsiveImage({
   alt,
   className,
   fallbackSrc,
+  loading: loadingProp = "lazy",
   ...props
 }: ResponsiveImageProps) {
   const [imgSrc, setImgSrc] = useState<string>(src);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
   // Reset state when src changes
   useEffect(() => {
     setImgSrc(src);
-    setLoading(true);
+    setIsLoading(true);
     setError(false);
   }, [src]);
 
-  // Format the image source path
-  const formattedSrc = imgSrc?.startsWith('/') || imgSrc?.startsWith('http') 
-    ? imgSrc 
-    : `/${imgSrc}`;
+  // Format the image source path to ensure proper paths
+  const formattedSrc = imgSrc;
 
   // Handle image load errors
   const handleError = () => {
     setError(true);
-    setLoading(false);
+    setIsLoading(false);
     if (fallbackSrc) {
       setImgSrc(fallbackSrc);
     }
   };
 
   const handleLoad = () => {
-    setLoading(false);
+    setIsLoading(false);
   };
 
   return (
-    <div className={cn("relative overflow-hidden", className)}>
-      {loading && (
+    <div className="relative overflow-hidden w-full h-full">
+      {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse">
           <span className="sr-only">Loading...</span>
         </div>
@@ -63,13 +62,14 @@ export function ResponsiveImage({
       <img
         src={formattedSrc}
         alt={alt}
-        loading="lazy"
+        loading={loadingProp}
         className={cn(
-          "w-full h-auto transition-opacity duration-300",
-          loading ? "opacity-0" : "opacity-100"
+          "w-full h-full transition-opacity duration-300",
+          isLoading ? "opacity-0" : "opacity-100"
         )}
         onError={handleError}
         onLoad={handleLoad}
+        style={{ position: 'relative' }}
         {...props}
       />
     </div>
