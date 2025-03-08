@@ -578,6 +578,97 @@ export function BookingWizard({
       setSmartHomeInstallations(prev => prev.filter((_, i) => i !== index));
     }
   }, []);
+  
+  // Handle adding services directly from price breakdown
+  const handleAddService = useCallback((type: 'tv' | 'smartHome', subtype: string) => {
+    if (type === 'tv') {
+      if (subtype === 'standard') {
+        // Add a standard TV mounting
+        setTvInstallations(prev => [
+          ...prev, 
+          {
+            size: 'small',
+            location: 'standard',
+            mountType: 'tilt',
+            masonryWall: false,
+            outletRelocation: false,
+            highRise: false,
+            unmount: false,
+            remount: false,
+            isUnmountOnly: false,
+            isRemountOnly: false,
+            isOutletOnly: false
+          }
+        ]);
+      } else if (subtype === 'unmount') {
+        // Add TV unmounting only service
+        setTvInstallations(prev => [
+          ...prev, 
+          {
+            size: 'small',
+            location: 'standard',
+            mountType: 'none',
+            masonryWall: false,
+            outletRelocation: false,
+            highRise: false,
+            unmount: false,
+            remount: false,
+            isUnmountOnly: true,
+            isRemountOnly: false,
+            isOutletOnly: false
+          }
+        ]);
+      } else if (subtype === 'remount') {
+        // Add TV remounting only service
+        setTvInstallations(prev => [
+          ...prev, 
+          {
+            size: 'small',
+            location: 'standard',
+            mountType: 'none',
+            masonryWall: false,
+            outletRelocation: false,
+            highRise: false,
+            unmount: false,
+            remount: false,
+            isUnmountOnly: false,
+            isRemountOnly: true,
+            isOutletOnly: false
+          }
+        ]);
+      } else if (subtype === 'outlet') {
+        // Add outlet-only installation
+        setTvInstallations(prev => [
+          ...prev, 
+          {
+            size: 'small',
+            location: 'standard',
+            mountType: 'none',
+            masonryWall: false,
+            outletRelocation: false,
+            highRise: false,
+            unmount: false,
+            remount: false,
+            isUnmountOnly: false,
+            isRemountOnly: false,
+            isOutletOnly: true
+          }
+        ]);
+      }
+    } else if (type === 'smartHome') {
+      if (['camera', 'doorbell', 'floodlight'].includes(subtype)) {
+        // Add smart home device
+        setSmartHomeInstallations(prev => [
+          ...prev, 
+          {
+            type: subtype as 'camera' | 'doorbell' | 'floodlight',
+            quantity: 1,
+            brickInstallation: false
+          }
+        ]);
+      }
+    }
+  }, []);
 
   // Update pricing totals
   const handlePricingUpdate = useCallback((total: number) => {
