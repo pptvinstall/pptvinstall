@@ -71,7 +71,7 @@ export function ServiceSelectionGrid({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="tv" className="mt-0">
+          <TabsContent value="tv" className="mt-0 relative">
             <ScrollArea className="h-[280px] pr-2">
               <motion.div
                 variants={containerVariants}
@@ -94,7 +94,7 @@ export function ServiceSelectionGrid({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="smartHome" className="mt-0">
+          <TabsContent value="smartHome" className="mt-0 relative">
             <ScrollArea className="h-[280px] pr-2">
               <motion.div
                 variants={containerVariants}

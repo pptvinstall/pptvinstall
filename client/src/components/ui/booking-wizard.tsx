@@ -147,7 +147,7 @@ const PriceCalculator = React.memo(
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-2">
+        <CardContent className="pb-2 relative">
           {allServices.length > 0 ? (
             <ScrollArea className="max-h-[200px] pr-3">
               <div className="space-y-3">
