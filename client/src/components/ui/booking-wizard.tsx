@@ -1117,7 +1117,7 @@ export function BookingWizard({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full booking-wizard-container mx-auto">
       <div className="space-y-6">
         {/* Steps progress */}
         <StepIndicator currentStep={currentStep} totalSteps={steps.length} />
@@ -1133,9 +1133,9 @@ export function BookingWizard({
             transition={{ duration: 0.3 }}
           >
             {/* Step Content */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div className="booking-step-grid grid grid-cols-1 md:grid-cols-5 gap-6">
               {/* Main Content Column */}
-              <Card className="md:col-span-3 p-6">
+              <Card className="md:col-span-3 p-6 wizard-step">
                 {currentStep === 0 && (
                   <ServiceSelectionStep
                     onServiceSelect={handleServiceSelect}
