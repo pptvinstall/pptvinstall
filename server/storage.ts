@@ -8,6 +8,24 @@ import { fileURLToPath } from 'url';
 // Since bookings and contactMessages tables are not exported from schema
 // We'll use local file system storage instead
 
+// Setup dirname and paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Storage path for bookings
+const STORAGE_DIR = path.join(__dirname, 'data');
+const BOOKINGS_FILE = path.join(STORAGE_DIR, 'bookings.json');
+
+// Ensure storage directory exists
+if (!fs.existsSync(STORAGE_DIR)) {
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+}
+
+// Initialize bookings file if it doesn't exist
+if (!fs.existsSync(BOOKINGS_FILE)) {
+  fs.writeFileSync(BOOKINGS_FILE, JSON.stringify([]));
+}
+
 export interface IStorage {
   // Contact Messages
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
@@ -94,8 +112,6 @@ export class FileSystemStorage implements IStorage {
   
   // Helper methods for contact messages
   private loadContactMessages(): any[] {
-    const fs = require('fs');
-    const path = require('path');
     const MESSAGES_FILE = path.join(STORAGE_DIR, 'contact_messages.json');
     
     if (!fs.existsSync(MESSAGES_FILE)) {
@@ -112,8 +128,6 @@ export class FileSystemStorage implements IStorage {
   }
   
   private saveContactMessages(messages: any[]): void {
-    const fs = require('fs');
-    const path = require('path');
     const MESSAGES_FILE = path.join(STORAGE_DIR, 'contact_messages.json');
     
     try {
@@ -124,24 +138,7 @@ export class FileSystemStorage implements IStorage {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export const storage = new FileSystemStorage();
-
-// Storage path for bookings
-const STORAGE_DIR = path.join(__dirname, 'data');
-const BOOKINGS_FILE = path.join(STORAGE_DIR, 'bookings.json');
-
-// Ensure storage directory exists
-if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR, { recursive: true });
-}
-
-// Initialize bookings file if it doesn't exist
-if (!fs.existsSync(BOOKINGS_FILE)) {
-  fs.writeFileSync(BOOKINGS_FILE, JSON.stringify([]));
-}
 
 /**
  * Load bookings from storage
