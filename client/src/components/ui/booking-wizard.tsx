@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { pricing } from "@/lib/pricing";
 import { DateTimeStep } from "@/components/steps/date-time-step";
 import { CustomerDetailsStep } from "@/components/steps/customer-details-step";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
@@ -246,48 +247,49 @@ const ServiceSelectionStep = React.memo(
     ) => void;
     onContinue: () => void;
   }) => {
+    // Import pricing.ts values for consistency
     const tvInstallations: TVInstallation[] = [
       {
         id: "tv-mount-1",
-        name: "TV Wall Mounting (Up to 55\")",
-        description: "Standard wall mounting for TVs up to 55 inches",
+        name: "TV Installation (Small)",
+        description: "Standard installation with customer mount",
         type: "mount",
-        basePrice: 99,
+        basePrice: pricing.tv_mounting.standard.price, // $100
       },
       {
         id: "tv-mount-2",
-        name: "TV Wall Mounting (56-75\")",
-        description: "Standard wall mounting for TVs 56-75 inches",
+        name: "TV Installation (Large)",
+        description: "Standard installation with customer mount",
         type: "mount",
-        basePrice: 129,
+        basePrice: pricing.tv_mounting.standard.price, // $100
       },
       {
         id: "tv-mount-3",
-        name: "TV Wall Mounting (76\"+ or Heavy)",
-        description: "Wall mounting for TVs 76 inches and larger or heavy TVs",
+        name: "TV Installation (Over Fireplace)",
+        description: "Installation above a fireplace",
         type: "mount",
-        basePrice: 199,
+        basePrice: pricing.tv_mounting.fireplace.price, // $200
       },
       {
         id: "tv-unmount-1",
         name: "TV Unmounting",
         description: "Removal of an existing TV from wall mount",
         type: "unmount",
-        basePrice: 49,
+        basePrice: pricing.tv_mounting.unmount.price, // $50
       },
       {
         id: "tv-remount-1",
         name: "TV Remounting",
         description: "Moving an existing TV to a new location",
         type: "remount",
-        basePrice: 149,
+        basePrice: pricing.tv_mounting.existing_mount.price, // $50
       },
       {
         id: "tv-outlet-1",
         name: "In-Wall Power Outlet",
         description: "Professional installation of in-wall power management",
         type: "outlet",
-        basePrice: 149,
+        basePrice: pricing.wire_concealment.standard.price, // $100
       },
     ];
 
@@ -297,21 +299,21 @@ const ServiceSelectionStep = React.memo(
         name: "Security Camera Installation",
         description: "Install and setup of security cameras",
         type: "camera",
-        basePrice: 75, // $75 per camera as per pricing.ts
+        basePrice: pricing.smart_home.security_camera.price, // $75
       },
       {
         id: "smart-doorbell-1",
         name: "Smart Doorbell Installation",
         description: "Install and configure video doorbell",
         type: "doorbell",
-        basePrice: 85, // $85 per doorbell as per pricing.ts
+        basePrice: pricing.smart_home.doorbell.price, // $85
       },
       {
         id: "smart-light-1",
         name: "Smart Floodlight Installation",
         description: "Installation of smart floodlight (existing wiring)",
         type: "floodlight",
-        basePrice: 125, // $125 per floodlight as per pricing.ts
+        basePrice: pricing.smart_home.floodlight.price, // $125
       },
     ];
 
