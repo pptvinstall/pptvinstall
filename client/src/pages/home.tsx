@@ -20,6 +20,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { InstallationSlideshow } from "@/components/ui/installation-gallery";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -210,6 +211,40 @@ export default function HomePage() {
                 <div className="text-sm md:text-base text-gray-700">Satisfaction</div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Recent Installations Gallery */}
+      <section
+        className="py-16 bg-gradient-to-b from-white to-blue-50"
+        style={{ position: 'relative' }}
+      >
+        <div className="container relative mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4">
+              Our Work
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent TV Installations</h2>
+            <p className="text-lg text-blue-600 mb-8">
+              Browse our gallery of recent TV mounting and installation projects in Metro Atlanta
+            </p>
+          </div>
+          
+          <InstallationSlideshow />
+          
+          <div className="mt-8 text-center">
+            <p className="text-sm text-blue-500 mb-4">Swipe or use arrows to view more installations</p>
+            
+            <Link href="/booking">
+              <Button 
+                size="lg" 
+                className="bg-blue-600 hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              >
+                Book Your Professional Installation
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
