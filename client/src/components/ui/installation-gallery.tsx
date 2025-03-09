@@ -10,46 +10,6 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-// Define your installation images array here
-// To add more images, simply add more objects to this array
-const installationImages = [
-  {
-    src: "/assets/optimized/image1.jpg", // Replace with your actual image path
-    alt: "TV Installation over fireplace",
-    description: "Custom TV mounting over a fireplace",
-    tags: ["Fireplace", "Custom"]
-  },
-  {
-    src: "/assets/optimized/image2.jpg",
-    alt: "Home theater setup",
-    description: "Complete home theater installation",
-    tags: ["Home Theater", "Surround Sound"]
-  },
-  // Add more images here following the same structure
-  // For example:
-  /*
-  {
-    src: "/assets/optimized/your-new-image.jpg",
-    alt: "Descriptive alt text for accessibility",
-    description: "Short caption describing the installation",
-    tags: ["Tag1", "Tag2"]
-  },
-  */
-];
-
-// You can add as many images as you want to the array above
-// The components below will automatically use all images in the array
-
-import { 
-  Carousel, 
-  CarouselContent, 
-  CarouselItem, 
-  CarouselNext, 
-  CarouselPrevious 
-} from '@/components/ui/carousel';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-
 // Real installation images with proper SEO-friendly alt text
 const installationImages = [
   {
