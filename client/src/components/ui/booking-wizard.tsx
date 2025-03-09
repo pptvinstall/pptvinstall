@@ -254,42 +254,42 @@ const ServiceSelectionStep = React.memo(
         name: "TV Installation (Small)",
         description: "Standard installation with customer mount",
         type: "mount",
-        basePrice: pricing.tv_mounting.standard.price, // $100
+        basePrice: pricing.tvMounting.standard.price, // $100
       },
       {
         id: "tv-mount-2",
         name: "TV Installation (Large)",
         description: "Standard installation with customer mount",
         type: "mount",
-        basePrice: pricing.tv_mounting.standard.price, // $100
+        basePrice: pricing.tvMounting.standard.price, // $100
       },
       {
         id: "tv-mount-3",
         name: "TV Installation (Over Fireplace)",
         description: "Installation above a fireplace",
         type: "mount",
-        basePrice: pricing.tv_mounting.fireplace.price, // $200
+        basePrice: pricing.tvMounting.fireplace.price, // $200
       },
       {
         id: "tv-unmount-1",
         name: "TV Unmounting",
         description: "Removal of an existing TV from wall mount",
         type: "unmount",
-        basePrice: pricing.tv_mounting.unmount.price, // $50
+        basePrice: pricing.tvMounting.unmount.price, // $50
       },
       {
         id: "tv-remount-1",
         name: "TV Remounting",
         description: "Moving an existing TV to a new location",
         type: "remount",
-        basePrice: pricing.tv_mounting.existing_mount.price, // $50
+        basePrice: pricing.tvMounting.remount.price, // $50
       },
       {
         id: "tv-outlet-1",
         name: "In-Wall Power Outlet",
         description: "Professional installation of in-wall power management",
         type: "outlet",
-        basePrice: pricing.wire_concealment.standard.price, // $100
+        basePrice: pricing.wireConcealment.standard.price, // $100
       },
     ];
 

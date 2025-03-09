@@ -51,7 +51,7 @@ export function PriceCalculator({
     
     // Apply multiple TV discount
     if (tvs.length > 1) {
-      const discount = pricing.discounts.multiple_tvs.amount * (tvs.length - 1);
+      const discount = pricing.discounts.multipleTvs.amount * (tvs.length - 1);
       totalPrice -= discount;
     }
     
@@ -94,18 +94,18 @@ export function PriceCalculator({
     
     // Apply multiple TV discount
     if (tvs.length > 1) {
-      discounts = pricing.discounts.multiple_tvs.amount * (tvs.length - 1);
+      discounts = pricing.discounts.multipleTvs.amount * (tvs.length - 1);
       total -= discounts;
     }
     
     // Add smart home devices
     smartHome.forEach(device => {
       if (device.type === 'camera') {
-        total += pricing.smart_home.security_camera.price;
+        total += pricing.smartHome.securityCamera.price;
       } else if (device.type === 'doorbell') {
-        total += pricing.smart_home.doorbell.price;
+        total += pricing.smartHome.doorbell.price;
       } else if (device.type === 'floodlight') {
-        total += pricing.smart_home.floodlight.price;
+        total += pricing.smartHome.floodlight.price;
       }
     });
     
@@ -126,7 +126,7 @@ export function PriceCalculator({
     const items: ServiceItem[] = [];
     
     // Calculate multi-TV discount for display in the breakdown
-    const multiTVDiscount = tvs.length > 1 ? pricing.discounts.multiple_tvs.amount * (tvs.length - 1) : 0;
+    const multiTVDiscount = tvs.length > 1 ? pricing.discounts.multipleTvs.amount * (tvs.length - 1) : 0;
     let discountShown = false;
     
     // Add TV installations (wire concealment is included in basePrice)
@@ -142,13 +142,13 @@ export function PriceCalculator({
     if (tvs.length > 1) {
       discountShown = true;
       items.push({
-        name: pricing.discounts.multiple_tvs.name,
+        name: pricing.discounts.multipleTvs.name,
         description: `Discount for ${tvs.length - 1} additional TVs`,
-        price: -(pricing.discounts.multiple_tvs.amount * (tvs.length - 1))
+        price: -(pricing.discounts.multipleTvs.amount * (tvs.length - 1))
       });
       
       // Log for debugging
-      console.log('Adding discount:', pricing.discounts.multiple_tvs.amount * (tvs.length - 1));
+      console.log('Adding discount:', pricing.discounts.multipleTvs.amount * (tvs.length - 1));
     }
     
     // Add camera installations
@@ -157,7 +157,7 @@ export function PriceCalculator({
       items.push({
         name: "Smart Camera Installation",
         description: "Installation of smart camera",
-        price: pricing.smart_home.security_camera.price
+        price: pricing.smartHome.securityCamera.price
       });
     }
     
@@ -167,7 +167,7 @@ export function PriceCalculator({
       items.push({
         name: "Smart Doorbell Installation",
         description: "Installation of smart doorbell",
-        price: pricing.smart_home.doorbell.price
+        price: pricing.smartHome.doorbell.price
       });
     }
     
@@ -177,7 +177,7 @@ export function PriceCalculator({
       items.push({
         name: "Smart Floodlight Installation",
         description: "Installation of smart floodlight",
-        price: pricing.smart_home.floodlight.price
+        price: pricing.smartHome.floodlight.price
       });
     }
     

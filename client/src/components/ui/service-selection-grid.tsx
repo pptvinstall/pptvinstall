@@ -51,11 +51,11 @@ export function ServiceSelectionGrid({
   const getPriceForSmartHome = (type: string): number => {
     switch (type) {
       case "camera":
-        return pricing.smart_home.security_camera.price; // $75
+        return pricing.smartHome.securityCamera.price; // $75
       case "doorbell":
-        return pricing.smart_home.doorbell.price; // $85
+        return pricing.smartHome.doorbell.price; // $85
       case "floodlight":
-        return pricing.smart_home.floodlight.price; // $125
+        return pricing.smartHome.floodlight.price; // $125
       default:
         return 0;
     }
