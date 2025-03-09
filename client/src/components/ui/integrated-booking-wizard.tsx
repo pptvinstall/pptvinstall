@@ -144,31 +144,98 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   
+  // Define time slots (available appointment times)
+  const timeSlots = [
+    "9:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "12:00 PM",
+    "1:00 PM",
+    "2:00 PM",
+    "3:00 PM",
+    "4:00 PM",
+    "5:00 PM"
+  ];
+  
+  // Simple function to check if a time slot is in the past or too soon 
+  // (extracted to avoid circular dependencies)
+  const isTimePastOrTooSoon = useCallback((dateStr: string, timeStr: string): boolean => {
+    // Parse the time string
+    const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!timeMatch) return true; // Invalid format means unavailable
+    
+    let hours = parseInt(timeMatch[1], 10);
+    const minutes = parseInt(timeMatch[2], 10);
+    const period = timeMatch[3].toUpperCase();
+    
+    // Convert to 24-hour format
+    if (period === 'PM' && hours < 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
+    // Create a date object for the time slot
+    const slotDate = new Date(dateStr);
+    slotDate.setHours(hours, minutes, 0, 0);
+    
+    // Get current time plus buffer
+    const now = new Date();
+    const bufferTime = new Date(now.getTime() + 60 * 60 * 1000); // 60-minute buffer
+    
+    // Check if slot is in the past or too soon
+    return slotDate <= bufferTime;
+  }, []);
+
   // Add real-time refreshing of time slot availability
   useEffect(() => {
-    // Set up an interval to refresh time slot availability every minute
-    const refreshInterval = setInterval(() => {
-      if (selectedDate) {
-        // Clear the cache for the selected date to force recalculation
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
-        const newAvailability = { ...timeSlotAvailability };
-        
-        // Remove all cached entries for the selected date
-        Object.keys(newAvailability).forEach(key => {
-          if (key.startsWith(dateStr)) {
-            delete newAvailability[key];
+    // First-time check when date changes
+    if (selectedDate) {
+      // Check each time slot for the selected date
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      
+      // We only want to update the UI, not create an infinite loop
+      // So we handle this in a non-render-triggering way
+      const timer1 = setTimeout(() => {
+        // For each time slot, check if it's in the past and update accordingly
+        timeSlots.forEach(timeSlot => {
+          const key = `${dateStr}|${timeSlot}`;
+          const isPastOrTooSoon = isTimePastOrTooSoon(dateStr, timeSlot);
+          
+          if (isPastOrTooSoon) {
+            setTimeSlotAvailability(prev => ({ ...prev, [key]: false }));
           }
         });
         
-        setTimeSlotAvailability(newAvailability);
-        
-        // Log for debugging
-        console.log('Real-time refresh: Updated time slot availability at', new Date().toLocaleTimeString());
-      }
-    }, 60000); // Refresh every minute
-    
-    return () => clearInterval(refreshInterval);
-  }, [selectedDate]); // Remove timeSlotAvailability from dependencies to prevent infinite loop
+        console.log('Initial availability check for', dateStr, 'at', new Date().toLocaleTimeString());
+      }, 0);
+      
+      // Set up an interval to refresh time slot availability every minute
+      const refreshInterval = setInterval(() => {
+        if (selectedDate) {
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          
+          // For each time slot, check if it's just become unavailable
+          timeSlots.forEach(timeSlot => {
+            const key = `${dateStr}|${timeSlot}`;
+            const isPastOrTooSoon = isTimePastOrTooSoon(dateStr, timeSlot);
+            
+            if (isPastOrTooSoon && timeSlotAvailability[key] !== false) {
+              setTimeSlotAvailability(prev => ({ ...prev, [key]: false }));
+              console.log(`Auto-refresh: Time slot ${timeSlot} on ${dateStr} is now unavailable`);
+            }
+          });
+          
+          console.log('Real-time refresh: Checked time slot availability at', new Date().toLocaleTimeString());
+        }
+      }, 60000); // Refresh every minute
+      
+      return () => {
+        clearTimeout(timer1);
+        clearInterval(refreshInterval);
+      };
+    }
+  }, [selectedDate, timeSlots, isTimePastOrTooSoon]);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -203,23 +270,15 @@ export function IntegratedBookingWizard({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Available time slots
-  const timeSlots = [
-    "9:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "1:00 PM",
-    "2:00 PM",
-    "3:00 PM",
-    "4:00 PM",
-    "5:00 PM"
-  ];
-
   // Time slot availability check with real-time validation and improved error handling
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}|${time}`;
+      
+      // Check if we already have a cached result to avoid unnecessary state updates
+      if (timeSlotAvailability[key] !== undefined) {
+        return timeSlotAvailability[key];
+      }
       
       // Always recalculate time-based availability to ensure real-time checks
       // (don't use cached result for time-based checks)
@@ -255,7 +314,18 @@ export function IntegratedBookingWizard({
       // Check if the selected time is in the past (with buffer)
       if (selectedDate <= bufferTime) {
         console.log(`Time slot ${time} on ${date} is unavailable due to being in the past or too soon`);
-        setTimeSlotAvailability((prev) => ({ ...prev, [key]: false }));
+        
+        // Use setTimeout to prevent state updates during render
+        setTimeout(() => {
+          setTimeSlotAvailability((prev) => {
+            // Only update if not already set
+            if (prev[key] !== false) {
+              return { ...prev, [key]: false };
+            }
+            return prev;
+          });
+        }, 0);
+        
         return false;
       }
 
@@ -280,20 +350,38 @@ export function IntegratedBookingWizard({
             console.log(`Time slot ${time} on ${dateStr} is already booked`);
           }
           
-          setTimeSlotAvailability((prev) => ({ ...prev, [key]: !isSlotTaken }));
+          // Use setTimeout to prevent state updates during render
+          setTimeout(() => {
+            setTimeSlotAvailability((prev) => {
+              // Only update if value changed
+              if (prev[key] !== !isSlotTaken) {
+                return { ...prev, [key]: !isSlotTaken };
+              }
+              return prev;
+            });
+          }, 0);
+          
           return !isSlotTaken;
         } catch (error) {
           console.error("Error checking time slot availability:", error);
-          // Default to available if there's an error in checking
-          setTimeSlotAvailability((prev) => ({ ...prev, [key]: true }));
           return true;
         }
       }
 
-      setTimeSlotAvailability((prev) => ({ ...prev, [key]: true }));
+      // Use setTimeout to prevent state updates during render
+      setTimeout(() => {
+        setTimeSlotAvailability((prev) => {
+          // Only update if not already set
+          if (prev[key] !== true) {
+            return { ...prev, [key]: true };
+          }
+          return prev;
+        });
+      }, 0);
+      
       return true;
     },
-    [existingBookings] // Remove timeSlotAvailability from dependencies to prevent infinite loop
+    [existingBookings, timeSlotAvailability] // Include both dependencies but prevent updates in render
   );
 
   // Add TV installation option
