@@ -88,30 +88,30 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
     tvInstallations.forEach(tv => {
       // Base TV mounting price
       if (tv.location === 'standard') {
-        total += pricing.tv_mounting.standard.price;
+        total += pricing.tvMounting.standard.price;
       } else if (tv.location === 'fireplace') {
-        total += pricing.tv_mounting.fireplace.price;
+        total += pricing.tvMounting.fireplace.price;
       }
       
       // Add-ons
       if (tv.masonryWall) {
-        total += pricing.tv_mounting.non_drywall_addon.price;
+        total += pricing.tvMounting.nonDrywall.price;
       }
       
       if (tv.highRise) {
-        total += pricing.tv_mounting.high_rise_addon.price;
+        total += pricing.tvMounting.highRise.price;
       }
       
       // Mount purchases
       if (tv.mountType !== 'none' && tv.mountType !== 'customer') {
         const sizeKey = tv.size === 'large' ? 'big' : 'small';
-        const mountKey = `${tv.mountType}_${sizeKey}` as keyof typeof pricing.tv_mounts;
-        total += pricing.tv_mounts[mountKey]?.price || 0;
+        const mountKey = `${tv.mountType}${sizeKey.charAt(0).toUpperCase() + sizeKey.slice(1)}` as keyof typeof pricing.tvMounts;
+        total += pricing.tvMounts[mountKey]?.price || 0;
       }
       
       // Outlet installation
       if (tv.outletNeeded) {
-        total += pricing.wire_concealment.standard.price;
+        total += pricing.wireConcealment.standard.price;
       }
     });
     
