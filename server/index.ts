@@ -170,9 +170,9 @@ const gracefulShutdown = (signal: string) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
+    // Use environment PORT variable or default to 5000
     // this serves both the API and the client
-    const port = 5000;
+    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
     // Check if the port is already in use before trying to listen
     server.on('error', (error: any) => {
@@ -250,7 +250,7 @@ process.on('uncaughtException', (error) => {
     error.message.includes('EACCES') || 
     error.message.includes('cannot bind to port')
   )) {
-    gracefulShutdown();
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
   }
   // For other errors, just log them without shutting down
 });
@@ -283,7 +283,9 @@ const addSignalHandler = (signal: string) => {
   }
   
   // Create handler that passes signal name
-  const handler = () => gracefulShutdown(signal);
+  const handler = () => {
+    gracefulShutdown(signal);
+  };
   
   // Store and add the handler
   signalHandlers.set(signal, handler);
