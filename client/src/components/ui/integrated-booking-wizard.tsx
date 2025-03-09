@@ -189,7 +189,7 @@ export function IntegratedBookingWizard({
     "5:00 PM"
   ];
 
-  // Time slot availability check
+  // Time slot availability check with improved error handling
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}|${time}`;
@@ -220,20 +220,33 @@ export function IntegratedBookingWizard({
 
       // Check if time slot conflicts with existing bookings
       if (existingBookings && existingBookings.length > 0) {
-        const dateStr = format(new Date(date), "yyyy-MM-dd");
-        
-        // Filter bookings for the selected date
-        const bookingsOnDate = existingBookings.filter(
-          (booking) => booking.preferredDate === dateStr
-        );
-        
-        // Check if any booking has the same time slot
-        const isSlotTaken = bookingsOnDate.some(
-          (booking) => booking.appointmentTime === time
-        );
-        
-        setTimeSlotAvailability((prev) => ({ ...prev, [key]: !isSlotTaken }));
-        return !isSlotTaken;
+        try {
+          const dateStr = format(new Date(date), "yyyy-MM-dd");
+          
+          // Filter bookings for the selected date
+          const bookingsOnDate = existingBookings.filter(
+            (booking) => booking.preferredDate === dateStr
+          );
+          
+          // Check if any booking has the same time slot
+          const conflictingBooking = bookingsOnDate.find(
+            (booking) => booking.appointmentTime === time
+          );
+          
+          const isSlotTaken = !!conflictingBooking;
+          
+          if (isSlotTaken) {
+            console.log(`Time slot ${time} on ${dateStr} is already booked`);
+          }
+          
+          setTimeSlotAvailability((prev) => ({ ...prev, [key]: !isSlotTaken }));
+          return !isSlotTaken;
+        } catch (error) {
+          console.error("Error checking time slot availability:", error);
+          // Default to available if there's an error in checking
+          setTimeSlotAvailability((prev) => ({ ...prev, [key]: true }));
+          return true;
+        }
       }
 
       setTimeSlotAvailability((prev) => ({ ...prev, [key]: true }));
@@ -908,15 +921,29 @@ export function IntegratedBookingWizard({
                                   <Button
                                     key={time}
                                     variant={selectedTime === time ? "default" : "outline"}
-                                    className={`${!isAvailable ? "opacity-50 cursor-not-allowed" : ""} text-sm sm:text-base`}
+                                    className={`
+                                      ${!isAvailable ? "opacity-60 cursor-not-allowed border-red-200 bg-red-50 text-red-500 dark:bg-red-950 dark:border-red-800 dark:text-red-300" : ""} 
+                                      text-sm sm:text-base relative
+                                    `}
                                     onClick={() => {
                                       if (isAvailable) {
                                         setSelectedTime(time);
+                                      } else {
+                                        toast({
+                                          title: "Time slot unavailable",
+                                          description: "This time slot is already booked. Please select another time.",
+                                          variant: "destructive",
+                                        });
                                       }
                                     }}
                                     disabled={!isAvailable}
                                   >
                                     {time}
+                                    {!isAvailable && (
+                                      <span className="absolute inset-0 flex items-center justify-center">
+                                        <span className="sr-only">Unavailable</span>
+                                      </span>
+                                    )}
                                   </Button>
                                 );
                               })}
