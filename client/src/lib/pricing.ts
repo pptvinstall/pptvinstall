@@ -131,10 +131,7 @@ export function calculatePrice(options: any) {
         });
         additionalServices += additionalOutletService.price;
 
-        // Apply discount for additional outlets
-        if (i > 0) {
-          discounts += pricing.discounts.multipleOutlets.amount;
-        }
+        // Removed discount for additional outlets as requested
       }
     }
 
@@ -229,48 +226,7 @@ export function calculatePrice(options: any) {
     }
   }
 
-  // Calculate multi-TV discounts
-  if (options.tvCount && options.tvCount > 1) {
-    const multiTvDiscount = pricing.discounts.multipleTvs.amount * (options.tvCount - 1);
-
-    breakdown.push({
-      category: 'Discounts',
-      items: [{
-        name: `${pricing.discounts.multipleTvs.name} (${options.tvCount - 1} additional TVs)`,
-        price: -multiTvDiscount,
-        isDiscount: true
-      }]
-    });
-
-    discounts += multiTvDiscount;
-  }
-
-  // Apply mount bundle discounts if multiple mounts purchased
-  if (options.mountCount && options.mountCount > 1) {
-    const mountBundleDiscount = pricing.discounts.mountBundle.amount * (options.mountCount - 1);
-
-    // Add to existing discounts category or create new one
-    const discountCategory = breakdown.find(category => category.category === 'Discounts');
-
-    if (discountCategory) {
-      discountCategory.items.push({
-        name: `${pricing.discounts.mountBundle.name} (${options.mountCount - 1} additional mounts)`,
-        price: -mountBundleDiscount,
-        isDiscount: true
-      });
-    } else {
-      breakdown.push({
-        category: 'Discounts',
-        items: [{
-          name: `${pricing.discounts.mountBundle.name} (${options.mountCount - 1} additional mounts)`,
-          price: -mountBundleDiscount,
-          isDiscount: true
-        }]
-      });
-    }
-
-    discounts += mountBundleDiscount;
-  }
+  // Removed discount calculations as requested per requirements
 
   // Apply travel fee if applicable
   if (pricing.travel.fee > 0) {
