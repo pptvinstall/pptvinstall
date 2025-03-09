@@ -480,7 +480,7 @@ export function IntegratedBookingWizard({
       basePrice: 0 // Price is calculated on backend
     }));
 
-    // Prepare booking data
+    // Prepare booking data - directly include all fields in the top-level object
     const bookingData = {
       name: formData.name,
       email: formData.email,
@@ -497,6 +497,8 @@ export function IntegratedBookingWizard({
       status: "Scheduled",
       pricingTotal,
       consentToContact: formData.consentToContact,
+      tvInstallations,
+      smartHomeInstallations,
       pricingBreakdown: [
         ...tvServices.map(tv => ({
           type: 'tv',
@@ -515,12 +517,8 @@ export function IntegratedBookingWizard({
       ]
     };
 
-    // Submit booking via the onSubmit prop
-    onSubmit({
-      booking: bookingData,
-      tvInstallations,
-      smartHomeInstallations
-    });
+    // Submit booking directly without nesting
+    onSubmit(bookingData);
   };
 
   // Animation variants
