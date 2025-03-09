@@ -24,29 +24,29 @@ export function ReviewBookingStep({
   pricingTotal
 }: ReviewBookingStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 relative px-1">
       <div>
-        <h3 className="text-lg font-medium">Review Your Booking</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-base sm:text-lg font-medium">Review Your Booking</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Please review your booking details before confirming
         </p>
       </div>
       
       {/* Services Summary */}
-      <div>
+      <div className="relative">
         <h4 className="text-sm font-medium mb-2">Services</h4>
         <div className="space-y-3">
           {/* TV Installations */}
           {tvInstallations.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-sm font-medium">TV Installations:</h5>
-              <ul className="text-sm space-y-1">
+              <ul className="text-xs sm:text-sm space-y-2">
                 {tvInstallations.map((tv, index) => (
                   <li key={tv.id} className="flex flex-col p-2 bg-muted rounded-md">
                     <span className="font-medium">TV {index + 1}:</span>
                     <span>Size: {tv.size === 'large' ? '56" or larger' : '32"-55"'}</span>
                     <span>Location: {tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}</span>
-                    <span>
+                    <span className="line-clamp-2">
                       Mount: {tv.mountType === 'fixed' 
                         ? `Fixed Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
                         : tv.mountType === 'tilting' 
@@ -70,7 +70,7 @@ export function ReviewBookingStep({
           {tvRemovalService && (
             <div className="space-y-2">
               <h5 className="text-sm font-medium">TV Removal:</h5>
-              <div className="text-sm p-2 bg-muted rounded-md">
+              <div className="text-xs sm:text-sm p-2 bg-muted rounded-md">
                 <p>
                   {tvRemovalService.isUnmountOnly ? 'TV Unmounting' : 'TV Remounting'} 
                   {tvRemovalService.count > 1 ? ` (${tvRemovalService.count} TVs)` : ''}
@@ -83,7 +83,7 @@ export function ReviewBookingStep({
           {smartHomeInstallations.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-sm font-medium">Smart Home Installations:</h5>
-              <ul className="text-sm space-y-1">
+              <ul className="text-xs sm:text-sm space-y-2">
                 {smartHomeInstallations.map((device) => (
                   <li key={device.id} className="p-2 bg-muted rounded-md">
                     {device.type === 'camera' && `Smart Security Camera (Qty: ${device.count})`}
@@ -99,7 +99,7 @@ export function ReviewBookingStep({
           {handymanService && (
             <div className="space-y-2">
               <h5 className="text-sm font-medium">Handyman Services:</h5>
-              <div className="text-sm p-2 bg-muted rounded-md">
+              <div className="text-xs sm:text-sm p-2 bg-muted rounded-md">
                 <p>General Handyman Work ({handymanService.hours} hour{handymanService.hours > 1 ? 's' : ''})</p>
                 {handymanService.description && (
                   <p className="mt-1">{handymanService.description}</p>
@@ -113,12 +113,14 @@ export function ReviewBookingStep({
       <Separator />
       
       {/* Appointment Details */}
-      <div>
+      <div className="relative">
         <h4 className="text-sm font-medium mb-2">Appointment</h4>
-        <div className="text-sm grid grid-cols-2 gap-2">
+        <div className="text-xs sm:text-sm space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2">
           <div>
             <span className="font-medium">Date:</span>{' '}
-            {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Not selected'}
+            <span className="break-all">
+              {selectedDate ? format(selectedDate, 'EEE, MMM d, yyyy') : 'Not selected'}
+            </span>
           </div>
           <div>
             <span className="font-medium">Time:</span>{' '}
@@ -130,14 +132,16 @@ export function ReviewBookingStep({
       <Separator />
       
       {/* Customer Details */}
-      <div>
+      <div className="relative">
         <h4 className="text-sm font-medium mb-2">Customer Information</h4>
-        <div className="text-sm space-y-2">
+        <div className="text-xs sm:text-sm space-y-2">
           <p>
             <span className="font-medium">Name:</span> {formData.name}
           </p>
-          <p>
-            <span className="font-medium">Contact:</span> {formData.email}, {formData.phone}
+          <p className="break-words">
+            <span className="font-medium">Contact:</span> {formData.email}
+            <br className="sm:hidden" /><span className="hidden sm:inline">, </span>
+            {formData.phone}
           </p>
           <div>
             <span className="font-medium">Address:</span> 
@@ -151,7 +155,7 @@ export function ReviewBookingStep({
           {formData.notes && (
             <div>
               <span className="font-medium">Notes:</span> 
-              <p className="mt-1">{formData.notes}</p>
+              <p className="mt-1 break-words">{formData.notes}</p>
             </div>
           )}
         </div>
@@ -160,7 +164,7 @@ export function ReviewBookingStep({
       <Separator />
       
       {/* Pricing */}
-      <div>
+      <div className="relative">
         <h4 className="text-sm font-medium mb-2">Pricing</h4>
         <div className="bg-muted p-3 rounded-md flex justify-between items-center">
           <span className="font-medium">Estimated Total:</span>
