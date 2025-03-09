@@ -1,1 +1,35 @@
-[]
+[
+  {
+    "name": "Justin",
+    "email": "jwoodceo@gmaik.com",
+    "phone": "4047024748",
+    "streetAddress": "4359 oakleaf cove",
+    "city": "Decatur",
+    "state": "GA",
+    "zipCode": "30034",
+    "serviceType": "Smart Home Installation",
+    "preferredDate": "2025-03-09",
+    "appointmentTime": "5:00 PM",
+    "status": "active",
+    "pricingTotal": 285,
+    "pricingBreakdown": [
+      {
+        "type": "camera",
+        "count": 1,
+        "hasExistingWiring": true
+      },
+      {
+        "type": "doorbell",
+        "count": 1,
+        "hasExistingWiring": true
+      },
+      {
+        "type": "floodlight",
+        "count": 1,
+        "hasExistingWiring": true
+      }
+    ],
+    "id": "69",
+    "createdAt": "2025-03-09T19:52:27.433Z"
+  }
+]

@@ -142,6 +142,34 @@ export function IntegratedBookingWizard({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
+  const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
+  
+  // Add real-time refreshing of time slot availability
+  useEffect(() => {
+    // Set up an interval to refresh time slot availability every minute
+    const refreshInterval = setInterval(() => {
+      if (selectedDate) {
+        // Clear the cache for the selected date to force recalculation
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const newAvailability = { ...timeSlotAvailability };
+        
+        // Remove all cached entries for the selected date
+        Object.keys(newAvailability).forEach(key => {
+          if (key.startsWith(dateStr)) {
+            delete newAvailability[key];
+          }
+        });
+        
+        setTimeSlotAvailability(newAvailability);
+        
+        // Log for debugging
+        console.log('Real-time refresh: Updated time slot availability at', new Date().toLocaleTimeString());
+      }
+    }, 60000); // Refresh every minute
+    
+    return () => clearInterval(refreshInterval);
+  }, [selectedDate, timeSlotAvailability]);
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -154,7 +182,6 @@ export function IntegratedBookingWizard({
     notes: "",
     consentToContact: false
   });
-  const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
   
@@ -189,31 +216,45 @@ export function IntegratedBookingWizard({
     "5:00 PM"
   ];
 
-  // Time slot availability check with improved error handling
+  // Time slot availability check with real-time validation and improved error handling
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}|${time}`;
-      if (timeSlotAvailability[key] !== undefined) {
-        return timeSlotAvailability[key];
-      }
-
+      
+      // Always recalculate time-based availability to ensure real-time checks
+      // (don't use cached result for time-based checks)
+      
       // Convert the selected date and time to a DateTime
       const now = new Date();
-      const selectedDateTime = new Date(`${date}T${time.replace(/AM|PM/, '')}`);
-
-      selectedDateTime.setHours(
-        time.includes("PM") && !time.startsWith("12") 
-          ? selectedDateTime.getHours() + 12 
-          : time.includes("AM") && time.startsWith("12")
-          ? 0
-          : selectedDateTime.getHours()
-      );
-
-      // Add a 30-minute buffer for same-day bookings
-      const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
-
+      
+      // Parse the time string to get hours and minutes
+      const timeMatch = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) {
+        console.error(`Invalid time format: ${time}`);
+        return false;
+      }
+      
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      const period = timeMatch[3].toUpperCase();
+      
+      // Convert to 24-hour format
+      if (period === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      // Create a date object for the selected date and time
+      const selectedDate = new Date(date);
+      selectedDate.setHours(hours, minutes, 0, 0);
+      
+      // Add a 60-minute buffer for bookings (appointments need to be at least 1 hour in the future)
+      const bufferTime = new Date(now.getTime() + 60 * 60 * 1000);
+      
       // Check if the selected time is in the past (with buffer)
-      if (selectedDateTime <= bufferTime) {
+      if (selectedDate <= bufferTime) {
+        console.log(`Time slot ${time} on ${date} is unavailable due to being in the past or too soon`);
         setTimeSlotAvailability((prev) => ({ ...prev, [key]: false }));
         return false;
       }
