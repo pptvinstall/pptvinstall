@@ -168,7 +168,7 @@ export function IntegratedBookingWizard({
     }, 60000); // Refresh every minute
     
     return () => clearInterval(refreshInterval);
-  }, [selectedDate, timeSlotAvailability]);
+  }, [selectedDate]); // Remove timeSlotAvailability from dependencies to prevent infinite loop
   
   const [formData, setFormData] = useState({
     name: "",
@@ -293,7 +293,7 @@ export function IntegratedBookingWizard({
       setTimeSlotAvailability((prev) => ({ ...prev, [key]: true }));
       return true;
     },
-    [existingBookings, timeSlotAvailability]
+    [existingBookings] // Remove timeSlotAvailability from dependencies to prevent infinite loop
   );
 
   // Add TV installation option
