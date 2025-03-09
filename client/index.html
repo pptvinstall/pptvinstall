@@ -18,14 +18,12 @@
     <!-- Preload critical assets -->
     <link rel="preload" href="/logo.svg" as="image" fetchpriority="high" />
     
-    <!-- Smooth scrolling polyfill for Safari -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        if (!('scrollBehavior' in document.documentElement.style)) {
-          import('scroll-behavior-polyfill');
-        }
-      });
-    </script>
+    <!-- Default smooth scrolling behavior -->
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+    </style>
     
     <!-- Favicon -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
