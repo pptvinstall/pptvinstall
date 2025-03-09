@@ -494,7 +494,7 @@ export function IntegratedBookingWizard({
       preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
       appointmentTime: selectedTime || "",
       serviceType: tvInstallations.length > 0 ? "TV Installation" : "Smart Home Installation",
-      status: "Scheduled",
+      status: "active",
       pricingTotal,
       consentToContact: formData.consentToContact,
       tvInstallations,
