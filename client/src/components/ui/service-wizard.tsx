@@ -115,10 +115,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
       }
     });
     
-    // Apply multi-TV discount
-    if (tvInstallations.length > 1) {
-      total -= (tvInstallations.length - 1) * pricing.discounts.multipleTvs.amount;
-    }
+    // No discount calculation as requested
     
     // TV Removal services
     if (needsTvRemoval) {
