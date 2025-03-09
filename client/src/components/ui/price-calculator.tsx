@@ -127,6 +127,7 @@ export function PriceCalculator({
     
     // Calculate multi-TV discount for display in the breakdown
     const multiTVDiscount = tvs.length > 1 ? pricing.discounts.multiple_tvs.amount * (tvs.length - 1) : 0;
+    let discountShown = false;
     
     // Add TV installations (wire concealment is included in basePrice)
     tvs.forEach((tv, index) => {
@@ -137,13 +138,17 @@ export function PriceCalculator({
       });
     });
     
-    // Add multiple TV discount if applicable
+    // Always add multiple TV discount if multiple TVs are selected
     if (tvs.length > 1) {
+      discountShown = true;
       items.push({
         name: pricing.discounts.multiple_tvs.name,
         description: `Discount for ${tvs.length - 1} additional TVs`,
         price: -(pricing.discounts.multiple_tvs.amount * (tvs.length - 1))
       });
+      
+      // Log for debugging
+      console.log('Adding discount:', pricing.discounts.multiple_tvs.amount * (tvs.length - 1));
     }
     
     // Add camera installations
@@ -217,10 +222,12 @@ export function PriceCalculator({
             
             <Separator />
             
-            {/* Total */}
+            {/* Total - Calculate directly from service items */}
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span className="text-primary">${calculateTotal().toFixed(2)}</span>
+              <span className="text-primary">
+                ${serviceItems.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+              </span>
             </div>
             
             {/* Add More Services button */}
