@@ -299,21 +299,21 @@ const ServiceSelectionStep = React.memo(
         name: "Security Camera Installation",
         description: "Install and setup of security cameras",
         type: "camera",
-        basePrice: pricing.smart_home.security_camera.price, // $75
+        basePrice: pricing.smartHome.securityCamera.price, // $75
       },
       {
         id: "smart-doorbell-1",
         name: "Smart Doorbell Installation",
         description: "Install and configure video doorbell",
         type: "doorbell",
-        basePrice: pricing.smart_home.doorbell.price, // $85
+        basePrice: pricing.smartHome.doorbell.price, // $85
       },
       {
         id: "smart-light-1",
         name: "Smart Floodlight Installation",
         description: "Installation of smart floodlight (existing wiring)",
         type: "floodlight",
-        basePrice: pricing.smart_home.floodlight.price, // $125
+        basePrice: pricing.smartHome.floodlight.price, // $125
       },
     ];
 
@@ -776,21 +776,21 @@ export function BookingWizard({
                       // Convert from ServiceWizard format to our format
                       services.tvInstallations.forEach(tv => {
                         // Calculate the correct price based on location and size
-                        let basePrice = pricing.tv_mounting.standard.price; // $100 default
+                        let basePrice = pricing.tvMounting.standard.price; // $100 default
                         
                         // If it's a fireplace location, use fireplace price
                         if (tv.location === 'fireplace') {
-                          basePrice = pricing.tv_mounting.fireplace.price; // $200
+                          basePrice = pricing.tvMounting.fireplace.price; // $200
                         }
                         
                         // Add masonry wall cost if needed
                         if (tv.masonryWall) {
-                          basePrice += pricing.tv_mounting.non_drywall_addon.price; // +$50
+                          basePrice += pricing.tvMounting.nonDrywall.price; // +$50
                         }
                         
                         // Add high-rise cost if needed
                         if (tv.highRise) {
-                          basePrice += pricing.tv_mounting.high_rise_addon.price; // +$25
+                          basePrice += pricing.tvMounting.highRise.price; // +$25
                         }
                         
                         // Create description that includes wire concealment information if selected
@@ -798,7 +798,7 @@ export function BookingWizard({
                         if (tv.outletNeeded) {
                           description += " with wire concealment & outlet";
                           // Add cost of wire concealment to base price
-                          basePrice += pricing.wire_concealment.standard.price; // +$100
+                          basePrice += pricing.wireConcealment.standard.price; // +$100
                         }
                         
                         const tvService: TVInstallation = {
@@ -815,11 +815,11 @@ export function BookingWizard({
                         // Set the correct price based on device type from pricing.ts
                         let price = 0;
                         if (device.type === 'camera') {
-                          price = pricing.smart_home.security_camera.price; // $75
+                          price = pricing.smartHome.securityCamera.price; // $75
                         } else if (device.type === 'doorbell') {
-                          price = pricing.smart_home.doorbell.price; // $85
+                          price = pricing.smartHome.doorbell.price; // $85
                         } else if (device.type === 'floodlight') {
-                          price = pricing.smart_home.floodlight.price; // $125
+                          price = pricing.smartHome.floodlight.price; // $125
                         }
                         
                         const deviceService: SmartHomeInstallation = {
