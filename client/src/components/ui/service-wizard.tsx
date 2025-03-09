@@ -117,15 +117,15 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
     
     // Apply multi-TV discount
     if (tvInstallations.length > 1) {
-      total -= (tvInstallations.length - 1) * pricing.discounts.multiple_tvs.amount;
+      total -= (tvInstallations.length - 1) * pricing.discounts.multipleTvs.amount;
     }
     
     // TV Removal services
     if (needsTvRemoval) {
       if (tvRemovalType === 'unmount') {
-        total += tvRemovalCount * pricing.tv_mounting.unmount.price;
+        total += tvRemovalCount * pricing.tvMounting.unmount.price;
       } else {
-        total += tvRemovalCount * pricing.tv_mounting.existing_mount.price;
+        total += tvRemovalCount * pricing.tvMounting.remount.price;
       }
     }
     
@@ -133,21 +133,21 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
     smartHomeDevices.forEach(device => {
       if (device.type === 'camera') {
         // Camera price: $75
-        total += device.count * pricing.smart_home.security_camera.price;
+        total += device.count * pricing.smartHome.securityCamera.price;
       } else if (device.type === 'doorbell') {
         // Doorbell price: $85
-        total += device.count * pricing.smart_home.doorbell.price;
+        total += device.count * pricing.smartHome.doorbell.price;
       } else if (device.type === 'floodlight' && device.hasExistingWiring) {
         // Floodlight price: $125
-        total += device.count * pricing.smart_home.floodlight.price;
+        total += device.count * pricing.smartHome.floodlight.price;
       }
     });
     
     // Handyman services
     if (needsHandyman) {
-      const handymanBasePrice = pricing.custom_services.handyman.price;
+      const handymanBasePrice = pricing.customServices.handyman.price;
       const additionalHalfHours = Math.ceil((handymanHours - 1) * 2);
-      const halfHourRate = pricing.custom_services.handyman.half_hour_rate || 50; // Fallback to 50 if not defined
+      const halfHourRate = pricing.customServices.handyman.halfHourRate || 50; // Fallback to 50 if not defined
       const additionalFee = additionalHalfHours * halfHourRate;
       total += handymanBasePrice + additionalFee;
     }
@@ -331,11 +331,11 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="standard" id="location-standard" />
-                      <Label htmlFor="location-standard">Standard Wall (${pricing.tv_mounting.standard.price})</Label>
+                      <Label htmlFor="location-standard">Standard Wall (${pricing.tvMounting.standard.price})</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="fireplace" id="location-fireplace" />
-                      <Label htmlFor="location-fireplace">Over Fireplace (${pricing.tv_mounting.fireplace.price})</Label>
+                      <Label htmlFor="location-fireplace">Over Fireplace (${pricing.tvMounting.fireplace.price})</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -362,7 +362,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                       <Label htmlFor="mount-fixed">
                         Fixed Mount
                         <span className="block text-xs text-muted-foreground">
-                          (${newTvSize === 'small' ? pricing.tv_mounts.fixed_small.price : pricing.tv_mounts.fixed_big.price})
+                          (${newTvSize === 'small' ? pricing.tvMounts.fixedSmall.price : pricing.tvMounts.fixedBig.price})
                         </span>
                       </Label>
                     </div>
@@ -371,7 +371,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                       <Label htmlFor="mount-tilting">
                         Tilting Mount
                         <span className="block text-xs text-muted-foreground">
-                          (${newTvSize === 'small' ? pricing.tv_mounts.tilting_small.price : pricing.tv_mounts.tilting_big.price})
+                          (${newTvSize === 'small' ? pricing.tvMounts.tiltingSmall.price : pricing.tvMounts.tiltingBig.price})
                         </span>
                       </Label>
                     </div>
@@ -380,7 +380,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                       <Label htmlFor="mount-full-motion">
                         Full Motion Mount
                         <span className="block text-xs text-muted-foreground">
-                          (${newTvSize === 'small' ? pricing.tv_mounts.full_motion_small.price : pricing.tv_mounts.full_motion_big.price})
+                          (${newTvSize === 'small' ? pricing.tvMounts.fullMotionSmall.price : pricing.tvMounts.fullMotionBig.price})
                         </span>
                       </Label>
                     </div>
@@ -404,7 +404,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                         Non-Drywall Surface (Brick, Masonry, etc.)
                       </Label>
                       <span className="text-xs text-muted-foreground">
-                        Additional ${pricing.tv_mounting.non_drywall_addon.price}
+                        Additional ${pricing.tvMounting.nonDrywall.price}
                       </span>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                         High-Rise/Steel Stud Mounting
                       </Label>
                       <span className="text-xs text-muted-foreground">
-                        Additional ${pricing.tv_mounting.high_rise_addon.price}
+                        Additional ${pricing.tvMounting.highRise.price}
                       </span>
                     </div>
                   </div>
@@ -451,7 +451,7 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">
-                          Additional ${pricing.wire_concealment.standard.price}
+                          Additional ${pricing.wireConcealment.standard.price}
                         </span>
                       )}
                     </div>
@@ -494,13 +494,13 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="unmount" id="removal-unmount" />
                         <Label htmlFor="removal-unmount">
-                          Unmount TV from Wall (${pricing.tv_mounting.unmount.price}/TV)
+                          Unmount TV from Wall (${pricing.tvMounting.unmount.price}/TV)
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="remount" id="removal-remount" />
                         <Label htmlFor="removal-remount">
-                          Remount TV on Existing Mount (${pricing.tv_mounting.existing_mount.price}/TV)
+                          Remount TV on Existing Mount (${pricing.tvMounting.remount.price}/TV)
                         </Label>
                       </div>
                     </RadioGroup>
@@ -581,19 +581,19 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="camera" id="device-camera" />
                       <Label htmlFor="device-camera">
-                        Smart Security Camera Installation (${pricing.smart_home.security_camera.price})
+                        Smart Security Camera Installation (${pricing.smartHome.securityCamera.price})
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="doorbell" id="device-doorbell" />
                       <Label htmlFor="device-doorbell">
-                        Smart Doorbell Installation (${pricing.smart_home.doorbell.price})
+                        Smart Doorbell Installation (${pricing.smartHome.doorbell.price})
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="floodlight" id="device-floodlight" />
                       <Label htmlFor="device-floodlight">
-                        Smart Floodlight Installation (${pricing.smart_home.floodlight.price})
+                        Smart Floodlight Installation (${pricing.smartHome.floodlight.price})
                       </Label>
                     </div>
                   </RadioGroup>
@@ -692,8 +692,8 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                         className="w-20"
                       />
                       <span className="ml-2 text-sm text-muted-foreground">
-                        First hour: ${pricing.custom_services.handyman.price}, 
-                        then ${pricing.custom_services.handyman.half_hour_rate}/30 min
+                        First hour: ${pricing.customServices.handyman.price}, 
+                        then ${pricing.customServices.handyman.halfHourRate}/30 min
                       </span>
                     </div>
                   </div>
