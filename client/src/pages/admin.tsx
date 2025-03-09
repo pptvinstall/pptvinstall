@@ -43,6 +43,7 @@ import { formatPrice } from "@/lib/pricing";
 import { Download, Search, Filter, SlidersHorizontal } from "lucide-react";
 import { TimeBlocking } from "@/components/admin/time-blocking";
 import { BookingCalendar } from "@/components/admin/booking-calendar";
+import { BusinessHours } from "@/components/admin/business-hours";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -351,6 +352,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           <TabsTrigger value="bookings">List View</TabsTrigger>
           <TabsTrigger value="time-blocking">Time Blocking</TabsTrigger>
+          <TabsTrigger value="business-hours">Business Hours</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -556,6 +558,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="time-blocking">
           <TimeBlocking password={password} />
+        </TabsContent>
+
+        <TabsContent value="business-hours">
+          <BusinessHours password={password} />
         </TabsContent>
 
         <TabsContent value="settings">
