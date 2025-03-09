@@ -80,12 +80,12 @@ export function InstallationSlideshow() {
         align: "start",
         loop: true,
       }}
-      className="w-full max-w-6xl mx-auto"
+      className="w-full mx-auto max-w-7xl"
     >
       <CarouselContent>
         {installationImages.map((image, index) => (
-          <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-            <div className="p-1">
+          <CarouselItem key={index} className="md:basis-1/2 lg:basis-2/5">
+            <div className="p-2">
               <Card className="overflow-hidden border border-blue-100 shadow-md">
                 <CardContent className="flex aspect-video items-center justify-center p-0">
                   <div className="relative w-full h-full group">
@@ -96,8 +96,8 @@ export function InstallationSlideshow() {
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-                      <div className="p-3 space-y-2">
-                        <p className="text-white text-sm font-medium">{image.description}</p>
+                      <div className="p-4 space-y-2">
+                        <p className="text-white text-base font-medium">{image.description}</p>
                         <div className="flex flex-wrap gap-1">
                           {image.tags.map((tag, tagIndex) => (
                             <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
@@ -114,8 +114,8 @@ export function InstallationSlideshow() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="hidden md:flex -left-4 bg-white/80 hover:bg-white" />
-      <CarouselNext className="hidden md:flex -right-4 bg-white/80 hover:bg-white" />
+      <CarouselPrevious className="hidden md:flex -left-6 bg-white/90 hover:bg-white" />
+      <CarouselNext className="hidden md:flex -right-6 bg-white/90 hover:bg-white" />
     </Carousel>
   );
 }

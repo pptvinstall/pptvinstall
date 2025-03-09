@@ -179,42 +179,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Showcase section */}
-      <section
-        ref={showcaseRef}
-        className="py-12 bg-white"
-        style={{ position: 'relative' }}
-      >
-        <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-8">
-            <p className="text-lg text-blue-600">
-              We provide professional TV mounting and smart home installation services throughout Metro Atlanta
-            </p>
-          </div>
-
-          <div className="mx-auto max-w-xl bg-gray-100 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-2 gap-px relative">
-              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
-                <div className="text-3xl md:text-4xl font-bold text-gray-800">250+</div>
-                <div className="text-sm md:text-base text-gray-700">Happy Customers</div>
-              </div>
-              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
-                <div className="text-3xl md:text-4xl font-bold text-gray-800">500+</div>
-                <div className="text-sm md:text-base text-gray-700">TVs Mounted</div>
-              </div>
-              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
-                <div className="text-3xl md:text-4xl font-bold text-gray-800">5<span className="text-yellow-500">★</span></div>
-                <div className="text-sm md:text-base text-gray-700">Average Rating</div>
-              </div>
-              <div className="bg-gray-300 p-6 text-center flex flex-col items-center justify-center">
-                <div className="text-3xl md:text-4xl font-bold text-gray-800">100%</div>
-                <div className="text-sm md:text-base text-gray-700">Satisfaction</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Recent Installations Gallery */}
       <section
         className="py-16 bg-gradient-to-b from-white to-blue-50"
@@ -245,6 +209,42 @@ export default function HomePage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
+          </div>
+        </div>
+      </section>
+      
+      {/* Showcase section */}
+      <section
+        ref={showcaseRef}
+        className="py-12 bg-white"
+        style={{ position: 'relative' }}
+      >
+        <div className="container relative mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-8">
+            <p className="text-lg text-blue-600">
+              We provide professional TV mounting and smart home installation services throughout Metro Atlanta
+            </p>
+          </div>
+
+          <div className="mx-auto max-w-4xl bg-gray-100 rounded-xl overflow-hidden shadow-md">
+            <div className="grid grid-cols-2 gap-px relative">
+              <div className="bg-blue-50 p-6 text-center flex flex-col items-center justify-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600">250+</div>
+                <div className="text-sm md:text-base text-blue-600 font-medium mt-2">Happy Customers</div>
+              </div>
+              <div className="bg-blue-50 p-6 text-center flex flex-col items-center justify-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600">500+</div>
+                <div className="text-sm md:text-base text-blue-600 font-medium mt-2">TVs Mounted</div>
+              </div>
+              <div className="bg-blue-50 p-6 text-center flex flex-col items-center justify-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600">5<span className="text-yellow-500">★</span></div>
+                <div className="text-sm md:text-base text-blue-600 font-medium mt-2">Average Rating</div>
+              </div>
+              <div className="bg-blue-50 p-6 text-center flex flex-col items-center justify-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600">100%</div>
+                <div className="text-sm md:text-base text-blue-600 font-medium mt-2">Satisfaction</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
