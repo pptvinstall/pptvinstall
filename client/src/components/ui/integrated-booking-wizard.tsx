@@ -542,8 +542,8 @@ export function IntegratedBookingWizard({
   };
 
   return (
-    <div className="w-full booking-wizard-container mx-auto relative">
-      <div className="space-y-6">
+    <div className="w-full booking-wizard-container mx-auto relative" style={{ position: 'relative' }}>
+      <div className="space-y-6 relative">
         {/* Mobile-optimized step indicator with reduced padding on small screens */}
         <div className="px-2 sm:px-0">
           <StepIndicator currentStep={currentStep} totalSteps={4} />
