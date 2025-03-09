@@ -125,6 +125,9 @@ export function PriceCalculator({
   const serviceDescriptions = (): ServiceItem[] => {
     const items: ServiceItem[] = [];
     
+    // Calculate multi-TV discount for display in the breakdown
+    const multiTVDiscount = tvs.length > 1 ? pricing.discounts.multiple_tvs.amount * (tvs.length - 1) : 0;
+    
     // Add TV installations (wire concealment is included in basePrice)
     tvs.forEach((tv, index) => {
       items.push({
@@ -217,7 +220,7 @@ export function PriceCalculator({
             {/* Total */}
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span className="text-primary">${totalAmount.toFixed(2)}</span>
+              <span className="text-primary">${calculateTotal().toFixed(2)}</span>
             </div>
             
             {/* Add More Services button */}
