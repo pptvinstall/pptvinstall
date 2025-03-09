@@ -191,8 +191,10 @@ export default function BookingConfirmation() {
         breakdown.push({
           category: 'TV Mounting',
           items: tvItems.map((tv: PricingBreakdownItem, index: number) => ({
-            name: `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location} ${tv.mountType !== 'none' ? `(${tv.mountType})` : ''}`,
+            name: `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location}`,
             details: [
+              tv.mountType && ['fixed', 'tilting', 'full_motion'].includes(tv.mountType) ? 
+                `With ${tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilting' ? 'Tilting' : 'Full Motion'} Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})` : null,
               tv.masonryWall ? 'Non-Drywall Surface' : null,
               tv.highRise ? 'High-Rise/Steel Studs' : null,
               tv.outletRelocation ? 'With Outlet Installation' : null
@@ -377,6 +379,18 @@ export default function BookingConfirmation() {
 
       if (tvProperties.includes('outlet')) {
         tvPrice += 100;
+      }
+      
+      // Add mount prices if applicable
+      if (tvProperties.includes('fixed mount')) {
+        const isLarge = tvProperties.includes('56"') || tvProperties.includes('large');
+        tvPrice += isLarge ? 65 : 50; // Fixed mount prices
+      } else if (tvProperties.includes('tilting mount')) {
+        const isLarge = tvProperties.includes('56"') || tvProperties.includes('large');
+        tvPrice += isLarge ? 80 : 65; // Tilting mount prices
+      } else if (tvProperties.includes('full motion mount')) {
+        const isLarge = tvProperties.includes('56"') || tvProperties.includes('large');
+        tvPrice += isLarge ? 120 : 90; // Full motion mount prices
       }
 
       totalPrice += tvPrice;

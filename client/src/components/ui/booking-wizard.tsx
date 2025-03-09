@@ -801,6 +801,26 @@ export function BookingWizard({
                           basePrice += pricing.wireConcealment.standard.price; // +$100
                         }
                         
+                        // Add the mount price if a purchasable mount is selected
+                        if (['fixed', 'tilting', 'full_motion'].includes(tv.mountType)) {
+                          // Convert full_motion to fullMotion for compatibility with pricing data
+                          let mountType = tv.mountType === 'full_motion' ? 'fullMotion' : tv.mountType;
+                          
+                          // Get the appropriate mount price based on size and type
+                          let mountPrice = 0;
+                          if (mountType === 'fixed') {
+                            mountPrice = tv.size === 'small' ? pricing.tvMounts.fixedSmall.price : pricing.tvMounts.fixedBig.price;
+                          } else if (mountType === 'tilting') {
+                            mountPrice = tv.size === 'small' ? pricing.tvMounts.tiltingSmall.price : pricing.tvMounts.tiltingBig.price;
+                          } else if (mountType === 'fullMotion') {
+                            mountPrice = tv.size === 'small' ? pricing.tvMounts.fullMotionSmall.price : pricing.tvMounts.fullMotionBig.price;
+                          }
+                          
+                          // Add the mount price to the total
+                          basePrice += mountPrice;
+                          description += ` (${mountType} mount included)`;
+                        }
+                        
                         const tvService: TVInstallation = {
                           id: tv.id,
                           name: `TV Installation (${tv.size === 'small' ? 'Small' : 'Large'})`,

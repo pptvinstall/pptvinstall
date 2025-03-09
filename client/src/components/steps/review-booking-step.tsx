@@ -46,9 +46,17 @@ export function ReviewBookingStep({
                     <span className="font-medium">TV {index + 1}:</span>
                     <span>Size: {tv.size === 'large' ? '56" or larger' : '32"-55"'}</span>
                     <span>Location: {tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}</span>
-                    {tv.mountType !== 'customer' && tv.mountType !== 'none' && (
-                      <span>Mount: {tv.mountType === 'fixed' ? 'Fixed' : tv.mountType === 'tilting' ? 'Tilting' : 'Full Motion'}</span>
-                    )}
+                    <span>
+                      Mount: {tv.mountType === 'fixed' 
+                        ? `Fixed Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                        : tv.mountType === 'tilting' 
+                        ? `Tilting Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                        : tv.mountType === 'full_motion' 
+                        ? `Full Motion Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                        : tv.mountType === 'customer' 
+                        ? 'Customer-Provided Mount' 
+                        : 'No Mount Required'}
+                    </span>
                     {tv.masonryWall && <span>Non-Drywall Surface (Brick/Masonry)</span>}
                     {tv.highRise && <span>High-Rise/Steel Studs</span>}
                     {tv.outletNeeded && <span>With Wire Concealment & Outlet</span>}
