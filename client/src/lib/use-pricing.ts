@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { calculatePrice, type ServiceOptions } from './pricing';
 import { formatPrice } from './pricing';
+import { type PricingItem } from '../data/pricing-data';
 import type { TVInstallation, SmartHomeInstallation } from '../components/ui/service-wizard';
 
 interface UsePricingResult {
