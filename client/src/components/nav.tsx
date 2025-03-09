@@ -22,7 +22,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetClose
+  SheetClose,
+  SheetDescription
 } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -154,7 +155,7 @@ export default function Nav() {
           </Button>
           
           {/* Mobile menu */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <Sheet defaultOpen={false} open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
                 <Menu className="h-5 w-5" />
@@ -173,6 +174,9 @@ export default function Nav() {
                     </Button>
                   </SheetClose>
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Navigation menu for mobile devices
+                </SheetDescription>
               </SheetHeader>
               
               <div className="py-4 px-2">
