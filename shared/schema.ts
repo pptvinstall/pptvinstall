@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pgTable, serial, text, varchar, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 
 // Contact form schema
@@ -32,8 +32,17 @@ export const bookingSchema = z.object({
   pricingBreakdown: z.any().optional()
 });
 
-// Create insert schema for bookings
+// Business hours schema
+export const businessHoursSchema = z.object({
+  dayOfWeek: z.number().min(0).max(6), // 0 = Sunday, 6 = Saturday
+  startTime: z.string(), // Format: "HH:MM AM/PM"
+  endTime: z.string(),   // Format: "HH:MM AM/PM"
+  isAvailable: z.boolean().default(true)
+});
+
+// Create insert schema for bookings and business hours
 export const insertBookingSchema = bookingSchema;
+export const insertBusinessHoursSchema = businessHoursSchema;
 
 // Define database schema using Drizzle
 export const bookings = pgTable('bookings', {
@@ -54,13 +63,27 @@ export const bookings = pgTable('bookings', {
   pricingTotal: text('total_price'),
   pricingBreakdown: text('detailed_services'),
   createdAt: timestamp('created_at').defaultNow()
-  // Removed emailSent field as it doesn't exist in the database
 });
 
-// Create Drizzle insert schema
+// Business hours table
+export const businessHours = pgTable('business_hours', {
+  id: serial('id').primaryKey(),
+  dayOfWeek: integer('day_of_week').notNull(), // 0 = Sunday, 6 = Saturday
+  startTime: varchar('start_time', { length: 20 }).notNull(), // Format: "HH:MM AM/PM"
+  endTime: varchar('end_time', { length: 20 }).notNull(),     // Format: "HH:MM AM/PM"
+  isAvailable: boolean('is_available').notNull().default(true),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// Create Drizzle insert schemas
 export const insertBookingDrizzleSchema = createInsertSchema(bookings).omit({ 
   id: true,
   createdAt: true 
+});
+
+export const insertBusinessHoursDrizzleSchema = createInsertSchema(businessHours).omit({
+  id: true,
+  updatedAt: true
 });
 
 // Export types for TypeScript
@@ -78,6 +101,15 @@ export type Booking = z.infer<typeof bookingSchema> & {
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 
+export type BusinessHours = z.infer<typeof businessHoursSchema> & {
+  id?: number;
+  updatedAt?: string;
+};
+
+export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;
+
 // Export Drizzle types
 export type BookingSelect = typeof bookings.$inferSelect;
 export type BookingInsert = typeof bookings.$inferInsert;
+export type BusinessHoursSelect = typeof businessHours.$inferSelect;
+export type BusinessHoursInsert = typeof businessHours.$inferInsert;
