@@ -26,7 +26,7 @@ export default function BookingPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: any): Promise<any> => {
       console.log("Booking mutation received data:", data);
 
       // Use simple fetch instead of apiRequest to directly handle response
@@ -121,7 +121,9 @@ export default function BookingPage() {
           </div>
 
           <IntegratedBookingWizard
-            onSubmit={(data) => mutation.mutate(data)}
+            onSubmit={async (data) => {
+              return mutation.mutateAsync(data);
+            }}
             isSubmitting={mutation.isPending}
             existingBookings={existingBookings}
             isLoadingBookings={isLoadingBookings}
