@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ResponsiveImage } from '@/components/ui/responsive-image';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/logo';
 import { 
   Sheet,
   SheetContent,
@@ -82,11 +83,9 @@ export default function Nav() {
       isScrolled ? "bg-background/95 backdrop-blur shadow-sm" : "bg-background"
     )}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Text Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <h1 className="text-xl font-bold text-gray-900">
-            Picture Perfect TV Install
-          </h1>
+        {/* Logo */}
+        <Link href="/" className="flex items-center">
+          <Logo size="md" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -164,10 +163,9 @@ export default function Nav() {
             <SheetContent side="right" className="w-[85vw] sm:w-[350px] p-0">
               <SheetHeader className="p-4 border-b">
                 <SheetTitle className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <h2 className="text-lg font-bold text-gray-900">
-                      Picture Perfect TV Install
-                    </h2>
+                  <div className="flex items-center">
+                    <Logo size="sm" withText={false} />
+                    <span className="ml-2 text-lg font-bold">Picture Perfect</span>
                   </div>
                   <SheetClose asChild>
                     <Button variant="ghost" size="icon">
