@@ -1,9 +1,9 @@
-import { type Express, Request as ExpressRequest, Response } from "express";
+import { type Express, Request as ExpressRequest, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { db } from "./db";
-import { bookingSchema, bookings } from "@shared/schema";
+import { bookingSchema, bookings, businessHoursSchema } from "@shared/schema";
 import { ZodError } from "zod";
-import { loadBookings, saveBookings, ensureDataDirectory } from "./storage";
+import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
@@ -884,6 +884,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to clear bookings"
+      });
+    }
+  });
+  
+  // Business Hours endpoints
+  
+  // Get all business hours
+  app.get("/api/admin/business-hours", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      const businessHours = await storage.getBusinessHours();
+      
+      res.json({
+        success: true,
+        businessHours
+      });
+    } catch (error) {
+      logger.error('Error fetching business hours', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch business hours"
+      });
+    }
+  });
+  
+  // Get business hours for specific day
+  app.get("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      const dayOfWeek = parseInt(req.params.dayOfWeek);
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      // Validate day of week
+      if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
+        });
+      }
+      
+      const hours = await storage.getBusinessHoursForDay(dayOfWeek);
+      
+      if (!hours) {
+        return res.status(404).json({
+          success: false,
+          message: "Business hours not found for the specified day"
+        });
+      }
+      
+      res.json({
+        success: true,
+        businessHours: hours
+      });
+    } catch (error) {
+      logger.error('Error fetching business hours for day', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch business hours for the specified day"
+      });
+    }
+  });
+  
+  // Update business hours for a specific day
+  app.post("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
+    try {
+      const { password, startTime, endTime, isAvailable } = req.body;
+      const dayOfWeek = parseInt(req.params.dayOfWeek);
+      
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      // Validate day of week
+      if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
+        });
+      }
+      
+      // Validate input data
+      try {
+        businessHoursSchema.parse({
+          dayOfWeek,
+          startTime,
+          endTime,
+          isAvailable: isAvailable !== undefined ? isAvailable : true
+        });
+      } catch (validationError) {
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid business hours data",
+            errors: validationError.errors
+          });
+        }
+        throw validationError;
+      }
+      
+      // Update business hours in storage
+      const updatedHours = await storage.updateBusinessHours(dayOfWeek, {
+        startTime,
+        endTime,
+        isAvailable: isAvailable !== undefined ? isAvailable : true
+      });
+      
+      res.json({
+        success: true,
+        message: "Business hours updated successfully",
+        businessHours: updatedHours
+      });
+    } catch (error) {
+      logger.error('Error updating business hours', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update business hours"
       });
     }
   });
