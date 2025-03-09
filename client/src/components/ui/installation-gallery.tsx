@@ -77,27 +77,26 @@ export function InstallationSlideshow() {
   return (
     <div className="flex flex-col space-y-6 mx-auto w-full max-w-7xl">
       {/* Grid of main featured images */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {installationImages.slice(0, 6).map((image, index) => (
           <Card key={index} className="overflow-hidden border border-blue-100 shadow-md h-full">
-            <CardContent className="flex aspect-[4/3] items-center justify-center p-0">
-              <div className="relative w-full h-full group">
+            <CardContent className="p-0">
+              <div className="relative w-full group">
                 <img
                   src={image.src}
                   alt={image.alt}
-                  className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
+                  className="w-full object-contain transition-all duration-300 group-hover:scale-105"
+                  style={{ maxHeight: "300px", width: "100%" }}
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-                  <div className="p-4 space-y-2">
-                    <p className="text-white text-base font-medium">{image.description}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {image.tags.map((tag, tagIndex) => (
-                        <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3 opacity-90">
+                  <p className="text-white text-sm font-medium mb-1">{image.description}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {image.tags.map((tag, tagIndex) => (
+                      <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -119,24 +118,23 @@ export function InstallationSlideshow() {
             <CarouselItem key={index} className="md:basis-1/3 lg:basis-1/4">
               <div className="p-2">
                 <Card className="overflow-hidden border border-blue-100 shadow-md">
-                  <CardContent className="flex aspect-video items-center justify-center p-0">
-                    <div className="relative w-full h-full group">
+                  <CardContent className="p-0">
+                    <div className="relative w-full group">
                       <img
                         src={image.src}
                         alt={image.alt}
-                        className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
+                        className="w-full object-contain transition-all duration-300 group-hover:scale-105"
+                        style={{ maxHeight: "220px", width: "100%" }}
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-                        <div className="p-3 space-y-1">
-                          <p className="text-white text-sm font-medium">{image.description}</p>
-                          <div className="flex flex-wrap gap-1">
-                            {image.tags.map((tag, tagIndex) => (
-                              <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3 opacity-90">
+                        <p className="text-white text-xs font-medium mb-1">{image.description}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {image.tags.slice(0, 2).map((tag, tagIndex) => (
+                            <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     </div>
