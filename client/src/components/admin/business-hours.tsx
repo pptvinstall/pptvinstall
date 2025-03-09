@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { TimeField } from '@/components/ui/time-field';
+import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,10 +42,12 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   const { data: businessHours, isLoading, isError, error } = useQuery({
     queryKey: ['/api/admin/business-hours', password],
     queryFn: async () => {
-      const res = await apiRequest(`/api/admin/business-hours?password=${password}`, {
-        method: 'GET'
-      });
-      return res?.businessHours || [];
+      const res = await apiRequest('GET', `/api/admin/business-hours?password=${password}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch business hours');
+      }
+      const data = await res.json();
+      return data.businessHours || [];
     },
     enabled: !!password
   });
@@ -104,14 +106,11 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   // Update business hours mutation
   const updateBusinessHoursMutation = useMutation({
     mutationFn: async (data: BusinessHour) => {
-      return await apiRequest(`/api/admin/business-hours/${data.dayOfWeek}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          password,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          isAvailable: data.isAvailable
-        })
+      return await apiRequest('POST', `/api/admin/business-hours/${data.dayOfWeek}`, {
+        password,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        isAvailable: data.isAvailable
       });
     },
     onSuccess: () => {
