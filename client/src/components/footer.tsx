@@ -8,7 +8,10 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-lg font-semibold mb-4">Picture Perfect TV Install</h3>
+            <div className="mb-4">
+              <Logo size="md" withText={false} />
+              <h3 className="text-lg font-semibold mt-2">Picture Perfect TV Install</h3>
+            </div>
             <p className="text-muted-foreground">
               Professional TV mounting and smart home installation services in Metro Atlanta and surrounding areas.
             </p>

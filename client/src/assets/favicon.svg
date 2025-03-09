@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="150" cy="150" r="150" fill="#000" />
+  
+  <!-- Light effect overlay -->
+  <circle cx="150" cy="150" r="150" fill="url(#lightEffect)" />
+  
+  <!-- First P with TV screens -->
+  <g clip-path="url(#firstPClip)">
+    <path 
+      d="M70 85 L70 215 L100 215 L100 170 L110 170 C130 170 145 155 145 130 C145 105 130 85 110 85 Z" 
+      fill="#243b78"
+    />
+    
+    <!-- TV screen pattern inside first P -->
+    <rect x="70" y="85" width="75" height="130" fill="url(#tvShowsPattern)" />
+  </g>
+  
+  <!-- Second P -->
+  <g clip-path="url(#secondPClip)">
+    <path 
+      d="M115 85 L115 215 L145 215 L145 170 L155 170 C175 170 190 155 190 130 C190 105 175 85 155 85 Z" 
+      fill="#243b78" 
+    />
+    
+    <!-- TV screen pattern inside second P -->
+    <rect x="115" y="85" width="75" height="130" fill="url(#tvShowsPattern)" />
+  </g>
+  
+  <!-- TV text -->
+  <text 
+    x="195" 
+    y="170" 
+    font-size="60" 
+    font-weight="bold" 
+    fill="#e53935"
+  >
+    TV
+  </text>
+  
+  <!-- Light reflection -->
+  <circle cx="70" cy="70" r="15" fill="rgba(255,255,255,0.2)" />
+  
+  <!-- Definitions -->
+  <defs>
+    <!-- Light effect -->
+    <radialGradient id="lightEffect" cx="30%" cy="30%" r="70%" fx="30%" fy="30%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </radialGradient>
+    
+    <!-- Pattern with TV shows images simulation -->
+    <pattern id="tvShowsPattern" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="scale(0.2)">
+      <rect width="20" height="20" fill="#304f8c" />
+      <rect x="20" y="0" width="20" height="20" fill="#466bc2" />
+      <rect x="0" y="20" width="20" height="20" fill="#466bc2" />
+      <rect x="20" y="20" width="20" height="20" fill="#304f8c" />
+    </pattern>
+
+    <!-- Clip paths for proper tv shows appearance -->
+    <clipPath id="firstPClip">
+      <path d="M70 85 L70 215 L100 215 L100 170 L110 170 C130 170 145 155 145 130 C145 105 130 85 110 85 Z" />
+    </clipPath>
+    <clipPath id="secondPClip">
+      <path d="M115 85 L115 215 L145 215 L145 170 L155 170 C175 170 190 155 190 130 C190 105 175 85 155 85 Z" />
+    </clipPath>
+  </defs>
+</svg>
