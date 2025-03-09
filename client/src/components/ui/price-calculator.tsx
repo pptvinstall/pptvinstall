@@ -49,11 +49,7 @@ export function PriceCalculator({
       totalPrice += tv.basePrice;
     });
     
-    // Apply multiple TV discount
-    if (tvs.length > 1) {
-      const discount = pricing.discounts.multipleTvs.amount * (tvs.length - 1);
-      totalPrice -= discount;
-    }
+    // Removed discount calculation as requested
     
     // Add smart home device prices
     smartHome.forEach(device => {
@@ -85,18 +81,13 @@ export function PriceCalculator({
   // Calculate total for display
   const calculateTotal = () => {
     let total = 0;
-    let discounts = 0;
     
     // Add TV installations (wire concealment is already included in basePrice)
     tvs.forEach(tv => {
       total += tv.basePrice;
     });
     
-    // Apply multiple TV discount
-    if (tvs.length > 1) {
-      discounts = pricing.discounts.multipleTvs.amount * (tvs.length - 1);
-      total -= discounts;
-    }
+    // No discount calculation as requested
     
     // Add smart home devices
     smartHome.forEach(device => {
@@ -125,10 +116,6 @@ export function PriceCalculator({
   const serviceDescriptions = (): ServiceItem[] => {
     const items: ServiceItem[] = [];
     
-    // Calculate multi-TV discount for display in the breakdown
-    const multiTVDiscount = tvs.length > 1 ? pricing.discounts.multipleTvs.amount * (tvs.length - 1) : 0;
-    let discountShown = false;
-    
     // Add TV installations (wire concealment is included in basePrice)
     tvs.forEach((tv, index) => {
       items.push({
@@ -138,18 +125,7 @@ export function PriceCalculator({
       });
     });
     
-    // Always add multiple TV discount if multiple TVs are selected
-    if (tvs.length > 1) {
-      discountShown = true;
-      items.push({
-        name: pricing.discounts.multipleTvs.name,
-        description: `Discount for ${tvs.length - 1} additional TVs`,
-        price: -(pricing.discounts.multipleTvs.amount * (tvs.length - 1))
-      });
-      
-      // Log for debugging
-      console.log('Adding discount:', pricing.discounts.multipleTvs.amount * (tvs.length - 1));
-    }
+    // Removed discount calculation as requested
     
     // Add camera installations
     const cameras = smartHome.filter(item => item.type === 'camera');
@@ -212,8 +188,8 @@ export function PriceCalculator({
                     <p className="text-xs text-muted-foreground">{item.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`font-medium ${item.price < 0 ? 'text-green-600' : ''}`}>
-                      ${Math.abs(item.price).toFixed(2)}
+                    <span className={`font-medium ${item.price < 0 ? 'text-green-600 text-sm' : ''}`}>
+                      {item.price < 0 ? '- ' : ''}${Math.abs(item.price).toFixed(2)}
                     </span>
                   </div>
                 </div>
