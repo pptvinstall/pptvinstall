@@ -32,7 +32,7 @@ export function Logo({
       />
       
       {withText && (
-        <span className="ml-2 text-xl font-bold tracking-tight">
+        <span className="ml-2 text-lg font-bold tracking-tight">
           Picture Perfect TV Install
         </span>
       )}

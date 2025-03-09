@@ -141,11 +141,11 @@ export default function Nav() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
           <Button 
             variant="default" 
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 mr-2"
             onClick={() => window.location.href = "tel:+16782632859"}
           >
             <PhoneCall className="mr-2 h-4 w-4" />
