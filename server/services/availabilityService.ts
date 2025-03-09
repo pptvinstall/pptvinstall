@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from './loggingService';
+import { db } from '../db';
+import { businessHours } from '../../shared/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Interface for time slot structure
@@ -293,7 +296,7 @@ export class AvailabilityService {
   /**
    * Check if a time slot is available
    */
-  isTimeSlotAvailable(date: string, time: string): boolean {
+  async isTimeSlotAvailable(date: string, time: string): Promise<boolean> {
     // Check if the day is blocked
     const isDayBlocked = this.availabilityData.blockedDays.some(day => day.date === date);
     if (isDayBlocked) {
@@ -305,7 +308,62 @@ export class AvailabilityService {
       slot => slot.date === date && slot.time === time
     );
     
-    return !isTimeSlotBlocked;
+    if (isTimeSlotBlocked) {
+      return false;
+    }
+    
+    // Check if the time is within business hours for that day
+    try {
+      // Get the day of week (0 = Sunday, 1 = Monday, ...)
+      const dateObj = new Date(date);
+      const dayOfWeek = dateObj.getDay();
+      
+      // Get business hours for this day from the database
+      const hoursForDay = await db.query.businessHours.findFirst({
+        where: eq(businessHours.dayOfWeek, dayOfWeek)
+      });
+      
+      // If no business hours set or the day is marked as unavailable
+      if (!hoursForDay || !hoursForDay.isAvailable) {
+        return false;
+      }
+      
+      // Parse the requested time
+      const timeComponents = time.match(/(\d+):(\d+)\s+(AM|PM)/i);
+      if (!timeComponents) {
+        return false;
+      }
+      
+      let hour = parseInt(timeComponents[1], 10);
+      const minute = parseInt(timeComponents[2], 10);
+      const period = timeComponents[3].toUpperCase();
+      
+      // Convert to 24-hour format
+      if (period === 'PM' && hour < 12) {
+        hour += 12;
+      } else if (period === 'AM' && hour === 12) {
+        hour = 0;
+      }
+      
+      // Parse business hours
+      const startHour = parseInt(hoursForDay.startTime.split(':')[0], 10);
+      const startMinute = parseInt(hoursForDay.startTime.split(':')[1], 10);
+      
+      const endHour = parseInt(hoursForDay.endTime.split(':')[0], 10);
+      const endMinute = parseInt(hoursForDay.endTime.split(':')[1], 10);
+      
+      // Convert to minutes for easier comparison
+      const requestedTimeInMinutes = hour * 60 + minute;
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = endHour * 60 + endMinute;
+      
+      // Check if the requested time is within business hours
+      return requestedTimeInMinutes >= startTimeInMinutes && requestedTimeInMinutes < endTimeInMinutes;
+    } catch (error) {
+      logger.error('Error checking business hours:', error as Error);
+      // Default to unavailable if there's an error
+      return false;
+    }
   }
 }
 

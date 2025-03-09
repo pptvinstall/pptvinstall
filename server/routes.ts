@@ -235,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if the specific time slot is available using internal service
-      const isAvailable = availabilityService.isTimeSlotAvailable(
+      const isAvailable = await availabilityService.isTimeSlotAvailable(
         dateStr,
         timeSlot as string
       );
