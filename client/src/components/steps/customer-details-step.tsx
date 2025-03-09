@@ -39,23 +39,23 @@ export const CustomerDetailsStep = React.memo(
     };
 
     return (
-      <Card className="w-full mt-4">
-        <CardHeader>
-          <CardTitle>Customer Information</CardTitle>
+      <Card className="w-full mt-4 relative">
+        <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+          <CardTitle className="text-xl sm:text-2xl">Customer Information</CardTitle>
           <CardDescription>
             Please provide your contact and address details
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="space-y-6">
+        <CardContent className="px-4 sm:px-6 pb-5">
+          <form className="space-y-5">
             {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center">
-                <User className="mr-2 h-5 w-5" />
+            <div className="space-y-3">
+              <h3 className="text-base sm:text-lg font-medium flex items-center">
+                <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Personal Information
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Full Name
@@ -66,7 +66,7 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.name || ""}
                     onChange={handleInputChange}
                     placeholder="John Doe"
-                    className={validationErrors.name ? "border-destructive" : ""}
+                    className={`${validationErrors.name ? "border-destructive" : ""} h-10`}
                   />
                   {validationErrors.name && (
                     <p className="text-sm text-destructive">
@@ -79,8 +79,8 @@ export const CustomerDetailsStep = React.memo(
                   <label htmlFor="email" className="text-sm font-medium">
                     Email Address
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center relative">
+                    <Mail className="absolute left-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       name="email"
@@ -88,7 +88,7 @@ export const CustomerDetailsStep = React.memo(
                       value={formData.email || ""}
                       onChange={handleInputChange}
                       placeholder="john.doe@example.com"
-                      className={validationErrors.email ? "border-destructive" : ""}
+                      className={`${validationErrors.email ? "border-destructive" : ""} pl-10 h-10`}
                     />
                   </div>
                   {validationErrors.email && (
@@ -102,8 +102,8 @@ export const CustomerDetailsStep = React.memo(
                   <label htmlFor="phone" className="text-sm font-medium">
                     Phone Number
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center relative">
+                    <Phone className="absolute left-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="phone"
                       name="phone"
@@ -111,7 +111,7 @@ export const CustomerDetailsStep = React.memo(
                       value={formData.phone || ""}
                       onChange={handleInputChange}
                       placeholder="(555) 123-4567"
-                      className={validationErrors.phone ? "border-destructive" : ""}
+                      className={`${validationErrors.phone ? "border-destructive" : ""} pl-10 h-10`}
                     />
                   </div>
                   {validationErrors.phone && (
@@ -124,9 +124,9 @@ export const CustomerDetailsStep = React.memo(
             </div>
 
             {/* Address Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center">
-                <Home className="mr-2 h-5 w-5" />
+            <div className="space-y-3 pt-1">
+              <h3 className="text-base sm:text-lg font-medium flex items-center">
+                <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Service Address
               </h3>
               
@@ -141,7 +141,7 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.streetAddress || ""}
                     onChange={handleInputChange}
                     placeholder="123 Main St"
-                    className={validationErrors.streetAddress ? "border-destructive" : ""}
+                    className={`${validationErrors.streetAddress ? "border-destructive" : ""} h-10`}
                   />
                   {validationErrors.streetAddress && (
                     <p className="text-sm text-destructive">
@@ -160,11 +160,12 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.addressLine2 || ""}
                     onChange={handleInputChange}
                     placeholder="Apt 4B"
+                    className="h-10"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <label htmlFor="city" className="text-sm font-medium">
                     City
@@ -175,7 +176,7 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.city || ""}
                     onChange={handleInputChange}
                     placeholder="Atlanta"
-                    className={validationErrors.city ? "border-destructive" : ""}
+                    className={`${validationErrors.city ? "border-destructive" : ""} h-10`}
                   />
                   {validationErrors.city && (
                     <p className="text-sm text-destructive">
@@ -194,7 +195,7 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.state || ""}
                     onChange={handleInputChange}
                     placeholder="GA"
-                    className={validationErrors.state ? "border-destructive" : ""}
+                    className={`${validationErrors.state ? "border-destructive" : ""} h-10`}
                   />
                   {validationErrors.state && (
                     <p className="text-sm text-destructive">
@@ -203,7 +204,7 @@ export const CustomerDetailsStep = React.memo(
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2 sm:col-span-1">
                   <label htmlFor="zipCode" className="text-sm font-medium">
                     ZIP Code
                   </label>
@@ -213,7 +214,7 @@ export const CustomerDetailsStep = React.memo(
                     value={formData.zipCode || ""}
                     onChange={handleInputChange}
                     placeholder="30303"
-                    className={validationErrors.zipCode ? "border-destructive" : ""}
+                    className={`${validationErrors.zipCode ? "border-destructive" : ""} h-10`}
                   />
                   {validationErrors.zipCode && (
                     <p className="text-sm text-destructive">
@@ -225,9 +226,9 @@ export const CustomerDetailsStep = React.memo(
             </div>
 
             {/* Additional Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center">
-                <Info className="mr-2 h-5 w-5" />
+            <div className="space-y-3 pt-1">
+              <h3 className="text-base sm:text-lg font-medium flex items-center">
+                <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Additional Information
               </h3>
               
@@ -242,6 +243,7 @@ export const CustomerDetailsStep = React.memo(
                   onChange={handleInputChange}
                   placeholder="Any specific details about your installation needs..."
                   rows={3}
+                  className="min-h-[80px]"
                 />
               </div>
 
@@ -256,9 +258,9 @@ export const CustomerDetailsStep = React.memo(
                       consentToContact: checked === true 
                     })
                   }
-                  className={validationErrors.consentToContact ? "border-destructive" : ""}
+                  className={validationErrors.consentToContact ? "border-destructive mt-1" : "mt-1"}
                 />
-                <div className="space-y-1 leading-none">
+                <div className="space-y-1 leading-tight">
                   <label
                     htmlFor="consentToContact"
                     className="text-sm font-medium cursor-pointer"

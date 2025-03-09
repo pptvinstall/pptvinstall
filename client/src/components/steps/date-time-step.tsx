@@ -31,35 +31,37 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   };
 
   return (
-    <Card className="w-full mt-4">
-      <CardHeader>
-        <CardTitle>Select Date & Time</CardTitle>
+    <Card className="w-full mt-4 relative">
+      <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+        <CardTitle className="text-xl sm:text-2xl">Select Date & Time</CardTitle>
         <CardDescription>
           Choose a date and time for your service appointment
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent className="space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Date Selection */}
-          <div>
+          <div className="relative">
             <div className="mb-4 flex items-center">
               <CalendarIcon className="mr-2 h-4 w-4" />
               <span className="font-medium">Select Date</span>
             </div>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              disabled={(date) => {
-                // Disable dates in the past
-                return date < new Date(new Date().setHours(0, 0, 0, 0));
-              }}
-              className="rounded-md border"
-            />
+            <div className="calendar-container relative">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={(date) => {
+                  // Disable dates in the past
+                  return date < new Date(new Date().setHours(0, 0, 0, 0));
+                }}
+                className="rounded-md border mx-auto w-full"
+              />
+            </div>
           </div>
 
           {/* Time Selection */}
-          <div>
+          <div className="relative">
             <div className="mb-4 flex items-center">
               <Clock className="mr-2 h-4 w-4" />
               <span className="font-medium">Select Time</span>
@@ -72,7 +74,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                   <Skeleton className="h-10 w-full" />
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {timeSlots.map((time) => {
                     const isAvailable = isTimeSlotAvailable(
                       format(selectedDate, "yyyy-MM-dd"),
@@ -82,7 +84,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                       <Button
                         key={time}
                         variant={selectedTime === time ? "default" : "outline"}
-                        className={`${!isAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={`${!isAvailable ? "opacity-50 cursor-not-allowed" : ""} text-sm sm:text-base`}
                         onClick={() => {
                           if (isAvailable) {
                             setSelectedTime(time);
@@ -97,7 +99,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                 </div>
               )
             ) : (
-              <div className="flex flex-col items-center justify-center h-40 border rounded-md border-dashed">
+              <div className="flex flex-col items-center justify-center h-32 border rounded-md border-dashed">
                 <p className="text-muted-foreground text-sm">
                   Please select a date first
                 </p>
@@ -108,12 +110,12 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
 
         {/* Selected Date & Time Summary */}
         {selectedDate && selectedTime && (
-          <div className="bg-primary/10 p-4 rounded-md">
+          <div className="bg-primary/10 p-4 rounded-md mt-4">
             <h3 className="font-medium mb-2">Your Appointment</h3>
-            <p>
+            <p className="text-sm sm:text-base">
               Date: <span className="font-medium">{formatDateWithDay(selectedDate)}</span>
             </p>
-            <p>
+            <p className="text-sm sm:text-base">
               Time: <span className="font-medium">{selectedTime}</span>
             </p>
           </div>

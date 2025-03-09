@@ -755,9 +755,12 @@ export function BookingWizard({
   };
 
   return (
-    <div className="w-full booking-wizard-container mx-auto">
+    <div className="w-full booking-wizard-container mx-auto relative">
       <div className="space-y-6">
-        <StepIndicator currentStep={currentStep} totalSteps={steps.length} />
+        {/* Mobile-optimized step indicator with reduced padding on small screens */}
+        <div className="px-2 sm:px-0">
+          <StepIndicator currentStep={currentStep} totalSteps={steps.length} />
+        </div>
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -767,9 +770,10 @@ export function BookingWizard({
             exit="exit"
             variants={pageVariants}
             transition={{ duration: 0.3 }}
+            className="relative"
           >
-            <div className="booking-step-grid grid grid-cols-1 md:grid-cols-5 gap-6">
-              <Card className="md:col-span-3 p-6 wizard-step">
+            <div className="booking-step-grid grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+              <Card className="md:col-span-3 p-4 sm:p-6 wizard-step relative">
                 {currentStep === 0 && (
                   <ServiceWizard
                     onComplete={(services) => {
