@@ -1,3 +1,45 @@
+
+import React from 'react';
+import { 
+  Carousel, 
+  CarouselContent, 
+  CarouselItem, 
+  CarouselNext, 
+  CarouselPrevious 
+} from '@/components/ui/carousel';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+// Define your installation images array here
+// To add more images, simply add more objects to this array
+const installationImages = [
+  {
+    src: "/assets/optimized/image1.jpg", // Replace with your actual image path
+    alt: "TV Installation over fireplace",
+    description: "Custom TV mounting over a fireplace",
+    tags: ["Fireplace", "Custom"]
+  },
+  {
+    src: "/assets/optimized/image2.jpg",
+    alt: "Home theater setup",
+    description: "Complete home theater installation",
+    tags: ["Home Theater", "Surround Sound"]
+  },
+  // Add more images here following the same structure
+  // For example:
+  /*
+  {
+    src: "/assets/optimized/your-new-image.jpg",
+    alt: "Descriptive alt text for accessibility",
+    description: "Short caption describing the installation",
+    tags: ["Tag1", "Tag2"]
+  },
+  */
+];
+
+// You can add as many images as you want to the array above
+// The components below will automatically use all images in the array
+
 import React from 'react';
 import { 
   Carousel, 
@@ -81,16 +123,18 @@ export function InstallationSlideshow() {
         {installationImages.slice(0, 6).map((image, index) => (
           <Card key={index} className="overflow-hidden border border-blue-100 shadow-md h-full">
             <CardContent className="p-0">
-              <div className="relative w-full group">
-                <img
-                  src={image.src}
-                  alt={image.alt}
-                  className="w-full object-contain transition-all duration-300 group-hover:scale-105"
-                  style={{ maxHeight: "300px", width: "100%" }}
-                  loading="lazy"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3 opacity-90">
-                  <p className="text-white text-sm font-medium mb-1">{image.description}</p>
+              <div className="w-full group">
+                <div className="overflow-hidden">
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full object-contain transition-all duration-300 group-hover:scale-105"
+                    style={{ maxHeight: "300px", width: "100%" }}
+                    loading="lazy"
+                  />
+                </div>
+                <div className="py-3 px-4 bg-white">
+                  <p className="text-gray-800 text-sm font-medium mb-2">{image.description}</p>
                   <div className="flex flex-wrap gap-1">
                     {image.tags.map((tag, tagIndex) => (
                       <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
@@ -119,16 +163,18 @@ export function InstallationSlideshow() {
               <div className="p-2">
                 <Card className="overflow-hidden border border-blue-100 shadow-md">
                   <CardContent className="p-0">
-                    <div className="relative w-full group">
-                      <img
-                        src={image.src}
-                        alt={image.alt}
-                        className="w-full object-contain transition-all duration-300 group-hover:scale-105"
-                        style={{ maxHeight: "220px", width: "100%" }}
-                        loading="lazy"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3 opacity-90">
-                        <p className="text-white text-xs font-medium mb-1">{image.description}</p>
+                    <div className="w-full group">
+                      <div className="overflow-hidden">
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          className="w-full object-contain transition-all duration-300 group-hover:scale-105"
+                          style={{ maxHeight: "220px", width: "100%" }}
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="py-2 px-3 bg-white">
+                        <p className="text-gray-800 text-xs font-medium mb-1">{image.description}</p>
                         <div className="flex flex-wrap gap-1">
                           {image.tags.slice(0, 2).map((tag, tagIndex) => (
                             <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
@@ -154,23 +200,24 @@ export function InstallationSlideshow() {
 export function CompactGallery() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-      {installationImages.slice(0, 8).map((image, index) => (
-        <div key={index} className="relative group overflow-hidden rounded-lg shadow-md aspect-video">
-          <img
-            src={image.src}
-            alt={image.alt}
-            className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-            <div className="p-2">
-              <div className="flex flex-wrap gap-1 mb-1">
-                {image.tags.slice(0, 1).map((tag, tagIndex) => (
-                  <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+      {installationImages.map((image, index) => (
+        <div key={index} className="flex flex-col overflow-hidden rounded-lg shadow-md">
+          <div className="relative group overflow-hidden aspect-video">
+            <img
+              src={image.src}
+              alt={image.alt}
+              className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+              loading="lazy"
+            />
+          </div>
+          <div className="p-2 bg-white">
+            <p className="text-sm text-gray-800 mb-1 line-clamp-1">{image.description}</p>
+            <div className="flex flex-wrap gap-1">
+              {image.tags.slice(0, 2).map((tag, tagIndex) => (
+                <Badge key={tagIndex} variant="outline" className="bg-blue-600/80 text-white border-none text-xs">
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
