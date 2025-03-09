@@ -241,14 +241,14 @@ export function calculatePrice(options: any) {
     additionalServices += pricing.travel.fee;
   }
 
-  // Calculate the total price
-  const total = basePrice + additionalServices - discounts;
+  // Calculate the total price without discounts
+  const total = basePrice + additionalServices;
 
   return {
     total,
     basePrice,
     additionalServices,
-    discounts,
+    discounts: 0, // Set to zero as we've removed all discounts
     breakdown,
     formattedTotal: formatPrice(total),
     formattedBasePrice: formatPrice(basePrice)
