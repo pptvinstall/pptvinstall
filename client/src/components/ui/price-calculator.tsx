@@ -40,21 +40,20 @@ export function PriceCalculator({
     const cameraPrice = pricing.smart_home.security_camera.price;   // $75 per camera
     const doorbellPrice = pricing.smart_home.doorbell.price; // $85 per doorbell
     const floodlightPrice = pricing.smart_home.floodlight.price; // $125 per floodlight
-    const wirePrice = pricing.wire_concealment.standard.price; // $100 per wire concealment
     
     // Calculate total based on services
     let totalPrice = 0;
     
-    // Add TV installation prices with wire concealment
+    // Add TV installation prices (wire concealment is already included in basePrice)
     tvs.forEach(tv => {
-      // Add base price for TV installation
       totalPrice += tv.basePrice;
-      
-      // Add wire concealment price if needed (from tv.description)
-      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
-        totalPrice += wirePrice;
-      }
     });
+    
+    // Apply multiple TV discount
+    if (tvs.length > 1) {
+      const discount = pricing.discounts.multiple_tvs.amount * (tvs.length - 1);
+      totalPrice -= discount;
+    }
     
     // Add smart home device prices
     smartHome.forEach(device => {
@@ -88,14 +87,9 @@ export function PriceCalculator({
     let total = 0;
     let discounts = 0;
     
-    // Add TV installations
+    // Add TV installations (wire concealment is already included in basePrice)
     tvs.forEach(tv => {
       total += tv.basePrice;
-      
-      // Add wire concealment
-      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
-        total += pricing.wire_concealment.standard.price;
-      }
     });
     
     // Apply multiple TV discount
@@ -131,22 +125,13 @@ export function PriceCalculator({
   const serviceDescriptions = (): ServiceItem[] => {
     const items: ServiceItem[] = [];
     
-    // Add TV installations
+    // Add TV installations (wire concealment is included in basePrice)
     tvs.forEach((tv, index) => {
       items.push({
         name: tv.name || `TV Installation ${index + 1}`,
         description: tv.description || "Standard TV installation",
         price: tv.basePrice
       });
-      
-      // Add wire concealment as a separate line item if needed
-      if (tv.description && tv.description.toLowerCase().includes('wire concealment')) {
-        items.push({
-          name: "Wire Concealment & Outlet",
-          description: `Wire concealment for TV ${index + 1}`,
-          price: pricing.wire_concealment.standard.price
-        });
-      }
     });
     
     // Add multiple TV discount if applicable
