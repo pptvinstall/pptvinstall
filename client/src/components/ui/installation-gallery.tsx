@@ -40,7 +40,6 @@ const installationImages = [
 // You can add as many images as you want to the array above
 // The components below will automatically use all images in the array
 
-import React from 'react';
 import { 
   Carousel, 
   CarouselContent, 
