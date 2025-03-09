@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { BookingWizard } from "@/components/ui/booking-wizard";
+import { IntegratedBookingWizard } from "@/components/ui/integrated-booking-wizard";
 
 export default function BookingPage() {
   const { toast } = useToast();
@@ -120,7 +120,7 @@ export default function BookingPage() {
             </p>
           </div>
 
-          <BookingWizard
+          <IntegratedBookingWizard
             onSubmit={(data) => mutation.mutate(data)}
             isSubmitting={mutation.isPending}
             existingBookings={existingBookings}
