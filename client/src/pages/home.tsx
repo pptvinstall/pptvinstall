@@ -181,16 +181,16 @@ export default function HomePage() {
 
       {/* Recent Installations Gallery */}
       <section
-        className="py-16 bg-gradient-to-b from-white to-blue-50"
+        className="py-10 bg-gradient-to-b from-white to-blue-50"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4">
+          <div className="text-center max-w-3xl mx-auto mb-6">
+            <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-3">
               Our Work
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent TV Installations</h2>
-            <p className="text-lg text-blue-600 mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">Recent TV Installations</h2>
+            <p className="text-lg text-blue-600 mb-5">
               Browse our gallery of recent TV mounting and installation projects in Metro Atlanta
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function HomePage() {
       {/* Showcase section */}
       <section
         ref={showcaseRef}
-        className="py-12 bg-white"
+        className="py-8 bg-white"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
@@ -252,11 +252,11 @@ export default function HomePage() {
       {/* Services */}
       <section
         ref={servicesRef}
-        className="relative py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50/30"
+        className="relative py-12 lg:py-16 bg-gradient-to-b from-white to-blue-50/30"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10">
             <h2 className="section-title text-3xl lg:text-4xl font-bold">Our Premium Services</h2>
             <p className="text-blue-600 text-lg">
               Professional TV mounting and smart home installation services
@@ -315,11 +315,11 @@ export default function HomePage() {
       {/* Testimonials */}
       <section
         ref={testimonialsRef}
-        className="relative py-20 bg-white"
+        className="relative py-12 bg-white"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10">
             <motion.span
               className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-4"
               initial={{ opacity: 0, y: 10 }}
@@ -385,7 +385,7 @@ export default function HomePage() {
 
       {/* CTA */}
       <section
-        className="relative py-16 bg-blue-600 text-white"
+        className="relative py-10 bg-blue-600 text-white"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
@@ -410,11 +410,11 @@ export default function HomePage() {
 
       {/* Why Choose Us */}
       <section
-        className="relative py-20 bg-gray-50"
+        className="relative py-12 bg-gray-50"
         style={{ position: 'relative' }}
       >
         <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10">
             <motion.h2
               className="text-3xl md:text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
