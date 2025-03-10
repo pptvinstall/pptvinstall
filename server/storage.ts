@@ -17,15 +17,15 @@ const STORAGE_DIR = path.join(__dirname, 'data');
 const BOOKINGS_FILE = path.join(STORAGE_DIR, 'bookings.json');
 const BUSINESS_HOURS_FILE = path.join(STORAGE_DIR, 'business_hours.json');
 
-// Default business hours (9 AM to 5 PM, Monday-Friday)
+// Default business hours (Mon-Fri: 6:30-10:30PM, Sat-Sun: 11AM-7PM)
 const DEFAULT_BUSINESS_HOURS = [
-  { dayOfWeek: 0, startTime: "09:00", endTime: "17:00", isAvailable: false }, // Sunday
-  { dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isAvailable: true },  // Monday
-  { dayOfWeek: 2, startTime: "09:00", endTime: "17:00", isAvailable: true },  // Tuesday
-  { dayOfWeek: 3, startTime: "09:00", endTime: "17:00", isAvailable: true },  // Wednesday
-  { dayOfWeek: 4, startTime: "09:00", endTime: "17:00", isAvailable: true },  // Thursday
-  { dayOfWeek: 5, startTime: "09:00", endTime: "17:00", isAvailable: true },  // Friday
-  { dayOfWeek: 6, startTime: "09:00", endTime: "17:00", isAvailable: false }, // Saturday
+  { dayOfWeek: 0, startTime: "11:00", endTime: "19:00", isAvailable: true }, // Sunday
+  { dayOfWeek: 1, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Monday
+  { dayOfWeek: 2, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Tuesday
+  { dayOfWeek: 3, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Wednesday
+  { dayOfWeek: 4, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Thursday
+  { dayOfWeek: 5, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Friday
+  { dayOfWeek: 6, startTime: "11:00", endTime: "19:00", isAvailable: true }, // Saturday
 ];
 
 // Ensure storage directory exists

@@ -2,57 +2,57 @@
   {
     "id": 1,
     "dayOfWeek": 0,
-    "startTime": "9:00 AM",
-    "endTime": "5:00 PM",
-    "isAvailable": false,
-    "updatedAt": "2025-03-09T21:20:38.157Z"
+    "startTime": "11:00",
+    "endTime": "19:00",
+    "isAvailable": true,
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 2,
     "dayOfWeek": 1,
-    "startTime": "18:00",
-    "endTime": "22:00",
+    "startTime": "18:30",
+    "endTime": "22:30",
     "isAvailable": true,
-    "updatedAt": "2025-03-10T00:00:32.887Z"
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 3,
     "dayOfWeek": 2,
-    "startTime": "18:00",
-    "endTime": "22:00",
+    "startTime": "18:30",
+    "endTime": "22:30",
     "isAvailable": true,
-    "updatedAt": "2025-03-10T00:00:59.002Z"
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 4,
     "dayOfWeek": 3,
-    "startTime": "9:00 AM",
-    "endTime": "5:00 PM",
+    "startTime": "18:30",
+    "endTime": "22:30",
     "isAvailable": true,
-    "updatedAt": "2025-03-09T21:20:38.157Z"
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 5,
     "dayOfWeek": 4,
-    "startTime": "9:00 AM",
-    "endTime": "5:00 PM",
+    "startTime": "18:30",
+    "endTime": "22:30",
     "isAvailable": true,
-    "updatedAt": "2025-03-09T21:20:38.157Z"
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 6,
     "dayOfWeek": 5,
-    "startTime": "9:00 AM",
-    "endTime": "5:00 PM",
+    "startTime": "18:30",
+    "endTime": "22:30",
     "isAvailable": true,
-    "updatedAt": "2025-03-09T21:20:38.157Z"
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   },
   {
     "id": 7,
     "dayOfWeek": 6,
-    "startTime": "9:00 AM",
-    "endTime": "5:00 PM",
-    "isAvailable": false,
-    "updatedAt": "2025-03-09T21:20:38.157Z"
+    "startTime": "11:00",
+    "endTime": "19:00",
+    "isAvailable": true,
+    "updatedAt": "2025-03-10T00:12:30.000Z"
   }
 ]
