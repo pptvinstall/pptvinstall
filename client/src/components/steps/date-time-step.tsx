@@ -83,8 +83,44 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                   <TooltipContent side="right" className="max-w-xs">
                     <div className="space-y-1 text-sm">
                       <p className="font-medium">Our Working Hours:</p>
-                      <p>Monday-Friday: 6:30 PM - 10:30 PM</p>
-                      <p>Saturday-Sunday: 11:00 AM - 7:00 PM</p>
+                      {isLoadingBusinessHours ? (
+                        <div className="flex items-center">
+                          <LoadingSpinner size="sm" />
+                          <span className="ml-2">Loading hours...</span>
+                        </div>
+                      ) : businessHours && businessHours.length > 0 ? (
+                        <>
+                          {/* Format and display business hours for each day */}
+                          {[
+                            { days: 'Monday', index: 1 },
+                            { days: 'Tuesday', index: 2 },
+                            { days: 'Wednesday', index: 3 },
+                            { days: 'Thursday', index: 4 },
+                            { days: 'Friday', index: 5 },
+                            { days: 'Saturday', index: 6 },
+                            { days: 'Sunday', index: 0 },
+                          ].map(({ days, index }) => {
+                            const dayHours = businessHours.find((h: any) => h.dayOfWeek === index);
+                            if (!dayHours || !dayHours.isAvailable) return <p key={days}>{days}: Closed</p>;
+                            
+                            // Convert 24h to 12h format
+                            const formatTime = (time24h: string) => {
+                              const [hours, minutes] = time24h.split(':').map(Number);
+                              const period = hours >= 12 ? 'PM' : 'AM';
+                              const displayHours = hours % 12 || 12;
+                              return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                            };
+                            
+                            return (
+                              <p key={days}>
+                                {days}: {formatTime(dayHours.startTime)} - {formatTime(dayHours.endTime)}
+                              </p>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        <p>No business hours available</p>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>

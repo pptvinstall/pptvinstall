@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, Info, Minus, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { pricing } from "@/lib/pricing";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
+import { useBusinessHours } from "@/hooks/use-business-hours";
 import { ScrollArea } from "./scroll-area";
 import { ServiceSelectionGrid } from "./service-selection-grid";
 import {
@@ -144,18 +145,19 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   
-  // Define time slots (available appointment times)
-  const timeSlots = [
-    "9:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "1:00 PM",
-    "2:00 PM",
-    "3:00 PM",
-    "4:00 PM",
-    "5:00 PM"
-  ];
+  // Use business hours to generate time slots
+  const { getTimeSlotsForDate } = useBusinessHours();
+  
+  // Generate time slots based on the selected date and business hours
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    
+    console.log(`Generating time slots for date: ${format(selectedDate, 'yyyy-MM-dd')}`);
+    // Get time slots based on business hours - 60 minute intervals
+    const slots = getTimeSlotsForDate(selectedDate, 60);
+    console.log(`Generated ${slots.length} time slots:`, slots);
+    return slots;
+  }, [selectedDate, getTimeSlotsForDate]);
   
   // Simple function to check if a time slot is in the past or too soon 
   // (extracted to avoid circular dependencies)
