@@ -145,8 +145,8 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   
-  // Use business hours to generate time slots
-  const { getTimeSlotsForDate } = useBusinessHours();
+  // Use business hours to generate time slots and check availability
+  const { getTimeSlotsForDate, businessHours } = useBusinessHours();
   
   // Generate time slots based on the selected date and business hours
   const timeSlots = useMemo(() => {
@@ -1032,9 +1032,9 @@ export function IntegratedBookingWizard({
                               const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0));
                               if (isPastDate) return true;
                               
-                              // Check if business hours exist for this day
+                              // Check if business hours exist for this day by using the function from our hook
                               const dayOfWeek = date.getDay();
-                              const hoursForDay = businessHours?.find(h => h.dayOfWeek === dayOfWeek);
+                              const hoursForDay = getBusinessHoursForDay(dayOfWeek);
                               
                               // If no business hours set for this day or marked as unavailable
                               if (!hoursForDay || !hoursForDay.isAvailable) {
