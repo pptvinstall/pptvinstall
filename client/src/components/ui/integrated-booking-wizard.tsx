@@ -1019,10 +1019,29 @@ export function IntegratedBookingWizard({
                           <Calendar
                             mode="single"
                             selected={selectedDate}
-                            onSelect={setSelectedDate}
+                            onSelect={(date) => {
+                              // Reset selected time when the date changes
+                              setSelectedTime(undefined); 
+                              // Update the selected date
+                              setSelectedDate(date);
+                              // Clear any cached availability data
+                              setTimeSlotAvailability({});
+                            }}
                             disabled={(date) => {
                               // Disable dates in the past
-                              return date < new Date(new Date().setHours(0, 0, 0, 0));
+                              const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0));
+                              if (isPastDate) return true;
+                              
+                              // Check if business hours exist for this day
+                              const dayOfWeek = date.getDay();
+                              const hoursForDay = businessHours?.find(h => h.dayOfWeek === dayOfWeek);
+                              
+                              // If no business hours set for this day or marked as unavailable
+                              if (!hoursForDay || !hoursForDay.isAvailable) {
+                                return true;
+                              }
+                              
+                              return false;
                             }}
                             className="rounded-md border mx-auto w-full"
                           />
