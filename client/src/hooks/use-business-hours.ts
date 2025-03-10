@@ -24,12 +24,37 @@ export function useBusinessHours() {
   } = useQuery({
     queryKey: ['/api/business-hours'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/business-hours');
-      if (!res.ok) {
-        throw new Error('Failed to fetch business hours');
+      console.log('Fetching business hours from API...');
+      try {
+        const res = await apiRequest('GET', '/api/business-hours');
+        if (!res.ok) {
+          console.error('API request failed:', res.status, res.statusText);
+          throw new Error('Failed to fetch business hours');
+        }
+        const data = await res.json();
+        console.log('Received business hours from API:', data);
+        
+        if (!data.businessHours || !Array.isArray(data.businessHours) || data.businessHours.length === 0) {
+          console.warn('No business hours data received from API or in unexpected format');
+          
+          // Fallback to default hours if API returns empty data
+          console.log('Using fallback business hours');
+          return [
+            { dayOfWeek: 0, startTime: '11:00', endTime: '19:00', isAvailable: true }, // Sunday
+            { dayOfWeek: 1, startTime: '18:30', endTime: '22:30', isAvailable: true }, // Monday
+            { dayOfWeek: 2, startTime: '18:30', endTime: '22:30', isAvailable: true }, // Tuesday
+            { dayOfWeek: 3, startTime: '18:30', endTime: '22:30', isAvailable: true }, // Wednesday
+            { dayOfWeek: 4, startTime: '18:30', endTime: '22:30', isAvailable: true }, // Thursday
+            { dayOfWeek: 5, startTime: '18:30', endTime: '22:30', isAvailable: true }, // Friday
+            { dayOfWeek: 6, startTime: '11:00', endTime: '19:00', isAvailable: true }, // Saturday
+          ];
+        }
+        
+        return data.businessHours;
+      } catch (err) {
+        console.error('Error fetching business hours:', err);
+        throw err;
       }
-      const data = await res.json();
-      return data.businessHours || [];
     }
   });
 
@@ -51,8 +76,12 @@ export function useBusinessHours() {
     // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
     const dayOfWeek = date.getDay();
     
+    console.log(`Generating time slots for day of week: ${dayOfWeek} (${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]})`);
+    console.log(`Business hours data:`, businessHours);
+    
     // Get business hours for this day
     const hoursForDay = getBusinessHoursForDay(dayOfWeek);
+    console.log(`Hours for day ${dayOfWeek}:`, hoursForDay);
     
     // If no business hours set or the day is marked as unavailable, return empty array
     if (!hoursForDay || !hoursForDay.isAvailable) {
@@ -64,6 +93,8 @@ export function useBusinessHours() {
     const [startHour, startMinute] = hoursForDay.startTime.split(':').map(Number);
     const [endHour, endMinute] = hoursForDay.endTime.split(':').map(Number);
     
+    console.log(`Business hours: ${startHour}:${startMinute} - ${endHour}:${endMinute}`);
+    
     // Create a date object for today with the start time
     const startDate = new Date(date);
     startDate.setHours(startHour, startMinute, 0, 0);
@@ -72,9 +103,13 @@ export function useBusinessHours() {
     const endDate = new Date(date);
     endDate.setHours(endHour, endMinute, 0, 0);
     
+    console.log(`Start time: ${startDate.toISOString()}, End time: ${endDate.toISOString()}`);
+    
     // Calculate the number of slots between start and end time
     const totalMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
     const numSlots = Math.floor(totalMinutes / intervalMinutes);
+    
+    console.log(`Total minutes: ${totalMinutes}, Number of slots: ${numSlots}`);
     
     const timeSlots: string[] = [];
     
