@@ -31,5 +31,28 @@
     ],
     "id": "69",
     "createdAt": "2025-03-09T19:52:27.433Z"
+  },
+  {
+    "name": "Justin Alexander Woodard",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4047024748",
+    "streetAddress": "4359 Oakleaf Cove",
+    "city": "Decatur",
+    "state": "GA",
+    "zipCode": "30034",
+    "serviceType": "Smart Home Installation",
+    "preferredDate": "2025-03-15",
+    "appointmentTime": "6:00 PM",
+    "status": "active",
+    "pricingTotal": 75,
+    "pricingBreakdown": [
+      {
+        "type": "camera",
+        "count": 1,
+        "hasExistingWiring": true
+      }
+    ],
+    "id": "70",
+    "createdAt": "2025-03-10T00:57:46.173Z"
   }
 ]

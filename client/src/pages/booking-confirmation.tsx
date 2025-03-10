@@ -23,8 +23,7 @@ export default function BookingConfirmation() {
     async function fetchData() {
       try {
         if (!isActive) return;
-        setLoading(true);
-
+        
         // Get booking ID from URL or session storage
         const urlBookingId = queryParams.get("id");
         const storedBookingId = sessionStorage.getItem("bookingId");
@@ -146,7 +145,7 @@ export default function BookingConfirmation() {
     return () => {
       isActive = false;
     };
-  }, [queryParams]);
+  }, [queryParams]); // Only depend on queryParams, not loading
 
   // Define interfaces for service breakdown
   interface ServiceItem {
@@ -484,14 +483,14 @@ export default function BookingConfirmation() {
       <div className="container mx-auto py-12">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-center text-2xl">Booking Not Found</CardTitle>
+            <CardTitle className="text-center text-red-500">Booking Not Found</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center min-h-[300px] space-y-6">
-            <p className="text-center text-muted-foreground">
-              We couldn't find your booking information. Please try again or contact us for assistance.
+          <CardContent className="flex flex-col items-center justify-center">
+            <p className="text-center mb-6">
+              {error ? error.message : "We couldn't find the booking details. The booking may have been expired or deleted."}
             </p>
-            <Button variant="default" asChild>
-              <Link to="/">Return to Homepage</Link>
+            <Button asChild>
+              <Link href="/booking">Book a New Appointment</Link>
             </Button>
           </CardContent>
         </Card>
@@ -499,103 +498,130 @@ export default function BookingConfirmation() {
     );
   }
 
+  // Get the service breakdown
   const serviceBreakdown = processServiceBreakdown();
-  const totalPrice = calculateTotalPrice();
 
   return (
-    <div className="container mx-auto py-12">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="bg-green-50 dark:bg-green-950 border-b">
+    <div className="container mx-auto py-8 px-4 md:px-8">
+      <Card className="max-w-3xl mx-auto">
+        <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+            <div className="rounded-full bg-green-100 p-3">
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            </div>
           </div>
-          <CardTitle className="text-center text-2xl">Booking Confirmed!</CardTitle>
-          <CardDescription className="text-center text-lg">
-            Thank you for choosing Picture Perfect TV Install
+          <CardTitle className="text-2xl md:text-3xl">Booking Confirmed!</CardTitle>
+          <CardDescription className="text-md md:text-lg">
+            Your appointment has been booked successfully
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          {/* Service Breakdown */}
-          <div className="space-y-6">
-            <h3 className="font-medium text-lg">Service Details</h3>
+        <CardContent className="space-y-8">
+          {/* Booking Reference ID */}
+          <div className="text-center py-4 bg-muted/50 rounded-lg">
+            <p className="text-muted-foreground text-sm">Booking Reference ID</p>
+            <p className="text-xl font-semibold">{bookingData.id || "N/A"}</p>
+          </div>
 
-            {serviceBreakdown.length > 0 ? (
-              serviceBreakdown.map((category: ServiceCategory, index: number) => (
-                <div key={index} className="space-y-3">
-                  <h4 className="font-medium">{category.category}</h4>
-                  <ul className="space-y-2">
-                    {category.items.map((item: ServiceItem, itemIndex: number) => (
-                      <li key={itemIndex} className="pl-4 relative before:content-['•'] before:absolute before:left-0">
-                        <span>{item.name}</span>
-                        {item.details && item.details.length > 0 && (
-                          <span className="text-muted-foreground ml-1">
-                            ({item.details.join(', ')})
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  {index < serviceBreakdown.length - 1 && <Separator className="my-3" />}
+          {/* Booking Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Appointment Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col p-4 bg-muted/30 rounded-lg">
+                <span className="text-muted-foreground text-sm">Date</span>
+                <span className="font-medium">{formattedDate || "Not specified"}</span>
+              </div>
+              
+              <div className="flex flex-col p-4 bg-muted/30 rounded-lg">
+                <span className="text-muted-foreground text-sm">Time</span>
+                <span className="font-medium">{formattedTime || "Not specified"}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col p-4 bg-muted/30 rounded-lg">
+              <span className="text-muted-foreground text-sm">Address</span>
+              <span className="font-medium">
+                {bookingData.streetAddress}
+                {bookingData.addressLine2 && `, ${bookingData.addressLine2}`}
+              </span>
+              <span className="font-medium">
+                {bookingData.city}, {bookingData.state} {bookingData.zipCode}
+              </span>
+            </div>
+          </div>
+
+          {/* Services */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Services</h3>
+            
+            <div className="divide-y">
+              {serviceBreakdown.length > 0 ? (
+                serviceBreakdown.map((category: ServiceCategory, index: number) => (
+                  <div key={index} className="py-3">
+                    <h4 className="font-medium text-primary">{category.category}</h4>
+                    <div className="space-y-2 mt-2">
+                      {category.items.map((item: ServiceItem, itemIndex: number) => (
+                        <div key={itemIndex} className="text-sm">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <span className="font-medium">{item.name}</span>
+                              {item.details && item.details.length > 0 && (
+                                <ul className="list-disc list-inside pl-4 text-muted-foreground text-xs mt-1">
+                                  {item.details.map((detail, detailIndex) => (
+                                    <li key={detailIndex}>{detail}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                            {item.price !== undefined && (
+                              <span className="font-medium">{formatPrice(item.price)}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-3">
+                  <p className="text-muted-foreground">
+                    {bookingData.serviceType || "Service details not available"}
+                  </p>
                 </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">{bookingData.serviceType || "No service details available"}</p>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <span className="font-semibold">Total Price</span>
+              <span className="text-xl font-bold">{calculateTotalPrice()}</span>
+            </div>
+          </div>
+
+          {/* Next Steps */}
+          <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold">Next Steps</h3>
+            <p className="text-muted-foreground text-sm">
+              You'll receive a confirmation email shortly with your booking details. 
+              Our team will contact you before your appointment to confirm all details.
+            </p>
+            {bookingData.notes && (
+              <>
+                <h4 className="font-medium">Your Notes</h4>
+                <p className="text-sm italic">"{bookingData.notes}"</p>
+              </>
             )}
           </div>
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <h3 className="font-medium">Appointment Date</h3>
-              <p className="text-muted-foreground">
-                {formattedDate || "Date not available"}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-medium">Appointment Time</h3>
-              <p className="text-muted-foreground">{formattedTime || "Time not available"}</p>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <h3 className="font-medium">Customer Information</h3>
-            <p className="text-muted-foreground">{bookingData.name}</p>
-            <p className="text-muted-foreground">{bookingData.email}</p>
-            <p className="text-muted-foreground">{bookingData.phone}</p>
-          </div>
-
-          <div className="space-y-1">
-            <h3 className="font-medium">Address</h3>
-            <p className="text-muted-foreground">{bookingData.streetAddress}</p>
-            {bookingData.addressLine2 && (
-              <p className="text-muted-foreground">{bookingData.addressLine2}</p>
-            )}
-            <p className="text-muted-foreground">
-              {bookingData.city}, {bookingData.state} {bookingData.zipCode}
-            </p>
-          </div>
-
-          {bookingData.notes && (
-            <div className="space-y-1">
-              <h3 className="font-medium">Additional Notes</h3>
-              <p className="text-muted-foreground">{bookingData.notes}</p>
-            </div>
-          )}
-
-          <div className="bg-muted p-4 rounded-md">
-            <h3 className="font-medium mb-2">Estimated Total</h3>
-            <p className="text-xl font-bold">{totalPrice}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              This is an estimate. Final price may vary based on additional services or special requirements.
-            </p>
-          </div>
-
-          <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground">
-              A confirmation email has been sent to {bookingData.email}. If you have any questions,
-              please contact us at +16782632859.
-            </p>
+          {/* Action Buttons */}
+          <div className="pt-2 flex flex-col sm:flex-row justify-center gap-4">
+            <Button asChild variant="outline">
+              <Link href="/">Return to Home</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/contact">Contact Us</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
