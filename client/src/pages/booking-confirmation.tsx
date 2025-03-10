@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,9 +16,21 @@ export default function BookingConfirmation() {
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
+  // We're using useRef to track if we've already loaded the data
+  // This will prevent the infinite update loop
+  const hasLoadedDataRef = React.useRef(false);
+
   useEffect(() => {
     // Create a flag to prevent state updates if component unmounts
     let isActive = true;
+    
+    // Skip this effect if we've already loaded the data
+    if (hasLoadedDataRef.current && bookingData !== null) {
+      return;
+    }
+    
+    // Mark that we're loading data
+    hasLoadedDataRef.current = true;
     
     async function fetchData() {
       try {
