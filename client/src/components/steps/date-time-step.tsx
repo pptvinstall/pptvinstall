@@ -145,38 +145,36 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
+              ) : timeSlots.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {timeSlots.map((time) => {
+                    const isAvailable = isTimeSlotAvailable(
+                      format(selectedDate, "yyyy-MM-dd"),
+                      time
+                    );
+                    return (
+                      <Button
+                        key={time}
+                        variant={selectedTime === time ? "default" : "outline"}
+                        className={`${!isAvailable ? "opacity-50 cursor-not-allowed" : ""} text-sm sm:text-base`}
+                        onClick={() => {
+                          if (isAvailable) {
+                            setSelectedTime(time);
+                          }
+                        }}
+                        disabled={!isAvailable}
+                      >
+                        {time}
+                      </Button>
+                    );
+                  })}
+                </div>
               ) : (
-                timeSlots.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {timeSlots.map((time) => {
-                      const isAvailable = isTimeSlotAvailable(
-                        format(selectedDate, "yyyy-MM-dd"),
-                        time
-                      );
-                      return (
-                        <Button
-                          key={time}
-                          variant={selectedTime === time ? "default" : "outline"}
-                          className={`${!isAvailable ? "opacity-50 cursor-not-allowed" : ""} text-sm sm:text-base`}
-                          onClick={() => {
-                            if (isAvailable) {
-                              setSelectedTime(time);
-                            }
-                          }}
-                          disabled={!isAvailable}
-                        >
-                          {time}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-32 border rounded-md border-dashed">
-                    <p className="text-muted-foreground text-sm text-center px-4">
-                      No time slots available for this date. Please select another date.
-                    </p>
-                  </div>
-                )}
+                <div className="flex flex-col items-center justify-center h-32 border rounded-md border-dashed">
+                  <p className="text-muted-foreground text-sm text-center px-4">
+                    No time slots available for this date. Please select another date.
+                  </p>
+                </div>
               )
             ) : (
               <div className="flex flex-col items-center justify-center h-32 border rounded-md border-dashed">
