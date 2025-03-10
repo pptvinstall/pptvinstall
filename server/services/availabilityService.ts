@@ -5,6 +5,7 @@ import { logger } from './loggingService';
 import { db } from '../db';
 import { businessHours } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
+import { storage } from '../storage';
 
 /**
  * Interface for time slot structure
@@ -297,9 +298,12 @@ export class AvailabilityService {
    * Check if a time slot is available
    */
   async isTimeSlotAvailable(date: string, time: string): Promise<boolean> {
+    console.log(`Checking availability for date: ${date}, time: ${time}`);
+    
     // Check if the day is blocked
     const isDayBlocked = this.availabilityData.blockedDays.some(day => day.date === date);
     if (isDayBlocked) {
+      console.log(`Day ${date} is blocked`);
       return false;
     }
     
@@ -309,6 +313,7 @@ export class AvailabilityService {
     );
     
     if (isTimeSlotBlocked) {
+      console.log(`Time slot ${time} on ${date} is specifically blocked`);
       return false;
     }
     
@@ -317,20 +322,32 @@ export class AvailabilityService {
       // Get the day of week (0 = Sunday, 1 = Monday, ...)
       const dateObj = new Date(date);
       const dayOfWeek = dateObj.getDay();
+      console.log(`Day of week for ${date}: ${dayOfWeek} (0=Sunday, 1=Monday, etc.)`);
       
-      // Get business hours for this day from the database
-      const hoursForDay = await db.query.businessHours.findFirst({
+      // Get business hours for this day
+      // First try from storage
+      const businessHoursList = await storage.getBusinessHours();
+      const hoursForDayFromStorage = businessHoursList.find((h: { dayOfWeek: number }) => h.dayOfWeek === dayOfWeek);
+      
+      console.log(`Business hours from storage for day ${dayOfWeek}:`, hoursForDayFromStorage);
+      
+      // If not found in storage, try from database
+      const hoursForDay = hoursForDayFromStorage || await db.query.businessHours.findFirst({
         where: eq(businessHours.dayOfWeek, dayOfWeek)
       });
       
+      console.log(`Final business hours for day ${dayOfWeek}:`, hoursForDay);
+      
       // If no business hours set or the day is marked as unavailable
       if (!hoursForDay || !hoursForDay.isAvailable) {
+        console.log(`No business hours set for day ${dayOfWeek} or it's marked as unavailable`);
         return false;
       }
       
       // Parse the requested time
       const timeComponents = time.match(/(\d+):(\d+)\s+(AM|PM)/i);
       if (!timeComponents) {
+        console.log(`Failed to parse time: ${time}`);
         return false;
       }
       
@@ -357,10 +374,17 @@ export class AvailabilityService {
       const startTimeInMinutes = startHour * 60 + startMinute;
       const endTimeInMinutes = endHour * 60 + endMinute;
       
+      console.log(`Requested time: ${hour}:${minute} (${requestedTimeInMinutes} minutes)`);
+      console.log(`Business hours: ${startHour}:${startMinute}-${endHour}:${endMinute} (${startTimeInMinutes}-${endTimeInMinutes} minutes)`);
+      
       // Check if the requested time is within business hours
-      return requestedTimeInMinutes >= startTimeInMinutes && requestedTimeInMinutes < endTimeInMinutes;
+      const isWithinHours = requestedTimeInMinutes >= startTimeInMinutes && requestedTimeInMinutes < endTimeInMinutes;
+      console.log(`Is time within business hours: ${isWithinHours}`);
+      
+      return isWithinHours;
     } catch (error) {
       logger.error('Error checking business hours:', error as Error);
+      console.error('Error checking business hours:', error);
       // Default to unavailable if there's an error
       return false;
     }
