@@ -74,7 +74,7 @@ export default function AdminDashboard() {
 
   // Filtered bookings with search and status filter
   const filteredBookings = useMemo(() => {
-    return bookings.filter(booking => {
+    return bookings.filter((booking: any) => {
       const matchesSearch = searchTerm === "" ||
         booking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   const exportBookings = () => {
     const csvContent = [
       ["Date", "Time", "Name", "Email", "Phone", "Address", "Service", "Status", "Total"],
-      ...filteredBookings.map(booking => [
+      ...filteredBookings.map((booking: any) => [
         format(new Date(booking.preferredDate), "MM/dd/yyyy"),
         booking.appointmentTime,
         booking.name,
@@ -457,7 +457,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredBookings.map((booking) => (
+                      {filteredBookings.map((booking: any) => (
                         <TableRow key={booking.id}>
                           <TableCell>
                             {booking.preferredDate ? format(new Date(booking.preferredDate), "MMM d, yyyy") : "N/A"}

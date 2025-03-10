@@ -32,6 +32,7 @@ import { Icons } from "../icons";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
+import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
 
 
 type BookingWizardProps = {
@@ -356,6 +357,12 @@ const DateTimeSelectionStep = React.memo(
     timeSlots: string[];
     isTimeSlotAvailable: (date: string, time: string) => boolean;
   }) => {
+    // Track which time slots are loading
+    const [loadingSlots, setLoadingSlots] = useState<Record<string, boolean>>({});
+    
+    // Whether any availability data is being loaded
+    const isAvailabilityLoading = isBookingsLoading || Object.values(loadingSlots).some(Boolean);
+    
     return (
       <div className="space-y-6">
         <div>
@@ -384,8 +391,9 @@ const DateTimeSelectionStep = React.memo(
 
           <Card className="md:col-span-2">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                Available Time Slots
+              <CardTitle className="text-sm font-medium flex items-center justify-between">
+                <span>Available Time Slots</span>
+                {isAvailabilityLoading && <LoadingSpinner size="sm" />}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -400,10 +408,10 @@ const DateTimeSelectionStep = React.memo(
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {timeSlots.map((time) => {
-                    const isAvailable = isTimeSlotAvailable(
-                      format(selectedDate, "yyyy-MM-dd"),
-                      time
-                    );
+                    const dateStr = format(selectedDate, "yyyy-MM-dd");
+                    const slotKey = `${dateStr}-${time}`;
+                    const isAvailable = isTimeSlotAvailable(dateStr, time);
+                    
                     return (
                       <Button
                         key={time}
@@ -420,8 +428,11 @@ const DateTimeSelectionStep = React.memo(
                             setSelectedTime(time);
                           }
                         }}
-                        disabled={!isAvailable}
+                        disabled={!isAvailable || loadingSlots[slotKey]}
                       >
+                        {loadingSlots[slotKey] ? (
+                          <LoadingSpinner size="sm" className="mr-2" />
+                        ) : null}
                         {time}
                       </Button>
                     );
@@ -502,6 +513,10 @@ export function BookingWizard({
     "6:00 PM"
   ];
 
+  // Get the calendar availability service
+  const { isTimeSlotAvailable: checkCalendarAvailability } = useCalendarAvailability();
+  
+  // Local check for basic availability constraints (time buffer, existing bookings)
   const checkTimeSlotAvailability = useCallback(
     (date: string, time: string) => {
       const now = new Date();
@@ -517,17 +532,19 @@ export function BookingWizard({
 
       const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
 
+      // Don't allow bookings in the past or too near in the future
       if (selectedDateTime <= bufferTime) {
         return false;
       }
 
+      // Check if the slot is already booked
       if (existingBookings && existingBookings.length > 0) {
         const isBooked = existingBookings.some(booking => {
           const bookingDate = booking.preferredDate ? 
             new Date(booking.preferredDate).toISOString().split('T')[0] : null;
           return bookingDate === date && booking.appointmentTime === time && booking.status === 'active';
         });
-        return !isBooked;
+        if (isBooked) return false;
       }
 
       return true;
@@ -535,31 +552,61 @@ export function BookingWizard({
     [existingBookings]
   );
 
+  // Track time slot availability in local state
   useEffect(() => {
     if (!selectedDate) return;
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-
-    const updatedAvailability: Record<string, boolean> = {};
-    const dateStrFinal = dateStr; 
-
-    timeSlots.forEach(time => {
-      const key = `${dateStrFinal}-${time}`;
-      updatedAvailability[key] = checkTimeSlotAvailability(dateStrFinal, time);
-    });
-
-    setTimeSlotAvailability(prev => {
-      let isDifferent = false;
-      Object.entries(updatedAvailability).forEach(([key, value]) => {
-        if (prev[key] !== value) {
-          isDifferent = true;
+    const checkAllTimeSlots = async () => {
+      const updatedAvailability: Record<string, boolean> = {};
+      
+      // First filter by basic availability constraints
+      timeSlots.forEach(time => {
+        const key = `${dateStr}-${time}`;
+        const basicAvailability = checkTimeSlotAvailability(dateStr, time);
+        if (!basicAvailability) {
+          updatedAvailability[key] = false;
         }
       });
+      
+      // Then check remaining slots against the calendar API
+      const slotsToCheck = timeSlots.filter(time => {
+        const key = `${dateStr}-${time}`;
+        return updatedAvailability[key] === undefined;
+      });
+      
+      // Check each slot against the business hours and availability constraints
+      for (const time of slotsToCheck) {
+        const key = `${dateStr}-${time}`;
+        try {
+          const isAvailable = await checkCalendarAvailability(dateStr, time);
+          updatedAvailability[key] = isAvailable;
+          
+          // Log for debugging
+          console.log("Initial availability check for", dateStr, "at", time, isAvailable ? "is available" : "is unavailable");
+        } catch (error) {
+          console.error("Error checking availability:", error);
+          updatedAvailability[key] = false; // Default to unavailable on error
+        }
+      }
+      
+      // Update the state with all availability results
+      setTimeSlotAvailability(prev => {
+        let isDifferent = false;
+        Object.entries(updatedAvailability).forEach(([key, value]) => {
+          if (prev[key] !== value) {
+            isDifferent = true;
+          }
+        });
 
-      return isDifferent ? { ...prev, ...updatedAvailability } : prev;
-    });
-  }, [selectedDate, timeSlots, checkTimeSlotAvailability]);
+        return isDifferent ? { ...prev, ...updatedAvailability } : prev;
+      });
+    };
+    
+    checkAllTimeSlots();
+  }, [selectedDate, timeSlots, checkTimeSlotAvailability, checkCalendarAvailability]);
 
+  // Unified availability check function - uses cached values from state
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}-${time}`;
@@ -568,9 +615,10 @@ export function BookingWizard({
         return timeSlotAvailability[key];
       }
 
-      return checkTimeSlotAvailability(date, time);
+      // Default to unavailable if we don't have a cached result yet
+      return false;
     },
-    [timeSlotAvailability, checkTimeSlotAvailability]
+    [timeSlotAvailability]
   );
 
   const handleServiceSelect = (

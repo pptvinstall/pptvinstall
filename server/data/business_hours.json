@@ -1,1 +1,58 @@
-[{"id":1,"dayOfWeek":0,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":false,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":2,"dayOfWeek":1,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":true,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":3,"dayOfWeek":2,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":true,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":4,"dayOfWeek":3,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":true,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":5,"dayOfWeek":4,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":true,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":6,"dayOfWeek":5,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":true,"updatedAt":"2025-03-09T21:20:38.157Z"},{"id":7,"dayOfWeek":6,"startTime":"9:00 AM","endTime":"5:00 PM","isAvailable":false,"updatedAt":"2025-03-09T21:20:38.157Z"}]
+[
+  {
+    "id": 1,
+    "dayOfWeek": 0,
+    "startTime": "9:00 AM",
+    "endTime": "5:00 PM",
+    "isAvailable": false,
+    "updatedAt": "2025-03-09T21:20:38.157Z"
+  },
+  {
+    "id": 2,
+    "dayOfWeek": 1,
+    "startTime": "18:00",
+    "endTime": "22:00",
+    "isAvailable": true,
+    "updatedAt": "2025-03-10T00:00:32.887Z"
+  },
+  {
+    "id": 3,
+    "dayOfWeek": 2,
+    "startTime": "18:00",
+    "endTime": "22:00",
+    "isAvailable": true,
+    "updatedAt": "2025-03-10T00:00:59.002Z"
+  },
+  {
+    "id": 4,
+    "dayOfWeek": 3,
+    "startTime": "9:00 AM",
+    "endTime": "5:00 PM",
+    "isAvailable": true,
+    "updatedAt": "2025-03-09T21:20:38.157Z"
+  },
+  {
+    "id": 5,
+    "dayOfWeek": 4,
+    "startTime": "9:00 AM",
+    "endTime": "5:00 PM",
+    "isAvailable": true,
+    "updatedAt": "2025-03-09T21:20:38.157Z"
+  },
+  {
+    "id": 6,
+    "dayOfWeek": 5,
+    "startTime": "9:00 AM",
+    "endTime": "5:00 PM",
+    "isAvailable": true,
+    "updatedAt": "2025-03-09T21:20:38.157Z"
+  },
+  {
+    "id": 7,
+    "dayOfWeek": 6,
+    "startTime": "9:00 AM",
+    "endTime": "5:00 PM",
+    "isAvailable": false,
+    "updatedAt": "2025-03-09T21:20:38.157Z"
+  }
+]
