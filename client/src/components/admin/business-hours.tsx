@@ -73,9 +73,10 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   // Update form values when selected day changes
   useEffect(() => {
     if (selectedDayHours) {
-      setFormValues(selectedDayHours);
+      // Using JSON stringify/parse to create a deep copy to prevent infinite update loop
+      setFormValues(JSON.parse(JSON.stringify(selectedDayHours)));
     }
-  }, [selectedDay, selectedDayHours]);
+  }, [selectedDay, businessHours]);
   
   // Format time for display (e.g., "09:00" to "9:00 AM")
   const formatTimeForDisplay = (time: string) => {
