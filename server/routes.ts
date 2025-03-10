@@ -890,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Business Hours endpoints
   
-  // Get all business hours
+  // Get all business hours (Admin)
   app.get("/api/admin/business-hours", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
@@ -910,6 +910,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       logger.error('Error fetching business hours', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch business hours"
+      });
+    }
+  });
+  
+  // Get all business hours (Public) - No authentication needed
+  app.get("/api/business-hours", async (req: Request, res: Response) => {
+    try {
+      const businessHours = await storage.getBusinessHours();
+      
+      logger.debug('Fetched business hours for client', { 
+        businessHoursCount: businessHours.length
+      });
+      
+      res.json({
+        success: true,
+        businessHours
+      });
+    } catch (error) {
+      logger.error('Error fetching business hours for client', error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch business hours"

@@ -1,0 +1,137 @@
+import { useCallback, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { format, parse } from 'date-fns';
+
+export interface BusinessHour {
+  id?: number;
+  dayOfWeek: number;  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime: string;  // 24-hour format HH:MM
+  endTime: string;    // 24-hour format HH:MM
+  isAvailable: boolean;
+  updatedAt?: string;
+}
+
+/**
+ * Hook to fetch and manage business hours
+ */
+export function useBusinessHours() {
+  const {
+    data: businessHours,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['/api/business-hours'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/business-hours');
+      if (!res.ok) {
+        throw new Error('Failed to fetch business hours');
+      }
+      const data = await res.json();
+      return data.businessHours || [];
+    }
+  });
+
+  /**
+   * Get business hours for a specific day of the week
+   * @param dayOfWeek Day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+   */
+  const getBusinessHoursForDay = useCallback((dayOfWeek: number): BusinessHour | undefined => {
+    if (!businessHours) return undefined;
+    return businessHours.find((hours: BusinessHour) => hours.dayOfWeek === dayOfWeek);
+  }, [businessHours]);
+
+  /**
+   * Get time slots for a specific date based on business hours
+   * @param date Date to get time slots for
+   * @param intervalMinutes Interval between time slots in minutes (default: 60)
+   */
+  const getTimeSlotsForDate = useCallback((date: Date, intervalMinutes: number = 60): string[] => {
+    // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    const dayOfWeek = date.getDay();
+    
+    // Get business hours for this day
+    const hoursForDay = getBusinessHoursForDay(dayOfWeek);
+    
+    // If no business hours set or the day is marked as unavailable, return empty array
+    if (!hoursForDay || !hoursForDay.isAvailable) {
+      console.log(`No business hours for day ${dayOfWeek} or it's marked as unavailable`);
+      return [];
+    }
+    
+    // Parse start and end times (assuming 24-hour format HH:MM)
+    const [startHour, startMinute] = hoursForDay.startTime.split(':').map(Number);
+    const [endHour, endMinute] = hoursForDay.endTime.split(':').map(Number);
+    
+    // Create a date object for today with the start time
+    const startDate = new Date(date);
+    startDate.setHours(startHour, startMinute, 0, 0);
+    
+    // Create a date object for today with the end time
+    const endDate = new Date(date);
+    endDate.setHours(endHour, endMinute, 0, 0);
+    
+    // Calculate the number of slots between start and end time
+    const totalMinutes = (endDate.getTime() - startDate.getTime()) / 60000;
+    const numSlots = Math.floor(totalMinutes / intervalMinutes);
+    
+    const timeSlots: string[] = [];
+    
+    // Generate time slots
+    for (let i = 0; i < numSlots; i++) {
+      const slotTime = new Date(startDate.getTime() + i * intervalMinutes * 60000);
+      
+      // Format as "h:mm A" (e.g., "9:00 AM", "1:30 PM")
+      timeSlots.push(format(slotTime, 'h:mm a'));
+    }
+    
+    console.log(`Generated ${timeSlots.length} time slots for ${format(date, 'yyyy-MM-dd')}:`, timeSlots);
+    return timeSlots;
+  }, [getBusinessHoursForDay]);
+
+  /**
+   * Check if a specific date & time is within business hours
+   * @param date Date to check
+   * @param timeStr Time string in "h:mm a" format (e.g., "9:00 AM")
+   * @returns Boolean indicating if time is within business hours
+   */
+  const isWithinBusinessHours = useCallback((date: Date, timeStr: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const hoursForDay = getBusinessHoursForDay(dayOfWeek);
+    
+    // If no business hours or day is marked as unavailable
+    if (!hoursForDay || !hoursForDay.isAvailable) {
+      return false;
+    }
+    
+    // Parse the time string (e.g., "9:00 AM")
+    const timeDate = parse(timeStr, 'h:mm a', new Date());
+    
+    // Get hours and minutes
+    const hour = timeDate.getHours();
+    const minute = timeDate.getMinutes();
+    
+    // Parse business hours
+    const [startHour, startMinute] = hoursForDay.startTime.split(':').map(Number);
+    const [endHour, endMinute] = hoursForDay.endTime.split(':').map(Number);
+    
+    // Convert to minutes for easier comparison
+    const timeInMinutes = hour * 60 + minute;
+    const startTimeInMinutes = startHour * 60 + startMinute;
+    const endTimeInMinutes = endHour * 60 + endMinute;
+    
+    // Check if the time is within business hours
+    return timeInMinutes >= startTimeInMinutes && timeInMinutes < endTimeInMinutes;
+  }, [getBusinessHoursForDay]);
+
+  return {
+    businessHours,
+    isLoading,
+    isError,
+    error,
+    getBusinessHoursForDay,
+    getTimeSlotsForDate,
+    isWithinBusinessHours
+  };
+}

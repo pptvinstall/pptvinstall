@@ -33,6 +33,7 @@ import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { useCalendarAvailability } from "@/hooks/use-calendar-availability";
+import { useBusinessHours } from "@/hooks/use-business-hours";
 
 
 type BookingWizardProps = {
@@ -500,18 +501,18 @@ export function BookingWizard({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  const timeSlots = [
-    "9:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "1:00 PM",
-    "2:00 PM",
-    "3:00 PM",
-    "4:00 PM",
-    "5:00 PM",
-    "6:00 PM"
-  ];
+  // Get business hours for dynamic time slots
+  const { 
+    getTimeSlotsForDate, 
+    isWithinBusinessHours,
+    isLoading: isLoadingBusinessHours
+  } = useBusinessHours();
+  
+  // Generate time slots based on business hours when date is selected
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    return getTimeSlotsForDate(selectedDate);
+  }, [selectedDate, getTimeSlotsForDate]);
 
   // Get the calendar availability service
   const { isTimeSlotAvailable: checkCalendarAvailability } = useCalendarAvailability();
