@@ -822,32 +822,40 @@ export function IntegratedBookingWizard({
                             </RadioGroup>
                           </div>
                           
-                          <div className="space-y-3">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox 
-                                id="masonryWall" 
-                                checked={newTvMasonryWall}
-                                onCheckedChange={(checked) => setNewTvMasonryWall(checked === true)}
-                              />
-                              <Label htmlFor="masonryWall">Brick/Stone Surface (+$50)</Label>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Wall Material</label>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="masonryWall" 
+                                  checked={newTvMasonryWall}
+                                  onCheckedChange={(checked) => setNewTvMasonryWall(checked === true)}
+                                />
+                                <Label htmlFor="masonryWall">Brick/Stone Surface (+$50)</Label>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="highRise" 
+                                  checked={newTvHighRise}
+                                  onCheckedChange={(checked) => setNewTvHighRise(checked === true)}
+                                />
+                                <Label htmlFor="highRise">High-Rise/Steel Studs (+$25)</Label>
+                              </div>
                             </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Checkbox 
-                                id="highRise" 
-                                checked={newTvHighRise}
-                                onCheckedChange={(checked) => setNewTvHighRise(checked === true)}
-                              />
-                              <Label htmlFor="highRise">High-Rise/Steel Studs (+$25)</Label>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Checkbox 
-                                id="outletNeeded" 
-                                checked={newTvOutletNeeded}
-                                onCheckedChange={(checked) => setNewTvOutletNeeded(checked === true)}
-                              />
-                              <Label htmlFor="outletNeeded">Wire Concealment & Outlet (+$100)</Label>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Additional Services</label>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="outletNeeded" 
+                                  checked={newTvOutletNeeded}
+                                  onCheckedChange={(checked) => setNewTvOutletNeeded(checked === true)}
+                                />
+                                <Label htmlFor="outletNeeded">Wire Concealment & Outlet (+$100)</Label>
+                              </div>
                             </div>
                           </div>
                           
