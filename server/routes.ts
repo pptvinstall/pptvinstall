@@ -414,87 +414,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Booking endpoints
   app.post("/api/booking", async (req, res) => {
     try {
-      logger.debug("Booking submission received:", req.body);
-      const booking = bookingSchema.parse(req.body);
-      logger.info("Booking validated successfully");
-
-      // Check if this time slot is already booked
-      const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
-      logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
-
-      const existingBookings = await db.select().from(bookings).where(
-        and(
-          sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
-          eq(bookings.appointmentTime, booking.appointmentTime),
-          eq(bookings.status, 'active')
-        )
-      );
-
-      if (existingBookings.length > 0) {
-        logger.warn("Time slot already booked, returning conflict error");
-        return res.status(409).json({
+      logger.debug("Booking submission received:", JSON.stringify(req.body, null, 2));
+      
+      // First, check if we have a valid booking object before parsing
+      if (!req.body || Object.keys(req.body).length === 0) {
+        logger.error("Empty booking submission received");
+        return res.status(400).json({
           success: false,
-          message: "This time slot is already booked. Please select another time."
+          message: "No booking data provided"
         });
       }
-
-      // Store the pricingBreakdown and pricingTotal as JSON strings
-      let pricingBreakdownStr = null;
-      if (booking.pricingBreakdown) {
-        pricingBreakdownStr = JSON.stringify(booking.pricingBreakdown);
-      }
-
-      logger.debug("Preparing to insert booking into database");
-      // Insert into database
-      const insertedBookings = await db.insert(bookings).values({
-        name: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        streetAddress: booking.streetAddress,
-        addressLine2: booking.addressLine2,
-        city: booking.city,
-        state: booking.state,
-        zipCode: booking.zipCode,
-        notes: booking.notes,
-        serviceType: booking.serviceType,
-        preferredDate: booking.preferredDate,
-        appointmentTime: booking.appointmentTime,
-        status: 'active',
-        pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
-        pricingBreakdown: pricingBreakdownStr
-      }).returning();
-
-      logger.info("Booking successfully inserted into database");
-      const newBooking = insertedBookings[0];
-
-      // Also save to file storage for backward compatibility
-      const bookingWithId = {
-        ...booking,
-        id: newBooking.id.toString(),
-        createdAt: new Date()
-      };
-
-      fileBookings.push(bookingWithId);
-      saveBookings(fileBookings);
-
-      // Send confirmation email
+      
       try {
-        if (process.env.SENDGRID_API_KEY) {
-          await sendBookingConfirmationEmail(bookingWithId);
-          await sendAdminBookingNotificationEmail(bookingWithId);
-          logger.info("Confirmation emails sent successfully");
-        }
-      } catch (error) {
-        logger.error("Error sending notifications:", error as Error);
-        // We don't want to fail the booking if notifications fail
-      }
+        const booking = bookingSchema.parse(req.body);
+        logger.info("Booking validated successfully");
+        
+        // Check if this time slot is already booked
+        const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
+        logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
+        
+        // Continue with booking logic
+        const existingBookings = await db.select().from(bookings).where(
+          and(
+            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+            eq(bookings.appointmentTime, booking.appointmentTime),
+            eq(bookings.status, 'active')
+          )
+        );
 
-      // Return success response
-      res.status(200).json({
-        success: true,
-        message: "Booking confirmed successfully",
-        booking: bookingWithId
-      });
+        if (existingBookings.length > 0) {
+          logger.warn("Time slot already booked, returning conflict error");
+          return res.status(409).json({
+            success: false,
+            message: "This time slot is already booked. Please select another time."
+          });
+        }
+
+        // Store the pricingBreakdown and pricingTotal as JSON strings
+        let pricingBreakdownStr = null;
+        if (booking.pricingBreakdown) {
+          pricingBreakdownStr = JSON.stringify(booking.pricingBreakdown);
+        }
+
+        logger.debug("Preparing to insert booking into database");
+        // Insert into database
+        const insertedBookings = await db.insert(bookings).values({
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+          streetAddress: booking.streetAddress,
+          addressLine2: booking.addressLine2,
+          city: booking.city,
+          state: booking.state,
+          zipCode: booking.zipCode,
+          notes: booking.notes,
+          serviceType: booking.serviceType,
+          preferredDate: booking.preferredDate,
+          appointmentTime: booking.appointmentTime,
+          status: 'active',
+          pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
+          pricingBreakdown: pricingBreakdownStr
+        }).returning();
+
+        logger.info("Booking successfully inserted into database");
+        const newBooking = insertedBookings[0];
+
+        // Also save to file storage for backward compatibility
+        const bookingWithId = {
+          ...booking,
+          id: newBooking.id.toString(),
+          createdAt: new Date()
+        };
+
+        fileBookings.push(bookingWithId);
+        saveBookings(fileBookings);
+
+        // Send confirmation email
+        try {
+          if (process.env.SENDGRID_API_KEY) {
+            await sendBookingConfirmationEmail(bookingWithId);
+            await sendAdminBookingNotificationEmail(bookingWithId);
+            logger.info("Confirmation emails sent successfully");
+          }
+        } catch (error) {
+          logger.error("Error sending notifications:", error as Error);
+          // We don't want to fail the booking if notifications fail
+        }
+
+        // Return success response
+        res.status(200).json({
+          success: true,
+          message: "Booking confirmed successfully",
+          booking: bookingWithId
+        });
+        
+        // Exit the nested try/catch block
+        return;
+      } catch (parseError) {
+        logger.error("Booking schema validation failed:", parseError);
+        if (parseError instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid booking data",
+            errors: parseError.errors
+          });
+        }
+        throw parseError;
+      }
     } catch (error) {
       logger.error("Booking validation error:", error as Error);
 
