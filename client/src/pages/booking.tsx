@@ -15,40 +15,89 @@ export default function BookingPage() {
   const { data: existingBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['/api/bookings'],
     queryFn: async () => {
-      const response = await fetch("/api/bookings");
-      if (!response.ok) {
-        console.error(`Error fetching bookings: ${response.status}`);
+      try {
+        // Set a timeout to abort the request if it takes too long
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch("/api/bookings", {
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.error(`Error fetching bookings: ${response.status}`);
+          return [];
+        }
+        
+        const data = await response.json();
+        return data.bookings || [];
+      } catch (error) {
+        // Handle specific error types but return empty array to avoid breaking the UI
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.error('Bookings request timed out');
+          toast({
+            title: "Warning",
+            description: "Couldn't load existing bookings. Some time slots may appear available when they are not.",
+            variant: "destructive"
+          });
+        } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          console.error('Network error while fetching bookings');
+        } else {
+          console.error('Error fetching bookings:', error);
+        }
         return [];
       }
-      const data = await response.json();
-      return data.bookings || [];
-    }
+    },
+    retry: 2,
+    retryDelay: 1000
   });
 
   const mutation = useMutation({
     mutationFn: async (data: any): Promise<any> => {
       console.log("Booking mutation received data:", data);
 
-      // Use simple fetch instead of apiRequest to directly handle response
-      const response = await fetch('/api/booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      try {
+        // Set a timeout to abort the request if it takes too long
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        // Use simple fetch instead of apiRequest to directly handle response
+        const response = await fetch('/api/booking', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        console.log("API response status:", response.status);
 
-      console.log("API response status:", response.status);
+        // Parse response JSON
+        const responseData = await response.json();
+        console.log("API response data:", responseData);
 
-      // Parse response JSON
-      const responseData = await response.json();
-      console.log("API response data:", responseData);
+        if (!response.ok) {
+          throw new Error(responseData.message || 'Failed to create booking');
+        }
 
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to create booking');
+        return responseData;
+      } catch (error) {
+        // Handle specific error types
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
+        // Re-throw other errors
+        throw error;
       }
-
-      return responseData;
     },
     onSuccess: (data) => {
       // Store the booking data and ID in session storage for retrieval

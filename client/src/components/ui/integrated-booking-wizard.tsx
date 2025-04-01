@@ -856,21 +856,26 @@ export function IntegratedBookingWizard({
   };
 
   return (
-    <div className={cn(
-      "w-full booking-wizard-container mx-auto relative", 
-      textSizeMode === 'large' && "text-lg",
-      textSizeMode === 'extra-large' && "text-xl",
-      highContrastMode && "high-contrast-mode"
-    )} style={{ position: 'relative' }}>
+    <div 
+      className={cn(
+        "w-full booking-wizard-container mx-auto relative", 
+        textSizeMode === 'large' && "text-lg",
+        textSizeMode === 'extra-large' && "text-xl",
+        highContrastMode && "high-contrast-mode"
+      )} 
+      style={{ position: 'relative', overflow: 'visible' }}
+    >
       {/* Tutorial modal for first-time users */}
       {showTutorial && (
-        <BookingTutorial 
-          onClose={() => {
-            setShowTutorial(false);
-            markAsReturningUser();
-          }}
-          onEnable={() => setGuidanceMode('full')}
-        />
+        <div className="relative z-50">
+          <BookingTutorial 
+            onClose={() => {
+              setShowTutorial(false);
+              markAsReturningUser();
+            }}
+            onEnable={() => setGuidanceMode('full')}
+          />
+        </div>
       )}
       
       {/* Accessibility tools */}

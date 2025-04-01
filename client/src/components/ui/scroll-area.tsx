@@ -22,7 +22,7 @@ const ScrollArea = React.forwardRef<
   
   // Add a wrapper div with explicit positioning to prevent the warning
   return (
-    <div className="scroll-area-wrapper relative">
+    <div className="scroll-area-wrapper relative" style={{ position: 'relative' }}>
       <ScrollAreaPrimitive.Root
         ref={ref}
         className={cn("relative overflow-hidden", className)}
@@ -33,7 +33,7 @@ const ScrollArea = React.forwardRef<
           className="h-full w-full rounded-[inherit] relative" 
           style={viewportStyle}
         >
-          <div className="relative">
+          <div className="relative" style={{ position: 'relative', zIndex: 1 }}>
             {children}
           </div>
         </ScrollAreaPrimitive.Viewport>
