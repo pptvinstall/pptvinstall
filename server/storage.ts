@@ -238,7 +238,7 @@ export class FileSystemStorage implements IStorage {
 
   async getBooking(id: number): Promise<Booking | undefined> {
     const bookings = loadBookings();
-    return bookings.find((booking: any) => booking.id === id);
+    return bookings.find((booking: any) => Number(booking.id) === id || String(booking.id) === String(id));
   }
 
   async getAllBookings(): Promise<Booking[]> {
@@ -252,7 +252,9 @@ export class FileSystemStorage implements IStorage {
 
   async updateBooking(id: number, bookingData: Partial<Booking>): Promise<Booking> {
     const bookings = loadBookings();
-    const index = bookings.findIndex((booking: any) => booking.id === id);
+    const index = bookings.findIndex((booking: any) => 
+      Number(booking.id) === id || String(booking.id) === String(id)
+    );
     
     if (index === -1) {
       throw new Error('Booking not found');
@@ -272,7 +274,13 @@ export class FileSystemStorage implements IStorage {
 
   async deleteBooking(id: number): Promise<void> {
     const bookings = loadBookings();
-    const filteredBookings = bookings.filter((booking: any) => booking.id !== id);
+    const booking = await this.getBooking(id);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    const filteredBookings = bookings.filter((b: any) => 
+      Number(b.id) !== id && String(b.id) !== String(id)
+    );
     saveBookings(filteredBookings);
   }
   
