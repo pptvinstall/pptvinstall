@@ -560,9 +560,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let pricingBreakdown = null;
         if (booking.pricingBreakdown) {
           try {
+            // Try to parse the JSON
             pricingBreakdown = JSON.parse(booking.pricingBreakdown);
           } catch (e) {
             logger.error('Error parsing pricingBreakdown JSON:', e as Error);
+            // Log the problematic data for debugging
+            logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
+            
+            // Attempt to fix common JSON formatting issues
+            try {
+              // Replace single quotes with double quotes
+              let fixedJson = booking.pricingBreakdown.replace(/'/g, '"');
+              
+              // Add missing quotes around property names
+              fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+              
+              // Add missing quotes around property values that are not numbers or booleans
+              fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+              
+              // Try parsing the fixed JSON
+              pricingBreakdown = JSON.parse(fixedJson);
+              logger.info('Successfully fixed and parsed JSON');
+            } catch (fixError) {
+              // If all attempts fail, create a basic empty object
+              logger.error('Could not fix JSON parsing error:', fixError as Error);
+              pricingBreakdown = {};
+            }
           }
         }
 
@@ -612,9 +635,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let pricingBreakdown = null;
       if (booking.pricingBreakdown) {
         try {
+          // Try to parse the JSON
           pricingBreakdown = JSON.parse(booking.pricingBreakdown);
         } catch (e) {
           logger.error('Error parsing pricingBreakdown JSON:', e as Error);
+          // Log the problematic data for debugging
+          logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
+          
+          // Attempt to fix common JSON formatting issues
+          try {
+            // Replace single quotes with double quotes
+            let fixedJson = booking.pricingBreakdown.replace(/'/g, '"');
+            
+            // Add missing quotes around property names
+            fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+            
+            // Add missing quotes around property values that are not numbers or booleans
+            fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+            
+            // Try parsing the fixed JSON
+            pricingBreakdown = JSON.parse(fixedJson);
+            logger.info('Successfully fixed and parsed JSON');
+          } catch (fixError) {
+            // If all attempts fail, create a basic empty object
+            logger.error('Could not fix JSON parsing error:', fixError as Error);
+            pricingBreakdown = {};
+          }
         }
       }
 
@@ -837,10 +883,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle pricingBreakdown - if it's a string, parse it
       if (typeof updates.pricingBreakdown === 'string') {
         try {
+          // Try to parse the JSON
           updates.pricingBreakdown = JSON.parse(updates.pricingBreakdown);
         } catch (e) {
-          // If it can't be parsed, set to null
-          updates.pricingBreakdown = null;
+          logger.error('Error parsing pricingBreakdown JSON in update:', e as Error);
+          // Log the problematic data for debugging
+          logger.error('Problematic pricing data in update:', { problemData: updates.pricingBreakdown });
+          
+          // Attempt to fix common JSON formatting issues
+          try {
+            // Replace single quotes with double quotes
+            let fixedJson = updates.pricingBreakdown.replace(/'/g, '"');
+            
+            // Add missing quotes around property names
+            fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+            
+            // Add missing quotes around property values that are not numbers or booleans
+            fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+            
+            // Try parsing the fixed JSON
+            updates.pricingBreakdown = JSON.parse(fixedJson);
+            logger.info('Successfully fixed and parsed JSON in update');
+          } catch (fixError) {
+            // If all attempts fail, create a basic empty object
+            logger.error('Could not fix JSON parsing error in update:', fixError as Error);
+            updates.pricingBreakdown = {};
+          }
         }
       }
 
