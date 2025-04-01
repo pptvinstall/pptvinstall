@@ -89,30 +89,31 @@ export default function AdminDashboard() {
 
   // Handle tab changes - both from user clicks and URL changes
   const handleTabChange = (newTab: string) => {
+    console.log(`handleTabChange called with tab: ${newTab}`);
     setActiveTab(newTab);
-    // Update URL only if needed (to avoid recursive updates)
-    const searchParams = new URLSearchParams(window.location.search);
-    const currentUrlTab = searchParams.get('tab');
     
-    if (newTab !== currentUrlTab) {
-      if (newTab !== 'dashboard') {
-        setLocation(`/admin?tab=${newTab}`, { replace: true });
-      } else {
-        setLocation('/admin', { replace: true });
-      }
+    // Update URL using window.location.href to force a full page navigation
+    // This is a more robust approach for mobile
+    if (newTab !== 'dashboard') {
+      window.location.href = `/admin?tab=${newTab}`;
+    } else {
+      window.location.href = '/admin';
     }
   };
   
-  // Parse the tab from URL when location changes
+  // Parse the tab from URL on initial load and when URL changes
   useEffect(() => {
+    console.log("URL change detected, updating active tab");
     const searchParams = new URLSearchParams(window.location.search);
     const tab = searchParams.get('tab');
+    console.log(`Tab from URL: ${tab || 'dashboard'}`);
+    
     if (tab) {
       setActiveTab(tab);
     } else {
       setActiveTab('dashboard');
     }
-  }, [location]);
+  }, []);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/bookings"],

@@ -139,19 +139,30 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
             // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
             const isActive = (!currentTab && item.tab === 'dashboard') || currentTab === item.tab;
             
+            console.log(`Nav item: ${item.name}, Tab: ${item.tab}, isActive: ${isActive}`);
+            
             return (
               <button
                 key={item.name}
+                type="button"
                 onClick={() => {
-                  // Directly update the URL with the tab parameter
-                  if (item.tab === 'dashboard') {
-                    setLocation('/admin');
-                  } else {
-                    setLocation(`/admin?tab=${item.tab}`);
+                  console.log(`Clicked on ${item.name}, tab: ${item.tab}`);
+                  
+                  // Force a hard navigation
+                  try {
+                    if (item.tab === 'dashboard') {
+                      // We need to reset the URL to the root admin page
+                      window.location.replace('/admin');
+                    } else {
+                      // Navigate to the specific tab
+                      window.location.replace(`/admin?tab=${item.tab}`);
+                    }
+                  } catch (e) {
+                    console.error('Navigation error:', e);
                   }
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent",
+                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent cursor-pointer",
                   isActive 
                     ? "bg-primary/10 text-primary" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
