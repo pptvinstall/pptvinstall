@@ -1,6 +1,7 @@
 import { type Booking, type ContactMessage, type InsertBooking, type InsertContactMessage, 
   type BusinessHours, type InsertBusinessHours, type Customer, type InsertCustomer,
-  bookings, customers, businessHours } from "@shared/schema";
+  type SystemSettings, type InsertSystemSettings,
+  bookings, customers, businessHours, systemSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import fs from 'fs';
@@ -20,6 +21,7 @@ const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.join(__dirname, 'data');
 const BOOKINGS_FILE = path.join(STORAGE_DIR, 'bookings.json');
 const BUSINESS_HOURS_FILE = path.join(STORAGE_DIR, 'business_hours.json');
+const SYSTEM_SETTINGS_FILE = path.join(STORAGE_DIR, 'system_settings.json');
 
 // Default business hours (Mon-Fri: 6:30-10:30PM, Sat-Sun: 11AM-7PM)
 const DEFAULT_BUSINESS_HOURS = [
@@ -112,6 +114,62 @@ if (!fs.existsSync(BUSINESS_HOURS_FILE)) {
   ));
 }
 
+// Default system settings
+const DEFAULT_SYSTEM_SETTINGS: SystemSettings[] = [
+  {
+    id: 1,
+    name: 'bookingBufferHours',
+    bookingBufferHours: 2, // Default 2 hour buffer instead of 12
+    value: 2,
+    description: 'Minimum hours before a booking can be scheduled',
+    updatedAt: new Date().toISOString()
+  }
+];
+
+/**
+ * Load system settings from storage
+ */
+export function loadSystemSettings(): SystemSettings[] {
+  try {
+    const data = fs.readFileSync(SYSTEM_SETTINGS_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading system settings:', error);
+    
+    // If there's an error, initialize with default settings
+    const defaultSettings = DEFAULT_SYSTEM_SETTINGS.map(setting => ({
+      ...setting,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    // Save the default settings to the file
+    saveSystemSettings(defaultSettings);
+    
+    return defaultSettings;
+  }
+}
+
+/**
+ * Save system settings to storage
+ */
+export function saveSystemSettings(settings: SystemSettings[]): void {
+  try {
+    fs.writeFileSync(SYSTEM_SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  } catch (error) {
+    console.error('Error saving system settings:', error);
+  }
+}
+
+// Initialize system settings file if it doesn't exist
+if (!fs.existsSync(SYSTEM_SETTINGS_FILE)) {
+  fs.writeFileSync(SYSTEM_SETTINGS_FILE, JSON.stringify(
+    DEFAULT_SYSTEM_SETTINGS.map(setting => ({
+      ...setting,
+      updatedAt: new Date().toISOString()
+    }))
+  ));
+}
+
 export interface IStorage {
   // Contact Messages
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
@@ -129,6 +187,11 @@ export interface IStorage {
   getBusinessHours(): Promise<BusinessHours[]>;
   updateBusinessHours(dayOfWeek: number, data: Partial<BusinessHours>): Promise<BusinessHours>;
   getBusinessHoursForDay(dayOfWeek: number): Promise<BusinessHours | undefined>;
+  
+  // System Settings
+  getSystemSettings(): Promise<SystemSettings[]>;
+  getSystemSettingByName(name: string): Promise<SystemSettings | undefined>;
+  updateSystemSetting(name: string, value: any): Promise<SystemSettings>;
   
   // Customer Management
   createCustomer(customerData: InsertCustomer): Promise<Customer>;
@@ -242,6 +305,46 @@ export class FileSystemStorage implements IStorage {
     businessHours[index] = updatedHours;
     saveBusinessHours(businessHours);
     return updatedHours;
+  }
+  
+  // System Settings methods
+  async getSystemSettings(): Promise<SystemSettings[]> {
+    return loadSystemSettings();
+  }
+  
+  async getSystemSettingByName(name: string): Promise<SystemSettings | undefined> {
+    const settings = loadSystemSettings();
+    return settings.find(setting => setting.name === name);
+  }
+  
+  async updateSystemSetting(name: string, value: any): Promise<SystemSettings> {
+    const settings = loadSystemSettings();
+    const index = settings.findIndex(setting => setting.name === name);
+    
+    if (index === -1) {
+      throw new Error('System setting not found');
+    }
+    
+    // For bookingBufferHours, update both value and bookingBufferHours properties
+    let updatedSetting: SystemSettings;
+    if (name === 'bookingBufferHours') {
+      updatedSetting = {
+        ...settings[index],
+        value: value,
+        bookingBufferHours: Number(value),
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      updatedSetting = {
+        ...settings[index],
+        value: value,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    
+    settings[index] = updatedSetting;
+    saveSystemSettings(settings);
+    return updatedSetting;
   }
   
   // Helper methods for contact messages

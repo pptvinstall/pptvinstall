@@ -204,3 +204,36 @@ export type BusinessHoursSelect = typeof businessHours.$inferSelect;
 export type BusinessHoursInsert = typeof businessHours.$inferInsert;
 export type CustomerSelect = typeof customers.$inferSelect;
 export type CustomerInsert = typeof customers.$inferInsert;
+
+// System settings schema
+export const systemSettingsSchema = z.object({
+  bookingBufferHours: z.number().min(0).max(48).default(2), // Default 2 hours buffer
+  name: z.string(),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  description: z.string().optional()
+});
+
+export const insertSystemSettingsSchema = systemSettingsSchema;
+
+// System settings table
+export const systemSettings = pgTable('system_settings', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 64 }).notNull().unique(),
+  value: jsonb('value').notNull(),
+  description: text('description'),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const insertSystemSettingsDrizzleSchema = createInsertSchema(systemSettings).omit({ 
+  id: true,
+  updatedAt: true
+});
+
+export type SystemSettings = z.infer<typeof systemSettingsSchema> & {
+  id?: number;
+  updatedAt?: string;
+};
+
+export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+export type SystemSettingsSelect = typeof systemSettings.$inferSelect;
+export type SystemSettingsInsert = typeof systemSettings.$inferInsert;

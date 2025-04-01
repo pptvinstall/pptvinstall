@@ -192,8 +192,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minute
       );
         
-      // Add a 12-hour buffer for bookings
-      const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      // Get the configurable booking buffer hours
+      let bufferHours = 2; // Default fallback value of 2 hours
+      try {
+        const bufferSetting = await storage.getSystemSettingByName('bookingBufferHours');
+        if (bufferSetting && typeof bufferSetting.bookingBufferHours === 'number') {
+          bufferHours = bufferSetting.bookingBufferHours;
+        }
+      } catch (bufferError) {
+        logger.error("Error fetching booking buffer setting, using default:", bufferError as Error);
+      }
+      
+      // Add the configured buffer time for bookings
+      const bufferTime = new Date(now.getTime() + bufferHours * 60 * 60 * 1000);
       
       // Check if the selected time is in the past or within the buffer period
       if (selectedDateTime <= bufferTime) {
@@ -1774,6 +1785,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to update business hours"
+      });
+    }
+  });
+
+  // System Settings API Routes
+  app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json({
+        success: true,
+        settings
+      });
+    } catch (error) {
+      logger.error('Error fetching system settings', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch system settings"
+      });
+    }
+  });
+  
+  app.get("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
+    try {
+      const name = req.params.name;
+      const setting = await storage.getSystemSettingByName(name);
+      
+      if (!setting) {
+        return res.status(404).json({
+          success: false,
+          message: "System setting not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        setting
+      });
+    } catch (error) {
+      logger.error('Error fetching system setting', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch system setting"
+      });
+    }
+  });
+  
+  app.post("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
+    try {
+      const { password, value } = req.body;
+      const name = req.params.name;
+      
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      if (value === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: "Value is required"
+        });
+      }
+      
+      const updatedSetting = await storage.updateSystemSetting(name, value);
+      res.json({
+        success: true,
+        message: "System setting updated successfully",
+        setting: updatedSetting
+      });
+    } catch (error) {
+      logger.error('Error updating system setting', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update system setting"
+      });
+    }
+  });
+  
+  // Public API for system settings (only specific settings)
+  app.get("/api/system-settings/booking-buffer", async (req: Request, res: Response) => {
+    try {
+      const setting = await storage.getSystemSettingByName('bookingBufferHours');
+      
+      if (!setting) {
+        return res.status(404).json({
+          success: false,
+          message: "Setting not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        bookingBufferHours: setting.bookingBufferHours
+      });
+    } catch (error) {
+      logger.error('Error fetching booking buffer setting', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking buffer setting"
       });
     }
   });

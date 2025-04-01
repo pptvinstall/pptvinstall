@@ -83,6 +83,7 @@ import { BookingCalendar } from "@/components/admin/booking-calendar";
 import { BusinessHours } from "@/components/admin/business-hours";
 import { AdminLayout } from "@/components/admin/layout";
 import { BookingDetailsDialog } from "@/components/admin/booking-details-dialog";
+import { SystemSettings } from "@/components/admin/system-settings";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -1075,6 +1076,11 @@ export default function AdminDashboard() {
               <h1 className="text-3xl font-bold">Settings</h1>
               <p className="text-muted-foreground">Manage your account and preferences</p>
             </div>
+            
+            {/* Booking Settings */}
+            <SystemSettings />
+            
+            {/* Admin Password */}
             <Card>
               <CardHeader>
                 <CardTitle>Change Password</CardTitle>
