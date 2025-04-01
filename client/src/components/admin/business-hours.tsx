@@ -55,19 +55,23 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   
   // Get the admin password from localStorage if not provided through props
   const storedPassword = localStorage.getItem('adminPassword');
-  const adminPassword = password || storedPassword;
+  const adminPassword = password || storedPassword || '';
   
   // Fetch all business hours
   const { data: businessHours, isLoading, isError, error } = useQuery({
-    queryKey: ['/api/admin/business-hours'],
+    queryKey: ['/api/admin/business-hours', adminPassword],
     queryFn: async () => {
+      if (!adminPassword) {
+        throw new Error('Admin password is required');
+      }
       const res = await apiRequest('GET', `/api/admin/business-hours`, { password: adminPassword });
       if (!res.ok) {
         throw new Error('Failed to fetch business hours');
       }
       const data = await res.json();
       return data.businessHours || [];
-    }
+    },
+    enabled: !!adminPassword // Only run the query if adminPassword exists
   });
   
   // Get the selected day's hours, or use appropriate defaults based on whether it's weekday or weekend
@@ -144,7 +148,7 @@ export function BusinessHours({ password }: BusinessHoursProps) {
       });
       
       // Invalidate query to fetch updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/business-hours'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/business-hours', adminPassword] });
     },
     onError: (error: any) => {
       toast({

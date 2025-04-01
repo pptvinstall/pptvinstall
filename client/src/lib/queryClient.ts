@@ -12,10 +12,37 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // If it's a GET request and data is provided, append it as query parameters instead of body
+  let finalUrl = url;
+  const headers: Record<string, string> = {};
+  let body: string | undefined = undefined;
+  
+  if (method === 'GET' || method === 'HEAD') {
+    // For GET/HEAD requests, convert data to query parameters
+    if (data) {
+      const params = new URLSearchParams();
+      Object.entries(data as Record<string, any>).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+      const queryString = params.toString();
+      if (queryString) {
+        finalUrl = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
+      }
+    }
+  } else {
+    // For other requests, send data as JSON in body
+    if (data) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(data);
+    }
+  }
+
+  const res = await fetch(finalUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body,
     credentials: "include",
   });
 
