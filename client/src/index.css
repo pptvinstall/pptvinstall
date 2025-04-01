@@ -134,7 +134,7 @@
   }
 }
 
-/* Fix container positioning */
+/* Fix container positioning and pointer events */
 .scroll-container,
 [data-radix-scroll-area-viewport],
 .scroll-viewport,
@@ -144,28 +144,32 @@
 .radix-scroll-area,
 [role="dialog"],
 .dialog-content,
-.dialog-overlay {
+.dialog-overlay,
+.container,
+.service-selection-grid,
+.booking-step-grid,
+.wizard-step {
   position: relative !important;
+  pointer-events: auto !important;
 }
 
 /* Ensure proper overflow handling */
 .scroll-area-viewport {
   overflow: auto !important;
   height: 100% !important;
+  pointer-events: auto !important;
 }
-/* Ensure containers have proper positioning for scroll calculations */
-.scroll-container, 
-[data-radix-scroll-area-viewport],
-.scroll-viewport,
-.container,
-.scroll-area-container,
-.scroll-area-viewport,
-.radix-scroll-area,
-[role="dialog"],
-.service-selection-grid,
-.booking-step-grid,
-.wizard-step {
+
+/* Fix pointer events for interactive elements */
+button,
+a,
+input,
+select,
+[role="button"],
+[tabindex="0"] {
+  pointer-events: auto !important;
   position: relative !important;
+  z-index: 1;
 }
 
 /* Global fix for Radix UI ScrollArea */
