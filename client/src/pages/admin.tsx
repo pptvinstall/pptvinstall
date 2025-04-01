@@ -93,17 +93,25 @@ export default function AdminDashboard() {
     const tab = searchParams.get('tab');
     if (tab) {
       setActiveTab(tab);
+    } else {
+      setActiveTab('dashboard');
     }
   }, [location]);
 
-  // Update URL when tab changes
+  // Update URL when tab changes (but don't create a circular dependency)
   useEffect(() => {
-    if (activeTab !== 'dashboard') {
-      setLocation(`/admin?tab=${activeTab}`, { replace: true });
-    } else {
-      setLocation('/admin', { replace: true });
+    // Only update the URL if the tab change wasn't triggered by the URL itself
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlTab = searchParams.get('tab') || 'dashboard';
+    
+    if (activeTab !== urlTab) {
+      if (activeTab !== 'dashboard') {
+        setLocation(`/admin?tab=${activeTab}`, { replace: true });
+      } else {
+        setLocation('/admin', { replace: true });
+      }
     }
-  }, [activeTab, setLocation]);
+  }, [activeTab, setLocation, location]);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/bookings"],
@@ -1302,13 +1310,13 @@ export default function AdminDashboard() {
       </Tabs>
 
       {/* Booking Details Drawer */}
-      <Drawer open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Booking Details</DrawerTitle>
-            <DrawerDescription>Viewing booking information.</DrawerDescription>
-          </DrawerHeader>
-          {selectedBooking && (
+      {selectedBooking && (
+        <Drawer open={true} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Booking Details</DrawerTitle>
+              <DrawerDescription>Viewing booking information.</DrawerDescription>
+            </DrawerHeader>
             <div className="px-4 py-2">
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -1451,14 +1459,14 @@ export default function AdminDashboard() {
                 </AlertDialog>
               </div>
             </div>
-          )}
-          <DrawerFooter>
-            <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="outline">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
     </AdminLayout>
   );
 }
