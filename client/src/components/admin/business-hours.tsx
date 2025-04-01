@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
 import { Info } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface BusinessHoursProps {
   password?: string;
@@ -52,10 +53,24 @@ const defaultTimes = {
 export function BusinessHours({ password }: BusinessHoursProps) {
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const { toast } = useToast();
+  const [_, setLocation] = useLocation();
   
   // Get the admin password from localStorage if not provided through props
   const storedPassword = localStorage.getItem('adminPassword');
   const adminPassword = password || storedPassword || '';
+  
+  // Check for authentication
+  useEffect(() => {
+    // If no admin password is available, redirect to login
+    if (!adminPassword) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access this page",
+        variant: "destructive"
+      });
+      setLocation('/admin');
+    }
+  }, [adminPassword, toast, setLocation]);
   
   // Fetch all business hours
   const { data: businessHours, isLoading, isError, error } = useQuery({
@@ -133,11 +148,16 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   // Update business hours mutation
   const updateBusinessHoursMutation = useMutation({
     mutationFn: async (data: BusinessHour) => {
+      // Check if we have a valid admin password
+      if (!adminPassword) {
+        throw new Error('Admin password is required. Please log in again.');
+      }
+
       return await apiRequest('POST', `/api/admin/business-hours/${data.dayOfWeek}`, {
         startTime: data.startTime,
         endTime: data.endTime,
         isAvailable: data.isAvailable,
-        password: adminPassword
+        password: adminPassword // Include the admin password from props or localStorage
       });
     },
     onSuccess: () => {
@@ -151,11 +171,22 @@ export function BusinessHours({ password }: BusinessHoursProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/business-hours', adminPassword] });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: `Failed to update business hours: ${error.message || 'Unknown error'}`,
-        variant: 'destructive'
-      });
+      // If error is authentication related, prompt to re-login
+      if (error.message?.includes('401') || error.message?.includes('Invalid password')) {
+        toast({
+          title: 'Authentication Error',
+          description: 'Your login session has expired. Please log in again.',
+          variant: 'destructive'
+        });
+        // Clear the stored password as it's no longer valid
+        localStorage.removeItem('adminPassword');
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to update business hours: ${error.message || 'Unknown error'}`,
+          variant: 'destructive'
+        });
+      }
     }
   });
   
