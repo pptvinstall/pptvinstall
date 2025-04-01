@@ -140,7 +140,7 @@ export function BookingCalendar() {
           </div>
           <div className="space-y-4">
             <h3 className="text-lg font-medium">
-              Bookings for {format(selectedDate, "MMMM d, yyyy")}
+              Bookings for {format(selectedDate, "EEEE, MMMM d, yyyy")}
             </h3>
             {isLoading ? (
               <div>Loading bookings...</div>

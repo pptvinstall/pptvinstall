@@ -192,8 +192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           minute
         );
         
-        // Add a 30-minute buffer for booking preparation
-        const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
+        // Add a 12-hour buffer for bookings
+        const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
         
         // Check if the selected time is in the past or within the buffer period
         if (selectedDateTime <= bufferTime) {

@@ -184,7 +184,7 @@ export function IntegratedBookingWizard({
     
     // Get current time plus buffer
     const now = new Date();
-    const bufferTime = new Date(now.getTime() + 60 * 60 * 1000); // 60-minute buffer
+    const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12-hour buffer
     
     // Check if slot is in the past or too soon
     return slotDate <= bufferTime;
@@ -312,8 +312,8 @@ export function IntegratedBookingWizard({
       const selectedDate = new Date(date);
       selectedDate.setHours(hours, minutes, 0, 0);
       
-      // Add a 60-minute buffer for bookings (appointments need to be at least 1 hour in the future)
-      const bufferTime = new Date(now.getTime() + 60 * 60 * 1000);
+      // Add a 12-hour buffer for bookings (appointments need to be at least 12 hours in the future)
+      const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
       
       // Check if the selected time is in the past (with buffer)
       if (selectedDate <= bufferTime) {

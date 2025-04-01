@@ -460,7 +460,7 @@ export default function AdminDashboard() {
                       {filteredBookings.map((booking: any) => (
                         <TableRow key={booking.id}>
                           <TableCell>
-                            {booking.preferredDate ? format(new Date(booking.preferredDate), "MMM d, yyyy") : "N/A"}
+                            {booking.preferredDate ? format(new Date(booking.preferredDate), "EEEE, MMMM d, yyyy") : "N/A"}
                           </TableCell>
                           <TableCell>{booking.appointmentTime}</TableCell>
                           <TableCell>{booking.name}</TableCell>
