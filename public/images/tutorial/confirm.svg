@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="200" rx="8" fill="#F3F4F6"/>
+  
+  <!-- Order Summary Card -->
+  <rect x="100" y="40" width="200" height="140" rx="4" fill="white" stroke="#D1D5DB" stroke-width="2"/>
+  
+  <!-- Card Title -->
+  <text x="200" y="60" font-family="Arial" font-size="14" font-weight="bold" fill="#1F2937" text-anchor="middle">Order Summary</text>
+  
+  <!-- Divider -->
+  <line x1="120" y1="70" x2="280" y2="70" stroke="#E5E7EB" stroke-width="1"/>
+  
+  <!-- Service Items -->
+  <text x="130" y="85" font-family="Arial" font-size="10" fill="#1F2937">TV Mounting (55" Standard Wall)</text>
+  <text x="270" y="85" font-family="Arial" font-size="10" fill="#1F2937" text-anchor="end">$99</text>
+  
+  <text x="130" y="105" font-family="Arial" font-size="10" fill="#1F2937">Smart Camera Installation</text>
+  <text x="270" y="105" font-family="Arial" font-size="10" fill="#1F2937" text-anchor="end">$79</text>
+  
+  <!-- Divider -->
+  <line x1="120" y1="115" x2="280" y2="115" stroke="#E5E7EB" stroke-width="1"/>
+  
+  <!-- Total -->
+  <text x="130" y="130" font-family="Arial" font-size="12" font-weight="bold" fill="#1F2937">Total</text>
+  <text x="270" y="130" font-family="Arial" font-size="12" font-weight="bold" fill="#1F2937" text-anchor="end">$178</text>
+  
+  <!-- Appointment Info -->
+  <text x="130" y="150" font-family="Arial" font-size="10" fill="#4B5563">Appointment: April 4, 2025 at 2:00 PM</text>
+  <text x="130" y="165" font-family="Arial" font-size="10" fill="#4B5563">123 Main Street, Atlanta, GA 30303</text>
+  
+  <!-- Confirm Button -->
+  <rect x="150" y="180" width="100" height="25" rx="4" fill="#2563EB"/>
+  <text x="200" y="196" font-family="Arial" font-size="12" fill="white" text-anchor="middle">Confirm Booking</text>
+  
+  <!-- Check Mark Icon -->
+  <circle cx="320" cy="60" r="15" fill="#10B981"/>
+  <path d="M313 60L318 65L327 55" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Order Number -->
+  <text x="320" y="90" font-family="Arial" font-size="10" fill="#6B7280" text-anchor="middle">Order #TV-12345</text>
+</svg>

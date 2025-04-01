@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="200" rx="8" fill="#F3F4F6"/>
+  
+  <!-- TV Illustration -->
+  <rect x="70" y="70" width="100" height="70" rx="4" fill="#4B5563"/>
+  <rect x="80" y="80" width="80" height="50" rx="2" fill="#D1D5DB"/>
+  <rect x="100" y="140" width="40" height="5" rx="1" fill="#4B5563"/>
+  <rect x="110" y="145" width="20" height="15" rx="1" fill="#6B7280"/>
+  
+  <!-- Smart Home Camera -->
+  <rect x="230" y="80" width="40" height="50" rx="2" fill="#6B7280"/>
+  <circle cx="250" cy="95" r="10" fill="#1F2937"/>
+  <rect x="235" y="115" width="30" height="10" rx="1" fill="#4B5563"/>
+  
+  <!-- Service Card Labels -->
+  <rect x="70" y="50" width="100" height="15" rx="2" fill="#2563EB"/>
+  <text x="120" y="61" font-family="Arial" font-size="10" fill="white" text-anchor="middle">TV Mounting</text>
+  
+  <rect x="230" y="50" width="100" height="15" rx="2" fill="#2563EB"/>
+  <text x="280" y="61" font-family="Arial" font-size="10" fill="white" text-anchor="middle">Smart Home</text>
+  
+  <!-- Plus Icons -->
+  <circle cx="170" cy="105" r="15" fill="#3B82F6"/>
+  <rect x="160" y="103" width="20" height="4" rx="2" fill="white"/>
+  <rect x="168" y="95" width="4" height="20" rx="2" fill="white"/>
+  
+  <circle cx="330" cy="95" r="15" fill="#3B82F6"/>
+  <rect x="320" y="93" width="20" height="4" rx="2" fill="white"/>
+  <rect x="328" y="85" width="4" height="20" rx="2" fill="white"/>
+</svg>

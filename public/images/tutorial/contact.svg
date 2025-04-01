@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="200" rx="8" fill="#F3F4F6"/>
+  
+  <!-- Contact Form Illustration -->
+  <rect x="100" y="40" width="200" height="140" rx="4" fill="white" stroke="#D1D5DB" stroke-width="2"/>
+  
+  <!-- Form Fields -->
+  <rect x="120" y="60" width="160" height="20" rx="4" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="130" y="73" font-family="Arial" font-size="10" fill="#9CA3AF">Your Name*</text>
+  
+  <rect x="120" y="90" width="160" height="20" rx="4" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="130" y="103" font-family="Arial" font-size="10" fill="#9CA3AF">Email Address*</text>
+  
+  <rect x="120" y="120" width="160" height="20" rx="4" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="130" y="133" font-family="Arial" font-size="10" fill="#9CA3AF">Phone Number*</text>
+  
+  <rect x="120" y="150" width="160" height="20" rx="4" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+  <text x="130" y="163" font-family="Arial" font-size="10" fill="#9CA3AF">Your Address*</text>
+  
+  <!-- Form Title -->
+  <text x="200" y="45" font-family="Arial" font-size="14" font-weight="bold" fill="#1F2937" text-anchor="middle">Contact Information</text>
+  
+  <!-- Required Field Indicator -->
+  <text x="320" y="40" font-family="Arial" font-size="10" fill="#EF4444">* Required</text>
+  
+  <!-- Contact Icons -->
+  <circle cx="80" cy="70" r="10" fill="#3B82F6" fill-opacity="0.2"/>
+  <text x="80" y="74" font-family="Arial" font-size="12" fill="#2563EB" text-anchor="middle">👤</text>
+  
+  <circle cx="80" cy="100" r="10" fill="#3B82F6" fill-opacity="0.2"/>
+  <text x="80" y="104" font-family="Arial" font-size="12" fill="#2563EB" text-anchor="middle">✉️</text>
+  
+  <circle cx="80" cy="130" r="10" fill="#3B82F6" fill-opacity="0.2"/>
+  <text x="80" y="134" font-family="Arial" font-size="12" fill="#2563EB" text-anchor="middle">📞</text>
+  
+  <circle cx="80" cy="160" r="10" fill="#3B82F6" fill-opacity="0.2"/>
+  <text x="80" y="164" font-family="Arial" font-size="12" fill="#2563EB" text-anchor="middle">🏠</text>
+  
+  <!-- Submit Button -->
+  <rect x="320" y="150" width="60" height="20" rx="4" fill="#2563EB"/>
+  <text x="350" y="163" font-family="Arial" font-size="10" fill="white" text-anchor="middle">Next</text>
+</svg>

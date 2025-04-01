@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, Info, Minus, PlusCircle, AlertTriangle } from "lucide-react";
+import { 
+  CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, 
+  Info, Minus, PlusCircle, AlertTriangle, HelpCircle, ChevronRight,
+  ChevronLeft, CheckCircle, Settings2 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,6 +34,21 @@ import { RadioGroup, RadioGroupItem } from "./radio-group";
 import { Icons } from "../icons";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
+import { BookingAssistant, BookingAssistantButton } from "./booking-assistant";
+import { BookingTutorial, useFirstTimeUser } from "./booking-tutorial";
+import { 
+  ServiceSelectionGuide, 
+  DateTimeGuide, 
+  ContactInfoGuide, 
+  ReviewGuide,
+  AccessibilityNote 
+} from "./booking-step-guide";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 
 // Service-related interfaces 
@@ -146,6 +165,23 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
+  
+  // Accessibility and guidance features
+  const [guidanceMode, setGuidanceMode] = useState<'full' | 'minimal' | 'hidden'>('minimal');
+  const [showAccessibilityOptions, setShowAccessibilityOptions] = useState(false);
+  const [textSizeMode, setTextSizeMode] = useState<'normal' | 'large' | 'extra-large'>('normal');
+  const [highContrastMode, setHighContrastMode] = useState(false);
+  const { isFirstTime, markAsReturningUser } = useFirstTimeUser();
+  const [showTutorial, setShowTutorial] = useState(isFirstTime);
+  
+  // Function to handle assistant visibility
+  const toggleAssistant = () => {
+    if (guidanceMode === 'hidden') {
+      setGuidanceMode('full');
+    } else {
+      setGuidanceMode('hidden');
+    }
+  };
   
   // Use business hours to generate time slots and check availability
   const { getTimeSlotsForDate, getBusinessHoursForDay, businessHours } = useBusinessHours();
