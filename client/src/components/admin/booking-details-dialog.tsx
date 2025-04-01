@@ -366,9 +366,9 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
             <label className="text-sm font-medium">Special Instructions</label>
             <Textarea 
               className="mt-1"
-              value={selectedBooking.specialInstructions || ""}
+              value={selectedBooking.specialInstructions || "Additional notes"}
               onChange={(e) => setSelectedBooking({...selectedBooking, specialInstructions: e.target.value})}
-              placeholder="Any special notes or instructions"
+              placeholder="Additional notes - Use this area for any customer requests or special installation requirements."
             />
           </div>
 
@@ -420,8 +420,8 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
               <h3 className="text-lg font-medium mb-2">Cancel Booking</h3>
               <div className="space-y-4">
                 <Textarea
-                  placeholder="Reason for cancellation"
-                  value={cancellationReason}
+                  placeholder="Enter the reason for cancellation here - this will be included in the email to the customer"
+                  value={cancellationReason || "Customer requested cancellation"}
                   onChange={(e) => setCancellationReason(e.target.value)}
                 />
                 <Button
