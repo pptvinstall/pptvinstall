@@ -202,7 +202,7 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 bg-white rounded-full p-2.5 shadow-md">
                 <img 
-                  src="/icons/pptv/icon.svg" 
+                  src="/icons/pptv/pptv-icon.svg" 
                   alt="PPTVInstall" 
                   className="h-7 w-7" 
                   onError={(e) => {

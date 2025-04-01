@@ -11,7 +11,7 @@ const PRECACHE_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/badge-72x72.png',
-  '/icons/pptv/icon.svg',
+  '/icons/pptv/pptv-icon.svg',
   '/icons/pptv/apple-touch-icon.svg',
   '/icons/pptv/apple-touch-icon-precomposed.png',
   '/manifest.json'
@@ -155,7 +155,7 @@ self.addEventListener('push', event => {
   const title = data.title || 'PPTVInstall';
   const options = {
     body: data.body || 'Something new happened!',
-    icon: data.icon || '/icons/pptv/icon.svg',
+    icon: data.icon || '/icons/pptv/pptv-icon.svg',
     badge: data.badge || '/icons/pptv/apple-touch-icon-precomposed.png',
     data: data.data || {},
     actions: data.actions || [],
