@@ -61,7 +61,7 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   const { data: businessHours, isLoading, isError, error } = useQuery({
     queryKey: ['/api/admin/business-hours'],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/admin/business-hours`);
+      const res = await apiRequest('GET', `/api/admin/business-hours`, { password: adminPassword });
       if (!res.ok) {
         throw new Error('Failed to fetch business hours');
       }
@@ -132,7 +132,8 @@ export function BusinessHours({ password }: BusinessHoursProps) {
       return await apiRequest('POST', `/api/admin/business-hours/${data.dayOfWeek}`, {
         startTime: data.startTime,
         endTime: data.endTime,
-        isAvailable: data.isAvailable
+        isAvailable: data.isAvailable,
+        password: adminPassword
       });
     },
     onSuccess: () => {

@@ -87,7 +87,23 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
 
-  // Parse the tab from URL if present
+  // Handle tab changes - both from user clicks and URL changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    // Update URL only if needed (to avoid recursive updates)
+    const searchParams = new URLSearchParams(window.location.search);
+    const currentUrlTab = searchParams.get('tab');
+    
+    if (newTab !== currentUrlTab) {
+      if (newTab !== 'dashboard') {
+        setLocation(`/admin?tab=${newTab}`, { replace: true });
+      } else {
+        setLocation('/admin', { replace: true });
+      }
+    }
+  };
+  
+  // Parse the tab from URL when location changes
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const tab = searchParams.get('tab');
@@ -97,16 +113,6 @@ export default function AdminDashboard() {
       setActiveTab('dashboard');
     }
   }, [location]);
-
-  // Handle tab changes
-  const handleTabChange = (newTab: string) => {
-    setActiveTab(newTab);
-    if (newTab !== 'dashboard') {
-      setLocation(`/admin?tab=${newTab}`, { replace: true });
-    } else {
-      setLocation('/admin', { replace: true });
-    }
-  };
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/bookings"],

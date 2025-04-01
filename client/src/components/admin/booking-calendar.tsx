@@ -27,6 +27,9 @@ export function BookingCalendar() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Get the admin password from localStorage for API calls
+  const adminPassword = localStorage.getItem('adminPassword') || '';
 
   // Query to fetch bookings
   const { data: bookings = [], isLoading } = useQuery({
@@ -54,7 +57,7 @@ export function BookingCalendar() {
   // Mutation for approving bookings
   const approveMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      const response = await apiRequest("POST", `/api/bookings/${bookingId}/approve`);
+      const response = await apiRequest("POST", `/api/bookings/${bookingId}/approve`, { password: adminPassword });
       if (!response.ok) {
         throw new Error('Failed to approve booking');
       }
@@ -71,7 +74,7 @@ export function BookingCalendar() {
   // Mutation for declining bookings
   const declineMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      const response = await apiRequest("POST", `/api/bookings/${bookingId}/decline`);
+      const response = await apiRequest("POST", `/api/bookings/${bookingId}/decline`, { password: adminPassword });
       if (!response.ok) {
         throw new Error('Failed to decline booking');
       }
@@ -88,7 +91,10 @@ export function BookingCalendar() {
   // Mutation for updating bookings
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: Partial<Booking> }) => {
-      const response = await apiRequest("PUT", `/api/bookings/${id}`, data);
+      const response = await apiRequest("PUT", `/api/bookings/${id}`, {
+        ...data,
+        password: adminPassword
+      });
       if (!response.ok) {
         throw new Error('Failed to update booking');
       }
