@@ -393,6 +393,68 @@ export function IntegratedBookingWizard({
     },
     [existingBookings, timeSlotAvailability] // Include both dependencies but prevent updates in render
   );
+  
+  // Function to find the next available time slot
+  const findNextAvailableTimeSlot = useCallback(() => {
+    // Get today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Look ahead up to 14 days
+    const maxDaysToCheck = 14;
+    let availableDate: Date | undefined = undefined;
+    let availableTime: string | undefined = undefined;
+    
+    // For each date, starting from today
+    for (let dayOffset = 0; dayOffset < maxDaysToCheck; dayOffset++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() + dayOffset);
+      
+      // Check if this day has business hours
+      const dayOfWeek = checkDate.getDay();
+      const hoursForDay = getBusinessHoursForDay(dayOfWeek);
+      
+      // Skip days with no business hours or marked unavailable
+      if (!hoursForDay || !hoursForDay.isAvailable) {
+        continue;
+      }
+      
+      // Get time slots for this date
+      const slots = getTimeSlotsForDate(checkDate, 60);
+      const dateString = format(checkDate, "yyyy-MM-dd");
+      
+      // Find the first available time slot
+      for (const time of slots) {
+        const isAvailable = isTimeSlotAvailable(dateString, time);
+        if (isAvailable) {
+          availableDate = checkDate;
+          availableTime = time;
+          break;
+        }
+      }
+      
+      // If we found an available slot, break the loop
+      if (availableDate && availableTime) {
+        break;
+      }
+    }
+    
+    // If we found an available date/time, select it
+    if (availableDate && availableTime) {
+      setSelectedDate(availableDate);
+      setSelectedTime(availableTime);
+      toast({
+        title: "Next available time selected",
+        description: `${format(availableDate, "EEEE, MMMM d")} at ${availableTime}`,
+      });
+    } else {
+      toast({
+        title: "No available times",
+        description: "We couldn't find any available time slots in the next 14 days.",
+        variant: "destructive",
+      });
+    }
+  }, [getTimeSlotsForDate, getBusinessHoursForDay, isTimeSlotAvailable, toast, setSelectedDate, setSelectedTime]);
 
   // Add TV installation option
   const addTvService = () => {
@@ -414,7 +476,7 @@ export function IntegratedBookingWizard({
     // Reset form for next TV
     setNewTvSize('small');
     setNewTvLocation('standard');
-    setNewTvMountType('fixed');
+    setNewTvMountType('customer');
     setNewTvMasonryWall(false);
     setNewTvHighRise(false);
     setNewTvOutletNeeded(false);
@@ -1150,9 +1212,20 @@ export function IntegratedBookingWizard({
                     <div className="grid grid-cols-1 gap-6">
                       {/* Date Selection */}
                       <div className="relative">
-                        <div className="mb-4 flex items-center">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          <span className="font-medium">Select Date</span>
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            <span className="font-medium">Select Date</span>
+                          </div>
+                          <Button 
+                            type="button" 
+                            size="sm"
+                            variant="outline"
+                            onClick={findNextAvailableTimeSlot}
+                          >
+                            <Clock className="mr-2 h-4 w-4" />
+                            Next Available Time
+                          </Button>
                         </div>
                         <div id="date-selection" className="calendar-container relative">
                           <Calendar
