@@ -93,13 +93,21 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('Service Worker registered with scope:', registration.scope);
+          // Add a small delay to ensure the page is fully loaded
+          setTimeout(() => {
+            navigator.serviceWorker.register('/service-worker.js', { 
+              // Explicitly set the type here which can help in some environments
+              updateViaCache: 'none'
             })
-            .catch(error => {
-              console.error('Service Worker registration failed:', error);
-            });
+              .then(registration => {
+                console.log('Service Worker registered with scope:', registration.scope);
+              })
+              .catch(error => {
+                // Provide more detailed error logging but don't break the app
+                console.warn('Service Worker registration failed:', error);
+                console.info('Service Worker features will not be available in this environment');
+              });
+          }, 1000);
         });
       }
     </script>
