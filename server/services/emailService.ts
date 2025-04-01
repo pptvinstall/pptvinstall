@@ -301,6 +301,169 @@ function getHtmlConfirmation(booking: any): string {
 }
 
 /**
+ * Send a booking update notification email to the customer
+ */
+export async function sendBookingUpdateEmail(booking: any, changes: Record<string, any>) {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn("Cannot send booking update email: SENDGRID_API_KEY not set");
+    return false;
+  }
+
+  try {
+    console.log(`Attempting to send booking update email to customer: ${booking.email}`);
+
+    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    console.log(`Using sender email: ${fromEmail}`);
+
+    // Create a human-readable list of changes
+    const changesHtml = Object.entries(changes)
+      .filter(([key]) => key !== 'sendUpdateEmail' && key !== 'id') // Exclude non-relevant fields
+      .map(([key, value]) => {
+        let fieldName = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+        fieldName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1); // Capitalize first letter
+        
+        // Format date if the field is preferredDate
+        if (key === 'preferredDate') {
+          const date = new Date(value as string);
+          value = date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+        }
+        
+        return `<li><strong>${fieldName}:</strong> ${value}</li>`;
+      })
+      .join('');
+
+    const msg = {
+      to: booking.email,
+      from: fromEmail,
+      subject: 'Booking Update - Picture Perfect TV Install',
+      text: `Your booking has been updated. Please review the changes:\n${Object.entries(changes)
+        .filter(([key]) => key !== 'sendUpdateEmail' && key !== 'id')
+        .map(([key, value]) => {
+          let fieldName = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+          fieldName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+          return `${fieldName}: ${value}`;
+        })
+        .join('\n')}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { 
+              font-family: 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #f9fafb;
+            }
+            .header { 
+              background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+              color: white;
+              padding: 30px 20px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: white;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .appointment-details {
+              background-color: #f0f9ff;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              border-left: 4px solid #3b82f6;
+            }
+            .changes-list {
+              background-color: #fef3c7;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              border-left: 4px solid #d97706;
+            }
+            .footer {
+              font-size: 12px;
+              text-align: center;
+              margin-top: 30px;
+              color: #666;
+              padding: 20px;
+            }
+            h1 { margin: 0; font-size: 24px; }
+            h2 { color: #1e40af; font-size: 20px; margin-top: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Booking Update</h1>
+          </div>
+        
+          <div class="content">
+            <p>Dear <strong>${booking.name}</strong>,</p>
+        
+            <p>Your booking with Picture Perfect TV Install has been updated. Please review the changes below:</p>
+        
+            <div class="changes-list">
+              <h2>📝 Changes Made</h2>
+              <ul>
+                ${changesHtml}
+              </ul>
+            </div>
+        
+            <div class="appointment-details">
+              <h2>📅 Current Appointment Details</h2>
+              <p><strong>Date:</strong> ${new Date(booking.preferredDate).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+              <p><strong>Time:</strong> ${booking.appointmentTime}</p>
+              <p><strong>Service:</strong> ${booking.serviceType}</p>
+              <p><strong>Total:</strong> $${booking.pricingTotal || 'To be determined'}</p>
+            </div>
+        
+            <p>If you have any questions about these changes, please contact us at <strong>+16782632859</strong>.</p>
+        
+            <p>Thank you for choosing Picture Perfect TV Install!</p>
+          </div>
+        
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.</p>
+            <p>Professional TV Mounting Services in Metro Atlanta</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    console.log("Update email payload:", JSON.stringify({
+      to: msg.to,
+      from: msg.from,
+      subject: msg.subject
+    }));
+
+    await sgMail.send(msg);
+    console.log(`Booking update email sent to ${booking.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending booking update email:', error);
+    if (error.response) {
+      console.error('SendGrid API error response:', error.response.body);
+    }
+    return false;
+  }
+}
+
+/**
  * Send an admin notification email about a new booking
  */
 export async function sendAdminBookingNotificationEmail(booking: any) {

@@ -8,6 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Check, X, Edit } from "lucide-react";
 import type { Booking } from "@shared/schema";
+// Define extended booking type for client-side use
+interface ExtendedBooking extends Booking {
+  sendUpdateEmail?: boolean;
+}
 import {
   Dialog,
   DialogContent,
@@ -24,7 +28,7 @@ interface DayBookings {
 
 export function BookingCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ExtendedBooking | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   
@@ -90,7 +94,7 @@ export function BookingCalendar() {
 
   // Mutation for updating bookings
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string, data: Partial<Booking> }) => {
+    mutationFn: async ({ id, data }: { id: string, data: Partial<Booking> & { sendUpdateEmail?: boolean } }) => {
       const response = await apiRequest("PUT", `/api/bookings/${id}`, {
         ...data,
         password: adminPassword
@@ -242,6 +246,36 @@ export function BookingCalendar() {
                   })}
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background"
+                  value={selectedBooking.status || 'active'}
+                  onChange={(e) => setSelectedBooking({
+                    ...selectedBooking,
+                    status: e.target.value as "active" | "cancelled" | "completed"
+                  })}
+                >
+                  <option value="active">Active</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="sendUpdateEmail"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  onChange={(e) => setSelectedBooking({
+                    ...selectedBooking,
+                    sendUpdateEmail: e.target.checked
+                  })}
+                />
+                <label htmlFor="sendUpdateEmail" className="text-sm font-medium text-gray-700">
+                  Send update notification email to customer
+                </label>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -251,11 +285,16 @@ export function BookingCalendar() {
             <Button 
               onClick={() => {
                 if (selectedBooking) {
+                  // Separate the sendUpdateEmail flag from the actual booking data
+                  const { sendUpdateEmail, ...bookingData } = selectedBooking;
+                  
                   updateMutation.mutate({
                     id: selectedBooking.id as string,
                     data: {
-                      appointmentTime: selectedBooking.appointmentTime,
-                      serviceType: selectedBooking.serviceType
+                      appointmentTime: bookingData.appointmentTime,
+                      serviceType: bookingData.serviceType,
+                      status: bookingData.status,
+                      sendUpdateEmail: !!sendUpdateEmail // Include this flag for the API
                     }
                   });
                 }

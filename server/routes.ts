@@ -800,12 +800,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
+      const sendUpdateEmail = updates.sendUpdateEmail === true;
+      
+      // Remove the sendUpdateEmail flag from updates so it doesn't get stored
+      if (updates.sendUpdateEmail !== undefined) {
+        delete updates.sendUpdateEmail;
+      }
 
       if (isNaN(id)) {
         return res.status(400).json({
           success: false,
           message: "Invalid booking ID"
         });
+      }
+
+      // First, get the original booking for comparison if we need to send an email
+      let originalBooking = null;
+      if (sendUpdateEmail) {
+        const bookingResult = await db.select().from(bookings).where(eq(bookings.id, id));
+        if (bookingResult.length > 0) {
+          originalBooking = bookingResult[0];
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found"
+          });
+        }
       }
 
       // Update the booking in the database
@@ -830,10 +850,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
+      // Send notification email if requested
+      let emailSent = false;
+      if (sendUpdateEmail && originalBooking) {
+        try {
+          // Import the email service function
+          const { sendBookingUpdateEmail } = await import('./services/emailService');
+          
+          // Calculate what fields have changed
+          const updatedBooking = result[0];
+          const changes: Record<string, any> = {};
+          
+          // Compare fields and add to changes if they're different
+          for (const key in updates) {
+            if (Object.prototype.hasOwnProperty.call(updates, key) && 
+                updates[key] !== originalBooking[key]) {
+              changes[key] = updates[key];
+            }
+          }
+          
+          // Only send email if there were actual changes
+          if (Object.keys(changes).length > 0) {
+            emailSent = await sendBookingUpdateEmail(updatedBooking, changes);
+            logger.info(`Booking update email ${emailSent ? 'sent' : 'failed to send'} for booking ID ${id}`);
+          } else {
+            logger.info(`No changes detected for booking ID ${id}, skipping update email`);
+          }
+        } catch (emailError) {
+          logger.error("Error sending booking update email:", emailError as Error);
+        }
+      }
+
       res.json({
         success: true,
         message: "Booking updated successfully",
-        booking: result[0]
+        booking: result[0],
+        emailSent: sendUpdateEmail ? emailSent : null
       });
     } catch (error) {
       logger.error("Error updating booking:", error as Error);
