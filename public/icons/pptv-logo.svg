@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <!-- Outer circle with gradient background -->
+  <circle cx="256" cy="256" r="240" fill="url(#blue-gradient)" stroke="#0C4A6E" stroke-width="6"/>
+  
+  <!-- TV Shape -->
+  <rect x="136" y="156" width="240" height="160" rx="15" fill="#E0F2FE" stroke="#0C4A6E" stroke-width="8"/>
+  
+  <!-- TV Screen -->
+  <rect x="156" y="176" width="200" height="115" rx="8" fill="#0284C7"/>
+  
+  <!-- TV Stand -->
+  <path d="M226 316L186 376H326L286 316" fill="#0C4A6E"/>
+  
+  <!-- Text: PPTV -->
+  <text x="256" y="240" font-family="Arial, sans-serif" font-size="62" font-weight="bold" fill="#E0F2FE" text-anchor="middle">PPTV</text>
+  
+  <!-- Text: Install -->
+  <text x="256" y="290" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#E0F2FE" text-anchor="middle">Install</text>
+  
+  <!-- Define gradients -->
+  <defs>
+    <linearGradient id="blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0369A1" />
+      <stop offset="100%" stop-color="#0C4A6E" />
+    </linearGradient>
+  </defs>
+</svg>

@@ -202,8 +202,8 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 bg-white rounded-full p-2.5 shadow-md">
                 <img 
-                  src="/icons/icon.svg" 
-                  alt="Picture Perfect TV Install" 
+                  src="/icons/pptv-logo.svg" 
+                  alt="PPTVInstall" 
                   className="h-7 w-7" 
                   onError={(e) => {
                     // Fallback to device icon if image fails to load
@@ -225,7 +225,7 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
               
               <div>
                 <h3 className="font-bold text-white text-lg">
-                  Picture Perfect TV
+                  PPTVInstall
                 </h3>
                 <p className="text-sm text-blue-100">
                   Install our app for faster booking
@@ -257,7 +257,7 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
                     onClick={handleInstall}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Add Picture Perfect TV to Home Screen
+                    Add PPTVInstall to Home Screen
                   </Button>
                   
                   <div className="flex space-x-2">
