@@ -156,56 +156,51 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
         </div>
       </div>
 
-      {/* Mobile navigation */}
+      {/* Mobile navigation - Swipeable */}
       <div className="flex md:hidden w-full flex-col fixed bottom-0 left-0 right-0 z-10 bg-background border-t">
-        <div className="grid grid-cols-6 gap-1 p-1">
-          {[
-            navItems[0],  // Dashboard
-            navItems[1],  // Bookings
-            navItems[2],  // Availability
-            navItems[3],  // Business Hours
-            navItems[6],  // Settings
-            navItems[4],  // Gallery
-          ].map((item) => {
-            // Check if the URL includes the tab parameter that matches the current item
-            const currentTab = new URLSearchParams(window.location.search).get('tab');
-            // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
-            const isActive = (!currentTab && item.tab === 'dashboard') || currentTab === item.tab;
-            
-            console.log(`Nav item: ${item.name}, Tab: ${item.tab}, isActive: ${isActive}`);
-            
-            return (
-              <button
-                key={item.name}
-                type="button"
-                onClick={() => {
-                  console.log(`Clicked on ${item.name}, tab: ${item.tab}`);
-                  
-                  // Force a hard navigation
-                  try {
-                    if (item.tab === 'dashboard') {
-                      // We need to reset the URL to the root admin page
-                      window.location.replace('/admin');
-                    } else {
-                      // Navigate to the specific tab
-                      window.location.replace(`/admin?tab=${item.tab}`);
+        <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex p-1">
+            {navItems.map((item) => {
+              // Check if the URL includes the tab parameter that matches the current item
+              const currentTab = new URLSearchParams(window.location.search).get('tab');
+              // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
+              const isActive = (!currentTab && item.tab === 'dashboard') || currentTab === item.tab;
+              
+              console.log(`Nav item: ${item.name}, Tab: ${item.tab}, isActive: ${isActive}`);
+              
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => {
+                    console.log(`Clicked on ${item.name}, tab: ${item.tab}`);
+                    
+                    // Force a hard navigation
+                    try {
+                      if (item.tab === 'dashboard') {
+                        // We need to reset the URL to the root admin page
+                        window.location.replace('/admin');
+                      } else {
+                        // Navigate to the specific tab
+                        window.location.replace(`/admin?tab=${item.tab}`);
+                      }
+                    } catch (e) {
+                      console.error('Navigation error:', e);
                     }
-                  } catch (e) {
-                    console.error('Navigation error:', e);
-                  }
-                }}
-                className={cn(
-                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent cursor-pointer transition-colors duration-200",
-                  isActive 
-                    ? "bg-primary/10 text-primary font-medium" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5 mb-1" />
-                <span className="truncate">{item.name}</span>
-              </button>
-            );
-          })}
+                  }}
+                  className={cn(
+                    "flex flex-col items-center justify-center px-4 py-2 text-xs rounded-md border-0 bg-transparent cursor-pointer transition-colors duration-200 min-w-[80px]",
+                    isActive 
+                      ? "bg-primary/10 text-primary font-medium" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 mb-1" />
+                  <span className="truncate">{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
