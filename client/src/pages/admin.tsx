@@ -922,7 +922,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center">
                       <HelpCircle className="h-5 w-5 mr-2 text-primary" />
-                      <span className="font-mediumspan className="font-medium">Blocking Individual Time Slots</span>
+                      <span className="font-medium">Blocking Individual Time Slots</span>
                     </div>
                     <p className="text-muted-foreground ml-7">
                       Select a date and then click on the time slots you want to block. After selecting all desired time slots, click the "Block Selected Times" button. Blocked time slots will not be available for customers to book.
