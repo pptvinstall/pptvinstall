@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Tag, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Tag, ArrowRight, Timer, Gift } from 'lucide-react';
 import { Link } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 
@@ -63,20 +63,41 @@ export function PromotionBanner({
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         className={cn(
           bgColor,
           txtColor,
-          'relative w-full py-3 px-4 sm:px-6',
+          'relative w-full py-3 px-4 sm:px-6 transition-all duration-300',
+          'hover:saturate-110 hover:brightness-105',
           className
         )}
       >
         <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center space-x-2 mb-2 sm:mb-0">
-            <Tag className="h-4 w-4" />
-            <span className="font-medium">{promotion.title}</span>
+            <motion.div
+              animate={{ 
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, 0, -5, 0] 
+              }}
+              transition={{ 
+                duration: 2,
+                repeat: Infinity,
+                repeatDelay: 5
+              }}
+            >
+              {promotion.id.includes('spring') ? (
+                <Gift className="h-4 w-4" />
+              ) : promotion.id.includes('summer') ? (
+                <Timer className="h-4 w-4" />
+              ) : promotion.id.includes('holiday') ? (
+                <Gift className="h-4 w-4" />
+              ) : (
+                <Tag className="h-4 w-4" />
+              )}
+            </motion.div>
+            <span className="font-semibold">{promotion.title}</span>
             {promotion.description && (
-              <span className="hidden sm:inline ml-2">{promotion.description}</span>
+              <span className="hidden sm:inline ml-2 text-white/90">{promotion.description}</span>
             )}
           </div>
           
@@ -84,11 +105,11 @@ export function PromotionBanner({
             {promotion.linkUrl && (
               <Link href={promotion.linkUrl}>
                 <Button 
-                  variant="outline" 
+                  variant="secondary" 
                   size="sm" 
                   className={cn(
-                    "border-white/20 hover:bg-white/10 transition-colors",
-                    "text-white hover:text-white"
+                    "border border-white/30 bg-white/20 hover:bg-white/30 transition-colors",
+                    "text-white hover:text-white font-medium shadow-sm"
                   )}
                 >
                   {promotion.linkText || 'Learn More'} 
@@ -124,14 +145,29 @@ export function PromotionBannerGroup() {
         
         if (response.ok) {
           const data = await response.json();
-          setActivePromotions(data.promotions.filter((promo: Promotion) => promo.isActive));
+          
+          if (data.success && Array.isArray(data.promotions)) {
+            const filteredPromotions = data.promotions.filter((promo: Promotion) => promo.isActive);
+            
+            if (filteredPromotions.length > 0) {
+              setActivePromotions(filteredPromotions);
+            } else {
+              // No active promotions from API, fallback to default
+              setActivePromotions(defaultPromotions.filter(promo => promo.isActive));
+            }
+          } else {
+            // Invalid response format, fallback to default
+            console.warn('Invalid promotions data format from API', data);
+            setActivePromotions(defaultPromotions.filter(promo => promo.isActive));
+          }
         } else {
-          // Fallback to default promotions
+          // Error response, fallback to default
+          console.warn('Error response from promotions API:', response.status);
           setActivePromotions(defaultPromotions.filter(promo => promo.isActive));
         }
       } catch (error) {
+        // Network or parsing error, fallback to default
         console.error('Error fetching promotions:', error);
-        // Fallback to default promotions
         setActivePromotions(defaultPromotions.filter(promo => promo.isActive));
       } finally {
         setLoading(false);
@@ -189,5 +225,31 @@ const defaultPromotions: Promotion[] = [
     textColor: 'text-white',
     priority: 5,
     isActive: true
+  },
+  {
+    id: 'summer2025',
+    title: 'Summer Special: Free TV Calibration with Installation',
+    description: 'Valid June 1 - August 31, 2025',
+    linkText: 'Book Now',
+    linkUrl: '/booking',
+    backgroundColor: 'bg-orange-500',
+    textColor: 'text-white',
+    startDate: '2025-06-01',
+    endDate: '2025-08-31',
+    priority: 8,
+    isActive: false // Not active yet
+  },
+  {
+    id: 'holiday2025',
+    title: 'Holiday Special: $50 Off Home Theater Installation',
+    description: 'Valid November 15 - December 31, 2025',
+    linkText: 'Learn More',
+    linkUrl: '/services/home-theater',
+    backgroundColor: 'bg-red-600',
+    textColor: 'text-white',
+    startDate: '2025-11-15',
+    endDate: '2025-12-31',
+    priority: 9,
+    isActive: false // Not active yet
   }
 ];

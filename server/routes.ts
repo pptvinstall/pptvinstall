@@ -2278,7 +2278,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/promotions", async (req: Request, res: Response) => {
     try {
       // Get active promotions from database
-      const dbPromotions = await db.select().from(promotions);
+      let dbPromotions;
+      try {
+        dbPromotions = await db.select().from(promotions);
+      } catch (dbError) {
+        logger.error("Database error when fetching promotions:", dbError as Error);
+        // If there's a database error, return an empty array
+        return res.json({
+          success: true,
+          promotions: []
+        });
+      }
       
       // Check if we have valid dates for any time-limited promotions
       const now = new Date();
