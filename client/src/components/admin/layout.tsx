@@ -15,6 +15,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -105,9 +116,9 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                       setLocation(item.href);
                     }}
                     className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200",
                       location === item.href
-                        ? "bg-primary text-primary-foreground" 
+                        ? "bg-primary text-primary-foreground shadow-sm" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -119,13 +130,28 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
             </nav>
           </ScrollArea>
           <div className="px-2 py-4 border-t mt-auto">
-            <button
-              onClick={onLogout}
-              className="flex w-full items-center px-3 py-2 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10"
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Logout
-            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="flex w-full items-center px-3 py-2 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  Logout
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    You will need to enter your admin password to log back in.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onLogout}>Log Out</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
@@ -162,9 +188,9 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                   }
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent cursor-pointer",
+                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent cursor-pointer transition-colors duration-200",
                   isActive 
-                    ? "bg-primary/10 text-primary" 
+                    ? "bg-primary/10 text-primary font-medium" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
