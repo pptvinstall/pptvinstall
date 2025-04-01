@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Phone, Smartphone, Info, Check, ChevronRight, Tv, Home } from 'lucide-react';
+import { X, Download, Phone, Smartphone, Info, Check, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useMediaQuery } from '../../hooks/use-media-query';
@@ -202,7 +202,7 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 bg-white rounded-full p-2.5 shadow-md">
                 <img 
-                  src="/icons/pptv-logo.svg" 
+                  src="/icons/pptv/icon.svg" 
                   alt="PPTVInstall" 
                   className="h-7 w-7" 
                   onError={(e) => {
@@ -243,12 +243,6 @@ export function PWAInstallBanner({ className }: PWAInstallBannerProps) {
                 </p>
                 
                 <div className="flex flex-col w-full space-y-3">
-                  <div className="flex justify-center items-center mb-1">
-                    <div className="flex">
-                      <Tv className="h-7 w-7 text-blue-600 mr-1" />
-                      <Home className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
                   
                   <Button
                     variant="default"
