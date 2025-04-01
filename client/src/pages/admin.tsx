@@ -610,14 +610,7 @@ export default function AdminDashboard() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                // Force drawer to show
-                                document.body.style.pointerEvents = "none";
-                                setTimeout(() => {
-                                  document.body.style.pointerEvents = "";
-                                }, 0);
-                              }}
+                              onClick={() => setSelectedBooking(booking)}
                             >
                               View
                             </Button>

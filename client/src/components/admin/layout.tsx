@@ -84,8 +84,8 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
   return (
     <div className="flex min-h-screen bg-muted/20">
       {/* Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col h-full bg-card border-r shadow-sm">
+      <div className="hidden md:flex md:w-64 md:flex-col fixed top-0 bottom-0 left-0 z-40">
+        <div className="flex flex-col h-full w-full bg-card border-r shadow-sm">
           <div className="px-4 py-6 border-b">
             <h1 className="text-xl font-bold flex items-center">
               <BookOpen className="mr-2 h-6 w-6" />
@@ -160,7 +160,7 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden pb-16 md:pb-0">
+      <div className="flex flex-col flex-1 overflow-hidden pb-16 md:pb-0 md:ml-64">
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           {children}
         </main>
