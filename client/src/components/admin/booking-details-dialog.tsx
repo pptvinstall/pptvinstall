@@ -142,8 +142,8 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCloseDialog()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCloseDialog()} modal={true} defaultOpen={true}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Edit Booking</DialogTitle>
           <DialogDescription>Update customer booking information.</DialogDescription>

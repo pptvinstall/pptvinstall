@@ -448,7 +448,10 @@ export default function AdminDashboard() {
           const booking = bookings.find((b: any) => String(b.id) === bookingId);
           if (booking) {
             console.log('Setting selected booking from URL parameter');
-            setSelectedBooking(booking);
+            setSelectedBooking({
+              ...booking,
+              sendUpdateEmail: true
+            });
           } else {
             console.log(`Booking with ID ${bookingId} not found`);
           }
@@ -656,7 +659,10 @@ export default function AdminDashboard() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                setSelectedBooking(booking);
+                                setSelectedBooking({
+                                  ...booking,
+                                  sendUpdateEmail: true
+                                });
                                 // Store booking ID in URL as a separate parameter
                                 const url = new URL(window.location.href);
                                 url.searchParams.set('bookingId', String(booking.id));
@@ -907,7 +913,10 @@ export default function AdminDashboard() {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  setSelectedBooking(booking);
+                                  setSelectedBooking({
+                                    ...booking,
+                                    sendUpdateEmail: true
+                                  });
                                   // Store booking ID in URL as a separate parameter
                                   const url = new URL(window.location.href);
                                   url.searchParams.set('bookingId', String(booking.id));
