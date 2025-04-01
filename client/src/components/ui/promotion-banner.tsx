@@ -201,7 +201,7 @@ export function PromotionBannerGroup() {
   );
 }
 
-// Default promotions in case API is not available
+// Default promotions in case API is not available - currently all disabled
 const defaultPromotions: Promotion[] = [
   {
     id: 'spring2025',
@@ -214,7 +214,7 @@ const defaultPromotions: Promotion[] = [
     startDate: '2025-03-01',
     endDate: '2025-04-30',
     priority: 10,
-    isActive: true
+    isActive: false // Disabled as requested
   },
   {
     id: 'newcustomer',
@@ -224,7 +224,7 @@ const defaultPromotions: Promotion[] = [
     backgroundColor: 'bg-blue-600',
     textColor: 'text-white',
     priority: 5,
-    isActive: true
+    isActive: false // Disabled as requested
   },
   {
     id: 'summer2025',
