@@ -42,6 +42,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { formatPrice } from "@/lib/pricing";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   ArrowUpRight,
   Calendar as CalendarIcon,
   Check,
@@ -1491,8 +1496,9 @@ export default function AdminDashboard() {
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
                   <Select 
-                    value={selectedBooking.status}
-                    onValueChange={(value) => setSelectedBooking({...selectedBooking, status: value})}
+                    value={selectedBooking.status || 'active'}
+                    onValueChange={(value: "active" | "cancelled" | "completed") => 
+                      setSelectedBooking({...selectedBooking, status: value})}
                   >
                     <SelectTrigger className="mt-1 w-full">
                       <SelectValue placeholder="Select status" />
