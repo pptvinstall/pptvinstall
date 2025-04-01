@@ -87,6 +87,7 @@ import { AdminLayout } from "@/components/admin/layout";
 import { BookingDetailsDialog } from "@/components/admin/booking-details-dialog";
 import { SystemSettings } from "@/components/admin/system-settings";
 import BookingArchives from "@/components/admin/booking-archives";
+import { PromotionsManager } from "@/components/admin/promotions-manager";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -1541,6 +1542,10 @@ export default function AdminDashboard() {
               </p>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="promotions">
+          <PromotionsManager />
         </TabsContent>
 
         <TabsContent value="content">

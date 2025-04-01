@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import Nav from '@/components/nav';
 import Footer from '@/components/footer';
+import { PromotionBannerGroup } from '@/components/ui/promotion-banner';
 
 import './lib/process-polyfill';
 import './index.css';
@@ -77,6 +78,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary> {/* Added Error Boundary */}
       <QueryClientProvider client={queryClient}>
         <div className="min-h-screen flex flex-col relative"> {/* Added relative positioning */}
+          <PromotionBannerGroup />
           <Nav />
           <main className="flex-grow">
             <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>

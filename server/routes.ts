@@ -3,7 +3,8 @@ import { type Server } from "http";
 import { db } from "./db";
 import { 
   bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
-  insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema 
+  insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema,
+  promotions, promotionSchema, insertPromotionSchema, Promotion
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
@@ -2273,6 +2274,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Promotions endpoints
+  app.get("/api/promotions", async (req: Request, res: Response) => {
+    try {
+      // Get active promotions from database
+      const dbPromotions = await db.select().from(promotions);
+      
+      // Check if we have valid dates for any time-limited promotions
+      const now = new Date();
+      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Filter promotions based on date ranges if they exist
+      const activePromotions = dbPromotions.filter(promo => {
+        // If no dates are specified, or isActive is explicitly false, use the isActive flag
+        if (!promo.startDate && !promo.endDate) {
+          return promo.isActive;
+        }
+        
+        // If we have a date range, check if today falls within it
+        if (promo.startDate && promo.endDate) {
+          return promo.isActive && promo.startDate <= today && promo.endDate >= today;
+        }
+        
+        // If only start date, check if today is after start date
+        if (promo.startDate && !promo.endDate) {
+          return promo.isActive && promo.startDate <= today;
+        }
+        
+        // If only end date, check if today is before end date
+        if (!promo.startDate && promo.endDate) {
+          return promo.isActive && promo.endDate >= today;
+        }
+        
+        return promo.isActive;
+      });
+      
+      // Map to expected format
+      const formattedPromotions = activePromotions.map(p => ({
+        id: p.id.toString(),
+        title: p.title,
+        description: p.description,
+        linkText: p.linkText,
+        linkUrl: p.linkUrl,
+        backgroundColor: p.backgroundColor,
+        textColor: p.textColor,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        priority: p.priority,
+        isActive: p.isActive
+      }));
+      
+      // Add cache headers to prevent too many requests (10 minutes)
+      res.setHeader('Cache-Control', 'public, max-age=600');
+      
+      res.json({
+        success: true,
+        promotions: formattedPromotions
+      });
+    } catch (error) {
+      logger.error("Error fetching promotions:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch promotions"
+      });
+    }
+  });
+
+  // Admin: Create promotion
+  app.post("/api/admin/promotions", async (req: Request, res: Response) => {
+    try {
+      const { password, promotion } = req.body;
+
+      // Verify admin password
+      if (!verifyAdminPassword(password)) {
+        logger.auth('Invalid password for creating promotion');
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin password"
+        });
+      }
+
+      // Validate promotion data
+      try {
+        const validPromotion = promotionSchema.parse(promotion);
+        
+        // Insert promotion into database
+        const result = await db.insert(promotions).values({
+          title: validPromotion.title,
+          description: validPromotion.description,
+          linkText: validPromotion.linkText,
+          linkUrl: validPromotion.linkUrl,
+          backgroundColor: validPromotion.backgroundColor,
+          textColor: validPromotion.textColor,
+          startDate: validPromotion.startDate,
+          endDate: validPromotion.endDate,
+          priority: validPromotion.priority,
+          isActive: validPromotion.isActive !== undefined ? validPromotion.isActive : true
+        }).returning();
+
+        res.status(201).json({
+          success: true,
+          message: "Promotion created successfully",
+          promotion: result[0]
+        });
+      } catch (validationError) {
+        logger.error("Promotion validation error:", validationError);
+        
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid promotion data",
+            errors: validationError.errors
+          });
+        }
+        
+        throw validationError;
+      }
+    } catch (error) {
+      logger.error("Error creating promotion:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to create promotion"
+      });
+    }
+  });
+
+  // Admin: Update promotion
+  app.put("/api/admin/promotions/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { password, promotion } = req.body;
+      
+      // Verify admin password
+      if (!verifyAdminPassword(password)) {
+        logger.auth('Invalid password for updating promotion');
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin password"
+        });
+      }
+      
+      // Parse the ID
+      const promotionId = parseInt(id);
+      if (isNaN(promotionId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid promotion ID"
+        });
+      }
+      
+      // Validate promotion data
+      try {
+        const validPromotion = promotionSchema.parse(promotion);
+        
+        // Update promotion in database
+        const result = await db.update(promotions)
+          .set({
+            title: validPromotion.title,
+            description: validPromotion.description,
+            linkText: validPromotion.linkText,
+            linkUrl: validPromotion.linkUrl,
+            backgroundColor: validPromotion.backgroundColor,
+            textColor: validPromotion.textColor,
+            startDate: validPromotion.startDate,
+            endDate: validPromotion.endDate,
+            priority: validPromotion.priority,
+            isActive: validPromotion.isActive,
+            updatedAt: new Date()
+          })
+          .where(eq(promotions.id, promotionId))
+          .returning();
+          
+        if (result.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Promotion not found"
+          });
+        }
+        
+        res.json({
+          success: true,
+          message: "Promotion updated successfully",
+          promotion: result[0]
+        });
+      } catch (validationError) {
+        logger.error("Promotion validation error:", validationError);
+        
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid promotion data",
+            errors: validationError.errors
+          });
+        }
+        
+        throw validationError;
+      }
+    } catch (error) {
+      logger.error("Error updating promotion:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update promotion"
+      });
+    }
+  });
+  
+  // Admin: Delete promotion
+  app.delete("/api/admin/promotions/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { password } = req.query;
+      
+      // Verify admin password
+      if (!verifyAdminPassword(password as string)) {
+        logger.auth('Invalid password for deleting promotion');
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin password"
+        });
+      }
+      
+      // Parse the ID
+      const promotionId = parseInt(id);
+      if (isNaN(promotionId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid promotion ID"
+        });
+      }
+      
+      // Delete promotion from database
+      const result = await db.delete(promotions)
+        .where(eq(promotions.id, promotionId))
+        .returning();
+        
+      if (result.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Promotion not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Promotion deleted successfully"
+      });
+    } catch (error) {
+      logger.error("Error deleting promotion:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete promotion"
+      });
+    }
+  });
 
   // Create and return HTTP server
   const http = await import("http");

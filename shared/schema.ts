@@ -358,3 +358,52 @@ export type SystemSettings = z.infer<typeof systemSettingsSchema> & {
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
 export type SystemSettingsSelect = typeof systemSettings.$inferSelect;
 export type SystemSettingsInsert = typeof systemSettings.$inferInsert;
+
+// Promotion schema
+export const promotionSchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters"),
+  description: z.string().optional(),
+  linkText: z.string().optional(),
+  linkUrl: z.string().optional(),
+  backgroundColor: z.string().optional(),
+  textColor: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  priority: z.number().optional().default(0),
+  isActive: z.boolean().optional().default(true)
+});
+
+export const insertPromotionSchema = promotionSchema;
+
+// Promotions table
+export const promotions = pgTable('promotions', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: text('description'),
+  linkText: varchar('link_text', { length: 100 }),
+  linkUrl: varchar('link_url', { length: 255 }),
+  backgroundColor: varchar('background_color', { length: 50 }),
+  textColor: varchar('text_color', { length: 50 }),
+  startDate: varchar('start_date', { length: 50 }),
+  endDate: varchar('end_date', { length: 50 }),
+  priority: integer('priority').default(0),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const insertPromotionDrizzleSchema = createInsertSchema(promotions).omit({ 
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type Promotion = z.infer<typeof promotionSchema> & {
+  id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
+export type PromotionSelect = typeof promotions.$inferSelect;
+export type PromotionInsert = typeof promotions.$inferInsert;

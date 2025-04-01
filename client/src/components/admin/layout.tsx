@@ -12,7 +12,8 @@ import {
   Users,
   BookOpen,
   ImageIcon,
-  Archive
+  Archive,
+  Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -78,6 +79,12 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
       href: '/admin?tab=content',
       tab: 'content',
       icon: FileText
+    },
+    {
+      name: 'Promotions',
+      href: '/admin?tab=promotions',
+      tab: 'promotions',
+      icon: Tag
     },
     {
       name: 'Customer Data',
