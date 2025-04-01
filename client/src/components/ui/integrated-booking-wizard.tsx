@@ -261,7 +261,7 @@ export function IntegratedBookingWizard({
   // TVs
   const [newTvSize, setNewTvSize] = useState<'small' | 'large'>('small');
   const [newTvLocation, setNewTvLocation] = useState<'standard' | 'fireplace'>('standard');
-  const [newTvMountType, setNewTvMountType] = useState<'fixed' | 'tilting' | 'full_motion' | 'customer'>('fixed');
+  const [newTvMountType, setNewTvMountType] = useState<'fixed' | 'tilting' | 'full_motion' | 'customer'>('customer');
   const [newTvMasonryWall, setNewTvMasonryWall] = useState(false);
   const [newTvHighRise, setNewTvHighRise] = useState(false);
   const [newTvOutletNeeded, setNewTvOutletNeeded] = useState(false);
