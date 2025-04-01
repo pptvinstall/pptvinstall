@@ -111,13 +111,21 @@ export default function AdminDashboard() {
     console.log(`handleTabChange called with tab: ${newTab}`);
     setActiveTab(newTab);
     
-    // Update URL using window.location.href to force a full page navigation
-    // This is a more robust approach for mobile
+    // Create a new URL object to preserve existing parameters
+    const url = new URL(window.location.href);
+    
+    // Update the tab parameter
     if (newTab !== 'dashboard') {
-      window.location.href = `/admin?tab=${newTab}`;
+      url.searchParams.set('tab', newTab);
     } else {
-      window.location.href = '/admin';
+      url.searchParams.delete('tab');
     }
+    
+    // Keep the bookingId parameter if it exists
+    const bookingId = url.searchParams.get('bookingId');
+    
+    // Navigate to the new URL
+    window.location.href = url.toString();
   };
   
   // Parse the tab from URL on initial load and when URL changes
@@ -436,7 +444,10 @@ export default function AdminDashboard() {
       // Verify the stored password
       loginMutation.mutate(storedPassword);
     }
-    
+  }, []);
+  
+  // Separate effect to handle URL parameter changes
+  useEffect(() => {
     // Check for booking ID in URL parameters to restore booking details
     const loadBookingFromUrl = () => {
       if (bookings.length > 0) {
@@ -460,7 +471,8 @@ export default function AdminDashboard() {
     };
     
     loadBookingFromUrl();
-  }, [bookings.length]);
+    // Listen for both URL changes and when bookings are loaded
+  }, [bookings.length, location]);
 
   if (!isAuthenticated) {
     return (
