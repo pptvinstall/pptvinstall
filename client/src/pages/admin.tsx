@@ -66,6 +66,7 @@ import {
   Clock,
   Download,
   ExternalLink,
+  Eye,
   FileText,
   HelpCircle,
   Image as ImageIcon,
@@ -75,6 +76,7 @@ import {
   Search,
   Settings,
   Tag,
+  Trash2,
   User,
   X,
 } from "lucide-react";
@@ -96,6 +98,9 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<ExtendedBooking | null>(null);
+  const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
+  const [rescheduleTime, setRescheduleTime] = useState<string>("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -483,6 +488,34 @@ export default function AdminDashboard() {
   const handleClearBookings = async () => {
     clearBookingsMutation.mutate(password);
   };
+  
+  const handleReschedule = () => {
+    if (!selectedBooking || !rescheduleDate || !rescheduleTime) {
+      toast({
+        title: "Missing information",
+        description: "Please select a date and time for rescheduling.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Format date manually to avoid timezone issues
+    const year = rescheduleDate.getFullYear();
+    const month = String(rescheduleDate.getMonth() + 1).padStart(2, '0');
+    const day = String(rescheduleDate.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    updateBookingMutation.mutate({
+      id: Number(selectedBooking.id),
+      data: {
+        preferredDate: formattedDate,
+        appointmentTime: rescheduleTime,
+        sendUpdateEmail: true
+      }
+    });
+    
+    setIsRescheduleDialogOpen(false);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('adminPassword');
@@ -510,16 +543,33 @@ export default function AdminDashboard() {
       if (bookings.length > 0) {
         const urlParams = new URLSearchParams(window.location.search);
         const bookingId = urlParams.get('bookingId');
+        const action = urlParams.get('action');
         
         if (bookingId) {
           console.log(`Found booking ID in URL: ${bookingId}`);
-          const booking = bookings.find((b: any) => String(b.id) === bookingId);
+          const booking = bookings.find((b: any) => String(b.id) === String(bookingId));
           if (booking) {
             console.log('Setting selected booking from URL parameter');
             setSelectedBooking({
               ...booking,
               sendUpdateEmail: true
             });
+            
+            // Check if we need to open the reschedule dialog
+            if (action === 'reschedule') {
+              // Set initial values for reschedule form
+              try {
+                // Parse booking date manually to avoid timezone issues
+                const [year, month, day] = booking.preferredDate.split('-').map(Number);
+                // Create date with components (month is 0-indexed in JS Date)
+                const bookingDate = new Date(year, month - 1, day);
+                setRescheduleDate(bookingDate);
+                setRescheduleTime(booking.appointmentTime);
+                setIsRescheduleDialogOpen(true);
+              } catch (e) {
+                console.error("Error parsing date for reschedule:", e);
+              }
+            }
           } else {
             console.log(`Booking with ID ${bookingId} not found`);
           }
@@ -1007,24 +1057,76 @@ export default function AdminDashboard() {
                                 : "N/A"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedBooking({
-                                    ...booking,
-                                    sendUpdateEmail: true
-                                  });
-                                  // Store booking ID in URL as a separate parameter
-                                  const url = new URL(window.location.href);
-                                  url.searchParams.set('bookingId', String(booking.id));
-                                  window.history.pushState({}, '', url.toString());
-                                }}
-                              >
-                                View
-                              </Button>
+                              <div className="flex justify-end space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSelectedBooking({
+                                      ...booking,
+                                      sendUpdateEmail: true
+                                    });
+                                    // Store booking ID in URL as a separate parameter
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('bookingId', String(booking.id));
+                                    window.history.pushState({}, '', url.toString());
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" /> 
+                                  View
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSelectedBooking({
+                                      ...booking,
+                                      sendUpdateEmail: true
+                                    });
+                                    // Open calendar reschedule dialog
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('bookingId', String(booking.id));
+                                    url.searchParams.set('action', 'reschedule');
+                                    window.history.pushState({}, '', url.toString());
+                                  }}
+                                >
+                                  <CalendarIcon className="h-4 w-4 mr-1" />
+                                  Reschedule
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this booking? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-red-600 hover:bg-red-700"
+                                        onClick={() => deleteBookingMutation.mutate(booking.id)}
+                                      >
+                                        Delete Booking
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1496,6 +1598,79 @@ export default function AdminDashboard() {
           }}
         />
       )}
+      
+      {/* Reschedule Booking Dialog */}
+      <Dialog open={isRescheduleDialogOpen} onOpenChange={setIsRescheduleDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reschedule Booking</DialogTitle>
+            <DialogDescription>
+              Select a new date and time for this appointment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">New Date</h4>
+              <Calendar
+                mode="single"
+                selected={rescheduleDate}
+                onSelect={setRescheduleDate}
+                className="rounded-md border mx-auto"
+              />
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">New Time</h4>
+              <Select value={rescheduleTime} onValueChange={setRescheduleTime}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7:30 AM">7:30 AM</SelectItem>
+                  <SelectItem value="8:00 AM">8:00 AM</SelectItem>
+                  <SelectItem value="8:30 AM">8:30 AM</SelectItem>
+                  <SelectItem value="9:00 AM">9:00 AM</SelectItem>
+                  <SelectItem value="9:30 AM">9:30 AM</SelectItem>
+                  <SelectItem value="10:00 AM">10:00 AM</SelectItem>
+                  <SelectItem value="10:30 AM">10:30 AM</SelectItem>
+                  <SelectItem value="11:00 AM">11:00 AM</SelectItem>
+                  <SelectItem value="11:30 AM">11:30 AM</SelectItem>
+                  <SelectItem value="12:00 PM">12:00 PM</SelectItem>
+                  <SelectItem value="12:30 PM">12:30 PM</SelectItem>
+                  <SelectItem value="1:00 PM">1:00 PM</SelectItem>
+                  <SelectItem value="1:30 PM">1:30 PM</SelectItem>
+                  <SelectItem value="2:00 PM">2:00 PM</SelectItem>
+                  <SelectItem value="2:30 PM">2:30 PM</SelectItem>
+                  <SelectItem value="3:00 PM">3:00 PM</SelectItem>
+                  <SelectItem value="3:30 PM">3:30 PM</SelectItem>
+                  <SelectItem value="4:00 PM">4:00 PM</SelectItem>
+                  <SelectItem value="4:30 PM">4:30 PM</SelectItem>
+                  <SelectItem value="5:00 PM">5:00 PM</SelectItem>
+                  <SelectItem value="5:30 PM">5:30 PM</SelectItem>
+                  <SelectItem value="6:00 PM">6:00 PM</SelectItem>
+                  <SelectItem value="6:30 PM">6:30 PM</SelectItem>
+                  <SelectItem value="7:00 PM">7:00 PM</SelectItem>
+                  <SelectItem value="7:30 PM">7:30 PM</SelectItem>
+                  <SelectItem value="8:00 PM">8:00 PM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsRescheduleDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleReschedule}
+              disabled={!rescheduleDate || !rescheduleTime || updateBookingMutation.isPending}
+            >
+              {updateBookingMutation.isPending ? "Rescheduling..." : "Reschedule Booking"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

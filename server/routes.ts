@@ -1890,6 +1890,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a booking (permanent deletion)
+  app.delete("/api/bookings/:id", async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+      if (isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
+        });
+      }
+      
+      const booking = await storage.getBooking(Number(id));
+      if (!booking) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Booking not found" 
+        });
+      }
+      
+      // Permanently delete the booking
+      await storage.deleteBooking(Number(id));
+      
+      res.json({ 
+        success: true, 
+        message: "Booking permanently deleted" 
+      });
+    } catch (error) {
+      logger.error('Error deleting booking', error as Error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to delete booking" 
+      });
+    }
+  });
+
 
   // Create and return HTTP server
   const http = await import("http");
