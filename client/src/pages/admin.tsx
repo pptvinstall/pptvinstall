@@ -683,46 +683,37 @@ export default function AdminDashboard() {
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">Clear All</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Clear All Bookings</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action will permanently delete all bookings. Are you sure?
-                              <div className="mt-4">
-                                <Input
-                                  type="password"
-                                  placeholder="Confirm with admin password"
-                                  value={password}
-                                  onChange={(e) => setPassword(e.target.value)}
-                                  className="mt-2"
-                                />
-                              </div>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={handleClearBookings}
-                            >
-                              Clear All Bookings
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Warning: This will delete all booking records</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">Clear All</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Bookings</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action will permanently delete all bookings. Are you sure?
+                        <div className="mt-4">
+                          <Input
+                            type="password"
+                            placeholder="Confirm with admin password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={handleClearBookings}
+                      >
+                        Clear All Bookings
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
 
