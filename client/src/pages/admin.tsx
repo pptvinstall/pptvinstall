@@ -98,20 +98,15 @@ export default function AdminDashboard() {
     }
   }, [location]);
 
-  // Update URL when tab changes (but don't create a circular dependency)
-  useEffect(() => {
-    // Only update the URL if the tab change wasn't triggered by the URL itself
-    const searchParams = new URLSearchParams(window.location.search);
-    const urlTab = searchParams.get('tab') || 'dashboard';
-
-    if (activeTab !== urlTab) {
-      if (activeTab !== 'dashboard') {
-        setLocation(`/admin?tab=${activeTab}`, { replace: true });
-      } else {
-        setLocation('/admin', { replace: true });
-      }
+  // Handle tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    if (newTab !== 'dashboard') {
+      setLocation(`/admin?tab=${newTab}`, { replace: true });
+    } else {
+      setLocation('/admin', { replace: true });
     }
-  }, [activeTab, setLocation, location]);
+  };
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/bookings"],
@@ -453,7 +448,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout onLogout={handleLogout}>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="mb-6 hidden">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="bookings">Bookings</TabsTrigger>
@@ -473,10 +468,10 @@ export default function AdminDashboard() {
                 <p className="text-muted-foreground">Welcome to your admin dashboard</p>
               </div>
               <div className="flex space-x-2 mt-4 md:mt-0">
-                <Button variant="outline" size="sm" onClick={() => setActiveTab("bookings")}>
+                <Button variant="outline" size="sm" onClick={() => handleTabChange("bookings")}>
                   View All Bookings
                 </Button>
-                <Button size="sm" onClick={() => setActiveTab("time-blocking")}>
+                <Button size="sm" onClick={() => handleTabChange("time-blocking")}>
                   Manage Availability
                 </Button>
               </div>
@@ -541,7 +536,7 @@ export default function AdminDashboard() {
                     selected={dateFilter}
                     onSelect={(date) => {
                       setDateFilter(date);
-                      setActiveTab("bookings");
+                      handleTabChange("bookings");
                     }}
                     className="rounded-md border w-full"
                     modifiers={{
@@ -625,7 +620,7 @@ export default function AdminDashboard() {
                     variant="outline" 
                     size="sm" 
                     className="w-full"
-                    onClick={() => setActiveTab("bookings")}
+                    onClick={() => handleTabChange("bookings")}
                   >
                     View All Bookings
                   </Button>
@@ -646,7 +641,7 @@ export default function AdminDashboard() {
                   <Button 
                     variant="outline" 
                     className="h-auto py-4 flex flex-col items-center justify-center"
-                    onClick={() => setActiveTab("business-hours")}
+                    onClick={() => handleTabChange("business-hours")}
                   >
                     <Clock className="h-5 w-5 mb-2" />
                     <span className="font-medium">Update Business Hours</span>
@@ -655,7 +650,7 @@ export default function AdminDashboard() {
                   <Button 
                     variant="outline" 
                     className="h-auto py-4 flex flex-col items-center justify-center"
-                    onClick={() => setActiveTab("time-blocking")}
+                    onClick={() => handleTabChange("time-blocking")}
                   >
                     <CalendarIcon className="h-5 w-5 mb-2" />
                     <span className="font-medium">Block Time Slots</span>

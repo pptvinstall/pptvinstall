@@ -103,9 +103,6 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                     onClick={(e) => {
                       e.preventDefault();
                       setLocation(item.href);
-                      if (item.tab !== 'dashboard') {
-                        window.dispatchEvent(new CustomEvent('tabChange', { detail: item.tab }));
-                      }
                     }}
                     className={cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md",
@@ -142,6 +139,10 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setLocation(item.href);
+                }}
                 className={cn(
                   "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md",
                   isActive 
