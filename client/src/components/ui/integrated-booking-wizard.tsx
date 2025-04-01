@@ -876,24 +876,51 @@ export function IntegratedBookingWizard({
                             >
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="fixed" id="fixed" />
-                                <Label htmlFor="fixed">Fixed (No Tilt)</Label>
+                                <Label htmlFor="fixed" className="flex flex-col">
+                                  <span>Fixed (No Tilt)</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {newTvSize === 'small' ? '+$30 (32"-55")' : '+$40 (56"+)'}
+                                  </span>
+                                </Label>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="tilting" id="tilting" />
-                                <Label htmlFor="tilting">Tilting (+$10)</Label>
+                                <Label htmlFor="tilting" className="flex flex-col">
+                                  <span>Tilting</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {newTvSize === 'small' ? '+$40 (32"-55")' : '+$50 (56"+)'}
+                                  </span>
+                                </Label>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="full_motion" id="full_motion" />
-                                <Label htmlFor="full_motion">Full Motion (+$30)</Label>
+                                <Label htmlFor="full_motion" className="flex flex-col">
+                                  <span>Full Motion</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {newTvSize === 'small' ? '+$60 (32"-55")' : '+$80 (56"+)'}
+                                  </span>
+                                </Label>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="customer" id="customer" />
-                                <Label htmlFor="customer">Customer-Provided</Label>
+                                <Label htmlFor="customer" className="flex flex-col">
+                                  <span>Customer-Provided</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    (No additional charge)
+                                  </span>
+                                </Label>
                               </div>
                             </RadioGroup>
-                            <p className="text-xs text-muted-foreground">
-                              Note: Installation always requires a mount. Please provide your own or select one of our options.
-                            </p>
+                            <div className="p-2 bg-primary/10 rounded-md mt-1">
+                              <div className="text-xs">
+                                <strong>Important Notes:</strong>
+                                <ul className="list-disc list-inside mt-1 space-y-1">
+                                  <li>Installation always requires a mount. Please provide your own or select one of our options.</li>
+                                  <li>When using a customer-provided mount, TV size selection is still required for installation planning.</li>
+                                  <li>Mount prices vary based on the size of your TV and the type of mount selected.</li>
+                                </ul>
+                              </div>
+                            </div>
                           </div>
                           
                           <div className="space-y-2">
