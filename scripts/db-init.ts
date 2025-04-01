@@ -1,7 +1,9 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import pg from 'pg';
 import * as schema from '../shared/schema';
-import { businessHours } from '../shared/schema';
+import { businessHours, customers, systemSettings } from '../shared/schema';
+
+const { Pool } = pg;
 
 console.log('Database initialization starting...');
 
@@ -31,10 +33,84 @@ const defaultBusinessHours = [
   { dayOfWeek: 6, startTime: '11:00', endTime: '19:00', isAvailable: true }, // Saturday
 ];
 
+// Default system settings
+const defaultSystemSettings = [
+  { 
+    name: 'bookingBufferHours', 
+    value: JSON.stringify(2), 
+    description: 'Number of hours before a booking time that it should be blocked' 
+  }
+];
+
 async function initializeDatabase() {
   try {
     // First, ensure tables exist by pushing schema (this is safe to run multiple times)
     console.log('Creating database tables if they don\'t exist...');
+    
+    // Check if customers table exists and create it if needed
+    try {
+      console.log('Setting up customers table...');
+      // Create customers table if it doesn't exist
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS customers (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          phone VARCHAR(20) NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          street_address VARCHAR(255),
+          address_line2 VARCHAR(255),
+          city VARCHAR(100),
+          state VARCHAR(2),
+          zip_code VARCHAR(5),
+          loyalty_points INTEGER DEFAULT 0,
+          member_since TIMESTAMP DEFAULT NOW(),
+          last_login TIMESTAMP,
+          verification_token VARCHAR(100),
+          is_verified BOOLEAN DEFAULT FALSE,
+          password_reset_token VARCHAR(100),
+          password_reset_expires TIMESTAMP
+        )
+      `);
+      
+      console.log('Successfully set up customers table');
+    } catch (err) {
+      console.error('Error setting up customers table:', err);
+    }
+    
+    // Check if system_settings table exists and create it if needed
+    try {
+      console.log('Setting up system_settings table...');
+      // Create system_settings table if it doesn't exist
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(64) NOT NULL UNIQUE,
+          value JSONB NOT NULL,
+          description TEXT,
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      
+      console.log('Successfully set up system_settings table');
+      
+      // Insert default system settings
+      for (const setting of defaultSystemSettings) {
+        const existingSettings = await pool.query('SELECT * FROM system_settings WHERE name = $1', [setting.name]);
+        
+        if (existingSettings.rows.length === 0) {
+          console.log(`Creating system setting: ${setting.name}`);
+          await pool.query(
+            'INSERT INTO system_settings (name, value, description) VALUES ($1, $2, $3)',
+            [setting.name, setting.value, setting.description]
+          );
+        } else {
+          console.log(`System setting ${setting.name} already exists, skipping`);
+        }
+      }
+    } catch (err) {
+      console.error('Error setting up system_settings table:', err);
+    }
     
     console.log('Setting up business hours...');
     
