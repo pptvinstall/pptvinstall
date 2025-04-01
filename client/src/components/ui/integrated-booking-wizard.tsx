@@ -390,15 +390,7 @@ export function IntegratedBookingWizard({
 
   // Add TV installation option
   const addTvService = () => {
-    // Check if an image is required for fireplace with wire concealment
-    if (newTvLocation === 'fireplace' && newTvOutletNeeded && !newTvOutletImage) {
-      toast({
-        title: "Image Required",
-        description: "Please upload an image showing outlet locations for fireplace wire concealment",
-        variant: "destructive",
-      });
-      return;
-    }
+    // No longer checking for image upload as we're asking users to email/text images separately
     
     const newTv: TVServiceOption = {
       id: `tv-${Date.now()}`,
@@ -883,103 +875,27 @@ export function IntegratedBookingWizard({
                                 <Label htmlFor="outletNeeded">Wire Concealment & Outlet (+$100)</Label>
                               </div>
                               
-                              {/* Show image upload when fireplace installation with wire concealment is selected */}
+                              {/* Information message for outlet locations */}
                               {newTvLocation === 'fireplace' && newTvOutletNeeded && (
-                                <div className="mt-3 bg-amber-50 p-3 rounded-md">
-                                  <div className="flex items-start mb-2">
-                                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
-                                    <p className="text-sm">
-                                      For fireplace installations with wire concealment, 
-                                      we need to see where your electrical outlets are located.
-                                      Please upload a photo of the area.
-                                    </p>
-                                  </div>
-                                  
-                                  <div className="mt-2">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          // Compress and resize image before uploading
-                                          const compressImage = (image: File, maxWidth = 800, maxHeight = 600, quality = 0.7): Promise<string> => {
-                                            return new Promise((resolve, reject) => {
-                                              const reader = new FileReader();
-                                              reader.readAsDataURL(image);
-                                              reader.onload = (event) => {
-                                                const img = new Image();
-                                                img.src = event.target?.result as string;
-                                                img.onload = () => {
-                                                  // Calculate new dimensions while maintaining aspect ratio
-                                                  let width = img.width;
-                                                  let height = img.height;
-                                                  
-                                                  if (width > maxWidth) {
-                                                    height = (height * maxWidth) / width;
-                                                    width = maxWidth;
-                                                  }
-                                                  
-                                                  if (height > maxHeight) {
-                                                    width = (width * maxHeight) / height;
-                                                    height = maxHeight;
-                                                  }
-                                                  
-                                                  // Create canvas and draw the resized image
-                                                  const canvas = document.createElement('canvas');
-                                                  canvas.width = width;
-                                                  canvas.height = height;
-                                                  
-                                                  const ctx = canvas.getContext('2d');
-                                                  if (!ctx) {
-                                                    reject(new Error('Could not get canvas context'));
-                                                    return;
-                                                  }
-                                                  
-                                                  ctx.drawImage(img, 0, 0, width, height);
-                                                  
-                                                  // Convert to base64 with reduced quality
-                                                  const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                                                  resolve(dataUrl);
-                                                };
-                                                img.onerror = () => reject(new Error('Failed to load image'));
-                                              };
-                                              reader.onerror = () => reject(new Error('Failed to read file'));
-                                            });
-                                          };
-                                          
-                                          // Use the compression function
-                                          compressImage(file)
-                                            .then(compressedImage => {
-                                              setNewTvOutletImage(compressedImage);
-                                            })
-                                            .catch(error => {
-                                              console.error('Image compression failed:', error);
-                                              // Fallback to standard method if compression fails
-                                              const reader = new FileReader();
-                                              reader.onload = (event) => {
-                                                setNewTvOutletImage(event.target?.result as string);
-                                              };
-                                              reader.readAsDataURL(file);
-                                            });
-                                        }
-                                      }}
-                                      className="w-full text-sm"
-                                    />
-                                  </div>
-                                  
-                                  {newTvOutletImage && (
-                                    <div className="mt-2">
-                                      <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                                      <div className="relative w-24 h-24 border rounded overflow-hidden">
-                                        <img 
-                                          src={newTvOutletImage} 
-                                          alt="Outlet location" 
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
+                                <div className="mt-3 bg-blue-50 border-l-4 border-blue-400 p-3 rounded-md">
+                                  <div className="flex">
+                                    <div className="flex-shrink-0">
+                                      <Info className="h-5 w-5 text-blue-500" />
                                     </div>
-                                  )}
+                                    <div className="ml-3">
+                                      <p className="text-sm text-blue-700">
+                                        <strong>Important:</strong> For fireplace installations with wire concealment, 
+                                        please email or text a picture of the nearest outlets to your fireplace.
+                                      </p>
+                                      <p className="text-sm text-blue-700 mt-2">
+                                        Send to: <span className="font-medium">info@pictureperfecttvinstall.com</span> or 
+                                        <span className="font-medium"> (404) 702-4748</span>
+                                      </p>
+                                      <p className="text-sm text-blue-700 mt-2">
+                                        Include your name and appointment date in the message to help us prepare for your installation.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </div>
