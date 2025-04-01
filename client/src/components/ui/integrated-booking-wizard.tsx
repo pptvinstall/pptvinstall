@@ -902,11 +902,66 @@ export function IntegratedBookingWizard({
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                          const reader = new FileReader();
-                                          reader.onload = (event) => {
-                                            setNewTvOutletImage(event.target?.result as string);
+                                          // Compress and resize image before uploading
+                                          const compressImage = (image: File, maxWidth = 800, maxHeight = 600, quality = 0.7): Promise<string> => {
+                                            return new Promise((resolve, reject) => {
+                                              const reader = new FileReader();
+                                              reader.readAsDataURL(image);
+                                              reader.onload = (event) => {
+                                                const img = new Image();
+                                                img.src = event.target?.result as string;
+                                                img.onload = () => {
+                                                  // Calculate new dimensions while maintaining aspect ratio
+                                                  let width = img.width;
+                                                  let height = img.height;
+                                                  
+                                                  if (width > maxWidth) {
+                                                    height = (height * maxWidth) / width;
+                                                    width = maxWidth;
+                                                  }
+                                                  
+                                                  if (height > maxHeight) {
+                                                    width = (width * maxHeight) / height;
+                                                    height = maxHeight;
+                                                  }
+                                                  
+                                                  // Create canvas and draw the resized image
+                                                  const canvas = document.createElement('canvas');
+                                                  canvas.width = width;
+                                                  canvas.height = height;
+                                                  
+                                                  const ctx = canvas.getContext('2d');
+                                                  if (!ctx) {
+                                                    reject(new Error('Could not get canvas context'));
+                                                    return;
+                                                  }
+                                                  
+                                                  ctx.drawImage(img, 0, 0, width, height);
+                                                  
+                                                  // Convert to base64 with reduced quality
+                                                  const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                                                  resolve(dataUrl);
+                                                };
+                                                img.onerror = () => reject(new Error('Failed to load image'));
+                                              };
+                                              reader.onerror = () => reject(new Error('Failed to read file'));
+                                            });
                                           };
-                                          reader.readAsDataURL(file);
+                                          
+                                          // Use the compression function
+                                          compressImage(file)
+                                            .then(compressedImage => {
+                                              setNewTvOutletImage(compressedImage);
+                                            })
+                                            .catch(error => {
+                                              console.error('Image compression failed:', error);
+                                              // Fallback to standard method if compression fails
+                                              const reader = new FileReader();
+                                              reader.onload = (event) => {
+                                                setNewTvOutletImage(event.target?.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                            });
                                         }
                                       }}
                                       className="w-full text-sm"
