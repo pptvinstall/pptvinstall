@@ -2,8 +2,9 @@
   "name": "Picture Perfect TV Install",
   "short_name": "PerfectTV",
   "description": "Professional TV mounting and smart home installation services in Atlanta",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#1e40af",
   "categories": ["business", "services", "home"],
@@ -11,6 +12,10 @@
   "lang": "en-US",
   "dir": "ltr",
   "scope": "/",
+  "id": "/",
+  "launch_handler": {
+    "client_mode": "auto"
+  },
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
