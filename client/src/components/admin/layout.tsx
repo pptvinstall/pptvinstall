@@ -158,8 +158,15 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
 
       {/* Mobile navigation */}
       <div className="flex md:hidden w-full flex-col fixed bottom-0 left-0 right-0 z-10 bg-background border-t">
-        <div className="grid grid-cols-5 gap-1 p-1">
-          {navItems.slice(0, 5).map((item) => {
+        <div className="grid grid-cols-6 gap-1 p-1">
+          {[
+            navItems[0],  // Dashboard
+            navItems[1],  // Bookings
+            navItems[2],  // Availability
+            navItems[3],  // Business Hours
+            navItems[6],  // Settings
+            navItems[4],  // Gallery
+          ].map((item) => {
             // Check if the URL includes the tab parameter that matches the current item
             const currentTab = new URLSearchParams(window.location.search).get('tab');
             // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
