@@ -1,13 +1,17 @@
 import { type Express, Request as ExpressRequest, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { db } from "./db";
-import { bookingSchema, bookings, businessHoursSchema, customers, customerSchema, insertCustomerSchema } from "@shared/schema";
+import { 
+  bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
+  insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema 
+} from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail, sendBookingCancellationEmail } from "./services/emailService";
+import { pushNotificationService } from "./services/pushNotificationService";
 
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
@@ -1311,6 +1315,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to update profile"
+      });
+    }
+  });
+
+  // Push Notification API Endpoints
+  
+  // Get VAPID public key for web push subscription
+  app.get("/api/push/vapid-public-key", (req: Request, res: Response) => {
+    try {
+      const publicKey = pushNotificationService.getPublicKey();
+      
+      res.json({
+        success: true,
+        publicKey
+      });
+    } catch (error) {
+      logger.error('Error getting VAPID public key', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get VAPID public key"
+      });
+    }
+  });
+  
+  // Save push subscription for a customer
+  app.post("/api/customers/:id/push-subscription", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = parseInt(id);
+      const { subscription } = req.body;
+      
+      // Validate the subscription object
+      try {
+        const validatedSubscription = pushSubscriptionSchema.parse(subscription);
+        
+        // Check if user exists
+        const user = await storage.getCustomerById(userId);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found"
+          });
+        }
+        
+        // Save the subscription
+        const success = await pushNotificationService.saveSubscription(userId, validatedSubscription);
+        
+        if (!success) {
+          return res.status(500).json({
+            success: false,
+            message: "Failed to save push subscription"
+          });
+        }
+        
+        // Send a test notification to confirm subscription
+        await pushNotificationService.sendNotification(
+          userId,
+          "Notifications Enabled",
+          "You will now receive booking notifications from Picture Perfect TV Install."
+        );
+        
+        res.json({
+          success: true,
+          message: "Push subscription saved successfully"
+        });
+      } catch (validationError) {
+        logger.error('Invalid push subscription format', validationError as Error);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid push subscription format"
+        });
+      }
+    } catch (error) {
+      logger.error('Error saving push subscription', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while saving push subscription"
+      });
+    }
+  });
+  
+  // Update notification settings for a customer
+  app.put("/api/customers/:id/notification-settings", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = parseInt(id);
+      const { settings, enabled } = req.body;
+      
+      // Check if user exists
+      const user = await storage.getCustomerById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+      
+      // Update database record
+      const updateData: any = {};
+      
+      // Update notification enabled/disabled status if provided
+      if (typeof enabled === 'boolean') {
+        updateData.notificationsEnabled = enabled;
+        
+        // If notifications are being disabled, we don't need to update settings
+        if (!enabled) {
+          await pushNotificationService.disableNotifications(userId);
+          
+          return res.json({
+            success: true,
+            message: "Notifications disabled successfully"
+          });
+        }
+      }
+      
+      // Update notification settings if provided
+      if (settings) {
+        try {
+          const validatedSettings = notificationSettingsSchema.parse(settings);
+          updateData.notificationSettings = validatedSettings;
+          
+          // Update the user's notification settings
+          await db.update(customers)
+            .set({ notificationSettings: validatedSettings as any })
+            .where(eq(customers.id, userId));
+          
+          res.json({
+            success: true,
+            message: "Notification settings updated successfully"
+          });
+        } catch (validationError) {
+          logger.error('Invalid notification settings format', validationError as Error);
+          return res.status(400).json({
+            success: false,
+            message: "Invalid notification settings format"
+          });
+        }
+      } else {
+        res.json({
+          success: true,
+          message: "No changes made to notification settings"
+        });
+      }
+    } catch (error) {
+      logger.error('Error updating notification settings', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while updating notification settings"
       });
     }
   });

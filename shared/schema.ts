@@ -152,6 +152,23 @@ export type BusinessHours = z.infer<typeof businessHoursSchema> & {
 
 export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;
 
+// Push subscription schema
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.string(),
+  keys: z.object({
+    p256dh: z.string(),
+    auth: z.string()
+  })
+});
+
+// Notification settings schema
+export const notificationSettingsSchema = z.object({
+  bookingConfirmation: z.boolean().default(true),
+  reminderDay: z.boolean().default(true),
+  reminderHour: z.boolean().default(true),
+  marketing: z.boolean().default(false)
+});
+
 // Customer schema
 export const customerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -164,7 +181,11 @@ export const customerSchema = z.object({
   state: z.string().min(2, "State is required").optional(),
   zipCode: z.string().min(5, "Zip code must be at least 5 digits").optional(),
   loyaltyPoints: z.number().default(0),
-  memberSince: z.string().optional()
+  memberSince: z.string().optional(),
+  // Push notification fields
+  pushSubscription: pushSubscriptionSchema.optional(),
+  notificationsEnabled: z.boolean().default(false).optional(),
+  notificationSettings: notificationSettingsSchema.optional()
 });
 
 export const insertCustomerSchema = customerSchema;
@@ -187,7 +208,16 @@ export const customers = pgTable('customers', {
   verificationToken: varchar('verification_token', { length: 100 }),
   isVerified: boolean('is_verified').default(false),
   passwordResetToken: varchar('password_reset_token', { length: 100 }),
-  passwordResetExpires: timestamp('password_reset_expires')
+  passwordResetExpires: timestamp('password_reset_expires'),
+  // Push notification fields
+  pushSubscription: jsonb('push_subscription'),
+  notificationsEnabled: boolean('notifications_enabled').default(false),
+  notificationSettings: jsonb('notification_settings').default({
+    bookingConfirmation: true,
+    reminderDay: true,
+    reminderHour: true,
+    marketing: false
+  })
 }, (table) => {
   return {
     emailIdx: uniqueIndex('customers_email_idx').on(table.email)
@@ -217,6 +247,23 @@ export const insertCustomerDrizzleSchema = createInsertSchema(customers).omit({
   passwordResetExpires: true
 });
 
+// Push notification settings type
+export type NotificationSettings = {
+  bookingConfirmation: boolean;
+  reminderDay: boolean;
+  reminderHour: boolean;
+  marketing: boolean;
+};
+
+// Push subscription type
+export type PushSubscription = {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+};
+
 // Export types
 export type Customer = z.infer<typeof customerSchema> & {
   id?: number;
@@ -226,6 +273,10 @@ export type Customer = z.infer<typeof customerSchema> & {
   isVerified?: boolean;
   passwordResetToken?: string;
   passwordResetExpires?: string;
+  // Push notification fields
+  pushSubscription?: PushSubscription;
+  notificationsEnabled?: boolean;
+  notificationSettings?: NotificationSettings;
 };
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
