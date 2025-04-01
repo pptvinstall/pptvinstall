@@ -86,5 +86,38 @@
     ],
     "id": "82",
     "createdAt": "2025-04-01T00:12:25.193Z"
+  },
+  {
+    "name": "JWood ",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4047024748",
+    "streetAddress": "567 one st",
+    "city": "Atlanta ",
+    "state": "Ga",
+    "zipCode": "37836",
+    "serviceType": "Smart Home Installation",
+    "preferredDate": "2025-04-02",
+    "appointmentTime": "8:30 PM",
+    "status": "active",
+    "pricingTotal": 285,
+    "pricingBreakdown": [
+      {
+        "type": "camera",
+        "count": 1,
+        "hasExistingWiring": true
+      },
+      {
+        "type": "doorbell",
+        "count": 1,
+        "hasExistingWiring": true
+      },
+      {
+        "type": "floodlight",
+        "count": 1,
+        "hasExistingWiring": true
+      }
+    ],
+    "id": "84",
+    "createdAt": "2025-04-01T14:56:26.324Z"
   }
 ]

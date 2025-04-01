@@ -92,6 +92,7 @@ Dear ${booking.name},
 Thank you for choosing Picture Perfect TV Install! Your appointment has been confirmed.
 
 📅 APPOINTMENT DETAILS
+Booking ID: ${booking.id}
 Date: ${formattedDate}
 Time: ${booking.appointmentTime}
 Service: ${booking.serviceType}
@@ -230,6 +231,7 @@ function getHtmlConfirmation(booking: any): string {
 
     <div class="appointment-details">
       <h2>📅 Appointment Details</h2>
+      <p><strong>Booking ID:</strong> ${booking.id}</p>
       <p><strong>Date:</strong> ${formattedDate}</p>
       <p><strong>Time:</strong> ${booking.appointmentTime}</p>
       <p><strong>Service:</strong> ${booking.serviceType}</p>
@@ -420,6 +422,7 @@ export async function sendBookingUpdateEmail(booking: any, changes: Record<strin
         
             <div class="appointment-details">
               <h2>📅 Current Appointment Details</h2>
+              <p><strong>Booking ID:</strong> ${booking.id}</p>
               <p><strong>Date:</strong> ${new Date(booking.preferredDate).toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -553,6 +556,7 @@ Email: ${booking.email}
 Phone: ${booking.phone}
 
 📅 APPOINTMENT DETAILS
+Booking ID: ${booking.id}
 Date: ${formattedDate}
 Time: ${booking.appointmentTime}
 Service: ${booking.serviceType}
@@ -654,6 +658,7 @@ function getHtmlAdminNotification(booking: any): string {
 
     <div class="section">
       <h2>📅 Appointment Details</h2>
+      <p><strong>Booking ID:</strong> ${booking.id}</p>
       <p><strong>Date:</strong> ${formattedDate}</p>
       <p><strong>Time:</strong> ${booking.appointmentTime}</p>
       <p><strong>Service:</strong> ${booking.serviceType}</p>
