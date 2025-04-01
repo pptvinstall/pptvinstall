@@ -150,8 +150,9 @@ export const pricingData = {
 };
 
 // Pricing-related utility functions
-export function formatPrice(price: number): string {
-  return `$${price.toFixed(0)}`;
+export function formatPrice(price: number | string): string {
+  const numberPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return `$${numberPrice.toFixed(0)}`;
 }
 
 // Types for pricing items

@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
+import { Info } from 'lucide-react';
 
 interface BusinessHoursProps {
   password?: string;
@@ -34,31 +35,52 @@ const dayNames = [
   'Saturday'
 ];
 
+// Default times for each day based on business requirements
+const defaultTimes = {
+  // Weekend (Saturday, Sunday)
+  weekend: {
+    startTime: '11:00',
+    endTime: '19:00'
+  },
+  // Weekday (Monday through Friday)
+  weekday: {
+    startTime: '18:30',
+    endTime: '22:30'
+  }
+};
+
 export function BusinessHours({ password }: BusinessHoursProps) {
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const { toast } = useToast();
   
+  // Get the admin password from localStorage if not provided through props
+  const storedPassword = localStorage.getItem('adminPassword');
+  const adminPassword = password || storedPassword;
+  
   // Fetch all business hours
   const { data: businessHours, isLoading, isError, error } = useQuery({
-    queryKey: ['/api/admin/business-hours', password],
+    queryKey: ['/api/admin/business-hours'],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/admin/business-hours?password=${password}`);
+      const res = await apiRequest('GET', `/api/admin/business-hours`);
       if (!res.ok) {
         throw new Error('Failed to fetch business hours');
       }
       const data = await res.json();
       return data.businessHours || [];
-    },
-    enabled: !!password
+    }
   });
   
-  // Get the selected day's hours
+  // Get the selected day's hours, or use appropriate defaults based on whether it's weekday or weekend
   const selectedDayHours = businessHours?.find((hours: BusinessHour) => 
     hours.dayOfWeek === selectedDay
   ) || {
     dayOfWeek: selectedDay,
-    startTime: '09:00',
-    endTime: '17:00',
+    startTime: selectedDay === 0 || selectedDay === 6 
+      ? defaultTimes.weekend.startTime 
+      : defaultTimes.weekday.startTime,
+    endTime: selectedDay === 0 || selectedDay === 6 
+      ? defaultTimes.weekend.endTime 
+      : defaultTimes.weekday.endTime,
     isAvailable: true
   };
   
@@ -108,7 +130,6 @@ export function BusinessHours({ password }: BusinessHoursProps) {
   const updateBusinessHoursMutation = useMutation({
     mutationFn: async (data: BusinessHour) => {
       return await apiRequest('POST', `/api/admin/business-hours/${data.dayOfWeek}`, {
-        password,
         startTime: data.startTime,
         endTime: data.endTime,
         isAvailable: data.isAvailable

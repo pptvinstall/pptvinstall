@@ -28,8 +28,13 @@ export const bookingSchema = z.object({
   preferredDate: z.string(),
   appointmentTime: z.string(),
   status: z.enum(['active', 'cancelled', 'completed']).optional().default('active'),
-  pricingTotal: z.number().optional(),
-  pricingBreakdown: z.any().optional()
+  pricingTotal: z.union([z.string(), z.number()]).optional(),
+  pricingBreakdown: z.any().optional(),
+  // Additional fields that we use in the admin panel
+  tvSize: z.string().optional(),
+  mountType: z.string().optional(),
+  wallMaterial: z.string().optional(),
+  specialInstructions: z.string().optional()
 });
 
 // Business hours schema
@@ -62,6 +67,11 @@ export const bookings = pgTable('bookings', {
   status: varchar('status', { length: 20 }).default('active'),
   pricingTotal: text('total_price'),
   pricingBreakdown: text('detailed_services'),
+  // Additional fields for admin panel
+  tvSize: varchar('tv_size', { length: 20 }),
+  mountType: varchar('mount_type', { length: 50 }),
+  wallMaterial: varchar('wall_material', { length: 50 }),
+  specialInstructions: text('special_instructions'),
   createdAt: timestamp('created_at').defaultNow()
 });
 

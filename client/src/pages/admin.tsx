@@ -199,7 +199,7 @@ export default function AdminDashboard() {
         `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
         booking.serviceType,
         booking.status,
-        booking.pricingTotal ? formatPrice(parseFloat(booking.pricingTotal)) : "N/A"
+        booking.pricingTotal ? formatPrice(typeof booking.pricingTotal === 'string' ? parseFloat(booking.pricingTotal) : booking.pricingTotal) : "N/A"
       ])
     ].map(row => row.join(",")).join("\n");
 
@@ -847,7 +847,9 @@ export default function AdminDashboard() {
                             </TableCell>
                             <TableCell>
                               {booking.pricingTotal
-                                ? formatPrice(parseFloat(booking.pricingTotal))
+                                ? formatPrice(typeof booking.pricingTotal === 'string' 
+                                    ? parseFloat(booking.pricingTotal) 
+                                    : booking.pricingTotal)
                                 : "N/A"}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1374,7 +1376,9 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-medium text-muted-foreground">Total</h3>
                   <p className="text-lg font-medium">
                     {selectedBooking.pricingTotal
-                      ? formatPrice(parseFloat(selectedBooking.pricingTotal))
+                      ? formatPrice(typeof selectedBooking.pricingTotal === 'string' 
+                          ? parseFloat(selectedBooking.pricingTotal) 
+                          : selectedBooking.pricingTotal)
                       : "N/A"}
                   </p>
                 </div>
