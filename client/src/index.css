@@ -133,6 +133,26 @@
     to { transform: translateY(0); opacity: 1; }
   }
 }
+
+/* Fix container positioning */
+.scroll-container,
+[data-radix-scroll-area-viewport],
+.scroll-viewport,
+.scroll-area-viewport,
+.scroll-area-root,
+.scroll-area-container,
+.radix-scroll-area,
+[role="dialog"],
+.dialog-content,
+.dialog-overlay {
+  position: relative !important;
+}
+
+/* Ensure proper overflow handling */
+.scroll-area-viewport {
+  overflow: auto !important;
+  height: 100% !important;
+}
 /* Ensure containers have proper positioning for scroll calculations */
 .scroll-container, 
 [data-radix-scroll-area-viewport],
