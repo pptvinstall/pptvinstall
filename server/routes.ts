@@ -1902,16 +1902,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const booking = await storage.getBooking(Number(id));
-      if (!booking) {
+      // First, check if the booking exists in the database
+      const bookingId = parseInt(id);
+      const result = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+      
+      if (result.length === 0) {
         return res.status(404).json({ 
           success: false,
           message: "Booking not found" 
         });
       }
       
-      // Permanently delete the booking
-      await storage.deleteBooking(Number(id));
+      // Delete the booking from the database
+      await db.delete(bookings).where(eq(bookings.id, bookingId));
       
       res.json({ 
         success: true, 
