@@ -145,6 +145,7 @@ export function IntegratedBookingWizard({
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
+  const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
   
   // Use business hours to generate time slots and check availability
   const { getTimeSlotsForDate, getBusinessHoursForDay, businessHours } = useBusinessHours();
@@ -187,11 +188,11 @@ export function IntegratedBookingWizard({
     
     // Get current time plus buffer
     const now = new Date();
-    const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12-hour buffer
+    const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000); // Use configurable buffer
     
     // Check if slot is in the past or too soon
     return slotDate <= bufferTime;
-  }, []);
+  }, [bookingBufferHours]);
 
   // Add real-time refreshing of time slot availability
   useEffect(() => {
@@ -276,6 +277,26 @@ export function IntegratedBookingWizard({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
+  
+  // Fetch booking buffer setting from the API
+  useEffect(() => {
+    async function fetchBookingBuffer() {
+      try {
+        const response = await fetch('/api/system-settings/booking-buffer');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.bookingBufferHours !== undefined) {
+            setBookingBufferHours(Number(data.bookingBufferHours));
+            console.log(`Loaded booking buffer setting: ${data.bookingBufferHours} hours`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching booking buffer setting:', error);
+      }
+    }
+    
+    fetchBookingBuffer();
+  }, []);
 
   // Time slot availability check with real-time validation and improved error handling
   const isTimeSlotAvailable = useCallback(
@@ -318,8 +339,8 @@ export function IntegratedBookingWizard({
       // Note: month is 0-indexed in JavaScript Date
       const selectedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
       
-      // Add a 12-hour buffer for bookings (appointments need to be at least 12 hours in the future)
-      const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      // Add configurable buffer for bookings (using system setting)
+      const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000);
       
       // Check if the selected time is in the past (with buffer)
       if (selectedDate <= bufferTime) {
@@ -391,7 +412,7 @@ export function IntegratedBookingWizard({
       
       return true;
     },
-    [existingBookings, timeSlotAvailability] // Include both dependencies but prevent updates in render
+    [existingBookings, timeSlotAvailability, bookingBufferHours] // Include all dependencies
   );
   
   // Function to find the next available time slot
