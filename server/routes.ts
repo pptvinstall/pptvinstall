@@ -565,26 +565,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (e) {
             logger.error('Error parsing pricingBreakdown JSON:', e as Error);
             // Log the problematic data for debugging
-            logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
+            logger.info('Attempting to fix problematic pricing data');
             
-            // Attempt to fix common JSON formatting issues
             try {
-              // Replace single quotes with double quotes
-              let fixedJson = booking.pricingBreakdown.replace(/'/g, '"');
+              // Function to help with deeply nested JSON
+              const fixNestedJson = (jsonStr: string) => {
+                // First, handle the case of over-escaped JSON (common in the DB)
+                if (jsonStr.includes('\\"')) {
+                  try {
+                    // Try to parse it as a JSON string that contains escaped JSON
+                    const unescaped = JSON.parse(`"${jsonStr.replace(/^"|"$/g, '').replace(/\\"/g, '"')}"`);
+                    return JSON.parse(unescaped);
+                  } catch (error) {
+                    // Failed to parse as nested JSON
+                  }
+                }
+                
+                // Replace single quotes with double quotes
+                let fixedJson = jsonStr.replace(/'/g, '"');
+                
+                // Add missing quotes around property names
+                fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+                
+                // Add missing quotes around property values that are not numbers or booleans
+                fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+                
+                return JSON.parse(fixedJson);
+              };
               
-              // Add missing quotes around property names
-              fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+              // Replace double-escaped quotes
+              let intermediateJson = booking.pricingBreakdown
+                .replace(/\\\\"/g, '\\"') // Replace \\" with \"
+                .replace(/\\"/g, '"')     // Replace \" with "
+                .replace(/"{/g, '{')      // Replace "{ with {
+                .replace(/}"/g, '}');     // Replace }" with }
               
-              // Add missing quotes around property values that are not numbers or booleans
-              fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+              // Handle the case where the string might be an array-like string with JSON objects
+              if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
+                intermediateJson = intermediateJson.replace(/^"|"$/g, '');
+              }
               
-              // Try parsing the fixed JSON
-              pricingBreakdown = JSON.parse(fixedJson);
-              logger.info('Successfully fixed and parsed JSON');
-            } catch (fixError) {
-              // If all attempts fail, create a basic empty object
-              logger.error('Could not fix JSON parsing error:', fixError as Error);
-              pricingBreakdown = {};
+              // Try to parse the fixed JSON
+              pricingBreakdown = JSON.parse(intermediateJson);
+              logger.info('Successfully fixed and parsed JSON with intermediate approach');
+            } catch (intermediateError) {
+              try {
+                // As a last resort, try to extract valid JSON substrings
+                const jsonMatches = booking.pricingBreakdown.match(/\{[^{}]*\}/g);
+                if (jsonMatches && jsonMatches.length > 0) {
+                  pricingBreakdown = jsonMatches.map(jsonStr => {
+                    try {
+                      return JSON.parse(jsonStr.replace(/\\"/g, '"'));
+                    } catch (err) {
+                      return null;
+                    }
+                  }).filter(Boolean);
+                  
+                  logger.info('Extracted valid JSON objects from malformed string');
+                } else {
+                  // If all attempts fail, create a basic empty object
+                  logger.error('Could not extract valid JSON objects');
+                  pricingBreakdown = {};
+                }
+              } catch (finalError) {
+                // If all attempts fail, create a basic empty object
+                logger.error('All JSON parsing attempts failed:', finalError as Error);
+                pricingBreakdown = {};
+              }
             }
           }
         }
@@ -640,26 +687,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) {
           logger.error('Error parsing pricingBreakdown JSON:', e as Error);
           // Log the problematic data for debugging
-          logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
-          
-          // Attempt to fix common JSON formatting issues
+          logger.info('Attempting to fix problematic pricing data');
+            
           try {
-            // Replace single quotes with double quotes
-            let fixedJson = booking.pricingBreakdown.replace(/'/g, '"');
+            // Function to help with deeply nested JSON
+            const fixNestedJson = (jsonStr: string) => {
+              // First, handle the case of over-escaped JSON (common in the DB)
+              if (jsonStr.includes('\\"')) {
+                try {
+                  // Try to parse it as a JSON string that contains escaped JSON
+                  const unescaped = JSON.parse(`"${jsonStr.replace(/^"|"$/g, '').replace(/\\"/g, '"')}"`);
+                  return JSON.parse(unescaped);
+                } catch (error) {
+                  // Failed to parse as nested JSON
+                }
+              }
+              
+              // Replace single quotes with double quotes
+              let fixedJson = jsonStr.replace(/'/g, '"');
+              
+              // Add missing quotes around property names
+              fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+              
+              // Add missing quotes around property values that are not numbers or booleans
+              fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+              
+              return JSON.parse(fixedJson);
+            };
             
-            // Add missing quotes around property names
-            fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+            // Replace double-escaped quotes
+            let intermediateJson = booking.pricingBreakdown
+              .replace(/\\\\"/g, '\\"') // Replace \\" with \"
+              .replace(/\\"/g, '"')     // Replace \" with "
+              .replace(/"{/g, '{')      // Replace "{ with {
+              .replace(/}"/g, '}');     // Replace }" with }
             
-            // Add missing quotes around property values that are not numbers or booleans
-            fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+            // Handle the case where the string might be an array-like string with JSON objects
+            if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
+              intermediateJson = intermediateJson.replace(/^"|"$/g, '');
+            }
             
-            // Try parsing the fixed JSON
-            pricingBreakdown = JSON.parse(fixedJson);
-            logger.info('Successfully fixed and parsed JSON');
-          } catch (fixError) {
-            // If all attempts fail, create a basic empty object
-            logger.error('Could not fix JSON parsing error:', fixError as Error);
-            pricingBreakdown = {};
+            // Try to parse the fixed JSON
+            pricingBreakdown = JSON.parse(intermediateJson);
+            logger.info('Successfully fixed and parsed JSON with intermediate approach');
+          } catch (intermediateError) {
+            try {
+              // As a last resort, try to extract valid JSON substrings
+              const jsonMatches = booking.pricingBreakdown.match(/\{[^{}]*\}/g);
+              if (jsonMatches && jsonMatches.length > 0) {
+                pricingBreakdown = jsonMatches.map((jsonStr: string) => {
+                  try {
+                    return JSON.parse(jsonStr.replace(/\\"/g, '"'));
+                  } catch (err) {
+                    return null;
+                  }
+                }).filter(Boolean);
+                
+                logger.info('Extracted valid JSON objects from malformed string');
+              } else {
+                // If all attempts fail, create a basic empty object
+                logger.error('Could not extract valid JSON objects');
+                pricingBreakdown = {};
+              }
+            } catch (finalError) {
+              // If all attempts fail, create a basic empty object
+              logger.error('All JSON parsing attempts failed:', finalError as Error);
+              pricingBreakdown = {};
+            }
           }
         }
       }
@@ -888,26 +982,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) {
           logger.error('Error parsing pricingBreakdown JSON in update:', e as Error);
           // Log the problematic data for debugging
-          logger.error('Problematic pricing data in update:', { problemData: updates.pricingBreakdown });
+          logger.info('Attempting to fix problematic pricing data in update');
           
-          // Attempt to fix common JSON formatting issues
           try {
-            // Replace single quotes with double quotes
-            let fixedJson = updates.pricingBreakdown.replace(/'/g, '"');
+            // Function to help with deeply nested JSON
+            const fixNestedJson = (jsonStr: string) => {
+              // First, handle the case of over-escaped JSON (common in the DB)
+              if (jsonStr.includes('\\"')) {
+                try {
+                  // Try to parse it as a JSON string that contains escaped JSON
+                  const unescaped = JSON.parse(`"${jsonStr.replace(/^"|"$/g, '').replace(/\\"/g, '"')}"`);
+                  return JSON.parse(unescaped);
+                } catch (error) {
+                  // Failed to parse as nested JSON
+                }
+              }
+              
+              // Replace single quotes with double quotes
+              let fixedJson = jsonStr.replace(/'/g, '"');
+              
+              // Add missing quotes around property names
+              fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+              
+              // Add missing quotes around property values that are not numbers or booleans
+              fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+              
+              return JSON.parse(fixedJson);
+            };
             
-            // Add missing quotes around property names
-            fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+            // Replace double-escaped quotes
+            let intermediateJson = updates.pricingBreakdown
+              .replace(/\\\\"/g, '\\"') // Replace \\" with \"
+              .replace(/\\"/g, '"')     // Replace \" with "
+              .replace(/"{/g, '{')      // Replace "{ with {
+              .replace(/}"/g, '}');     // Replace }" with }
             
-            // Add missing quotes around property values that are not numbers or booleans
-            fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+            // Handle the case where the string might be an array-like string with JSON objects
+            if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
+              intermediateJson = intermediateJson.replace(/^"|"$/g, '');
+            }
             
-            // Try parsing the fixed JSON
-            updates.pricingBreakdown = JSON.parse(fixedJson);
-            logger.info('Successfully fixed and parsed JSON in update');
-          } catch (fixError) {
-            // If all attempts fail, create a basic empty object
-            logger.error('Could not fix JSON parsing error in update:', fixError as Error);
-            updates.pricingBreakdown = {};
+            // Try to parse the fixed JSON
+            updates.pricingBreakdown = JSON.parse(intermediateJson);
+            logger.info('Successfully fixed and parsed JSON with intermediate approach in update');
+          } catch (intermediateError) {
+            try {
+              // As a last resort, try to extract valid JSON substrings
+              const jsonMatches = updates.pricingBreakdown.match(/\{[^{}]*\}/g);
+              if (jsonMatches && jsonMatches.length > 0) {
+                updates.pricingBreakdown = jsonMatches.map((jsonStr: string) => {
+                  try {
+                    return JSON.parse(jsonStr.replace(/\\"/g, '"'));
+                  } catch (err) {
+                    return null;
+                  }
+                }).filter(Boolean);
+                
+                logger.info('Extracted valid JSON objects from malformed string in update');
+              } else {
+                // If all attempts fail, create a basic empty object
+                logger.error('Could not extract valid JSON objects in update');
+                updates.pricingBreakdown = {};
+              }
+            } catch (finalError) {
+              // If all attempts fail, create a basic empty object
+              logger.error('All JSON parsing attempts failed in update:', finalError as Error);
+              updates.pricingBreakdown = {};
+            }
           }
         }
       }
