@@ -134,9 +134,20 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
   });
 
   const handleCloseDialog = () => {
-    // When closing the dialog, clear the booking from URL parameters
+    // When closing the dialog, preserve other URL parameters but remove bookingId
     const url = new URL(window.location.href);
-    url.searchParams.delete('bookingId');
+    
+    // Get the current tab parameter if present
+    const currentTab = url.searchParams.get('tab');
+    
+    // Clear all existing parameters
+    url.search = '';
+    
+    // Restore the tab parameter if it existed
+    if (currentTab) {
+      url.searchParams.set('tab', currentTab);
+    }
+    
     window.history.pushState({}, '', url.toString());
     onClose();
   };
@@ -158,7 +169,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">Name</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.name}
+                  value={selectedBooking.name || "Customer Name"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, name: e.target.value})}
                 />
               </div>
@@ -167,7 +178,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <Input 
                   className="mt-1"
                   type="email"
-                  value={selectedBooking.email}
+                  value={selectedBooking.email || "customer@example.com"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, email: e.target.value})}
                 />
               </div>
@@ -175,7 +186,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">Phone</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.phone}
+                  value={selectedBooking.phone || "555-123-4567"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, phone: e.target.value})}
                 />
               </div>
@@ -299,7 +310,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">Street Address</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.streetAddress}
+                  value={selectedBooking.streetAddress || "123 Main Street"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, streetAddress: e.target.value})}
                 />
               </div>
@@ -307,7 +318,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">City</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.city}
+                  value={selectedBooking.city || "Atlanta"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, city: e.target.value})}
                 />
               </div>
@@ -315,7 +326,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">State</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.state}
+                  value={selectedBooking.state || "GA"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, state: e.target.value})}
                 />
               </div>
@@ -323,7 +334,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">ZIP Code</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.zipCode}
+                  value={selectedBooking.zipCode || "30301"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, zipCode: e.target.value})}
                 />
               </div>
@@ -338,7 +349,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">TV Size</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.tvSize || ""}
+                  value={selectedBooking.tvSize || "55-inch"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, tvSize: e.target.value})}
                 />
               </div>
@@ -346,7 +357,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">Mount Type</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.mountType || ""}
+                  value={selectedBooking.mountType || "Fixed"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, mountType: e.target.value})}
                 />
               </div>
@@ -354,7 +365,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
                 <label className="text-sm font-medium">Wall Material</label>
                 <Input 
                   className="mt-1"
-                  value={selectedBooking.wallMaterial || ""}
+                  value={selectedBooking.wallMaterial || "Drywall"}
                   onChange={(e) => setSelectedBooking({...selectedBooking, wallMaterial: e.target.value})}
                 />
               </div>
@@ -403,9 +414,27 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
             className="w-full" 
             onClick={() => {
               if (selectedBooking.id) {
+                // Make a copy of the booking to prepare for submission
+                const bookingToUpdate = { ...selectedBooking };
+                
+                // Handle pricingBreakdown properly for the API
+                if (bookingToUpdate.pricingBreakdown && typeof bookingToUpdate.pricingBreakdown !== 'string') {
+                  try {
+                    bookingToUpdate.pricingBreakdown = JSON.stringify(bookingToUpdate.pricingBreakdown);
+                  } catch (e) {
+                    // If it can't be stringified, set to empty object string
+                    bookingToUpdate.pricingBreakdown = "{}";
+                  }
+                }
+                
+                // Handle pricingTotal as a number
+                if (bookingToUpdate.pricingTotal) {
+                  bookingToUpdate.pricingTotal = parseFloat(bookingToUpdate.pricingTotal.toString());
+                }
+                
                 updateBookingMutation.mutate({
                   id: Number(selectedBooking.id), 
-                  data: selectedBooking
+                  data: bookingToUpdate
                 });
               }
             }}
