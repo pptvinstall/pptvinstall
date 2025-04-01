@@ -21,6 +21,7 @@ import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { InstallationSlideshow } from "@/components/ui/installation-gallery";
+import { PWAInstallBanner } from "@/components/ui/pwa-install-banner";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -113,6 +114,9 @@ export default function HomePage() {
 
   return (
     <div className="scroll-container overflow-x-hidden relative" style={{ position: 'relative' }}>
+      {/* PWA Install Banner - only visible on mobile */}
+      <PWAInstallBanner />
+      
       {/* Hero Section with position: relative for useScroll */}
       <section
         ref={heroRef}
