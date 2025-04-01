@@ -16,6 +16,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Booking } from "@shared/schema";
+
+// Extended booking interface to include email notification flag
+interface ExtendedBooking extends Booking {
+  sendUpdateEmail?: boolean;
+}
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -28,6 +33,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerClose,
@@ -69,6 +82,7 @@ import { TimeBlocking } from "@/components/admin/time-blocking";
 import { BookingCalendar } from "@/components/admin/booking-calendar";
 import { BusinessHours } from "@/components/admin/business-hours";
 import { AdminLayout } from "@/components/admin/layout";
+import { BookingDetailsDialog } from "@/components/admin/booking-details-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -80,7 +94,7 @@ import {
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ExtendedBooking | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -308,7 +322,7 @@ export default function AdminDashboard() {
   });
 
   const updateBookingMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Booking> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ExtendedBooking> }) => {
       const response = await apiRequest("PUT", `/api/bookings/${id}`, data);
       if (!response.ok) {
         throw new Error('Failed to update booking');
@@ -1352,306 +1366,21 @@ export default function AdminDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Booking Details Drawer */}
+      {/* Booking Details Dialog */}
       {selectedBooking && (
-        <Drawer 
-          open={true} 
-          onOpenChange={(open) => {
-            if (!open) {
-              // Clear the booking from the URL when closing the drawer
-              const url = new URL(window.location.href);
-              url.searchParams.delete('bookingId');
-              window.history.pushState({}, '', url.toString());
-              
-              // Clear the selected booking state
-              setSelectedBooking(null);
-            }
+        <BookingDetailsDialog
+          booking={selectedBooking}
+          open={true}
+          onClose={() => {
+            // Clear the booking from the URL when closing the dialog
+            const url = new URL(window.location.href);
+            url.searchParams.delete('bookingId');
+            window.history.pushState({}, '', url.toString());
+            
+            // Clear the selected booking state
+            setSelectedBooking(null);
           }}
-        >
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Edit Booking</DrawerTitle>
-              <DrawerDescription>Update customer booking information.</DrawerDescription>
-            </DrawerHeader>
-            <div className="px-4 py-2">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Customer Name</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.name}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Date & Time</h3>
-                  <div className="flex space-x-2 mt-1">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className="justify-start text-left font-normal w-full"
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(new Date(selectedBooking.preferredDate), "MMM d, yyyy")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={new Date(selectedBooking.preferredDate)}
-                          onSelect={(date) => date && setSelectedBooking({...selectedBooking, preferredDate: format(date, 'yyyy-MM-dd')})}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-
-                    <Select 
-                      value={selectedBooking.appointmentTime} 
-                      onValueChange={(value) => setSelectedBooking({...selectedBooking, appointmentTime: value})}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', 
-                          '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM', 
-                          '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', 
-                          '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM'
-                        ].map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Email</h3>
-                  <Input 
-                    className="mt-1"
-                    type="email"
-                    value={selectedBooking.email}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, email: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Phone</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.phone}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, phone: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Street Address</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.streetAddress}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, streetAddress: e.target.value})}
-                  />
-                </div>
-                <div className="flex space-x-2">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-muted-foreground">City</h3>
-                    <Input 
-                      className="mt-1"
-                      value={selectedBooking.city}
-                      onChange={(e) => setSelectedBooking({...selectedBooking, city: e.target.value})}
-                    />
-                  </div>
-                  <div className="w-20">
-                    <h3 className="text-sm font-medium text-muted-foreground">State</h3>
-                    <Input 
-                      className="mt-1"
-                      value={selectedBooking.state}
-                      onChange={(e) => setSelectedBooking({...selectedBooking, state: e.target.value})}
-                    />
-                  </div>
-                  <div className="w-24">
-                    <h3 className="text-sm font-medium text-muted-foreground">Zip</h3>
-                    <Input 
-                      className="mt-1"
-                      value={selectedBooking.zipCode}
-                      onChange={(e) => setSelectedBooking({...selectedBooking, zipCode: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Service Type</h3>
-                  <Select 
-                    value={selectedBooking.serviceType}
-                    onValueChange={(value) => setSelectedBooking({...selectedBooking, serviceType: value})}
-                  >
-                    <SelectTrigger className="mt-1 w-full">
-                      <SelectValue placeholder="Select service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="TV Mounting">TV Mounting</SelectItem>
-                      <SelectItem value="Smart Home Installation">Smart Home Installation</SelectItem>
-                      <SelectItem value="Home Theater Setup">Home Theater Setup</SelectItem>
-                      <SelectItem value="Consultation">Consultation</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
-                  <Select 
-                    value={selectedBooking.status || 'active'}
-                    onValueChange={(value: "active" | "cancelled" | "completed") => 
-                      setSelectedBooking({...selectedBooking, status: value})}
-                  >
-                    <SelectTrigger className="mt-1 w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">TV Size</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.tvSize || ""}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, tvSize: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Mount Type</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.mountType || ""}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, mountType: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Wall Material</h3>
-                  <Input 
-                    className="mt-1"
-                    value={selectedBooking.wallMaterial || ""}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, wallMaterial: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Total</h3>
-                  <Input 
-                    className="mt-1"
-                    type="number"
-                    value={typeof selectedBooking.pricingTotal === 'string' 
-                      ? selectedBooking.pricingTotal 
-                      : selectedBooking.pricingTotal?.toString() || ""}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, pricingTotal: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Special Instructions</h3>
-                  <Textarea 
-                    className="mt-1"
-                    value={selectedBooking.specialInstructions || ""}
-                    onChange={(e) => setSelectedBooking({...selectedBooking, specialInstructions: e.target.value})}
-                    placeholder="Any special notes or instructions"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Booking Created</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedBooking.createdAt 
-                      ? `${formatDistanceToNow(new Date(selectedBooking.createdAt))} ago`
-                      : "Unknown"}
-                  </p>
-                </div>
-                
-                <div className="col-span-2 mt-4">
-                  <Button 
-                    className="w-full" 
-                    onClick={() => {
-                      if (selectedBooking.id) {
-                        updateBookingMutation.mutate({
-                          id: Number(selectedBooking.id), 
-                          data: {...selectedBooking, sendUpdateEmail: true}
-                        });
-                      }
-                    }}
-                    disabled={updateBookingMutation.isPending}
-                  >
-                    {updateBookingMutation.isPending ? "Updating..." : "Update Booking & Send Email Notification"}
-                  </Button>
-                </div>
-              </div>
-
-              {selectedBooking.status === "active" && (
-                <div className="border-t pt-4 mb-4">
-                  <h3 className="text-sm font-medium mb-2">Cancel Booking</h3>
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Reason for cancellation"
-                      value={cancellationReason}
-                      onChange={(e) => setCancellationReason(e.target.value)}
-                    />
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        if (selectedBooking.id) {
-                          cancelBookingMutation.mutate({
-                            id: Number(selectedBooking.id),
-                            reason: cancellationReason,
-                          });
-                        }
-                      }}
-                      disabled={cancelBookingMutation.isPending}
-                      className="w-full"
-                    >
-                      {cancelBookingMutation.isPending
-                        ? "Cancelling..."
-                        : "Cancel Booking"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium mb-2">Delete Booking</h3>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full">Delete Booking</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Booking</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action will permanently delete this booking. Are you sure?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-600 hover:bg-red-700"
-                        onClick={() => {
-                          if (selectedBooking.id) {
-                            deleteBookingMutation.mutate(Number(selectedBooking.id));
-                            setSelectedBooking(null);
-                          }
-                        }}
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant="outline">Close</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+        />
       )}
     </AdminLayout>
   );
