@@ -50,6 +50,7 @@ import {
   ExternalLink,
   FileText,
   HelpCircle,
+  Image as ImageIcon,
   Info,
   Mail,
   Phone,
