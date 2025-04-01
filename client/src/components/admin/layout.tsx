@@ -22,52 +22,61 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const navItems = [
     {
       name: 'Dashboard',
       href: '/admin',
+      tab: 'dashboard',
       icon: Home
     },
     {
       name: 'Bookings',
       href: '/admin?tab=bookings',
+      tab: 'bookings',
       icon: Calendar
     },
     {
       name: 'Availability',
       href: '/admin?tab=time-blocking',
+      tab: 'time-blocking',
       icon: ClockIcon
     },
     {
       name: 'Business Hours',
       href: '/admin?tab=business-hours',
+      tab: 'business-hours',
       icon: BarChart3
     },
     {
       name: 'Gallery',
       href: '/admin?tab=gallery',
+      tab: 'gallery',
       icon: ImageIcon
     },
     {
       name: 'Site Content',
       href: '/admin?tab=content',
+      tab: 'content',
       icon: FileText
     },
     {
       name: 'Customer Data',
       href: '/admin?tab=customers',
+      tab: 'customers',
       icon: Users
     },
     {
       name: 'Settings',
       href: '/admin?tab=settings',
+      tab: 'settings',
       icon: Settings
     },
     {
       name: 'Help Guide',
       href: '/admin?tab=help',
+      tab: 'help',
       icon: HelpCircle
     }
   ];
@@ -91,9 +100,18 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                   <Link
                     key={item.name}
                     href={item.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLocation(item.href);
+                      const searchParams = new URLSearchParams(window.location.search);
+                      const currentTab = searchParams.get('tab') || 'dashboard';
+                      if (currentTab !== item.tab) {
+                        window.dispatchEvent(new CustomEvent('tabChange', { detail: item.tab }));
+                      }
+                    }}
                     className={cn(
                       "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                      isActive 
+                      location === item.href
                         ? "bg-primary text-primary-foreground" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}

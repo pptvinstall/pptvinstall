@@ -612,6 +612,11 @@ export default function AdminDashboard() {
                               size="sm" 
                               onClick={() => {
                                 setSelectedBooking(booking);
+                                // Force drawer to show
+                                document.body.style.pointerEvents = "none";
+                                setTimeout(() => {
+                                  document.body.style.pointerEvents = "";
+                                }, 0);
                               }}
                             >
                               View
