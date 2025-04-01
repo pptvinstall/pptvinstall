@@ -410,13 +410,35 @@ export default function AdminDashboard() {
     });
   };
 
+  // Check for login status and load bookings if needed
   useEffect(() => {
     const storedPassword = localStorage.getItem('adminPassword');
     if (storedPassword) {
       // Verify the stored password
       loginMutation.mutate(storedPassword);
     }
-  }, []);
+    
+    // Check for booking ID in URL parameters to restore booking details
+    const loadBookingFromUrl = () => {
+      if (bookings.length > 0) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookingId = urlParams.get('bookingId');
+        
+        if (bookingId) {
+          console.log(`Found booking ID in URL: ${bookingId}`);
+          const booking = bookings.find((b: any) => String(b.id) === bookingId);
+          if (booking) {
+            console.log('Setting selected booking from URL parameter');
+            setSelectedBooking(booking);
+          } else {
+            console.log(`Booking with ID ${bookingId} not found`);
+          }
+        }
+      }
+    };
+    
+    loadBookingFromUrl();
+  }, [bookings.length]);
 
   if (!isAuthenticated) {
     return (
@@ -612,7 +634,15 @@ export default function AdminDashboard() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => setSelectedBooking(booking)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedBooking(booking);
+                                // Store booking ID in URL as a separate parameter
+                                const url = new URL(window.location.href);
+                                url.searchParams.set('bookingId', String(booking.id));
+                                window.history.pushState({}, '', url.toString());
+                              }}
                             >
                               View
                             </Button>
@@ -855,7 +885,15 @@ export default function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedBooking(booking)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedBooking(booking);
+                                  // Store booking ID in URL as a separate parameter
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.set('bookingId', String(booking.id));
+                                  window.history.pushState({}, '', url.toString());
+                                }}
                               >
                                 View
                               </Button>
@@ -1311,7 +1349,20 @@ export default function AdminDashboard() {
 
       {/* Booking Details Drawer */}
       {selectedBooking && (
-        <Drawer open={true} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <Drawer 
+          open={true} 
+          onOpenChange={(open) => {
+            if (!open) {
+              // Clear the booking from the URL when closing the drawer
+              const url = new URL(window.location.href);
+              url.searchParams.delete('bookingId');
+              window.history.pushState({}, '', url.toString());
+              
+              // Clear the selected booking state
+              setSelectedBooking(null);
+            }
+          }}
+        >
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Booking Details</DrawerTitle>
