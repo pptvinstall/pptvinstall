@@ -86,6 +86,7 @@ import { BusinessHours } from "@/components/admin/business-hours";
 import { AdminLayout } from "@/components/admin/layout";
 import { BookingDetailsDialog } from "@/components/admin/booking-details-dialog";
 import { SystemSettings } from "@/components/admin/system-settings";
+import BookingArchives from "@/components/admin/booking-archives";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -627,6 +628,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="business-hours">Business Hours</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
+          <TabsTrigger value="archives">Archives</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Overview */}
@@ -1558,6 +1560,16 @@ export default function AdminDashboard() {
                 This feature is currently under development. Soon you'll be able to edit website text, pricing, and other content directly from the admin panel.
               </p>
             </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="archives">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Booking Archives</h1>
+              <p className="text-muted-foreground">View all deleted or archived bookings</p>
+            </div>
+            <BookingArchives adminPassword={password} />
           </div>
         </TabsContent>
 

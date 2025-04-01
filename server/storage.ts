@@ -1,7 +1,7 @@
 import { type Booking, type ContactMessage, type InsertBooking, type InsertContactMessage, 
   type BusinessHours, type InsertBusinessHours, type Customer, type InsertCustomer,
-  type SystemSettings, type InsertSystemSettings,
-  bookings, customers, businessHours, systemSettings } from "@shared/schema";
+  type SystemSettings, type InsertSystemSettings, type BookingArchive, type InsertBookingArchive,
+  bookings, customers, businessHours, systemSettings, bookingArchives } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import fs from 'fs';
@@ -181,7 +181,14 @@ export interface IStorage {
   getAllBookings(): Promise<Booking[]>;
   getBookingsByDate(date: string): Promise<Booking[]>;
   updateBooking(id: number, booking: Partial<Booking>): Promise<Booking>;
-  deleteBooking(id: number): Promise<void>;
+  deleteBooking(id: number, archiveReason?: string, archiveNote?: string): Promise<void>;
+  
+  // Booking Archives
+  archiveBooking(bookingId: number, reason: string, note?: string): Promise<number>; // returns archive ID
+  getBookingArchives(): Promise<BookingArchive[]>;
+  getBookingArchivesByReason(reason: string): Promise<BookingArchive[]>;
+  getBookingArchivesByEmail(email: string): Promise<BookingArchive[]>;
+  getBookingArchiveById(id: number): Promise<BookingArchive | undefined>;
   
   // Business Hours
   getBusinessHours(): Promise<BusinessHours[]>;
@@ -272,16 +279,163 @@ export class FileSystemStorage implements IStorage {
     return updatedBooking;
   }
 
-  async deleteBooking(id: number): Promise<void> {
-    const bookings = loadBookings();
-    const booking = await this.getBooking(id);
-    if (!booking) {
-      throw new Error('Booking not found');
+  async deleteBooking(id: number, archiveReason?: string, archiveNote?: string): Promise<void> {
+    try {
+      // Get the booking to be deleted
+      const bookingId = Number(id);
+      const result = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+      
+      if (result.length === 0) {
+        throw new Error('Booking not found');
+      }
+      
+      const booking = result[0];
+      
+      // Archive the booking if reason provided
+      if (archiveReason) {
+        await this.archiveBooking(bookingId, archiveReason, archiveNote);
+      }
+      
+      // Delete the booking from the database
+      await db.delete(bookings).where(eq(bookings.id, bookingId));
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      throw error;
     }
-    const filteredBookings = bookings.filter((b: any) => 
-      Number(b.id) !== id && String(b.id) !== String(id)
-    );
-    saveBookings(filteredBookings);
+  }
+  
+  // Booking archives methods
+  async archiveBooking(bookingId: number, reason: string, note?: string): Promise<number> {
+    try {
+      // Get the booking to archive
+      const result = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+      
+      if (result.length === 0) {
+        throw new Error('Booking not found for archiving');
+      }
+      
+      const booking = result[0];
+      
+      // Create archive entry
+      const archiveData = {
+        originalId: booking.id,
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        streetAddress: booking.streetAddress,
+        addressLine2: booking.addressLine2,
+        city: booking.city,
+        state: booking.state,
+        zipCode: booking.zipCode,
+        notes: booking.notes,
+        serviceType: booking.serviceType,
+        preferredDate: booking.preferredDate,
+        appointmentTime: booking.appointmentTime,
+        status: booking.status,
+        pricingTotal: booking.pricingTotal,
+        pricingBreakdown: booking.pricingBreakdown,
+        tvSize: booking.tvSize,
+        mountType: booking.mountType,
+        wallMaterial: booking.wallMaterial,
+        specialInstructions: booking.specialInstructions,
+        originalCreatedAt: booking.createdAt,
+        archiveReason: reason,
+        archiveNote: note
+      };
+      
+      // Insert into archive table
+      const archiveResult = await db.insert(bookingArchives)
+        .values(archiveData)
+        .returning();
+      
+      if (archiveResult.length === 0) {
+        throw new Error('Failed to archive booking');
+      }
+      
+      return archiveResult[0].id;
+    } catch (error) {
+      console.error('Error archiving booking:', error);
+      throw error;
+    }
+  }
+  
+  async getBookingArchives(): Promise<BookingArchive[]> {
+    try {
+      const result = await db.select().from(bookingArchives)
+        .orderBy(desc(bookingArchives.archivedAt));
+      
+      return result.map(archive => ({
+        ...archive,
+        id: archive.id,
+        originalId: archive.originalId,
+        originalCreatedAt: archive.originalCreatedAt?.toISOString(),
+        archivedAt: archive.archivedAt?.toISOString()
+      }));
+    } catch (error) {
+      console.error('Error getting booking archives:', error);
+      return [];
+    }
+  }
+  
+  async getBookingArchivesByReason(reason: string): Promise<BookingArchive[]> {
+    try {
+      const result = await db.select().from(bookingArchives)
+        .where(eq(bookingArchives.archiveReason, reason))
+        .orderBy(desc(bookingArchives.archivedAt));
+      
+      return result.map(archive => ({
+        ...archive,
+        id: archive.id,
+        originalId: archive.originalId,
+        originalCreatedAt: archive.originalCreatedAt?.toISOString(),
+        archivedAt: archive.archivedAt?.toISOString()
+      }));
+    } catch (error) {
+      console.error(`Error getting booking archives by reason ${reason}:`, error);
+      return [];
+    }
+  }
+  
+  async getBookingArchivesByEmail(email: string): Promise<BookingArchive[]> {
+    try {
+      const result = await db.select().from(bookingArchives)
+        .where(eq(bookingArchives.email, email))
+        .orderBy(desc(bookingArchives.archivedAt));
+      
+      return result.map(archive => ({
+        ...archive,
+        id: archive.id,
+        originalId: archive.originalId,
+        originalCreatedAt: archive.originalCreatedAt?.toISOString(),
+        archivedAt: archive.archivedAt?.toISOString()
+      }));
+    } catch (error) {
+      console.error(`Error getting booking archives by email ${email}:`, error);
+      return [];
+    }
+  }
+  
+  async getBookingArchiveById(id: number): Promise<BookingArchive | undefined> {
+    try {
+      const result = await db.select().from(bookingArchives)
+        .where(eq(bookingArchives.id, id));
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      const archive = result[0];
+      return {
+        ...archive,
+        id: archive.id,
+        originalId: archive.originalId,
+        originalCreatedAt: archive.originalCreatedAt?.toISOString(),
+        archivedAt: archive.archivedAt?.toISOString()
+      };
+    } catch (error) {
+      console.error(`Error getting booking archive by id ${id}:`, error);
+      return undefined;
+    }
   }
   
   // Business Hours methods

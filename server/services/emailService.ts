@@ -1,8 +1,9 @@
 import sgMail from '@sendgrid/mail';
+import { logger } from './loggingService';
 
 // Initialize SendGrid with API key
 if (!process.env.SENDGRID_API_KEY) {
-  console.warn("SENDGRID_API_KEY environment variable is not set. Email functionality will not work.");
+  logger.warn("SENDGRID_API_KEY environment variable is not set. Email functionality will not work.");
 } else {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
@@ -467,8 +468,171 @@ export async function sendBookingUpdateEmail(booking: any, changes: Record<strin
 }
 
 /**
- * Send an admin notification email about a new booking
+ * Send a booking cancellation notification email to the customer
  */
+export async function sendBookingCancellationEmail(booking: any, reason?: string) {
+  if (!process.env.SENDGRID_API_KEY) {
+    logger.warn("Cannot send booking cancellation email: SENDGRID_API_KEY not set");
+    return false;
+  }
+
+  try {
+    logger.info(`Sending cancellation email to customer: ${booking.email}`);
+
+    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    
+    const msg = {
+      to: booking.email,
+      from: fromEmail,
+      subject: 'Booking Cancelled - Picture Perfect TV Install',
+      text: `
+Dear ${booking.name},
+
+Your booking with Picture Perfect TV Install has been cancelled.
+
+Booking Details:
+- Booking ID: ${booking.id}
+- Date: ${new Date(booking.preferredDate).toLocaleDateString('en-US', { 
+  weekday: 'long', 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric' 
+})}
+- Time: ${booking.appointmentTime}
+- Service: ${booking.serviceType}
+
+${reason ? `Reason for cancellation: ${reason}` : ''}
+
+If this cancellation was made in error or if you would like to reschedule, please contact us at +16782632859.
+
+Thank you for considering Picture Perfect TV Install.
+
+Best regards,
+The Picture Perfect TV Install Team
+      `,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #f9fafb;
+    }
+    .header { 
+      background: linear-gradient(135deg, #7e1d1d 0%, #ef4444 100%);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      background: white;
+      padding: 30px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .appointment-details {
+      background-color: #fee2e2;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #ef4444;
+    }
+    .reason {
+      background-color: #fef3c7;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #d97706;
+    }
+    .contact {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .contact-button {
+      background-color: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .footer {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 30px;
+      color: #666;
+      padding: 20px;
+    }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { color: #be123c; font-size: 20px; margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Booking Cancelled</h1>
+  </div>
+
+  <div class="content">
+    <p>Dear <strong>${booking.name}</strong>,</p>
+
+    <p>Your booking with Picture Perfect TV Install has been cancelled.</p>
+
+    <div class="appointment-details">
+      <h2>📅 Cancelled Appointment Details</h2>
+      <p><strong>Booking ID:</strong> ${booking.id}</p>
+      <p><strong>Date:</strong> ${new Date(booking.preferredDate).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}</p>
+      <p><strong>Time:</strong> ${booking.appointmentTime}</p>
+      <p><strong>Service:</strong> ${booking.serviceType}</p>
+    </div>
+
+    ${reason ? `
+    <div class="reason">
+      <h2>ℹ️ Reason for Cancellation</h2>
+      <p>${reason}</p>
+    </div>
+    ` : ''}
+
+    <div class="contact">
+      <p>If this cancellation was made in error or if you would like to reschedule, please contact us:</p>
+      <p><strong>Phone:</strong> +16782632859</p>
+    </div>
+
+    <p style="text-align: center;">Thank you for considering Picture Perfect TV Install.</p>
+  </div>
+
+  <div class="footer">
+    <p>© ${new Date().getFullYear()} Picture Perfect TV Install. All rights reserved.</p>
+    <p>Professional TV Mounting Services in Metro Atlanta</p>
+  </div>
+</body>
+</html>
+      `,
+    };
+
+    await sgMail.send(msg);
+    logger.info(`Booking cancellation email sent to ${booking.email}`);
+    return true;
+  } catch (error) {
+    logger.error('Error sending booking cancellation email:', error);
+    if (error.response) {
+      logger.error('SendGrid API error response:', error.response.body);
+    }
+    return false;
+  }
+}
+
 export async function sendAdminBookingNotificationEmail(booking: any) {
   if (!process.env.SENDGRID_API_KEY) {
     console.warn("Cannot send admin notification email: SENDGRID_API_KEY not set");

@@ -73,7 +73,40 @@ export const bookings = pgTable('bookings', {
   mountType: varchar('mount_type', { length: 50 }),
   wallMaterial: varchar('wall_material', { length: 50 }),
   specialInstructions: text('special_instructions'),
-  createdAt: timestamp('created_at').defaultNow()
+  createdAt: timestamp('created_at').defaultNow(),
+  // Consent to receiving notifications
+  consentToContact: boolean('consent_to_contact').default(false),
+  // Field for cancellation reason
+  cancellationReason: text('cancellation_reason')
+});
+
+// Booking archives table - keeps record of deleted bookings
+export const bookingArchives = pgTable('booking_archives', {
+  id: serial('id').primaryKey(),
+  originalId: integer('original_id'), // Original booking ID
+  name: varchar('name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  streetAddress: varchar('street_address', { length: 255 }).notNull(),
+  addressLine2: varchar('address_line2', { length: 255 }),
+  city: varchar('city', { length: 100 }).notNull(),
+  state: varchar('state', { length: 2 }).notNull(),
+  zipCode: varchar('zip_code', { length: 5 }).notNull(),
+  notes: text('notes'),
+  serviceType: text('service_type').notNull(),
+  preferredDate: varchar('preferred_date', { length: 50 }).notNull(),
+  appointmentTime: varchar('appointment_time', { length: 20 }).notNull(),
+  status: varchar('status', { length: 20 }),
+  pricingTotal: text('total_price'),
+  pricingBreakdown: text('detailed_services'),
+  tvSize: varchar('tv_size', { length: 20 }),
+  mountType: varchar('mount_type', { length: 50 }),
+  wallMaterial: varchar('wall_material', { length: 50 }),
+  specialInstructions: text('special_instructions'),
+  originalCreatedAt: timestamp('original_created_at'), // When the booking was created
+  archivedAt: timestamp('archived_at').defaultNow(), // When the booking was archived
+  archiveReason: varchar('archive_reason', { length: 50 }), // Why was it archived: 'cancelled', 'deleted', etc.
+  archiveNote: text('archive_note') // Additional notes about archiving
 });
 
 // Business hours table
@@ -197,9 +230,46 @@ export type Customer = z.infer<typeof customerSchema> & {
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 
+// Booking archive types
+export const bookingArchiveSchema = z.object({
+  originalId: z.number().nullable(),
+  name: z.string(),
+  email: z.string().email(),
+  phone: z.string(),
+  streetAddress: z.string(),
+  addressLine2: z.string().nullable().optional(),
+  city: z.string(),
+  state: z.string(),
+  zipCode: z.string(),
+  notes: z.string().nullable().optional(),
+  serviceType: z.string(),
+  preferredDate: z.string(),
+  appointmentTime: z.string(),
+  status: z.string().nullable().optional(),
+  pricingTotal: z.string().nullable().optional(),
+  pricingBreakdown: z.string().nullable().optional(),
+  tvSize: z.string().nullable().optional(),
+  mountType: z.string().nullable().optional(),
+  wallMaterial: z.string().nullable().optional(),
+  specialInstructions: z.string().nullable().optional(),
+  archiveReason: z.string().nullable(),
+  archiveNote: z.string().nullable().optional()
+});
+
+export type BookingArchive = z.infer<typeof bookingArchiveSchema> & {
+  id?: number;
+  originalCreatedAt?: string | null;
+  archivedAt?: string | null;
+};
+
+export const insertBookingArchiveSchema = bookingArchiveSchema;
+export type InsertBookingArchive = z.infer<typeof insertBookingArchiveSchema>;
+
 // Export Drizzle types
 export type BookingSelect = typeof bookings.$inferSelect;
 export type BookingInsert = typeof bookings.$inferInsert;
+export type BookingArchiveSelect = typeof bookingArchives.$inferSelect;
+export type BookingArchiveInsert = typeof bookingArchives.$inferInsert;
 export type BusinessHoursSelect = typeof businessHours.$inferSelect;
 export type BusinessHoursInsert = typeof businessHours.$inferInsert;
 export type CustomerSelect = typeof customers.$inferSelect;

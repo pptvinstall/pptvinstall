@@ -11,7 +11,8 @@ import {
   FileText,
   Users,
   BookOpen,
-  ImageIcon
+  ImageIcon,
+  Archive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -47,6 +48,12 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
       href: '/admin?tab=bookings',
       tab: 'bookings',
       icon: Calendar
+    },
+    {
+      name: 'Archives',
+      href: '/admin?tab=archives',
+      tab: 'archives',
+      icon: Archive
     },
     {
       name: 'Availability',

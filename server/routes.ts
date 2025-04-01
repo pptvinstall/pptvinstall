@@ -7,7 +7,7 @@ import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./stor
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
-import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail } from "./services/emailService";
+import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail, sendBookingCancellationEmail } from "./services/emailService";
 
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
@@ -1788,6 +1788,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // API endpoint to get booking archives
+  app.get("/api/booking-archives", async (req: Request, res: Response) => {
+    try {
+      // Verify admin password
+      const password = req.query.adminPassword as string;
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized - Invalid admin password"
+        });
+      }
+      
+      // Get archives from the database
+      const archives = await storage.getBookingArchives();
+      
+      // Sort by archivedAt date, most recent first
+      archives.sort((a, b) => {
+        if (!a.archivedAt || !b.archivedAt) return 0;
+        return new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime();
+      });
+      
+      res.json({
+        success: true,
+        archives
+      });
+    } catch (error) {
+      logger.error('Error fetching booking archives', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking archives"
+      });
+    }
+  });
 
   // System Settings API Routes
   app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
@@ -1890,9 +1924,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a booking (permanent deletion)
+  // Delete a booking (with archive option)
   app.delete("/api/bookings/:id", async (req, res) => {
     const { id } = req.params;
+    const { reason, note, skipArchive, sendCancellationEmail } = req.query;
     
     try {
       if (isNaN(parseInt(id))) {
@@ -1904,27 +1939,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // First, check if the booking exists in the database
       const bookingId = parseInt(id);
-      const result = await db.select().from(bookings).where(eq(bookings.id, bookingId));
       
-      if (result.length === 0) {
-        return res.status(404).json({ 
-          success: false,
-          message: "Booking not found" 
+      try {
+        // Get the booking before deletion to use for email notification
+        const booking = await storage.getBooking(bookingId);
+        
+        if (!booking) {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found"
+          });
+        }
+        
+        // Use storage interface to handle deletion and archiving
+        await storage.deleteBooking(bookingId, 
+          skipArchive === 'true' ? undefined : (reason as string || 'admin-deleted'), 
+          note as string
+        );
+        
+        // Send cancellation email if requested
+        if (sendCancellationEmail === 'true' && booking.email) {
+          try {
+            const emailResult = await sendBookingCancellationEmail(booking, reason as string);
+            if (emailResult) {
+              logger.info(`Cancellation email sent to ${booking.email}`);
+            } else {
+              logger.warn(`Failed to send cancellation email to ${booking.email}`);
+            }
+          } catch (emailError) {
+            logger.error('Error sending cancellation email', emailError as Error);
+            // Continue with the deletion even if email fails
+          }
+        }
+        
+        res.json({ 
+          success: true, 
+          message: skipArchive === 'true' 
+            ? "Booking permanently deleted" 
+            : `Booking deleted and archived. ${sendCancellationEmail === 'true' ? 'Cancellation notification sent.' : ''}`
         });
+      } catch (error) {
+        if ((error as Error).message === 'Booking not found') {
+          return res.status(404).json({ 
+            success: false,
+            message: "Booking not found" 
+          });
+        }
+        throw error;
       }
-      
-      // Delete the booking from the database
-      await db.delete(bookings).where(eq(bookings.id, bookingId));
-      
-      res.json({ 
-        success: true, 
-        message: "Booking permanently deleted" 
-      });
     } catch (error) {
       logger.error('Error deleting booking', error as Error);
       res.status(500).json({ 
         success: false,
         message: "Failed to delete booking" 
+      });
+    }
+  });
+  
+  // Get all booking archives
+  app.get("/api/admin/booking-archives", async (req, res) => {
+    try {
+      // Verify admin password
+      const { password } = req.query;
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Unauthorized" 
+        });
+      }
+      
+      const archives = await storage.getBookingArchives();
+      
+      res.json({
+        success: true,
+        archives
+      });
+    } catch (error) {
+      logger.error('Error fetching booking archives', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking archives"
+      });
+    }
+  });
+  
+  // Get a specific booking archive by ID
+  app.get("/api/admin/booking-archives/:id", async (req, res) => {
+    try {
+      // Verify admin password
+      const { password } = req.query;
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Unauthorized" 
+        });
+      }
+      
+      const { id } = req.params;
+      if (isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid archive ID"
+        });
+      }
+      
+      const archive = await storage.getBookingArchiveById(parseInt(id));
+      
+      if (!archive) {
+        return res.status(404).json({
+          success: false,
+          message: "Archive not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        archive
+      });
+    } catch (error) {
+      logger.error('Error fetching booking archive', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking archive"
+      });
+    }
+  });
+  
+  // Get booking archives by reason
+  app.get("/api/admin/booking-archives/reason/:reason", async (req, res) => {
+    try {
+      // Verify admin password
+      const { password } = req.query;
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Unauthorized" 
+        });
+      }
+      
+      const { reason } = req.params;
+      const archives = await storage.getBookingArchivesByReason(reason);
+      
+      res.json({
+        success: true,
+        archives
+      });
+    } catch (error) {
+      logger.error('Error fetching booking archives by reason', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking archives"
+      });
+    }
+  });
+  
+  // Get booking archives by customer email
+  app.get("/api/admin/booking-archives/email/:email", async (req, res) => {
+    try {
+      // Verify admin password
+      const { password } = req.query;
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Unauthorized" 
+        });
+      }
+      
+      const { email } = req.params;
+      const archives = await storage.getBookingArchivesByEmail(email);
+      
+      res.json({
+        success: true,
+        archives
+      });
+    } catch (error) {
+      logger.error('Error fetching booking archives by email', error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking archives"
       });
     }
   });
