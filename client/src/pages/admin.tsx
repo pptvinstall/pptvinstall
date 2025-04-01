@@ -167,8 +167,27 @@ export default function AdminDashboard() {
 
       const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
 
-      const matchesDate = !dateFilter ||
-        format(new Date(booking.preferredDate), "yyyy-MM-dd") === format(dateFilter, "yyyy-MM-dd");
+      const matchesDate = !dateFilter || (() => {
+        try {
+          // Parse booking date parts
+          const [bookingYear, bookingMonth, bookingDay] = booking.preferredDate.split('-').map(Number);
+          // Create booking date object with components to avoid timezone issues
+          const bookingDate = new Date(bookingYear, bookingMonth - 1, bookingDay);
+          
+          // Create filter date string using components
+          const filterYear = dateFilter.getFullYear();
+          const filterMonth = dateFilter.getMonth() + 1;
+          const filterDay = dateFilter.getDate();
+          
+          // Compare year, month, and day directly
+          return bookingYear === filterYear && 
+                 bookingMonth === filterMonth && 
+                 bookingDay === filterDay;
+        } catch (e) {
+          console.error('Error comparing dates:', e);
+          return false;
+        }
+      })();
 
       return matchesSearch && matchesStatus && matchesDate;
     });
@@ -194,23 +213,60 @@ export default function AdminDashboard() {
     const cancelledBookings = bookings.filter((b: any) => b.status === 'cancelled');
 
     const upcomingBookings = activeBookings.filter((b: any) => {
-      const bookingDate = new Date(b.preferredDate);
-      return bookingDate >= today;
+      try {
+        // Parse booking date manually to avoid timezone issues
+        const [year, month, day] = b.preferredDate.split('-').map(Number);
+        // Create date with components (month is 0-indexed in JS Date)
+        const bookingDate = new Date(year, month - 1, day);
+        return bookingDate >= today;
+      } catch (e) {
+        console.error("Error parsing date:", e);
+        return false;
+      }
     });
 
     const todayBookings = upcomingBookings.filter((b: any) => {
-      const bookingDate = new Date(b.preferredDate);
-      return isSameDay(bookingDate, today);
+      try {
+        // Parse booking date manually to avoid timezone issues
+        const [year, month, day] = b.preferredDate.split('-').map(Number);
+        // Create date with components (month is 0-indexed in JS Date)
+        const bookingDate = new Date(year, month - 1, day);
+        return isSameDay(bookingDate, today);
+      } catch (e) {
+        console.error("Error parsing date:", e);
+        return false;
+      }
     });
 
     const weekBookings = upcomingBookings.filter((b: any) => {
-      const bookingDate = new Date(b.preferredDate);
-      return bookingDate <= weekEnd;
+      try {
+        // Parse booking date manually to avoid timezone issues
+        const [year, month, day] = b.preferredDate.split('-').map(Number);
+        // Create date with components (month is 0-indexed in JS Date)
+        const bookingDate = new Date(year, month - 1, day);
+        return bookingDate <= weekEnd;
+      } catch (e) {
+        console.error("Error parsing date:", e);
+        return false;
+      }
     });
 
     // Sort upcoming bookings by date
     const sortedUpcoming = [...upcomingBookings].sort((a: any, b: any) => {
-      return new Date(a.preferredDate).getTime() - new Date(b.preferredDate).getTime();
+      try {
+        // Parse dates manually to avoid timezone issues
+        const [aYear, aMonth, aDay] = a.preferredDate.split('-').map(Number);
+        const [bYear, bMonth, bDay] = b.preferredDate.split('-').map(Number);
+        
+        // Create dates with components (month is 0-indexed in JS Date)
+        const aDate = new Date(aYear, aMonth - 1, aDay);
+        const bDate = new Date(bYear, bMonth - 1, bDay);
+        
+        return aDate.getTime() - bDate.getTime();
+      } catch (e) {
+        console.error("Error sorting dates:", e);
+        return 0; // Keep original order if there's an error
+      }
     });
 
     return {
@@ -605,11 +661,28 @@ export default function AdminDashboard() {
                     className="rounded-md border w-full"
                     modifiers={{
                       booked: (date) => {
-                        const dateStr = format(date, "yyyy-MM-dd");
-                        return bookings.some((booking: any) => 
-                          booking.status === 'active' && 
-                          format(new Date(booking.preferredDate), "yyyy-MM-dd") === dateStr
-                        );
+                        // Format date manually to avoid timezone issues
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const dateStr = `${year}-${month}-${day}`;
+                        
+                        return bookings.some((booking: any) => {
+                          if (booking.status !== 'active') return false;
+                          
+                          try {
+                            // Parse booking date manually
+                            const [bookingYear, bookingMonth, bookingDay] = booking.preferredDate.split('-').map(Number);
+                            
+                            // Compare directly (no timezone issues)
+                            return bookingYear === year && 
+                                   bookingMonth === Number(month) && 
+                                   bookingDay === Number(day);
+                          } catch (e) {
+                            console.error('Error comparing booking dates:', e);
+                            return false;
+                          }
+                        });
                       }
                     }}
                     modifiersStyles={{
@@ -640,7 +713,10 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="space-y-4">
                       {dashboardStats.recentBookings.map((booking: any) => {
-                        const bookingDate = new Date(booking.preferredDate);
+                        // Parse date properly to avoid timezone issues
+                        const [bookingYear, bookingMonth, bookingDay] = booking.preferredDate.split('-').map(Number);
+                        // Create date with exact components (month is 0-indexed in JS Date)
+                        const bookingDate = new Date(bookingYear, bookingMonth - 1, bookingDay);
                         const daysUntil = differenceInDays(bookingDate, new Date());
 
                         return (
@@ -885,7 +961,18 @@ export default function AdminDashboard() {
                           <TableRow key={booking.id}>
                             <TableCell>
                               <div className="font-medium">
-                                {format(new Date(booking.preferredDate), "MMM d, yyyy")}
+                                {(() => {
+                                  // Parse date properly to avoid timezone issues
+                                  try {
+                                    const [year, month, day] = booking.preferredDate.split('-').map(Number);
+                                    // Create date with exact components (month is 0-indexed in JS Date)
+                                    const bookingDate = new Date(year, month - 1, day);
+                                    return format(bookingDate, "MMM d, yyyy");
+                                  } catch (e) {
+                                    console.error("Error formatting date:", e);
+                                    return booking.preferredDate; // Fallback to raw date
+                                  }
+                                })()}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {booking.appointmentTime}

@@ -115,7 +115,11 @@ export function BookingCalendar() {
 
   // Function to get bookings for the selected date
   const getSelectedDateBookings = () => {
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    // Format date manually to avoid timezone issues
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     return bookingsByDate[dateStr] || [];
   };
 
@@ -139,7 +143,11 @@ export function BookingCalendar() {
               className="rounded-md border"
               modifiers={{
                 booked: (date) => {
-                  const dateStr = format(date, "yyyy-MM-dd");
+                  // Format date manually to avoid timezone issues
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
                   return !!bookingsByDate[dateStr]?.length;
                 }
               }}
