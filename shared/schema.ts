@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { pgTable, serial, text, varchar, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, integer, jsonb, uniqueIndex, json } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
+import { relations } from 'drizzle-orm';
 
 // Contact form schema
 export const contactMessageSchema = z.object({
@@ -118,8 +119,88 @@ export type BusinessHours = z.infer<typeof businessHoursSchema> & {
 
 export type InsertBusinessHours = z.infer<typeof insertBusinessHoursSchema>;
 
+// Customer schema
+export const customerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  streetAddress: z.string().min(2, "Street address is required").optional(),
+  addressLine2: z.string().optional(),
+  city: z.string().min(2, "City is required").optional(),
+  state: z.string().min(2, "State is required").optional(),
+  zipCode: z.string().min(5, "Zip code must be at least 5 digits").optional(),
+  loyaltyPoints: z.number().default(0),
+  memberSince: z.string().optional()
+});
+
+export const insertCustomerSchema = customerSchema;
+
+// Customers table
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  password: varchar('password', { length: 255 }).notNull(),
+  streetAddress: varchar('street_address', { length: 255 }),
+  addressLine2: varchar('address_line2', { length: 255 }),
+  city: varchar('city', { length: 100 }),
+  state: varchar('state', { length: 2 }),
+  zipCode: varchar('zip_code', { length: 5 }),
+  loyaltyPoints: integer('loyalty_points').default(0),
+  memberSince: timestamp('member_since').defaultNow(),
+  lastLogin: timestamp('last_login'),
+  verificationToken: varchar('verification_token', { length: 100 }),
+  isVerified: boolean('is_verified').default(false),
+  passwordResetToken: varchar('password_reset_token', { length: 100 }),
+  passwordResetExpires: timestamp('password_reset_expires')
+}, (table) => {
+  return {
+    emailIdx: uniqueIndex('customers_email_idx').on(table.email)
+  }
+});
+
+// Add customerId to bookings table
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  customer: one(customers, {
+    fields: [bookings.email],
+    references: [customers.email],
+  })
+}));
+
+export const customersRelations = relations(customers, ({ many }) => ({
+  bookings: many(bookings)
+}));
+
+// Create Drizzle insert schema for customers
+export const insertCustomerDrizzleSchema = createInsertSchema(customers).omit({
+  id: true,
+  memberSince: true,
+  lastLogin: true,
+  verificationToken: true,
+  isVerified: true,
+  passwordResetToken: true,
+  passwordResetExpires: true
+});
+
+// Export types
+export type Customer = z.infer<typeof customerSchema> & {
+  id?: number;
+  memberSince?: string;
+  lastLogin?: string;
+  verificationToken?: string;
+  isVerified?: boolean;
+  passwordResetToken?: string;
+  passwordResetExpires?: string;
+};
+
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+
 // Export Drizzle types
 export type BookingSelect = typeof bookings.$inferSelect;
 export type BookingInsert = typeof bookings.$inferInsert;
 export type BusinessHoursSelect = typeof businessHours.$inferSelect;
 export type BusinessHoursInsert = typeof businessHours.$inferInsert;
+export type CustomerSelect = typeof customers.$inferSelect;
+export type CustomerInsert = typeof customers.$inferInsert;

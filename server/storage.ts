@@ -1,9 +1,13 @@
-import { type Booking, type ContactMessage, type InsertBooking, type InsertContactMessage, type BusinessHours, type InsertBusinessHours } from "@shared/schema";
+import { type Booking, type ContactMessage, type InsertBooking, type InsertContactMessage, 
+  type BusinessHours, type InsertBusinessHours, type Customer, type InsertCustomer,
+  bookings, customers, businessHours } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // Since bookings and contactMessages tables are not exported from schema
 // We'll use local file system storage instead
@@ -125,6 +129,18 @@ export interface IStorage {
   getBusinessHours(): Promise<BusinessHours[]>;
   updateBusinessHours(dayOfWeek: number, data: Partial<BusinessHours>): Promise<BusinessHours>;
   getBusinessHoursForDay(dayOfWeek: number): Promise<BusinessHours | undefined>;
+  
+  // Customer Management
+  createCustomer(customerData: InsertCustomer): Promise<Customer>;
+  getCustomerById(id: number): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer>;
+  getCustomerBookings(customerId: number): Promise<Booking[]>;
+  addLoyaltyPoints(customerId: number, points: number): Promise<Customer>;
+  verifyCustomer(email: string, token: string): Promise<boolean>;
+  requestPasswordReset(email: string): Promise<string | null>; // Returns reset token if successful
+  resetPassword(email: string, token: string, newPassword: string): Promise<boolean>;
+  validateCustomerCredentials(email: string, password: string): Promise<Customer | null>;
 }
 
 export class FileSystemStorage implements IStorage {
@@ -252,6 +268,347 @@ export class FileSystemStorage implements IStorage {
       fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
     } catch (error) {
       console.error('Error saving contact messages:', error);
+    }
+  }
+  
+  // Helper method to convert database customer to model
+  private mapDatabaseCustomerToModel(dbCustomer: any): Customer {
+    return {
+      id: dbCustomer.id,
+      name: dbCustomer.name,
+      email: dbCustomer.email,
+      phone: dbCustomer.phone,
+      password: dbCustomer.password,
+      streetAddress: dbCustomer.streetAddress || undefined,
+      addressLine2: dbCustomer.addressLine2 || undefined,
+      city: dbCustomer.city || undefined,
+      state: dbCustomer.state || undefined,
+      zipCode: dbCustomer.zipCode || undefined,
+      loyaltyPoints: dbCustomer.loyaltyPoints || 0,
+      memberSince: dbCustomer.memberSince ? new Date(dbCustomer.memberSince).toISOString() : undefined,
+      lastLogin: dbCustomer.lastLogin ? new Date(dbCustomer.lastLogin).toISOString() : undefined,
+      verificationToken: dbCustomer.verificationToken || undefined,
+      isVerified: dbCustomer.isVerified || false,
+      passwordResetToken: dbCustomer.passwordResetToken || undefined,
+      passwordResetExpires: dbCustomer.passwordResetExpires 
+        ? new Date(dbCustomer.passwordResetExpires).toISOString() 
+        : undefined
+    };
+  }
+  
+  // Helper method to convert database booking to model
+  private mapDatabaseBookingToModel(dbBooking: any): Booking {
+    const result: any = {
+      name: dbBooking.name,
+      email: dbBooking.email,
+      phone: dbBooking.phone,
+      streetAddress: dbBooking.streetAddress,
+      addressLine2: dbBooking.addressLine2 || undefined,
+      city: dbBooking.city,
+      state: dbBooking.state,
+      zipCode: dbBooking.zipCode,
+      notes: dbBooking.notes || undefined,
+      serviceType: dbBooking.serviceType,
+      date: dbBooking.date || dbBooking.preferredDate, // Handle both field names
+      time: dbBooking.time || dbBooking.appointmentTime, // Handle both field names
+      status: dbBooking.status || 'active',
+    };
+    
+    // Convert ID to string if it exists
+    if (dbBooking.id !== undefined) {
+      result.id = dbBooking.id.toString();
+    }
+    
+    // Handle dates properly
+    if (dbBooking.createdAt) {
+      result.createdAt = dbBooking.createdAt instanceof Date 
+        ? dbBooking.createdAt.toISOString() 
+        : dbBooking.createdAt;
+    }
+    
+    // Handle optional fields
+    if (dbBooking.pricingTotal) result.pricingTotal = dbBooking.pricingTotal;
+    if (dbBooking.pricingBreakdown) result.pricingBreakdown = dbBooking.pricingBreakdown;
+    if (dbBooking.tvSize) result.tvSize = dbBooking.tvSize;
+    if (dbBooking.mountType) result.mountType = dbBooking.mountType;
+    if (dbBooking.wallMaterial) result.wallMaterial = dbBooking.wallMaterial;
+    if (dbBooking.specialInstructions) result.specialInstructions = dbBooking.specialInstructions;
+    if (dbBooking.customerId) result.customerId = dbBooking.customerId.toString();
+    
+    return result as Booking;
+  }
+
+  // Customer Management methods
+  async createCustomer(customerData: InsertCustomer): Promise<Customer> {
+    try {
+      // Hash the password before storing
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(customerData.password, salt);
+      
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      
+      // Prepare customer data for insertion
+      const customerForDb = {
+        ...customerData,
+        password: hashedPassword,
+        verificationToken: verificationToken,
+        isVerified: false,
+        memberSince: new Date(),
+        loyaltyPoints: 0
+      };
+      
+      // Insert into database
+      const result = await db.insert(customers)
+        .values(customerForDb)
+        .returning();
+      
+      if (result.length === 0) {
+        throw new Error('Failed to create customer');
+      }
+      
+      return this.mapDatabaseCustomerToModel(result[0]);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      throw error;
+    }
+  }
+  
+  async getCustomerById(id: number): Promise<Customer | undefined> {
+    try {
+      const result = await db.select().from(customers).where(eq(customers.id, id));
+      return result.length > 0 ? this.mapDatabaseCustomerToModel(result[0]) : undefined;
+    } catch (error) {
+      console.error('Error fetching customer by ID:', error);
+      throw error;
+    }
+  }
+  
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    try {
+      const result = await db.select().from(customers).where(eq(customers.email, email));
+      return result.length > 0 ? this.mapDatabaseCustomerToModel(result[0]) : undefined;
+    } catch (error) {
+      console.error('Error fetching customer by email:', error);
+      throw error;
+    }
+  }
+  
+  async updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer> {
+    try {
+      // If the update includes a password, hash it
+      if (customerData.password) {
+        const salt = await bcrypt.genSalt(10);
+        customerData.password = await bcrypt.hash(customerData.password, salt);
+      }
+      
+      // Convert any date strings to Date objects
+      const dbFormatData: any = { ...customerData };
+      delete dbFormatData.memberSince; // Don't allow updating member since date
+      
+      const result = await db.update(customers)
+        .set(dbFormatData)
+        .where(eq(customers.id, id))
+        .returning();
+      
+      if (result.length === 0) {
+        throw new Error('Customer not found');
+      }
+      
+      return this.mapDatabaseCustomerToModel(result[0]);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      throw error;
+    }
+  }
+  
+  async getCustomerBookings(customerId: number): Promise<Booking[]> {
+    try {
+      // First get the customer to find their email
+      const customerResult = await db.select().from(customers).where(eq(customers.id, customerId));
+      
+      if (customerResult.length === 0) {
+        throw new Error('Customer not found');
+      }
+      
+      const customerEmail = customerResult[0].email;
+      
+      // Then find all bookings with that email
+      const result = await db.select()
+        .from(bookings)
+        .where(eq(bookings.email, customerEmail))
+        .orderBy(desc(bookings.createdAt));
+      
+      return result.map(booking => this.mapDatabaseBookingToModel(booking));
+    } catch (error) {
+      console.error('Error fetching customer bookings:', error);
+      throw error;
+    }
+  }
+  
+  async addLoyaltyPoints(customerId: number, points: number): Promise<Customer> {
+    try {
+      // First get the current loyalty points
+      const customerResult = await db.select().from(customers).where(eq(customers.id, customerId));
+      
+      if (customerResult.length === 0) {
+        throw new Error('Customer not found');
+      }
+      
+      const currentPoints = customerResult[0].loyaltyPoints || 0;
+      const newPoints = currentPoints + points;
+      
+      // Update the loyalty points
+      const result = await db.update(customers)
+        .set({ loyaltyPoints: newPoints })
+        .where(eq(customers.id, customerId))
+        .returning();
+      
+      return this.mapDatabaseCustomerToModel(result[0]);
+    } catch (error) {
+      console.error('Error adding loyalty points:', error);
+      throw error;
+    }
+  }
+  
+  async verifyCustomer(email: string, token: string): Promise<boolean> {
+    try {
+      // Find customer with matching email and verification token
+      const customerResult = await db.select()
+        .from(customers)
+        .where(
+          and(
+            eq(customers.email, email),
+            eq(customers.verificationToken, token)
+          )
+        );
+      
+      if (customerResult.length === 0) {
+        return false;
+      }
+      
+      // Update customer to be verified
+      await db.update(customers)
+        .set({
+          isVerified: true,
+          verificationToken: null
+        })
+        .where(eq(customers.id, customerResult[0].id));
+      
+      return true;
+    } catch (error) {
+      console.error('Error verifying customer:', error);
+      return false;
+    }
+  }
+  
+  async requestPasswordReset(email: string): Promise<string | null> {
+    try {
+      // Find customer with matching email
+      const customerResult = await db.select()
+        .from(customers)
+        .where(eq(customers.email, email));
+      
+      if (customerResult.length === 0) {
+        return null;
+      }
+      
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      
+      // Set token expiration (1 hour from now)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1);
+      
+      // Update customer with reset token and expiration
+      await db.update(customers)
+        .set({
+          passwordResetToken: resetToken,
+          passwordResetExpires: expiresAt
+        })
+        .where(eq(customers.id, customerResult[0].id));
+      
+      return resetToken;
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      return null;
+    }
+  }
+  
+  async resetPassword(email: string, token: string, newPassword: string): Promise<boolean> {
+    try {
+      // Find customer with matching email and reset token
+      const customerResult = await db.select()
+        .from(customers)
+        .where(
+          and(
+            eq(customers.email, email),
+            eq(customers.passwordResetToken, token)
+          )
+        );
+      
+      if (customerResult.length === 0) {
+        return false;
+      }
+      
+      const customer = customerResult[0];
+      
+      // Check if token is expired
+      if (customer.passwordResetExpires && new Date() > new Date(customer.passwordResetExpires)) {
+        return false;
+      }
+      
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      
+      // Update password and clear reset token
+      await db.update(customers)
+        .set({
+          password: hashedPassword,
+          passwordResetToken: null,
+          passwordResetExpires: null
+        })
+        .where(eq(customers.id, customer.id));
+      
+      return true;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      return false;
+    }
+  }
+  
+  async validateCustomerCredentials(email: string, password: string): Promise<Customer | null> {
+    try {
+      // Find customer with matching email
+      const customerResult = await db.select()
+        .from(customers)
+        .where(eq(customers.email, email));
+      
+      if (customerResult.length === 0) {
+        return null;
+      }
+      
+      const customer = customerResult[0];
+      
+      // Check if password matches
+      const isPasswordValid = await bcrypt.compare(password, customer.password);
+      
+      if (!isPasswordValid) {
+        return null;
+      }
+      
+      // Update last login timestamp
+      await db.update(customers)
+        .set({
+          lastLogin: new Date()
+        })
+        .where(eq(customers.id, customer.id));
+      
+      return this.mapDatabaseCustomerToModel(customer);
+    } catch (error) {
+      console.error('Error validating customer credentials:', error);
+      return null;
     }
   }
 }

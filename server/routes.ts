@@ -1,7 +1,7 @@
 import { type Express, Request as ExpressRequest, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { db } from "./db";
-import { bookingSchema, bookings, businessHoursSchema } from "@shared/schema";
+import { bookingSchema, bookings, businessHoursSchema, customers, customerSchema, insertCustomerSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
@@ -799,12 +799,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/bookings/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = req.body;
+      const updates = {...req.body};
       const sendUpdateEmail = updates.sendUpdateEmail === true;
       
       // Remove the sendUpdateEmail flag from updates so it doesn't get stored
       if (updates.sendUpdateEmail !== undefined) {
         delete updates.sendUpdateEmail;
+      }
+      
+      // Make sure createdAt is a proper Date object if it exists
+      if (updates.createdAt && typeof updates.createdAt === 'string') {
+        // Don't send createdAt in update - it will be preserved
+        delete updates.createdAt;
       }
 
       if (isNaN(id)) {
@@ -825,6 +831,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: false,
             message: "Booking not found"
           });
+        }
+      }
+      
+      // Handle pricingBreakdown - if it's a string, parse it
+      if (typeof updates.pricingBreakdown === 'string') {
+        try {
+          updates.pricingBreakdown = JSON.parse(updates.pricingBreakdown);
+        } catch (e) {
+          // If it can't be parsed, set to null
+          updates.pricingBreakdown = null;
         }
       }
 
@@ -896,6 +912,434 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer API Endpoints
+  
+  // Register a new customer
+  app.post("/api/customers/register", async (req: Request, res: Response) => {
+    try {
+      const { name, email, phone, password, streetAddress, addressLine2, city, state, zipCode } = req.body;
+      
+      // Validate input data
+      try {
+        insertCustomerSchema.parse({
+          name,
+          email,
+          phone,
+          password,
+          streetAddress,
+          addressLine2,
+          city,
+          state,
+          zipCode
+        });
+      } catch (validationError) {
+        if (validationError instanceof ZodError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid customer data",
+            errors: validationError.errors
+          });
+        }
+        throw validationError;
+      }
+      
+      // Check if customer already exists
+      const existingCustomer = await storage.getCustomerByEmail(email);
+      
+      if (existingCustomer) {
+        return res.status(400).json({
+          success: false,
+          message: "A customer with this email already exists"
+        });
+      }
+      
+      // Create new customer
+      const newCustomer = await storage.createCustomer({
+        name,
+        email,
+        phone,
+        password,
+        streetAddress,
+        addressLine2,
+        city,
+        state,
+        zipCode,
+        loyaltyPoints: 0
+      });
+      
+      // Don't return the password
+      const { password: _, ...customerWithoutPassword } = newCustomer;
+      
+      res.status(201).json({
+        success: true,
+        message: "Customer registered successfully",
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error registering customer:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to register customer"
+      });
+    }
+  });
+  
+  // Customer login
+  app.post("/api/customers/login", async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Validate credentials
+      const customer = await storage.validateCustomerCredentials(email, password);
+      
+      if (!customer) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials"
+        });
+      }
+      
+      // Don't return the password
+      const { password: _, ...customerWithoutPassword } = customer;
+      
+      res.json({
+        success: true,
+        message: "Login successful",
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error logging in customer:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to login"
+      });
+    }
+  });
+  
+  // Get customer profile
+  app.get("/api/customers/profile/:id", async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      
+      if (isNaN(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID"
+        });
+      }
+      
+      const customer = await storage.getCustomerById(customerId);
+      
+      if (!customer) {
+        return res.status(404).json({
+          success: false,
+          message: "Customer not found"
+        });
+      }
+      
+      // Don't return the password
+      const { password, ...customerWithoutPassword } = customer;
+      
+      res.json({
+        success: true,
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error fetching customer profile:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch customer profile"
+      });
+    }
+  });
+  
+  // Update customer profile
+  app.put("/api/customers/profile/:id", async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      if (isNaN(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID"
+        });
+      }
+      
+      // Don't allow updating the email or loyalty points directly
+      delete updates.email;
+      delete updates.loyaltyPoints;
+      delete updates.memberSince;
+      delete updates.lastLogin;
+      delete updates.verificationToken;
+      delete updates.isVerified;
+      delete updates.passwordResetToken;
+      delete updates.passwordResetExpires;
+      
+      const updatedCustomer = await storage.updateCustomer(customerId, updates);
+      
+      // Don't return the password
+      const { password, ...customerWithoutPassword } = updatedCustomer;
+      
+      res.json({
+        success: true,
+        message: "Profile updated successfully",
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error updating customer profile:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update profile"
+      });
+    }
+  });
+  
+  // Get customer bookings
+  app.get("/api/customers/:id/bookings", async (req: Request, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      
+      if (isNaN(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID"
+        });
+      }
+      
+      const bookings = await storage.getCustomerBookings(customerId);
+      
+      res.json({
+        success: true,
+        bookings
+      });
+    } catch (error) {
+      logger.error("Error fetching customer bookings:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch bookings"
+      });
+    }
+  });
+  
+  // Reset password request
+  app.post("/api/customers/reset-password-request", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      // Request password reset
+      const resetToken = await storage.requestPasswordReset(email);
+      
+      // Even if the email doesn't exist, still return success
+      // This is to prevent email enumeration attacks
+      res.json({
+        success: true,
+        message: "If your email exists in our system, you will receive a password reset link shortly"
+      });
+      
+      // If a token was generated, send an email with the reset link
+      if (resetToken) {
+        // TODO: Implement sending reset email here
+        logger.info(`Password reset requested for ${email}. Token: ${resetToken}`);
+      }
+    } catch (error) {
+      logger.error("Error requesting password reset:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process password reset request"
+      });
+    }
+  });
+  
+  // Reset password
+  app.post("/api/customers/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { email, token, newPassword } = req.body;
+      
+      if (!email || !token || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields"
+        });
+      }
+      
+      // Try to reset the password
+      const success = await storage.resetPassword(email, token, newPassword);
+      
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid or expired reset token"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Password reset successful"
+      });
+    } catch (error) {
+      logger.error("Error resetting password:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to reset password"
+      });
+    }
+  });
+  
+  // Verify customer email
+  app.get("/api/customers/verify/:email/:token", async (req: Request, res: Response) => {
+    try {
+      const { email, token } = req.params;
+      
+      const success = await storage.verifyCustomer(email, token);
+      
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid verification token"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Email verified successfully"
+      });
+    } catch (error) {
+      logger.error("Error verifying email:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to verify email"
+      });
+    }
+  });
+  
+  // Admin customer management endpoints
+  
+  // List all customers (admin)
+  app.get("/api/admin/customers", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      // Get all customers from database
+      const result = await db.select({
+        id: customers.id,
+        name: customers.name,
+        email: customers.email,
+        phone: customers.phone,
+        streetAddress: customers.streetAddress,
+        city: customers.city,
+        state: customers.state,
+        zipCode: customers.zipCode,
+        loyaltyPoints: customers.loyaltyPoints,
+        memberSince: customers.memberSince,
+        lastLogin: customers.lastLogin,
+        isVerified: customers.isVerified
+      }).from(customers);
+      
+      res.json({
+        success: true,
+        customers: result
+      });
+    } catch (error) {
+      logger.error("Error fetching customers:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch customers"
+      });
+    }
+  });
+  
+  // Get customer details (admin)
+  app.get("/api/admin/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      const customerId = parseInt(req.params.id);
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      if (isNaN(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID"
+        });
+      }
+      
+      const customer = await storage.getCustomerById(customerId);
+      
+      if (!customer) {
+        return res.status(404).json({
+          success: false,
+          message: "Customer not found"
+        });
+      }
+      
+      // Don't return the password
+      const { password: _, ...customerWithoutPassword } = customer;
+      
+      res.json({
+        success: true,
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error fetching customer details:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch customer details"
+      });
+    }
+  });
+  
+  // Update customer (admin)
+  app.put("/api/admin/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const { password, ...updates } = req.body;
+      const customerId = parseInt(req.params.id);
+      
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid password"
+        });
+      }
+      
+      if (isNaN(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID"
+        });
+      }
+      
+      const updatedCustomer = await storage.updateCustomer(customerId, updates);
+      
+      // Don't return the password
+      const { password: _, ...customerWithoutPassword } = updatedCustomer;
+      
+      res.json({
+        success: true,
+        message: "Customer updated successfully",
+        customer: customerWithoutPassword
+      });
+    } catch (error) {
+      logger.error("Error updating customer:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update customer"
+      });
+    }
+  });
+  
   // Admin endpoints
   // The adminPassword variable is no longer needed here because it's managed by verifyAdminPassword function.
 
