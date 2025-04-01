@@ -134,17 +134,24 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
       <div className="flex md:hidden w-full flex-col fixed bottom-0 left-0 right-0 z-10 bg-background border-t">
         <div className="grid grid-cols-5 gap-1 p-1">
           {navItems.slice(0, 5).map((item) => {
-            const isActive = location.includes(item.href);
+            // Check if the URL includes the tab parameter that matches the current item
+            const currentTab = new URLSearchParams(window.location.search).get('tab');
+            // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
+            const isActive = (!currentTab && item.tab === 'dashboard') || currentTab === item.tab;
+            
             return (
-              <Link
+              <button
                 key={item.name}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setLocation(item.href);
+                onClick={() => {
+                  // Directly update the URL with the tab parameter
+                  if (item.tab === 'dashboard') {
+                    setLocation('/admin');
+                  } else {
+                    setLocation(`/admin?tab=${item.tab}`);
+                  }
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md",
+                  "flex flex-col items-center justify-center px-2 py-2 text-xs rounded-md border-0 bg-transparent",
                   isActive 
                     ? "bg-primary/10 text-primary" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -152,7 +159,7 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
               >
                 <item.icon className="h-5 w-5 mb-1" />
                 <span className="truncate">{item.name}</span>
-              </Link>
+              </button>
             );
           })}
         </div>
