@@ -35,20 +35,14 @@ import { Icons } from "../icons";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingAssistant, BookingAssistantButton } from "./booking-assistant";
-import { BookingTutorial, useFirstTimeUser } from "./booking-tutorial";
-import { 
-  ServiceSelectionGuide, 
-  DateTimeGuide, 
-  ContactInfoGuide, 
-  ReviewGuide,
-  AccessibilityNote 
-} from "./booking-step-guide";
+import { BookingTutorial } from "./booking-tutorial";
+import { useFirstTimeUser, BookingStepGuide } from "./booking-step-guide";
 import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger 
-} from '@/components/ui/tooltip';
+} from './tooltip';
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 
 // Service-related interfaces 
@@ -862,12 +856,166 @@ export function IntegratedBookingWizard({
   };
 
   return (
-    <div className="w-full booking-wizard-container mx-auto relative" style={{ position: 'relative' }}>
+    <div className={cn(
+      "w-full booking-wizard-container mx-auto relative", 
+      textSizeMode === 'large' && "text-lg",
+      textSizeMode === 'extra-large' && "text-xl",
+      highContrastMode && "high-contrast-mode"
+    )} style={{ position: 'relative' }}>
+      {/* Tutorial modal for first-time users */}
+      {showTutorial && (
+        <BookingTutorial 
+          onClose={() => {
+            setShowTutorial(false);
+            markAsReturningUser();
+          }}
+          onEnable={() => setGuidanceMode('full')}
+        />
+      )}
+      
+      {/* Accessibility tools */}
+      <div className="flex justify-between mb-4">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setGuidanceMode(guidanceMode === 'hidden' ? 'full' : 'hidden')}
+                className="flex items-center"
+              >
+                <HelpCircle className="h-4 w-4 mr-1.5" />
+                Help
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Toggle help assistant</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAccessibilityOptions(!showAccessibilityOptions)}
+                className="flex items-center"
+              >
+                <Settings2 className="h-4 w-4 mr-1.5" />
+                Accessibility
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Adjust text size and contrast</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* Accessibility options panel */}
+      {showAccessibilityOptions && (
+        <Card className="mb-4">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Text Size</h3>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant={textSizeMode === 'normal' ? 'default' : 'outline'} 
+                    onClick={() => setTextSizeMode('normal')}
+                    className="flex-1"
+                  >
+                    Normal
+                  </Button>
+                  <Button 
+                    variant={textSizeMode === 'large' ? 'default' : 'outline'} 
+                    onClick={() => setTextSizeMode('large')}
+                    className="flex-1"
+                  >
+                    Large
+                  </Button>
+                  <Button 
+                    variant={textSizeMode === 'extra-large' ? 'default' : 'outline'} 
+                    onClick={() => setTextSizeMode('extra-large')}
+                    className="flex-1"
+                  >
+                    Extra Large
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Display</h3>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant={highContrastMode ? 'default' : 'outline'} 
+                    onClick={() => setHighContrastMode(!highContrastMode)}
+                    className="flex-1"
+                  >
+                    {highContrastMode ? 'Disable' : 'Enable'} High Contrast
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Guidance Level</h3>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant={guidanceMode === 'minimal' ? 'default' : 'outline'} 
+                    onClick={() => setGuidanceMode('minimal')}
+                    className="flex-1"
+                  >
+                    Basic
+                  </Button>
+                  <Button 
+                    variant={guidanceMode === 'full' ? 'default' : 'outline'} 
+                    onClick={() => setGuidanceMode('full')}
+                    className="flex-1"
+                  >
+                    Detailed
+                  </Button>
+                  <Button 
+                    variant={guidanceMode === 'hidden' ? 'default' : 'outline'} 
+                    onClick={() => setGuidanceMode('hidden')}
+                    className="flex-1"
+                  >
+                    None
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="space-y-6 relative">
         {/* Mobile-optimized step indicator with reduced padding on small screens */}
         <div className="px-2 sm:px-0">
           <StepIndicator currentStep={currentStep} totalSteps={4} />
         </div>
+        
+        {/* Booking Assistant - Shows conditionally based on guidanceMode */}
+        {guidanceMode === 'full' && (
+          <BookingAssistant
+            currentStep={currentStep}
+            onClose={() => setGuidanceMode('minimal')}
+          />
+        )}
+        
+        {guidanceMode === 'minimal' && (
+          <div className="mb-4">
+            <BookingAssistantButton
+              onClick={() => setGuidanceMode('full')}
+            />
+          </div>
+        )}
+        
+        {/* Step-specific guidance that's always visible */}
+        {guidanceMode !== 'hidden' && (
+          <BookingStepGuide currentStep={currentStep} />
+        )}
 
         <AnimatePresence mode="wait">
           <motion.div

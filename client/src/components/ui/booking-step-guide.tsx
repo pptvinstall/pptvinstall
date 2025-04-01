@@ -1,92 +1,83 @@
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  LightbulbIcon, 
-  CalendarIcon, 
-  FileTextIcon, 
-  ClipboardCheckIcon,
-  AccessibilityIcon
-} from "lucide-react";
+import { Info, Lightbulb } from 'lucide-react';
 
-export function ServiceSelectionGuide() {
+interface BookingStepGuideProps {
+  currentStep: number;
+}
+
+export function BookingStepGuide({ currentStep }: BookingStepGuideProps) {
+  const guide = getStepGuide(currentStep);
+  
   return (
-    <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-      <LightbulbIcon className="h-4 w-4 text-blue-600" />
-      <AlertTitle className="text-blue-700">Service Selection Tips</AlertTitle>
-      <AlertDescription className="text-blue-600">
-        <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-          <li>For TV mounting, first select the size of your TV.</li>
-          <li>If installing above a fireplace, choose "Above Fireplace" option.</li>
-          <li>Not sure about mount type? Your technician can help you decide during installation.</li>
-          <li>For smart home devices, specify if you have existing wiring for accurate pricing.</li>
-        </ul>
-      </AlertDescription>
-    </Alert>
+    <div className="step-guide">
+      <h4 className="step-guide-title">
+        <Info className="inline-block h-4 w-4 mr-1" />
+        {guide.title}
+      </h4>
+      <div className="step-guide-content">
+        <p>{guide.content}</p>
+        
+        {guide.tip && (
+          <div className="step-guide-tip">
+            <div className="flex items-start">
+              <Lightbulb className="h-4 w-4 mt-0.5 mr-2 text-primary" />
+              <span>{guide.tip}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-export function DateTimeGuide() {
-  return (
-    <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-      <CalendarIcon className="h-4 w-4 text-blue-600" />
-      <AlertTitle className="text-blue-700">Appointment Selection Tips</AlertTitle>
-      <AlertDescription className="text-blue-600">
-        <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-          <li>Dates in <strong>gray</strong> are unavailable. Available dates are in white.</li>
-          <li>Installation times are shown in 60-minute slots.</li>
-          <li>Our installations typically take 2-3 hours to complete.</li>
-          <li>For faster scheduling, use the "Find Next Available Slot" button.</li>
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
+function getStepGuide(step: number) {
+  switch(step) {
+    case 0:
+      return {
+        title: "Service Selection Guide",
+        content: "Select the services you need by adding TVs and smart home devices to your cart. You can add multiple items.",
+        tip: "Remember that we provide all mounting hardware, but you can select 'customer-provided' if you have your own mount. For brick or stone walls, be sure to select that option for accurate pricing."
+      };
+    case 1:
+      return {
+        title: "Appointment Selection Guide",
+        content: "Click on a date on the calendar to see available time slots. Gray time slots are unavailable.",
+        tip: "We leave buffer time between appointments, so not all times will be available. Weekend times fill up quickly, so consider a weekday if possible."
+      };
+    case 2:
+      return {
+        title: "Contact Information Guide",
+        content: "Provide your contact details so we can confirm your appointment and reach you on installation day.",
+        tip: "If your address has special access instructions or gate codes, please include them in the notes section."
+      };
+    case 3:
+      return {
+        title: "Review Your Booking",
+        content: "Check all your information before confirming. You'll receive a confirmation email with all details.",
+        tip: "If something looks incorrect, you can use the Back button to make changes to any section."
+      };
+    default:
+      return {
+        title: "Booking Guide",
+        content: "Follow each step to complete your booking. If you need help, click the Help button at any time.",
+        tip: "You can adjust text size and contrast using the Accessibility options if needed."
+      };
+  }
 }
 
-export function ContactInfoGuide() {
-  return (
-    <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-      <FileTextIcon className="h-4 w-4 text-blue-600" />
-      <AlertTitle className="text-blue-700">Contact Information Tips</AlertTitle>
-      <AlertDescription className="text-blue-600">
-        <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-          <li>Please provide an accurate phone number for appointment confirmations.</li>
-          <li>Double-check your address details for correct installation location.</li>
-          <li>If your building has special access instructions, include them in the notes.</li>
-          <li>All fields marked with <span className="text-red-500">*</span> are required.</li>
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
-}
-
-export function ReviewGuide() {
-  return (
-    <Alert className="mb-4 bg-blue-50 text-blue-800 border-blue-200">
-      <ClipboardCheckIcon className="h-4 w-4 text-blue-600" />
-      <AlertTitle className="text-blue-700">Review Your Booking</AlertTitle>
-      <AlertDescription className="text-blue-600">
-        <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-          <li>Check that all selected services match what you need.</li>
-          <li>Verify your appointment date and time are correct.</li>
-          <li>Confirm your contact information is accurate.</li>
-          <li>After submission, you'll receive a confirmation email with your booking details.</li>
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
-}
-
-export function AccessibilityNote({ className }: { className?: string }) {
-  return (
-    <Alert className={`bg-amber-50 text-amber-800 border-amber-200 ${className}`}>
-      <AccessibilityIcon className="h-4 w-4 text-amber-600" />
-      <AlertTitle className="text-amber-700">Need Additional Help?</AlertTitle>
-      <AlertDescription className="text-amber-600">
-        <p className="mt-2 text-sm">
-          If you have difficulty completing this booking form, please call us at (404) 555-1234 
-          for assistance. Our customer service team is available Monday-Friday from 9am to 5pm.
-        </p>
-      </AlertDescription>
-    </Alert>
-  );
+// Hook for first-time user detection
+export function useFirstTimeUser() {
+  const [isFirstTime, setIsFirstTime] = React.useState<boolean>(() => {
+    // Check if this is the first visit based on localStorage
+    const hasVisitedBefore = localStorage.getItem('hasVisitedBookingPage');
+    return hasVisitedBefore !== 'true';
+  });
+  
+  // Mark user as returning
+  const markAsReturningUser = () => {
+    localStorage.setItem('hasVisitedBookingPage', 'true');
+    setIsFirstTime(false);
+  };
+  
+  return { isFirstTime, markAsReturningUser };
 }
