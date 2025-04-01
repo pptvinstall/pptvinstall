@@ -95,13 +95,17 @@ export function useBusinessHours() {
     
     console.log(`Business hours: ${startHour}:${startMinute} - ${endHour}:${endMinute}`);
     
-    // Create a date object for today with the start time
-    const startDate = new Date(date);
-    startDate.setHours(startHour, startMinute, 0, 0);
+    // Create date objects that ensure we're working with the correct date 
+    // regardless of timezone by using explicit components
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
     
-    // Create a date object for today with the end time
-    const endDate = new Date(date);
-    endDate.setHours(endHour, endMinute, 0, 0);
+    // Create a date object for the selected date with the start time
+    const startDate = new Date(year, month, day, startHour, startMinute, 0, 0);
+    
+    // Create a date object for the selected date with the end time
+    const endDate = new Date(year, month, day, endHour, endMinute, 0, 0);
     
     console.log(`Start time: ${startDate.toISOString()}, End time: ${endDate.toISOString()}`);
     
@@ -140,10 +144,11 @@ export function useBusinessHours() {
       return false;
     }
     
-    // Parse the time string (e.g., "9:00 AM")
+    // Parse the time string (e.g., "9:00 AM") to get hours/minutes
+    // Create a new date object to avoid timezone issues when parsing
     const timeDate = parse(timeStr, 'h:mm a', new Date());
     
-    // Get hours and minutes
+    // Get hours and minutes from the parsed time
     const hour = timeDate.getHours();
     const minute = timeDate.getMinutes();
     

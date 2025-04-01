@@ -178,9 +178,12 @@ export function IntegratedBookingWizard({
       hours = 0;
     }
     
-    // Create a date object for the time slot
-    const slotDate = new Date(dateStr);
-    slotDate.setHours(hours, minutes, 0, 0);
+    // Parse the date correctly to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+    
+    // Create a date object using individual components (avoids timezone shifts)
+    // Note: month is 0-indexed in JavaScript Date
+    const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
     
     // Get current time plus buffer
     const now = new Date();
@@ -287,7 +290,7 @@ export function IntegratedBookingWizard({
       // Always recalculate time-based availability to ensure real-time checks
       // (don't use cached result for time-based checks)
       
-      // Convert the selected date and time to a DateTime
+      // Get current time for comparison
       const now = new Date();
       
       // Parse the time string to get hours and minutes
@@ -308,9 +311,12 @@ export function IntegratedBookingWizard({
         hours = 0;
       }
       
-      // Create a date object for the selected date and time
-      const selectedDate = new Date(date);
-      selectedDate.setHours(hours, minutes, 0, 0);
+      // Parse the date components to ensure consistent handling across timezones
+      const [year, month, day] = date.split('-').map(num => parseInt(num, 10));
+      
+      // Create a date object using individual components to avoid timezone issues
+      // Note: month is 0-indexed in JavaScript Date
+      const selectedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
       
       // Add a 12-hour buffer for bookings (appointments need to be at least 12 hours in the future)
       const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);

@@ -166,44 +166,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Format date string for consistency
       const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
       
+      // Parse the date parts to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+      
       // Check if the selected time is in the past
       const now = new Date();
-      const selectedDate = new Date(dateStr);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      // If the date is today, check if the time has passed
-      if (selectedDate.getTime() === today.getTime()) {
-        // Parse the timeSlot (e.g., "7:30 PM")
-        const isPM = (timeSlot as string).includes('PM');
-        const timeComponents = (timeSlot as string).replace(/ (AM|PM)$/, '').split(':');
-        let hour = parseInt(timeComponents[0], 10);
-        const minute = timeComponents.length > 1 ? parseInt(timeComponents[1], 10) : 0;
+      // Always check time availability regardless of date
+      // Parse the timeSlot (e.g., "7:30 PM")
+      const isPM = (timeSlot as string).includes('PM');
+      const timeComponents = (timeSlot as string).replace(/ (AM|PM)$/, '').split(':');
+      let hour = parseInt(timeComponents[0], 10);
+      const minute = timeComponents.length > 1 ? parseInt(timeComponents[1], 10) : 0;
+      
+      // Convert to 24-hour format
+      if (isPM && hour < 12) hour += 12;
+      if (!isPM && hour === 12) hour = 0;
+      
+      // Create a date with the selected time for comparison using component parts to avoid timezone issues
+      const selectedDateTime = new Date(
+        year, 
+        month - 1, // JS months are 0-indexed
+        day,
+        hour,
+        minute
+      );
         
-        // Convert to 24-hour format
-        if (isPM && hour < 12) hour += 12;
-        if (!isPM && hour === 12) hour = 0;
-        
-        // Create a date with the selected time for comparison
-        const selectedDateTime = new Date(
-          selectedDate.getFullYear(),
-          selectedDate.getMonth(),
-          selectedDate.getDate(),
-          hour,
-          minute
-        );
-        
-        // Add a 12-hour buffer for bookings
-        const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-        
-        // Check if the selected time is in the past or within the buffer period
-        if (selectedDateTime <= bufferTime) {
-          return res.json({
-            success: true,
-            isAvailable: false,
-            message: "This time slot is no longer available for booking"
-          });
-        }
-      } else if (selectedDate < today) {
+      // Add a 12-hour buffer for bookings
+      const bufferTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      
+      // Check if the selected time is in the past or within the buffer period
+      if (selectedDateTime <= bufferTime) {
+        return res.json({
+          success: true,
+          isAvailable: false,
+          message: "This time slot is no longer available for booking"
+        });
+      }
+      
+      // Check if the selected date is in the past
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const selectedDate = new Date(dateStr);
+      if (selectedDate < today) {
         // If the selected date is in the past
         return res.json({
           success: true,
