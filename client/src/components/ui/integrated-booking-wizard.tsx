@@ -509,9 +509,22 @@ export function IntegratedBookingWizard({
   };
 
   // Validation
+  // Helper function to scroll to the first error field
+  const scrollToFirstError = (fieldNames: string[]) => {
+    for (const fieldName of fieldNames) {
+      const element = document.getElementById(fieldName);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+  };
+
   const validateCurrentStep = (): boolean => {
     let isValid = true;
     const errors: Record<string, string[]> = {};
+    let errorCount = 0;
+    const errorFieldIds: string[] = [];
 
     if (currentStep === 0) {
       // Service selection validation
@@ -521,72 +534,115 @@ export function IntegratedBookingWizard({
           description: "Please select at least one service",
           variant: "destructive",
         });
+        // No scrolling needed on the service tab
         return false;
       }
     } else if (currentStep === 1) {
       // Date and time validation
       if (!selectedDate) {
         errors.date = ["Please select a date"];
+        errorFieldIds.push('date-selection');
         isValid = false;
+        errorCount++;
       }
       
       if (!selectedTime) {
         errors.time = ["Please select a time"];
+        errorFieldIds.push('time-selection');
         isValid = false;
+        errorCount++;
       }
     } else if (currentStep === 2) {
       // Customer details validation
       if (!formData.name) {
         errors.name = ["Name is required"];
+        errorFieldIds.push('customer-name');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.email) {
         errors.email = ["Email is required"];
+        errorFieldIds.push('customer-email');
         isValid = false;
+        errorCount++;
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         errors.email = ["Please enter a valid email"];
+        errorFieldIds.push('customer-email');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.phone) {
         errors.phone = ["Phone number is required"];
+        errorFieldIds.push('customer-phone');
         isValid = false;
+        errorCount++;
       } else if (!/^[0-9()-.\s]+$/.test(formData.phone)) {
         errors.phone = ["Please enter a valid phone number"];
+        errorFieldIds.push('customer-phone');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.streetAddress) {
         errors.streetAddress = ["Street address is required"];
+        errorFieldIds.push('customer-street-address');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.city) {
         errors.city = ["City is required"];
+        errorFieldIds.push('customer-city');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.state) {
         errors.state = ["State is required"];
+        errorFieldIds.push('customer-state');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.zipCode) {
         errors.zipCode = ["ZIP code is required"];
+        errorFieldIds.push('customer-zipcode');
         isValid = false;
+        errorCount++;
       } else if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
         errors.zipCode = ["Please enter a valid ZIP code"];
+        errorFieldIds.push('customer-zipcode');
         isValid = false;
+        errorCount++;
       }
       
       if (!formData.consentToContact) {
         errors.consentToContact = ["Please consent to being contacted"];
+        errorFieldIds.push('consent-to-contact');
         isValid = false;
+        errorCount++;
       }
     }
 
     setValidationErrors(errors);
+
+    // If there are errors, display a summary and scroll to the first error
+    if (!isValid) {
+      // Show an error summary message
+      toast({
+        title: `Please fix ${errorCount} field${errorCount !== 1 ? 's' : ''} to continue`,
+        description: "Required information is missing or invalid",
+        variant: "destructive",
+      });
+      
+      // Scroll to the first error field after a small delay to ensure the DOM is updated
+      setTimeout(() => {
+        scrollToFirstError(errorFieldIds);
+      }, 100);
+    }
+
     return isValid;
   };
 
@@ -888,7 +944,7 @@ export function IntegratedBookingWizard({
                                         please email or text a picture of the nearest outlets to your fireplace.
                                       </p>
                                       <p className="text-sm text-blue-700 mt-2">
-                                        Send to: <span className="font-medium">info@pictureperfecttvinstall.com</span> or 
+                                        Send to: <span className="font-medium">pptvinstall@gmail.com</span> or 
                                         <span className="font-medium"> (404) 702-4748</span>
                                       </p>
                                       <p className="text-sm text-blue-700 mt-2">
@@ -1065,7 +1121,7 @@ export function IntegratedBookingWizard({
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           <span className="font-medium">Select Date</span>
                         </div>
-                        <div className="calendar-container relative">
+                        <div id="date-selection" className="calendar-container relative">
                           <Calendar
                             mode="single"
                             selected={selectedDate}
@@ -1102,7 +1158,7 @@ export function IntegratedBookingWizard({
                       </div>
 
                       {/* Time Selection */}
-                      <div className="relative">
+                      <div id="time-selection" className="relative">
                         <div className="mb-4 flex items-center">
                           <Clock className="mr-2 h-4 w-4" />
                           <span className="font-medium">Select Time</span>
@@ -1197,11 +1253,11 @@ export function IntegratedBookingWizard({
                         
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm font-medium">
+                            <label htmlFor="customer-name" className="text-sm font-medium">
                               Full Name
                             </label>
                             <Input
-                              id="name"
+                              id="customer-name"
                               name="name"
                               value={formData.name || ""}
                               onChange={handleInputChange}
@@ -1216,13 +1272,13 @@ export function IntegratedBookingWizard({
                           </div>
 
                           <div className="space-y-2">
-                            <label htmlFor="email" className="text-sm font-medium">
+                            <label htmlFor="customer-email" className="text-sm font-medium">
                               Email Address
                             </label>
                             <div className="flex items-center relative">
                               <Mail className="absolute left-3 h-4 w-4 text-muted-foreground" />
                               <Input
-                                id="email"
+                                id="customer-email"
                                 name="email"
                                 type="email"
                                 value={formData.email || ""}
@@ -1239,13 +1295,13 @@ export function IntegratedBookingWizard({
                           </div>
 
                           <div className="space-y-2">
-                            <label htmlFor="phone" className="text-sm font-medium">
+                            <label htmlFor="customer-phone" className="text-sm font-medium">
                               Phone Number
                             </label>
                             <div className="flex items-center relative">
                               <Phone className="absolute left-3 h-4 w-4 text-muted-foreground" />
                               <Input
-                                id="phone"
+                                id="customer-phone"
                                 name="phone"
                                 type="tel"
                                 value={formData.phone || ""}
@@ -1272,11 +1328,11 @@ export function IntegratedBookingWizard({
                         
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
-                            <label htmlFor="streetAddress" className="text-sm font-medium">
+                            <label htmlFor="customer-street-address" className="text-sm font-medium">
                               Street Address
                             </label>
                             <Input
-                              id="streetAddress"
+                              id="customer-street-address"
                               name="streetAddress"
                               value={formData.streetAddress || ""}
                               onChange={handleInputChange}
@@ -1307,11 +1363,11 @@ export function IntegratedBookingWizard({
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                           <div className="space-y-2">
-                            <label htmlFor="city" className="text-sm font-medium">
+                            <label htmlFor="customer-city" className="text-sm font-medium">
                               City
                             </label>
                             <Input
-                              id="city"
+                              id="customer-city"
                               name="city"
                               value={formData.city || ""}
                               onChange={handleInputChange}
@@ -1326,11 +1382,11 @@ export function IntegratedBookingWizard({
                           </div>
 
                           <div className="space-y-2">
-                            <label htmlFor="state" className="text-sm font-medium">
+                            <label htmlFor="customer-state" className="text-sm font-medium">
                               State
                             </label>
                             <Input
-                              id="state"
+                              id="customer-state"
                               name="state"
                               value={formData.state || ""}
                               onChange={handleInputChange}
@@ -1345,11 +1401,11 @@ export function IntegratedBookingWizard({
                           </div>
 
                           <div className="space-y-2 col-span-2 sm:col-span-1">
-                            <label htmlFor="zipCode" className="text-sm font-medium">
+                            <label htmlFor="customer-zipcode" className="text-sm font-medium">
                               ZIP Code
                             </label>
                             <Input
-                              id="zipCode"
+                              id="customer-zipcode"
                               name="zipCode"
                               value={formData.zipCode || ""}
                               onChange={handleInputChange}
@@ -1389,14 +1445,14 @@ export function IntegratedBookingWizard({
 
                         <div className="flex items-start space-x-2 pt-2">
                           <Checkbox
-                            id="consentToContact"
+                            id="consent-to-contact"
                             checked={formData.consentToContact}
                             onCheckedChange={(checked) => handleCheckboxChange(checked === true, 'consentToContact')}
                             className={validationErrors.consentToContact ? "border-destructive mt-1" : "mt-1"}
                           />
                           <div className="space-y-1 leading-tight">
                             <label
-                              htmlFor="consentToContact"
+                              htmlFor="consent-to-contact"
                               className="text-sm font-medium cursor-pointer"
                             >
                               I agree to be contacted about my appointment
