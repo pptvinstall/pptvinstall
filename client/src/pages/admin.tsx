@@ -103,7 +103,7 @@ export default function AdminDashboard() {
     // Only update the URL if the tab change wasn't triggered by the URL itself
     const searchParams = new URLSearchParams(window.location.search);
     const urlTab = searchParams.get('tab') || 'dashboard';
-    
+
     if (activeTab !== urlTab) {
       if (activeTab !== 'dashboard') {
         setLocation(`/admin?tab=${activeTab}`, { replace: true });
@@ -162,17 +162,17 @@ export default function AdminDashboard() {
 
     const activeBookings = bookings.filter((b: any) => b.status === 'active');
     const cancelledBookings = bookings.filter((b: any) => b.status === 'cancelled');
-    
+
     const upcomingBookings = activeBookings.filter((b: any) => {
       const bookingDate = new Date(b.preferredDate);
       return bookingDate >= today;
     });
-    
+
     const todayBookings = upcomingBookings.filter((b: any) => {
       const bookingDate = new Date(b.preferredDate);
       return isSameDay(bookingDate, today);
     });
-    
+
     const weekBookings = upcomingBookings.filter((b: any) => {
       const bookingDate = new Date(b.preferredDate);
       return bookingDate <= weekEnd;
@@ -583,7 +583,7 @@ export default function AdminDashboard() {
                       {dashboardStats.recentBookings.map((booking: any) => {
                         const bookingDate = new Date(booking.preferredDate);
                         const daysUntil = differenceInDays(bookingDate, new Date());
-                        
+
                         return (
                           <div 
                             key={booking.id}
@@ -922,7 +922,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center">
                       <HelpCircle className="h-5 w-5 mr-2 text-primary" />
-                      <span className="font-medium">Blocking Individual Time Slots</span>
+                      <span className="font-mediumspan className="font-medium">Blocking Individual Time Slots</span>
                     </div>
                     <p className="text-muted-foreground ml-7">
                       Select a date and then click on the time slots you want to block. After selecting all desired time slots, click the "Block Selected Times" button. Blocked time slots will not be available for customers to book.
@@ -1114,7 +1114,7 @@ export default function AdminDashboard() {
               <h1 className="text-3xl font-bold">Help & Documentation</h1>
               <p className="text-muted-foreground">Learn how to use the admin dashboard</p>
             </div>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Admin Dashboard Guide</CardTitle>

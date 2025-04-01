@@ -103,9 +103,7 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                     onClick={(e) => {
                       e.preventDefault();
                       setLocation(item.href);
-                      const searchParams = new URLSearchParams(window.location.search);
-                      const currentTab = searchParams.get('tab') || 'dashboard';
-                      if (currentTab !== item.tab) {
+                      if (item.tab !== 'dashboard') {
                         window.dispatchEvent(new CustomEvent('tabChange', { detail: item.tab }));
                       }
                     }}
