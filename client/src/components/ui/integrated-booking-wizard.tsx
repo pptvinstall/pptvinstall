@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, Info, Minus, PlusCircle } from "lucide-react";
+import { CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, Info, Minus, PlusCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,10 +37,11 @@ interface TVServiceOption {
   id: string;
   size: 'small' | 'large';
   location: 'standard' | 'fireplace';
-  mountType: 'fixed' | 'tilting' | 'full_motion' | 'none' | 'customer';
+  mountType: 'fixed' | 'tilting' | 'full_motion' | 'customer';
   masonryWall: boolean;
   highRise: boolean;
   outletNeeded: boolean;
+  outletImage?: string; // Base64 encoded image for outlet locations
 }
 
 interface SmartHomeDeviceOption {
@@ -257,10 +258,11 @@ export function IntegratedBookingWizard({
   // TVs
   const [newTvSize, setNewTvSize] = useState<'small' | 'large'>('small');
   const [newTvLocation, setNewTvLocation] = useState<'standard' | 'fireplace'>('standard');
-  const [newTvMountType, setNewTvMountType] = useState<'fixed' | 'tilting' | 'full_motion' | 'none' | 'customer'>('fixed');
+  const [newTvMountType, setNewTvMountType] = useState<'fixed' | 'tilting' | 'full_motion' | 'customer'>('fixed');
   const [newTvMasonryWall, setNewTvMasonryWall] = useState(false);
   const [newTvHighRise, setNewTvHighRise] = useState(false);
   const [newTvOutletNeeded, setNewTvOutletNeeded] = useState(false);
+  const [newTvOutletImage, setNewTvOutletImage] = useState<string | undefined>();
   
   // Smart Home
   const [newDeviceType, setNewDeviceType] = useState<'doorbell' | 'camera' | 'floodlight'>('camera');
@@ -388,6 +390,16 @@ export function IntegratedBookingWizard({
 
   // Add TV installation option
   const addTvService = () => {
+    // Check if an image is required for fireplace with wire concealment
+    if (newTvLocation === 'fireplace' && newTvOutletNeeded && !newTvOutletImage) {
+      toast({
+        title: "Image Required",
+        description: "Please upload an image showing outlet locations for fireplace wire concealment",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const newTv: TVServiceOption = {
       id: `tv-${Date.now()}`,
       size: newTvSize,
@@ -395,7 +407,8 @@ export function IntegratedBookingWizard({
       mountType: newTvMountType,
       masonryWall: newTvMasonryWall,
       highRise: newTvHighRise,
-      outletNeeded: newTvOutletNeeded
+      outletNeeded: newTvOutletNeeded,
+      outletImage: newTvOutletImage
     };
     
     setTvServices([...tvServices, newTv]);
@@ -407,6 +420,7 @@ export function IntegratedBookingWizard({
     setNewTvMasonryWall(false);
     setNewTvHighRise(false);
     setNewTvOutletNeeded(false);
+    setNewTvOutletImage(undefined);
     
     calculatePricingTotal([...tvServices, newTv], smartHomeServices);
   };
@@ -612,7 +626,8 @@ export function IntegratedBookingWizard({
       name: `TV Installation (${tv.size === 'small' ? 'Small' : 'Large'})`,
       description: `${tv.location === 'fireplace' ? 'Fireplace' : 'Standard wall'} installation with ${tv.mountType} mount${tv.outletNeeded ? ' and wire concealment' : ''}`,
       type: 'mount',
-      basePrice: 0 // Price is calculated on backend
+      basePrice: 0, // Price is calculated on backend
+      outletImage: tv.outletImage // Include the outlet image if it exists
     }));
 
     // Convert smart home services to the correct format
@@ -651,7 +666,8 @@ export function IntegratedBookingWizard({
           mountType: tv.mountType,
           masonryWall: tv.masonryWall,
           highRise: tv.highRise,
-          outletRelocation: tv.outletNeeded
+          outletRelocation: tv.outletNeeded,
+          outletImage: tv.outletImage
         })),
         ...smartHomeServices.map(device => ({
           type: device.type,
@@ -710,6 +726,17 @@ export function IntegratedBookingWizard({
                       
                       {/* TV Installation */}
                       <TabsContent value="tv" className="space-y-4 mt-4">
+                        {/* Base Price Notification */}
+                        <div className="bg-primary/10 p-3 rounded-md mb-3">
+                          <p className="text-sm font-medium flex items-center">
+                            <Info className="h-4 w-4 mr-2" />
+                            Base Installation Price: $100 per TV
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Additional charges apply based on your selections below.
+                          </p>
+                        </div>
+                        
                         {/* Current TVs */}
                         {tvServices.length > 0 && (
                           <div className="space-y-3 mb-6">
@@ -815,11 +842,10 @@ export function IntegratedBookingWizard({
                                 <RadioGroupItem value="customer" id="customer" />
                                 <Label htmlFor="customer">Customer-Provided</Label>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="none" id="none" />
-                                <Label htmlFor="none">No Mount Needed</Label>
-                              </div>
                             </RadioGroup>
+                            <p className="text-xs text-muted-foreground">
+                              Note: Installation always requires a mount. Please provide your own or select one of our options.
+                            </p>
                           </div>
                           
                           <div className="space-y-2">
@@ -856,6 +882,51 @@ export function IntegratedBookingWizard({
                                 />
                                 <Label htmlFor="outletNeeded">Wire Concealment & Outlet (+$100)</Label>
                               </div>
+                              
+                              {/* Show image upload when fireplace installation with wire concealment is selected */}
+                              {newTvLocation === 'fireplace' && newTvOutletNeeded && (
+                                <div className="mt-3 bg-amber-50 p-3 rounded-md">
+                                  <div className="flex items-start mb-2">
+                                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+                                    <p className="text-sm">
+                                      For fireplace installations with wire concealment, 
+                                      we need to see where your electrical outlets are located.
+                                      Please upload a photo of the area.
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="mt-2">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onload = (event) => {
+                                            setNewTvOutletImage(event.target?.result as string);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                      className="w-full text-sm"
+                                    />
+                                  </div>
+                                  
+                                  {newTvOutletImage && (
+                                    <div className="mt-2">
+                                      <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                                      <div className="relative w-24 h-24 border rounded overflow-hidden">
+                                        <img 
+                                          src={newTvOutletImage} 
+                                          alt="Outlet location" 
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           
