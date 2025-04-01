@@ -1,6 +1,6 @@
 // Service worker version
-const CACHE_VERSION = 'v1.0.0';
-const CACHE_NAME = `picture-perfect-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v1.1.0';
+const CACHE_NAME = `pptv-install-cache-${CACHE_VERSION}`;
 
 // Assets to cache
 const PRECACHE_ASSETS = [
@@ -11,6 +11,9 @@ const PRECACHE_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/badge-72x72.png',
+  '/icons/pptv/icon.svg',
+  '/icons/pptv/apple-touch-icon.svg',
+  '/icons/pptv/apple-touch-icon-precomposed.png',
   '/manifest.json'
 ];
 
@@ -149,11 +152,11 @@ self.addEventListener('push', event => {
     }
   }
   
-  const title = data.title || 'Picture Perfect TV Install';
+  const title = data.title || 'PPTVInstall';
   const options = {
     body: data.body || 'Something new happened!',
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/badge-72x72.png',
+    icon: data.icon || '/icons/pptv/icon.svg',
+    badge: data.badge || '/icons/pptv/apple-touch-icon-precomposed.png',
     data: data.data || {},
     actions: data.actions || [],
     vibrate: [100, 50, 100],

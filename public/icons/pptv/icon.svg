@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle with blue gradient -->
+  <circle cx="256" cy="256" r="256" fill="#0C4A6E"/>
+  
+  <!-- PPTV Text centered and large -->
+  <text x="256" y="256" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">PPTV</text>
+  
+  <!-- Install text smaller and below -->
+  <text x="256" y="340" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#E0F2FE" text-anchor="middle">Install</text>
+</svg>
