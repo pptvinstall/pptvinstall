@@ -18,7 +18,9 @@ export const insertContactMessageSchema = contactMessageSchema;
 export const bookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  phone: z.string()
+    .transform(val => val.replace(/\D/g, '')) // Remove all non-digits
+    .refine(val => val.length >= 7 && val.length <= 15, "Please enter a valid phone number"),
   streetAddress: z.string().min(2, "Street address is required"),
   addressLine2: z.string().optional(),
   city: z.string().min(2, "City is required"),
@@ -173,7 +175,9 @@ export const notificationSettingsSchema = z.object({
 export const customerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  phone: z.string()
+    .transform(val => val.replace(/\D/g, '')) // Remove all non-digits
+    .refine(val => val.length >= 7 && val.length <= 15, "Please enter a valid phone number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   streetAddress: z.string().min(2, "Street address is required").optional(),
   addressLine2: z.string().optional(),
