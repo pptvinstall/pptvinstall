@@ -33,6 +33,8 @@ const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Admin = lazy(() => import('@/pages/admin'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const PricingEditor = lazy(() => import('@/pages/admin/pricing-editor')); // Added import
+const CustomerLogin = lazy(() => import('@/pages/customer-login'));
+const CustomerPortal = lazy(() => import('@/pages/customer-portal'));
 
 
 // ScrollToTop component to handle scroll restoration
@@ -110,6 +112,12 @@ createRoot(document.getElementById('root')!).render(
                   <Route path="/admin/pricing">
                     {() => <PageWrapper><PricingEditor /></PageWrapper>}
                   </Route> {/* Added pricing editor route */}
+                  <Route path="/customer-login">
+                    {() => <PageWrapper><CustomerLogin /></PageWrapper>}
+                  </Route>
+                  <Route path="/customer-portal">
+                    {() => <PageWrapper><CustomerPortal /></PageWrapper>}
+                  </Route>
                   <Route component={NotFound} />
                 </Switch>
               </Router>

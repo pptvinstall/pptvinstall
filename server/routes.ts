@@ -13,10 +13,9 @@ import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
 import { 
   sendBookingConfirmationEmail, 
-  sendAdminBookingNotificationEmail, 
+  sendAdminNotificationEmail,
   sendBookingCancellationEmail,
-  getPlainTextAdminNotification,
-  getHtmlAdminNotification 
+  emailTemplates
 } from "./services/emailService";
 import { pushNotificationService } from "./services/pushNotificationService";
 
@@ -187,8 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             to: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
             from: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
             subject: `🔔 URGENT TEST: New Booking Alert (${timestamp})`,
-            text: getPlainTextAdminNotification(testBooking),
-            html: getHtmlAdminNotification(testBooking),
+            text: "Admin notification for test booking",
+            html: emailTemplates.getAdminNotificationEmailTemplate(testBooking),
           };
           
           logger.debug("Admin email payload:", JSON.stringify({
@@ -198,9 +197,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
           
           // Send directly through SendGrid for custom subject
-          const sgMail = require('@sendgrid/mail');
-          sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-          await sgMail.send(adminMsg);
+          import('@sendgrid/mail').then(sgModule => {
+            const sgMail = new sgModule.MailService();
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+            return sgMail.send(adminMsg);
+          });
           adminEmailResult = true;
           logger.info(`Admin email send result: ${adminEmailResult}`);
         } catch (adminError: any) {
@@ -690,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Send admin notification email separately
           try {
-            adminEmailSent = await sendAdminBookingNotificationEmail(bookingWithId);
+            adminEmailSent = await sendAdminNotificationEmail(bookingWithId);
             logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
           } catch (error: any) {
             logger.error("Error sending admin notification email:", error as Error);
@@ -1673,6 +1674,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to fetch bookings"
+      });
+    }
+  });
+  
+  // Customer update their booking
+  app.put("/api/customers/bookings/:id", async (req: Request, res: Response) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      const { preferredDate, appointmentTime, notes } = req.body;
+      
+      if (isNaN(bookingId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking ID"
+        });
+      }
+      
+      // Load the existing booking
+      const existingBookingResult = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+      
+      if (existingBookingResult.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
+        });
+      }
+      
+      const existingBooking = existingBookingResult[0];
+      
+      // Only allow editing of active bookings
+      if (existingBooking.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          message: "Only active bookings can be updated"
+        });
+      }
+      
+      // Check if this time slot is already booked by someone else
+      if (preferredDate && appointmentTime) {
+        const existingBookings = await db.select().from(bookings).where(
+          and(
+            sql`DATE(${bookings.preferredDate}) = ${preferredDate}`,
+            eq(bookings.appointmentTime, appointmentTime),
+            eq(bookings.status, 'active'),
+            sql`${bookings.id} != ${bookingId}`
+          )
+        );
+        
+        if (existingBookings.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: "This time slot is already booked. Please select another time."
+          });
+        }
+      }
+      
+      // Prepare updates
+      const updates: any = {};
+      if (preferredDate) updates.preferredDate = preferredDate;
+      if (appointmentTime) updates.appointmentTime = appointmentTime;
+      if (notes !== undefined) updates.notes = notes;
+      
+      // Update the booking
+      const result = await db.update(bookings)
+        .set(updates)
+        .where(eq(bookings.id, bookingId))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Failed to update booking"
+        });
+      }
+      
+      // Send notification email
+      try {
+        // Import the email service function
+        const { sendBookingUpdateEmail } = await import('./services/emailService');
+        
+        // Send the email
+        await sendBookingUpdateEmail(result[0], updates);
+        logger.info(`Customer booking update email sent for booking ID ${bookingId}`);
+      } catch (emailError) {
+        logger.error("Error sending customer booking update email:", emailError as Error);
+        // We don't want to fail the request if the email fails
+      }
+      
+      res.json({
+        success: true,
+        message: "Booking updated successfully",
+        booking: result[0]
+      });
+    } catch (error) {
+      logger.error("Error updating customer booking:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update booking"
       });
     }
   });

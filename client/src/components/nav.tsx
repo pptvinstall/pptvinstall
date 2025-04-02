@@ -11,7 +11,8 @@ import {
   HelpCircle,
   MonitorSmartphone,
   ChevronDown,
-  LucideIcon
+  LucideIcon,
+  User
 } from "lucide-react";
 import { ResponsiveImage } from '@/components/ui/responsive-image';
 import { cn } from '@/lib/utils';
@@ -61,7 +62,8 @@ export default function Nav() {
     },
     { href: '/booking', name: 'Book Now', icon: Calendar, badge: 'Best Value' },
     { href: '/contact', name: 'Contact', icon: MessagesSquare },
-    { href: '/faq', name: 'FAQ', icon: HelpCircle }
+    { href: '/faq', name: 'FAQ', icon: HelpCircle },
+    { href: '/customer-login', name: 'Customer Portal', icon: User }
   ];
 
   // Check if a link is active
