@@ -40,6 +40,12 @@ export default function Nav() {
   const toggleMenu = useCallback(() => setIsOpen(prev => !prev), []);
   const openMenu = useCallback(() => setIsOpen(true), []);
   const closeMenu = useCallback(() => setIsOpen(false), []);
+  
+  // Phone call handler
+  const handlePhoneCall = useCallback(() => {
+    window.location.href = "tel:+16782632859";
+    closeMenu();
+  }, [closeMenu]);
 
   // Navigation links with icons
   const navigationLinks: NavLink[] = [
@@ -101,7 +107,7 @@ export default function Nav() {
         "fixed top-0 z-50 w-full transition-all duration-300",
         isScrolled ? "bg-background/95 backdrop-blur shadow-sm" : "bg-background"
       )}>
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between relative">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Logo size="md" />
@@ -165,7 +171,7 @@ export default function Nav() {
               variant="default" 
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 mr-2"
-              onClick={() => window.location.href = "tel:+16782632859"}
+              onClick={handlePhoneCall}
             >
               <PhoneCall className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Call</span>
@@ -257,10 +263,7 @@ export default function Nav() {
               <div className="mt-auto p-4 border-t">
                 <Button 
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={useCallback(() => {
-                    window.location.href = "tel:+16782632859";
-                    closeMenu();
-                  }, [closeMenu])}
+                  onClick={handlePhoneCall}
                 >
                   <PhoneCall className="mr-2 h-4 w-4" />
                   Call (678) 263-2859
