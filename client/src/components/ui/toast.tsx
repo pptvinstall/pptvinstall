@@ -20,12 +20,31 @@ const toastVariants = cva(
 
 export interface ToastProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof toastVariants> {}
+    VariantProps<typeof toastVariants> {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
 
-export function Toast({ className, variant, ...props }: ToastProps) {
+export function Toast({ className, variant, open, onOpenChange, ...props }: ToastProps) {
+  // Create a filtered props object that doesn't include onOpenChange
+  // so it doesn't get passed to the DOM element
+  
+  React.useEffect(() => {
+    if (onOpenChange && open === false) {
+      // Use a short timeout to allow animations to complete
+      const timer = setTimeout(() => {
+        onOpenChange(false);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open, onOpenChange]);
+  
   return (
     <div
-      className={cn(toastVariants({ variant }), className)}
+      className={cn(toastVariants({ variant }), className, {
+        'opacity-0 translate-y-2': open === false,
+      })}
       {...props}
     />
   )
