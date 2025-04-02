@@ -1,6 +1,8 @@
 
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { PencilIcon } from "lucide-react";
 
 interface ReviewBookingStepProps {
   tvInstallations: any[];
@@ -11,6 +13,7 @@ interface ReviewBookingStepProps {
   selectedTime: string | undefined;
   formData: any;
   pricingTotal: number;
+  onEditServices?: () => void;
 }
 
 export function ReviewBookingStep({
@@ -21,7 +24,8 @@ export function ReviewBookingStep({
   selectedDate,
   selectedTime,
   formData,
-  pricingTotal
+  pricingTotal,
+  onEditServices
 }: ReviewBookingStepProps) {
   return (
     <div className="space-y-5 relative px-1">
@@ -39,7 +43,19 @@ export function ReviewBookingStep({
           {/* TV Installations */}
           {tvInstallations.length > 0 && (
             <div className="space-y-2">
-              <h5 className="text-sm font-medium">TV Installations:</h5>
+              <div className="flex justify-between items-center">
+                <h5 className="text-sm font-medium">TV Installations:</h5>
+                {onEditServices && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs flex items-center gap-1"
+                    onClick={onEditServices}
+                  >
+                    <PencilIcon className="h-3 w-3" /> Edit Services
+                  </Button>
+                )}
+              </div>
               <ul className="text-xs sm:text-sm space-y-2">
                 {tvInstallations.map((tv, index) => (
                   <li key={tv.id} className="flex flex-col p-2 bg-muted rounded-md">

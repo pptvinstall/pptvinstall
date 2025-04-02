@@ -44,6 +44,7 @@ import {
   TooltipTrigger 
 } from './tooltip';
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
+import { ReviewBookingStep } from "@/components/steps/review-booking-step";
 
 // Service-related interfaces 
 interface TVServiceOption {
@@ -800,6 +801,19 @@ export function IntegratedBookingWizard({
       // Final submission
       submitBooking();
     }
+  };
+
+  // Function to go back to the services selection step but keep all selections
+  const goToEditServices = () => {
+    // Go to the first step where services are selected
+    setCurrentStep(0);
+    
+    // Capture current state data to preserve settings
+    // This data will be automatically used when the user returns to the review step
+    toast({
+      title: "Editing Services",
+      description: "Make your changes and continue through the steps again",
+    });
   };
 
   const handlePrevClick = () => {
@@ -1819,6 +1833,21 @@ export function IntegratedBookingWizard({
                 
                 {/* Step 4: Review Booking */}
                 {currentStep === 3 && (
+                  <ReviewBookingStep
+                    tvInstallations={tvServices}
+                    tvRemovalService={null}
+                    smartHomeInstallations={smartHomeServices}
+                    handymanService={null}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    formData={formData}
+                    pricingTotal={pricingTotal}
+                    onEditServices={() => goToEditServices()}
+                  />
+                )}
+                
+                {/* Old review step - Remove after verifying the new component works */}
+                {false && currentStep === 3 && (
                   <div className="space-y-5 relative px-1">
                     <div>
                       <h3 className="text-base sm:text-lg font-medium">Review Your Booking</h3>
