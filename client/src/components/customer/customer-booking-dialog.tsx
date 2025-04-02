@@ -92,7 +92,9 @@ export function CustomerBookingDialog({
   const { data: existingBookingsData } = useQuery({
     queryKey: ["/api/bookings"],
     queryFn: async () => {
-      return await apiRequest("/api/bookings");
+      const response = await fetch("/api/bookings");
+      const data = await response.json();
+      return data;
     },
   });
 
@@ -155,7 +157,7 @@ export function CustomerBookingDialog({
 
         // Check if slot conflicts with other bookings
         const conflictingBooking = existingBookings.find(
-          (b) => 
+          (b: any) => 
             b.preferredDate === dateStr && 
             b.appointmentTime === slot && 
             b.id !== booking.id && 

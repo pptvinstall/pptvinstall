@@ -166,8 +166,8 @@ function getAdminNotificationEmailTemplate(booking: Booking): string {
         <p><strong>Time:</strong> ${booking.appointmentTime}</p>
         <p><strong>TV Size:</strong> ${booking.tvSize}</p>
         <p><strong>Mount Type:</strong> ${booking.mountType}</p>
-        <p><strong>Address:</strong> ${booking.address}</p>
-        <p><strong>City:</strong> ${booking.city}</p>
+        <p><strong>Address:</strong> ${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</p>
+        <p><strong>City:</strong> ${booking.city}, ${booking.state}</p>
         <p><strong>Zip Code:</strong> ${booking.zipCode}</p>
         ${booking.notes ? `<p><strong>Notes:</strong> ${booking.notes}</p>` : ''}
       </div>
@@ -195,8 +195,8 @@ function getBookingConfirmationEmailTemplate(booking: Booking): string {
         <p><strong>Time:</strong> ${booking.appointmentTime}</p>
         <p><strong>TV Size:</strong> ${booking.tvSize}</p>
         <p><strong>Mount Type:</strong> ${booking.mountType}</p>
-        <p><strong>Address:</strong> ${booking.address}</p>
-        <p><strong>City:</strong> ${booking.city}</p>
+        <p><strong>Address:</strong> ${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</p>
+        <p><strong>City:</strong> ${booking.city}, ${booking.state}</p>
         <p><strong>Zip Code:</strong> ${booking.zipCode}</p>
         ${booking.notes ? `<p><strong>Notes:</strong> ${booking.notes}</p>` : ''}
       </div>
@@ -248,8 +248,8 @@ function getAdminBookingUpdateEmailTemplate(booking: Booking, updates: Partial<B
         <p><strong>Time:</strong> ${updates.appointmentTime || booking.appointmentTime}</p>
         <p><strong>TV Size:</strong> ${booking.tvSize}</p>
         <p><strong>Mount Type:</strong> ${booking.mountType}</p>
-        <p><strong>Address:</strong> ${booking.address}</p>
-        <p><strong>City:</strong> ${booking.city}</p>
+        <p><strong>Address:</strong> ${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</p>
+        <p><strong>City:</strong> ${booking.city}, ${booking.state}</p>
         <p><strong>Zip Code:</strong> ${booking.zipCode}</p>
         <p><strong>Notes:</strong> ${updates.notes !== undefined ? updates.notes : booking.notes || 'None'}</p>
       </div>
@@ -295,8 +295,8 @@ function getCustomerBookingUpdateEmailTemplate(booking: Booking, updates: Partia
         <p><strong>Time:</strong> ${updates.appointmentTime || booking.appointmentTime}</p>
         <p><strong>TV Size:</strong> ${booking.tvSize}</p>
         <p><strong>Mount Type:</strong> ${booking.mountType}</p>
-        <p><strong>Address:</strong> ${booking.address}</p>
-        <p><strong>City:</strong> ${booking.city}</p>
+        <p><strong>Address:</strong> ${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</p>
+        <p><strong>City:</strong> ${booking.city}, ${booking.state}</p>
         <p><strong>Zip Code:</strong> ${booking.zipCode}</p>
         <p><strong>Notes:</strong> ${updates.notes !== undefined ? updates.notes : booking.notes || 'None'}</p>
       </div>
@@ -317,7 +317,7 @@ function getPasswordResetEmailTemplate(customer: Customer, resetLink: string): s
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
       <h2 style="color: #2c3e50; text-align: center;">Password Reset Request</h2>
-      <p>Hello ${customer.firstName},</p>
+      <p>Hello ${customer.name.split(' ')[0]},</p>
       <p>We received a request to reset your password for your Picture Perfect TV Installation account. If you didn't make this request, you can safely ignore this email.</p>
       
       <div style="text-align: center; margin: 30px 0;">
@@ -341,7 +341,7 @@ function getWelcomeEmailTemplate(customer: Customer): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
       <h2 style="color: #2c3e50; text-align: center;">Welcome to Picture Perfect TV Installation</h2>
-      <p>Hello ${customer.firstName},</p>
+      <p>Hello ${customer.name.split(' ')[0]},</p>
       <p>Thank you for creating an account with us. We're excited to have you as our customer!</p>
       
       <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
