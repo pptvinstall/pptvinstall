@@ -20,7 +20,7 @@ export async function sendBookingConfirmationEmail(booking: any) {
   try {
     console.log(`Attempting to send confirmation email to customer: ${booking.email}`);
 
-    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    const fromEmail = process.env.EMAIL_FROM || 'PPTVInstall@gmail.com';
     console.log(`Using sender email: ${fromEmail}`);
 
     const msg = {
@@ -315,7 +315,7 @@ export async function sendBookingUpdateEmail(booking: any, changes: Record<strin
   try {
     console.log(`Attempting to send booking update email to customer: ${booking.email}`);
 
-    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    const fromEmail = process.env.EMAIL_FROM || 'PPTVInstall@gmail.com';
     console.log(`Using sender email: ${fromEmail}`);
 
     // Create a human-readable list of changes
@@ -479,7 +479,7 @@ export async function sendBookingCancellationEmail(booking: any, reason?: string
   try {
     logger.info(`Sending cancellation email to customer: ${booking.email}`);
 
-    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    const fromEmail = process.env.EMAIL_FROM || 'PPTVInstall@gmail.com';
     
     const msg = {
       to: booking.email,
@@ -639,12 +639,12 @@ export async function sendAdminBookingNotificationEmail(booking: any) {
     return false;
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@pictureperfecttv.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
 
   try {
     console.log(`Attempting to send notification email to admin: ${adminEmail}`);
 
-    const fromEmail = process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com';
+    const fromEmail = process.env.EMAIL_FROM || 'PPTVInstall@gmail.com';
     console.log(`Using sender email: ${fromEmail}`);
 
     const msg = {
@@ -673,7 +673,7 @@ export async function sendAdminBookingNotificationEmail(booking: any) {
   }
 }
 
-function getPlainTextAdminNotification(booking: any): string {
+export function getPlainTextAdminNotification(booking: any): string {
   const appointmentDate = new Date(booking.preferredDate);
   const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -742,7 +742,7 @@ You can view and manage this booking from the admin dashboard.
   return emailText;
 }
 
-function getHtmlAdminNotification(booking: any): string {
+export function getHtmlAdminNotification(booking: any): string {
   const appointmentDate = new Date(booking.preferredDate);
   const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
     weekday: 'long', 

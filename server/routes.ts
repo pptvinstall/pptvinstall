@@ -11,7 +11,13 @@ import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./stor
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
-import { sendBookingConfirmationEmail, sendAdminBookingNotificationEmail, sendBookingCancellationEmail } from "./services/emailService";
+import { 
+  sendBookingConfirmationEmail, 
+  sendAdminBookingNotificationEmail, 
+  sendBookingCancellationEmail,
+  getPlainTextAdminNotification,
+  getHtmlAdminNotification 
+} from "./services/emailService";
 import { pushNotificationService } from "./services/pushNotificationService";
 
 // Extend Express Request type to include requestId
@@ -67,10 +73,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok" });
   });
   
+  // Route to check email-related environment variables
+  app.get("/api/admin/check-email-env", (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+      
+      // Gather email configuration
+      const emailConfig = {
+        SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? `Set (length: ${process.env.SENDGRID_API_KEY.length})` : 'Not set',
+        ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'Not set (using default PPTVInstall@gmail.com)',
+        EMAIL_FROM: process.env.EMAIL_FROM || 'Not set (using default PPTVInstall@gmail.com)',
+        NODE_ENV: process.env.NODE_ENV,
+        host: req.headers.host
+      };
+      
+      logger.info('Email environment variables checked');
+      
+      res.json({
+        success: true,
+        emailConfig
+      });
+    } catch (error: any) {
+      logger.error("Error checking environment variables:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error checking environment: " + error.message
+      });
+    }
+  });
+
   // Test email sending functionality - for troubleshooting only
   app.get("/api/admin/test-email", async (req, res) => {
     try {
-      const { email, password } = req.query;
+      const { email, password, type } = req.query;
       
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
@@ -86,11 +128,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      logger.info(`Testing email functionality to address: ${email}`);
+      logger.info(`Testing email functionality to address: ${email}, type: ${type || 'both'}`);
       
-      // Create a test booking object
+      const timestamp = new Date().toLocaleTimeString();
+      
+      // Create a test booking object with distinctive information
       const testBooking = {
-        id: "TEST-123",
+        id: `TEST-${Date.now()}`,
         name: "Test Customer",
         email: email as string,
         phone: "555-555-5555",
@@ -101,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceType: "TV Installation",
         preferredDate: new Date().toISOString(),
         appointmentTime: "7:00 PM",
-        notes: "This is a test booking to verify email functionality",
+        notes: `This is a test booking sent at ${timestamp} to verify email functionality`,
         pricingTotal: "199.99",
         pricingBreakdown: [
           { type: "tv", size: "large", location: "standard", mountType: "fixed" }
@@ -111,45 +155,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log SendGrid configuration
       logger.debug("SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
-        fromEmail: process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com',
-        adminEmail: process.env.ADMIN_EMAIL || 'admin@pictureperfecttv.com'
+        fromEmail: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com'
       });
       
-      // Send test customer email
+      // Variable to track email results
       let customerEmailResult = false;
-      try {
-        logger.debug("Sending test customer confirmation email...");
-        customerEmailResult = await sendBookingConfirmationEmail(testBooking);
-        logger.info(`Customer email send result: ${customerEmailResult}`);
-      } catch (customerError: any) {
-        logger.error("Error sending customer email:", customerError as Error);
-        if (customerError?.response) {
-          logger.error("SendGrid API error response for customer email:", customerError.response.body);
+      let adminEmailResult = false;
+      
+      // Send test customer email if requested type is 'customer' or not specified
+      if (!type || type === 'customer') {
+        try {
+          logger.debug("Sending test customer confirmation email...");
+          customerEmailResult = await sendBookingConfirmationEmail(testBooking);
+          logger.info(`Customer email send result: ${customerEmailResult}`);
+        } catch (customerError: any) {
+          logger.error("Error sending customer email:", customerError as Error);
+          if (customerError?.response) {
+            logger.error("SendGrid API error response for customer email:", customerError.response.body);
+          }
         }
       }
       
-      // Send test admin notification
-      let adminEmailResult = false;
-      try {
-        logger.debug("Sending test admin notification email...");
-        adminEmailResult = await sendAdminBookingNotificationEmail(testBooking);
-        logger.info(`Admin email send result: ${adminEmailResult}`);
-      } catch (adminError: any) {
-        logger.error("Error sending admin email:", adminError as Error);
-        if (adminError?.response) {
-          logger.error("SendGrid API error response for admin email:", adminError.response.body);
+      // Send test admin notification if requested type is 'admin' or not specified
+      if (!type || type === 'admin') {
+        try {
+          logger.debug("Sending test admin notification email...");
+          
+          // Create admin email with modified subject for easier identification in inbox
+          const adminMsg = {
+            to: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
+            from: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
+            subject: `🔔 URGENT TEST: New Booking Alert (${timestamp})`,
+            text: getPlainTextAdminNotification(testBooking),
+            html: getHtmlAdminNotification(testBooking),
+          };
+          
+          logger.debug("Admin email payload:", JSON.stringify({
+            to: adminMsg.to,
+            from: adminMsg.from,
+            subject: adminMsg.subject
+          }));
+          
+          // Send directly through SendGrid for custom subject
+          const sgMail = require('@sendgrid/mail');
+          sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+          await sgMail.send(adminMsg);
+          adminEmailResult = true;
+          logger.info(`Admin email send result: ${adminEmailResult}`);
+        } catch (adminError: any) {
+          logger.error("Error sending admin email:", adminError as Error);
+          if (adminError?.response) {
+            logger.error("SendGrid API error response for admin email:", adminError.response.body);
+          }
         }
       }
       
       res.json({
         success: true,
         results: {
-          customerEmail: customerEmailResult,
-          adminEmail: adminEmailResult
+          customerEmail: type === 'admin' ? 'not requested' : customerEmailResult,
+          adminEmail: type === 'customer' ? 'not requested' : adminEmailResult
         },
-        message: "Email test completed. Check server logs for details."
+        message: "Email test completed. Check server logs for details.",
+        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
+        timestamp: timestamp
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error("Error in test-email endpoint:", error as Error);
       res.status(500).json({
         success: false,
