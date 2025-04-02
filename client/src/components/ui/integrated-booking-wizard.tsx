@@ -618,9 +618,30 @@ export function IntegratedBookingWizard({
   };
   
   // Form input handlers
+  // Format phone number as (XXX)-XXX-XXXX while typing
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits from the input
+    const phoneDigits = value.replace(/\D/g, '');
+    
+    // Format the phone number
+    if (phoneDigits.length <= 3) {
+      return phoneDigits;
+    } else if (phoneDigits.length <= 6) {
+      return `(${phoneDigits.slice(0, 3)})-${phoneDigits.slice(3)}`;
+    } else {
+      return `(${phoneDigits.slice(0, 3)})-${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    // Apply special formatting for phone numbers
+    if (name === 'phone') {
+      setFormData({ ...formData, [name]: formatPhoneNumber(value) });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleCheckboxChange = (checked: boolean, name: string) => {
@@ -697,11 +718,15 @@ export function IntegratedBookingWizard({
         errorFieldIds.push('customer-phone');
         isValid = false;
         errorCount++;
-      } else if (!/^[0-9()-.\s]+$/.test(formData.phone)) {
-        errors.phone = ["Please enter a valid phone number"];
-        errorFieldIds.push('customer-phone');
-        isValid = false;
-        errorCount++;
+      } else {
+        // Extract just the digits for validation
+        const digitsOnly = formData.phone.replace(/\D/g, '');
+        if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+          errors.phone = ["Please enter a valid phone number in format (XXX)-XXX-XXXX"];
+          errorFieldIds.push('customer-phone');
+          isValid = false;
+          errorCount++;
+        }
       }
       
       if (!formData.streetAddress) {
@@ -1622,13 +1647,17 @@ export function IntegratedBookingWizard({
                                 type="tel"
                                 value={formData.phone || ""}
                                 onChange={handleInputChange}
-                                placeholder="(555) 123-4567"
+                                placeholder="(XXX)-XXX-XXXX"
                                 className={`${validationErrors.phone ? "border-destructive" : ""} pl-10 h-10`}
                               />
                             </div>
-                            {validationErrors.phone && (
+                            {validationErrors.phone ? (
                               <p className="text-sm text-destructive">
                                 {validationErrors.phone[0]}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Format: (XXX)-XXX-XXXX - Number will be formatted automatically as you type
                               </p>
                             )}
                           </div>
