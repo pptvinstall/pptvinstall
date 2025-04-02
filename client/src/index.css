@@ -57,6 +57,8 @@
   body {
     @apply font-sans antialiased bg-background text-foreground scroll-smooth;
   }
+  
+  /* Add padding for fixed header is now applied directly in main.tsx */
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;

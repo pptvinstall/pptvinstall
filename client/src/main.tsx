@@ -56,7 +56,7 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 //Error Boundary Component
-const ErrorBoundary = ({ children }) => {
+const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   const [hasError, setHasError] = React.useState(false);
 
   function handleError() {
@@ -82,7 +82,7 @@ createRoot(document.getElementById('root')!).render(
         <div className="min-h-screen flex flex-col relative"> {/* Added relative positioning */}
           <PromotionBannerGroup />
           <Nav />
-          <main className="flex-grow">
+          <main className="flex-grow pt-16">
             <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>
               <Router>
                 <ScrollToTop />

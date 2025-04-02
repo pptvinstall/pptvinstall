@@ -74,7 +74,7 @@ export default function Nav() {
 
   return (
     <nav className={cn(
-      "sticky top-0 z-50 w-full transition-all duration-300",
+      "fixed top-0 z-50 w-full transition-all duration-300",
       isScrolled ? "bg-background/95 backdrop-blur shadow-sm" : "bg-background"
     )}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -161,7 +161,7 @@ export default function Nav() {
           {/* Mobile menu dropdown */}
           {isOpen && (
             <div className="fixed inset-0 z-50 lg:hidden bg-black/50" onClick={() => setIsOpen(false)}>
-              <div className="fixed inset-y-0 right-0 w-[85vw] sm:w-[350px] z-50 bg-background shadow-xl p-0" 
+              <div className="fixed inset-y-0 right-0 w-[85vw] sm:w-[350px] z-50 bg-background shadow-xl p-0 overflow-hidden" 
                    onClick={(e) => e.stopPropagation()}>
                 <div className="flex flex-col h-full">
                   <div className="p-4 border-b flex items-center justify-between">
