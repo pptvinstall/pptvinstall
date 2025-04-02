@@ -53,8 +53,8 @@
     <meta name="apple-mobile-web-app-title" content="PPTVInstall" />
     
     <!-- Apple PWA icons -->
+    <link rel="apple-touch-icon" href="/icons/pptv/apple-touch-icon.png" />
     <link rel="apple-touch-icon-precomposed" href="/icons/pptv/apple-touch-icon-precomposed.png" />
-    <link rel="apple-touch-icon" href="/icons/pptv/apple-touch-icon.svg" />
     <link rel="icon" href="/icons/pptv/pptv-icon.svg" type="image/svg+xml" />
     
     <!-- Original PNG icons as fallback -->
@@ -66,6 +66,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
     <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+    <link rel="mask-icon" href="/icons/maskable-icon.png" color="#0f52ba" />
     
     <!-- Apple Splash Screens -->
     <link rel="apple-touch-startup-image" href="/icons/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
@@ -88,28 +89,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Add a small delay to ensure the page is fully loaded
-          setTimeout(() => {
-            navigator.serviceWorker.register('/service-worker.js', { 
-              // Explicitly set the type here which can help in some environments
-              updateViaCache: 'none'
-            })
-              .then(registration => {
-                console.log('Service Worker registered with scope:', registration.scope);
-              })
-              .catch(error => {
-                // Provide more detailed error logging but don't break the app
-                console.warn('Service Worker registration failed:', error);
-                console.info('Service Worker features will not be available in this environment');
-              });
-          }, 1000);
-        });
-      }
-    </script>
   </body>
 </html>

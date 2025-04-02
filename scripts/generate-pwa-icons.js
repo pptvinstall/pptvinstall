@@ -1,74 +1,82 @@
+// Icon generation script for PWA
 import sharp from 'sharp';
-import { promises as fs } from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get the directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define icon sizes
-const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+// Icon sizes for PWA
+const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
 
-// Also create a small badge icon for notifications
-const badgeSizes = [72];
+// Ensure directories exist
+const ICONS_DIR = path.join(__dirname, '../public/icons');
+if (!fs.existsSync(ICONS_DIR)) {
+  fs.mkdirSync(ICONS_DIR, { recursive: true });
+}
+
+const PPTV_DIR = path.join(ICONS_DIR, 'pptv');
+if (!fs.existsSync(PPTV_DIR)) {
+  fs.mkdirSync(PPTV_DIR, { recursive: true });
+}
 
 async function generateIcons() {
   try {
-    const sourceIcon = path.join(__dirname, '../public/icons/icon.svg');
-    const iconDir = path.join(__dirname, '../public/icons');
+    // Using the logo file
+    const sourceImage = path.join(__dirname, '../attached_assets/IMG_1509.jpeg');
     
-    // Check if source icon exists
-    await fs.access(sourceIcon);
-    
-    // Ensure the output directory exists
-    try {
-      await fs.access(iconDir);
-    } catch (e) {
-      console.log('Creating icons directory...');
-      await fs.mkdir(iconDir, { recursive: true });
+    if (!fs.existsSync(sourceImage)) {
+      console.error(`Source image not found: ${sourceImage}`);
+      process.exit(1);
     }
     
-    // Generate regular icons
     console.log('Generating PWA icons...');
-    for (const size of sizes) {
-      await sharp(sourceIcon)
+    
+    // Generate favicons
+    await sharp(sourceImage)
+      .resize(32, 32)
+      .toFile(path.join(__dirname, '../public/images/favicon.png'));
+    
+    // Generate regular icons at various sizes
+    for (const size of ICON_SIZES) {
+      await sharp(sourceImage)
         .resize(size, size)
-        .png()
-        .toFile(path.join(iconDir, `icon-${size}x${size}.png`));
+        .toFile(path.join(ICONS_DIR, `icon-${size}x${size}.png`));
       
-      console.log(`Created icon-${size}x${size}.png`);
+      console.log(`Generated icon-${size}x${size}.png`);
     }
     
-    // Generate badge icon for notifications (normally a simplified version)
-    console.log('Generating badge icons...');
-    for (const size of badgeSizes) {
-      await sharp(sourceIcon)
-        .resize(size, size)
-        .png()
-        .toFile(path.join(iconDir, `badge-${size}x${size}.png`));
-      
-      console.log(`Created badge-${size}x${size}.png`);
-    }
+    // Generate maskable icon with padding (ensures icon stays within safe area)
+    // Standard maskable icon has 10% safe zone from each edge
+    await sharp(sourceImage)
+      .resize(Math.floor(512 * 0.8), Math.floor(512 * 0.8)) // 80% of total size to allow for 10% padding on all sides
+      .extend({
+        top: Math.floor(512 * 0.1),
+        bottom: Math.floor(512 * 0.1),
+        left: Math.floor(512 * 0.1),
+        right: Math.floor(512 * 0.1),
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+      .toFile(path.join(ICONS_DIR, 'maskable-icon.png'));
     
-    // Create an offline fallback image
-    console.log('Generating offline image...');
-    const offlineImageSvg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-      <rect width="200" height="200" fill="#f3f4f6" rx="8" ry="8"/>
-      <g fill="#9ca3af">
-        <path d="M100 70c-22.1 0-40 17.9-40 40 0 22.1 17.9 40 40 40 22.1 0 40-17.9 40-40 0-22.1-17.9-40-40-40zm0 72c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z"/>
-        <path d="M126.4 81.6L81.6 126.4c-1.6 1.6-1.6 4.1 0 5.7.8.8 1.8 1.2 2.8 1.2s2.1-.4 2.8-1.2l44.8-44.8c1.6-1.6 1.6-4.1 0-5.7-1.5-1.6-4.1-1.6-5.6 0z"/>
-      </g>
-      <text x="100" y="160" font-family="sans-serif" font-size="14" text-anchor="middle" fill="#6b7280">Image unavailable</text>
-    </svg>`;
+    console.log('Generated maskable icon');
     
-    await fs.writeFile(path.join(iconDir, 'offline-image.svg'), offlineImageSvg);
-    console.log('Created offline-image.svg');
+    // Create Apple specific icons
+    await sharp(sourceImage)
+      .resize(180, 180)
+      .toFile(path.join(PPTV_DIR, 'apple-touch-icon.png'));
     
-    console.log('All PWA icons generated successfully!');
+    await sharp(sourceImage)
+      .resize(180, 180)
+      .toFile(path.join(PPTV_DIR, 'apple-touch-icon-precomposed.png'));
+    
+    console.log('Generated Apple touch icons');
+    
+    console.log('PWA icon generation complete!');
   } catch (error) {
     console.error('Error generating icons:', error);
+    process.exit(1);
   }
 }
 

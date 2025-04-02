@@ -1,207 +1,144 @@
-// Service worker version
-const CACHE_VERSION = 'v1.1.0';
-const CACHE_NAME = `pptv-install-cache-${CACHE_VERSION}`;
+// Service Worker for Picture Perfect TV Install PWA
 
-// Assets to cache
-const PRECACHE_ASSETS = [
+const CACHE_NAME = 'pptv-cache-v2';
+const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/offline.html',
-  '/icons/offline-image.svg',
+  '/manifest.json',
+  '/icons/icon-72x72.png',
+  '/icons/icon-96x96.png',
+  '/icons/icon-128x128.png',
+  '/icons/icon-144x144.png',
+  '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
+  '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
-  '/icons/badge-72x72.png',
-  '/icons/pptv/pptv-icon.svg',
-  '/icons/pptv/apple-touch-icon.svg',
+  '/icons/maskable-icon.png',
+  '/icons/pptv/apple-touch-icon.png',
   '/icons/pptv/apple-touch-icon-precomposed.png',
-  '/manifest.json'
+  '/icons/offline-image.svg',
+  '/assets/index.css',
+  '/assets/index.js',
+  // Apple splash screens
+  '/icons/apple-splash-640-1136.png',
+  '/icons/apple-splash-750-1334.png',
+  '/icons/apple-splash-828-1792.png',
+  '/icons/apple-splash-1125-2436.png',
+  '/icons/apple-splash-1242-2688.png',
+  '/icons/apple-splash-1170-2532.png',
+  '/icons/apple-splash-1284-2778.png',
+  '/icons/apple-splash-1536-2048.png',
+  '/icons/apple-splash-1668-2388.png',
+  '/icons/apple-splash-2048-2732.png',
 ];
 
-// Install event - Cache basic resources
-self.addEventListener('install', event => {
+// Cache for dynamic content like images
+const DYNAMIC_CACHE_NAME = 'pptv-dynamic-cache-v1';
+
+// Install event - cache essential files for offline usage
+self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing Service Worker...', event);
-  
-  // Skip waiting to activate service worker immediately
-  self.skipWaiting();
-  
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[Service Worker] Precaching app shell');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
-      .catch(error => {
-        console.error('[Service Worker] Precaching failed:', error);
-      })
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[Service Worker] Caching App Shell');
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
   );
 });
 
-// Activate event - Clean up old caches
-self.addEventListener('activate', event => {
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating Service Worker...', event);
-  
-  // Clean up old caches
   event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('[Service Worker] Removing old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
-      .then(() => {
-        console.log('[Service Worker] Claiming clients');
-        return self.clients.claim();
-      })
+    caches.keys().then((keyList) => {
+      return Promise.all(keyList.map((key) => {
+        // Keep current caches, delete old versions
+        if (key !== CACHE_NAME && key !== DYNAMIC_CACHE_NAME) {
+          console.log('[Service Worker] Removing old cache', key);
+          return caches.delete(key);
+        }
+      }));
+    })
   );
-  
   return self.clients.claim();
 });
 
-// Fetch event - Network first with cache fallback strategy
-self.addEventListener('fetch', event => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
-  
-  // Skip cross-origin requests
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  
-  // API requests - network only
+// Fetch event - respond with cached content when available
+self.addEventListener('fetch', (event) => {
+  // For API requests, always go to network
   if (event.request.url.includes('/api/')) {
     return;
   }
   
-  // HTML pages - network with offline fallback
-  if (event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match('/offline.html');
-        })
-    );
-    return;
-  }
-  
-  // Images - cache first, network fallback
-  if (event.request.url.match(/\.(jpg|jpeg|png|gif|svg|webp)$/)) {
-    event.respondWith(
-      caches.match(event.request)
-        .then(cachedResponse => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          return fetch(event.request)
-            .then(networkResponse => {
-              // Cache the fetched image
-              if (networkResponse && networkResponse.ok) {
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME)
-                  .then(cache => {
-                    cache.put(event.request, responseToCache);
-                  });
-              }
-              return networkResponse;
-            })
-            .catch(() => {
-              // If both cache and network fail, return a placeholder image
-              return caches.match('/icons/offline-image.svg');
-            });
-        })
-    );
-    return;
-  }
-  
-  // Default strategy - stale-while-revalidate
+  // For non-API requests, use a caching strategy
   event.respondWith(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.match(event.request).then(cachedResponse => {
-        const fetchPromise = fetch(event.request)
-          .then(networkResponse => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          })
-          .catch(error => {
-            console.log('[Service Worker] Fetch failed; returning cached response instead.', error);
+    caches.match(event.request).then((response) => {
+      if (response) {
+        // Return cached version if available
+        return response;
+      }
+      
+      // If not in cache, fetch from network and add to cache for future use
+      return fetch(event.request).then((response) => {
+        // Only cache successful responses to avoid caching error pages
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+        
+        const responseToCache = response.clone();
+        
+        // Determine which cache to use based on the request
+        if (event.request.url.match(/\.(jpg|jpeg|png|gif|svg|webp)$/)) {
+          // Cache images in dynamic cache
+          caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
           });
-          
-        return cachedResponse || fetchPromise;
+        } else {
+          // Cache other assets in main cache
+          caches.open(CACHE_NAME).then((cache) => {
+            // Don't cache API responses
+            if (!event.request.url.includes('/api/')) {
+              cache.put(event.request, responseToCache);
+            }
+          });
+        }
+        
+        return response;
+      }).catch((error) => {
+        console.error('[Service Worker] Fetch error:', error);
+        
+        // If both cache and network fail for image requests, return a fallback
+        if (event.request.url.match(/\.(jpg|jpeg|png|gif|svg|webp)$/)) {
+          return caches.match('/icons/offline-image.svg') || caches.match('/icons/icon-512x512.png');
+        }
+        
+        // For HTML pages, return the offline page
+        if (event.request.headers.get('accept')?.includes('text/html')) {
+          return caches.match('/offline.html');
+        }
+        
+        // For font files, try to serve any available font
+        if (event.request.url.match(/\.(woff|woff2|ttf|otf|eot)$/)) {
+          return new Response('Font not available offline', {
+            status: 408,
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        }
+        
+        // Otherwise, let the error happen
+        return new Response('You are offline. Please check your internet connection.', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' },
+        });
       });
     })
   );
 });
 
-// Push notification event
-self.addEventListener('push', event => {
-  console.log('[Service Worker] Push notification received', event);
-  
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = {
-        title: 'New Notification',
-        body: event.data.text()
-      };
-    }
+// Listen for message events for service worker communication
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
-  
-  const title = data.title || 'PPTVInstall';
-  const options = {
-    body: data.body || 'Something new happened!',
-    icon: data.icon || '/icons/pptv/pptv-icon.svg',
-    badge: data.badge || '/icons/pptv/apple-touch-icon-precomposed.png',
-    data: data.data || {},
-    actions: data.actions || [],
-    vibrate: [100, 50, 100],
-    tag: data.tag || 'default'
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
-});
-
-// Notification click event
-self.addEventListener('notificationclick', event => {
-  console.log('[Service Worker] Notification click received', event);
-  
-  event.notification.close();
-  
-  // Handle notification click
-  const data = event.notification.data;
-  const action = event.action;
-  
-  let url = '/';
-  
-  // Handle different actions
-  if (action === 'view' && data && data.bookingId) {
-    url = `/account/bookings/${data.bookingId}`;
-  } else if (data && data.type === 'reminder') {
-    url = '/account/bookings';
-  } else if (data && data.url) {
-    url = data.url;
-  }
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window' })
-      .then(windowClients => {
-        // Check if there is already a window client open
-        for (const client of windowClients) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        // If no window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
-      })
-  );
 });
