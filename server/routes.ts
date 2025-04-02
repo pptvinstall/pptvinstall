@@ -66,6 +66,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     logger.debug('Health check requested');
     res.json({ status: "ok" });
   });
+  
+  // Test email sending functionality - for troubleshooting only
+  app.get("/api/admin/test-email", async (req, res) => {
+    try {
+      const { email, password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin password"
+        });
+      }
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email address is required"
+        });
+      }
+      
+      logger.info(`Testing email functionality to address: ${email}`);
+      
+      // Create a test booking object
+      const testBooking = {
+        id: "TEST-123",
+        name: "Test Customer",
+        email: email as string,
+        phone: "555-555-5555",
+        streetAddress: "123 Test Street",
+        city: "Atlanta",
+        state: "GA",
+        zipCode: "30301",
+        serviceType: "TV Installation",
+        preferredDate: new Date().toISOString(),
+        appointmentTime: "7:00 PM",
+        notes: "This is a test booking to verify email functionality",
+        pricingTotal: "199.99",
+        pricingBreakdown: [
+          { type: "tv", size: "large", location: "standard", mountType: "fixed" }
+        ]
+      };
+      
+      // Log SendGrid configuration
+      logger.debug("SendGrid Config:", {
+        apiKeySet: !!process.env.SENDGRID_API_KEY,
+        fromEmail: process.env.EMAIL_FROM || 'bookings@pictureperfecttv.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'admin@pictureperfecttv.com'
+      });
+      
+      // Send test customer email
+      let customerEmailResult = false;
+      try {
+        logger.debug("Sending test customer confirmation email...");
+        customerEmailResult = await sendBookingConfirmationEmail(testBooking);
+        logger.info(`Customer email send result: ${customerEmailResult}`);
+      } catch (customerError: any) {
+        logger.error("Error sending customer email:", customerError as Error);
+        if (customerError?.response) {
+          logger.error("SendGrid API error response for customer email:", customerError.response.body);
+        }
+      }
+      
+      // Send test admin notification
+      let adminEmailResult = false;
+      try {
+        logger.debug("Sending test admin notification email...");
+        adminEmailResult = await sendAdminBookingNotificationEmail(testBooking);
+        logger.info(`Admin email send result: ${adminEmailResult}`);
+      } catch (adminError: any) {
+        logger.error("Error sending admin email:", adminError as Error);
+        if (adminError?.response) {
+          logger.error("SendGrid API error response for admin email:", adminError.response.body);
+        }
+      }
+      
+      res.json({
+        success: true,
+        results: {
+          customerEmail: customerEmailResult,
+          adminEmail: adminEmailResult
+        },
+        message: "Email test completed. Check server logs for details."
+      });
+    } catch (error) {
+      logger.error("Error in test-email endpoint:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while testing email functionality"
+      });
+    }
+  });
 
   // Calendar API endpoints with internal availability service
   app.get("/api/calendar/availability", async (req, res) => {
@@ -509,16 +600,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileBookings.push(bookingWithId);
         saveBookings(fileBookings);
 
-        // Send confirmation email
-        try {
-          if (process.env.SENDGRID_API_KEY) {
-            await sendBookingConfirmationEmail(bookingWithId);
-            await sendAdminBookingNotificationEmail(bookingWithId);
-            logger.info("Confirmation emails sent successfully");
+        // Send customer confirmation email
+        let customerEmailSent = false;
+        let adminEmailSent = false;
+        
+        if (process.env.SENDGRID_API_KEY) {
+          try {
+            customerEmailSent = await sendBookingConfirmationEmail(bookingWithId);
+            logger.info(`Customer confirmation email sent successfully: ${customerEmailSent}`);
+          } catch (error: any) {
+            logger.error("Error sending customer confirmation email:", error as Error);
+            if (error?.response) {
+              logger.error("SendGrid API error response for customer email:", error.response.body);
+            }
+            // We don't want to fail the booking if notifications fail
           }
-        } catch (error) {
-          logger.error("Error sending notifications:", error as Error);
-          // We don't want to fail the booking if notifications fail
+          
+          // Send admin notification email separately
+          try {
+            adminEmailSent = await sendAdminBookingNotificationEmail(bookingWithId);
+            logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
+          } catch (error: any) {
+            logger.error("Error sending admin notification email:", error as Error);
+            if (error?.response) {
+              logger.error("SendGrid API error response for admin email:", error.response.body);
+            }
+            // We don't want to fail the booking if notifications fail
+          }
+          
+          logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
         }
 
         // Return success response

@@ -40,9 +40,9 @@ export async function sendBookingConfirmationEmail(booking: any) {
     await sgMail.send(msg);
     console.log(`Booking confirmation email sent to ${booking.email}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending booking confirmation email:', error);
-    if (error.response) {
+    if (error?.response) {
       console.error('SendGrid API error response:', error.response.body);
     }
     return false;
@@ -458,9 +458,9 @@ export async function sendBookingUpdateEmail(booking: any, changes: Record<strin
     await sgMail.send(msg);
     console.log(`Booking update email sent to ${booking.email}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending booking update email:', error);
-    if (error.response) {
+    if (error?.response) {
       console.error('SendGrid API error response:', error.response.body);
     }
     return false;
@@ -624,9 +624,9 @@ The Picture Perfect TV Install Team
     await sgMail.send(msg);
     logger.info(`Booking cancellation email sent to ${booking.email}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error sending booking cancellation email:', error);
-    if (error.response) {
+    if (error?.response) {
       logger.error('SendGrid API error response:', error.response.body);
     }
     return false;
@@ -664,9 +664,9 @@ export async function sendAdminBookingNotificationEmail(booking: any) {
     await sgMail.send(msg);
     console.log(`Admin notification email sent to ${adminEmail}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending admin notification email:', error);
-    if (error.response) {
+    if (error?.response) {
       console.error('SendGrid API error response:', error.response.body);
     }
     return false;
