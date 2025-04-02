@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,10 +12,8 @@ import {
   MonitorSmartphone,
   ChevronDown,
   LucideIcon,
-  User,
-  ArrowUp
+  User
 } from "lucide-react";
-import { ResponsiveImage } from '@/components/ui/responsive-image';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/logo';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -37,6 +35,11 @@ export default function Nav() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showFloatingButton, setShowFloatingButton] = useState(false);
+  
+  // Memoized handlers for better performance
+  const toggleMenu = useCallback(() => setIsOpen(prev => !prev), []);
+  const openMenu = useCallback(() => setIsOpen(true), []);
+  const closeMenu = useCallback(() => setIsOpen(false), []);
 
   // Navigation links with icons
   const navigationLinks: NavLink[] = [
@@ -57,25 +60,39 @@ export default function Nav() {
     { href: '/customer-login', name: 'Customer Portal', icon: User }
   ];
 
-  // Handle scroll effects
+  // Memoize scroll handler to prevent unnecessary rerenders
+  const handleScroll = useCallback(() => {
+    const scrollPosition = window.scrollY;
+    setIsScrolled(scrollPosition > 10);
+    setShowFloatingButton(scrollPosition > 300);
+  }, []);
+  
+  // Handle scroll effects with throttling for better performance
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-      setShowFloatingButton(window.scrollY > 300);
-    };
-    
     // Initial check
     handleScroll();
     
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    // Throttled scroll event to improve performance
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [handleScroll]);
 
-  // Check if a link is active
-  const isActive = (href: string) => {
+  // Memoized function to check if a link is active
+  const isActive = useCallback((href: string) => {
     if (href === '/') return location === '/';
     return location.startsWith(href);
-  };
+  }, [location]);
 
   return (
     <>
@@ -160,7 +177,8 @@ export default function Nav() {
               variant="ghost" 
               size="icon" 
               className="lg:hidden"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={toggleMenu}
+              aria-label="Toggle menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -170,7 +188,7 @@ export default function Nav() {
       
       {/* Mobile menu dropdown */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden bg-black/50" onClick={() => setIsOpen(false)}>
+        <div className="fixed inset-0 z-50 lg:hidden bg-black/50" onClick={closeMenu}>
           <div className="fixed inset-y-0 right-0 w-[85vw] sm:w-[350px] z-50 bg-background shadow-xl p-0 overflow-hidden" 
                onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col h-full">
@@ -179,7 +197,7 @@ export default function Nav() {
                   <Logo size="sm" withText={false} />
                   <span className="ml-2 text-lg font-bold">Picture Perfect</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                <Button variant="ghost" size="icon" onClick={closeMenu} aria-label="Close menu">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -188,7 +206,7 @@ export default function Nav() {
                 {navigationLinks.map((link) => (
                   <div key={link.href}>
                     {!link.children ? (
-                      <Link href={link.href} onClick={() => setIsOpen(false)}>
+                      <Link href={link.href} onClick={closeMenu}>
                         <Button 
                           variant={isActive(link.href) ? "default" : "ghost"} 
                           size="sm"
@@ -222,7 +240,7 @@ export default function Nav() {
                                   key={child.href}
                                   href={child.href}
                                   className="p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                                  onClick={() => setIsOpen(false)}
+                                  onClick={closeMenu}
                                 >
                                   {child.name}
                                 </a>
@@ -239,10 +257,10 @@ export default function Nav() {
               <div className="mt-auto p-4 border-t">
                 <Button 
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
+                  onClick={useCallback(() => {
                     window.location.href = "tel:+16782632859";
-                    setIsOpen(false);
-                  }}
+                    closeMenu();
+                  }, [closeMenu])}
                 >
                   <PhoneCall className="mr-2 h-4 w-4" />
                   Call (678) 263-2859
@@ -255,12 +273,13 @@ export default function Nav() {
       
       {/* Floating menu button - appears when scrolling down on mobile */}
       {showFloatingButton && (
-        <div className="fixed bottom-6 right-6 z-40 lg:hidden">
+        <div className="fixed bottom-6 right-6 z-40 lg:hidden animate-in fade-in duration-300">
           <Button
             variant="default"
             size="icon"
-            className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
-            onClick={() => setIsOpen(true)}
+            className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 transition-transform hover:scale-110"
+            onClick={openMenu}
+            aria-label="Open menu"
           >
             <Menu className="h-6 w-6" />
           </Button>
