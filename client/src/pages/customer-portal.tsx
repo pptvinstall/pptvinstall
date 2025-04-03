@@ -28,6 +28,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   CalendarClock, 
   Clock, 
@@ -35,7 +45,8 @@ import {
   FileEdit, 
   AlertCircle,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Calendar
 } from 'lucide-react';
 
 import type { Booking } from '@shared/schema';
@@ -47,6 +58,15 @@ export default function CustomerPortalPage() {
   const [customerToken, setCustomerToken] = useState<{ id: string, email: string, name: string } | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  
+  // State for cancel dialog
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  
+  // State for success dialog
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successDialogType, setSuccessDialogType] = useState<'reschedule' | 'cancel'>('reschedule');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Get customer token from localStorage
   useEffect(() => {
@@ -100,17 +120,28 @@ export default function CustomerPortalPage() {
       
       return result.booking;
     },
-    onSuccess: () => {
+    onSuccess: (updatedBooking) => {
       // Close the dialog
       setIsBookingDialogOpen(false);
       setSelectedBooking(null);
       
-      // Show success message
-      toast({
-        title: 'Booking updated',
-        description: 'Your booking has been updated successfully.',
-        variant: 'default',
-      });
+      // Prepare success message for rescheduling
+      if (updatedBooking.preferredDate && updatedBooking.appointmentTime) {
+        const formattedDate = format(new Date(updatedBooking.preferredDate), 'EEEE, MMMM d, yyyy');
+        const message = `Your appointment has been rescheduled for ${formattedDate} at ${updatedBooking.appointmentTime}.`;
+        
+        // Show success dialog instead of toast
+        setSuccessMessage(message);
+        setSuccessDialogType('reschedule');
+        setShowSuccessDialog(true);
+      } else {
+        // Fallback to toast if no date/time
+        toast({
+          title: 'Booking updated',
+          description: 'Your booking has been updated successfully.',
+          variant: 'default',
+        });
+      }
       
       // Refresh the bookings list
       queryClient.invalidateQueries({ queryKey: ['/api/customers/bookings', customerToken?.id] });
@@ -119,6 +150,53 @@ export default function CustomerPortalPage() {
       toast({
         title: 'Error',
         description: error.message || 'An error occurred while updating your booking.',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Mutation for cancelling a booking
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/customers/bookings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to cancel booking');
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to cancel booking');
+      }
+      
+      return result.booking;
+    },
+    onSuccess: (cancelledBooking) => {
+      // Close the cancel dialog
+      setShowCancelDialog(false);
+      setBookingToCancel(null);
+      
+      // Show success dialog
+      const message = 'Your appointment has been cancelled successfully. Thank you for letting us know.';
+      setSuccessMessage(message);
+      setSuccessDialogType('cancel');
+      setShowSuccessDialog(true);
+      
+      // Refresh the bookings list
+      queryClient.invalidateQueries({ queryKey: ['/api/customers/bookings', customerToken?.id] });
+    },
+    onError: (error: Error) => {
+      setShowCancelDialog(false);
+      toast({
+        title: 'Error',
+        description: error.message || 'An error occurred while cancelling your booking.',
         variant: 'destructive',
       });
     }
@@ -210,6 +288,24 @@ export default function CustomerPortalPage() {
     // Clear selected booking after dialog closes
     setTimeout(() => setSelectedBooking(null), 300);
   };
+  
+  // Function to confirm cancellation
+  const confirmCancelBooking = (booking: Booking) => {
+    setBookingToCancel(booking);
+    setShowCancelDialog(true);
+  };
+  
+  // Function to actually cancel the booking
+  const handleCancelBooking = () => {
+    if (bookingToCancel?.id) {
+      cancelBookingMutation.mutate(Number(bookingToCancel.id));
+    }
+  };
+  
+  // Close the success dialog
+  const closeSuccessDialog = () => {
+    setShowSuccessDialog(false);
+  };
 
   return (
     <div className="container py-10 space-y-6">
@@ -268,13 +364,13 @@ export default function CustomerPortalPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center">
                           <div className="flex items-center">
                             <CalendarClock className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                            <span className="whitespace-nowrap">
-                              {booking.preferredDate && format(new Date(booking.preferredDate), 'MMM d, yyyy')}
+                            <span className="font-medium whitespace-nowrap">
+                              {booking.preferredDate ? format(new Date(booking.preferredDate), 'EEE, MMM d, yyyy') : '-'}
                             </span>
                           </div>
                           <div className="flex items-center mt-1 sm:mt-0 sm:ml-4">
                             <Clock className="w-3 h-3 mr-1 text-primary flex-shrink-0" />
-                            <span className="whitespace-nowrap">{booking.appointmentTime}</span>
+                            <span className="whitespace-nowrap font-medium">{booking.appointmentTime || '-'}</span>
                           </div>
                         </div>
                       </TableCell>
@@ -291,15 +387,26 @@ export default function CustomerPortalPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {booking.status === 'active' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(booking)}
-                            className="flex items-center bg-primary/10 hover:bg-primary/20 border-primary/20"
-                          >
-                            <FileEdit className="w-4 h-4 mr-1 text-primary" />
-                            <span className="text-primary font-medium">Edit</span>
-                          </Button>
+                          <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(booking)}
+                              className="flex items-center bg-primary/10 hover:bg-primary/20 border-primary/20"
+                            >
+                              <FileEdit className="w-4 h-4 mr-1 text-primary" />
+                              <span className="text-primary font-medium">Edit</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => confirmCancelBooking(booking)}
+                              className="flex items-center bg-red-50 hover:bg-red-100 border-red-200 text-red-500"
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <span className="font-medium">Cancel</span>
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -331,6 +438,78 @@ export default function CustomerPortalPage() {
           isUpdating={updateBookingMutation.isPending}
         />
       )}
+      
+      {/* Booking cancellation confirmation dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this appointment? This action cannot be undone.
+              {bookingToCancel?.preferredDate && (
+                <div className="mt-4 border rounded-md p-3 bg-muted/50">
+                  <div className="flex items-center mb-2">
+                    <CalendarClock className="w-4 h-4 mr-2 text-primary" />
+                    <span className="font-medium">
+                      {format(new Date(bookingToCancel.preferredDate), 'EEEE, MMMM d, yyyy')}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Clock className="w-4 h-4 mr-2 text-primary" />
+                    <span className="font-medium">{bookingToCancel.appointmentTime}</span>
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelBooking}
+              disabled={cancelBookingMutation.isPending}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {cancelBookingMutation.isPending ? 'Cancelling...' : 'Yes, Cancel Appointment'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Success dialog for rescheduling and cancellation */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {successDialogType === 'reschedule' ? 'Appointment Rescheduled' : 'Appointment Cancelled'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start">
+                  <CheckCircle2 className="w-5 h-5 mr-2 text-green-500 mt-0.5" />
+                  <span>{successMessage}</span>
+                </div>
+                
+                {successDialogType === 'reschedule' && (
+                  <div className="flex items-start">
+                    <Calendar className="w-5 h-5 mr-2 text-primary mt-0.5" />
+                    <span>We look forward to seeing you then!</span>
+                  </div>
+                )}
+                
+                {successDialogType === 'cancel' && (
+                  <div className="flex items-start">
+                    <Calendar className="w-5 h-5 mr-2 text-primary mt-0.5" />
+                    <span>Your timeslot is now available for someone else to book.</span>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
