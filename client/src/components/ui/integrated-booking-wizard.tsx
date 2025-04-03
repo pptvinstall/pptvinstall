@@ -939,9 +939,12 @@ export function IntegratedBookingWizard({
     }));
 
     // Prepare booking data - directly include all fields in the top-level object
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = formData.email ? formData.email.toLowerCase().trim() : '';
+    
     const bookingData = {
       name: formData.name,
-      email: formData.email,
+      email: normalizedEmail, // Use normalized email
       phone: formData.phone,
       streetAddress: formData.streetAddress,
       addressLine2: formData.addressLine2 || undefined,

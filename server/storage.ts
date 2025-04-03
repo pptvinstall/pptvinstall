@@ -606,16 +606,24 @@ export class FileSystemStorage implements IStorage {
   // Customer Management methods
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
     try {
+      // Normalize email (ensure it's lowercase) before storing
+      const normalizedData = {
+        ...customerData,
+        email: customerData.email.toLowerCase().trim()
+      };
+      
+      console.log(`Creating customer with email: ${normalizedData.email}`);
+      
       // Hash the password before storing
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(customerData.password, salt);
+      const hashedPassword = await bcrypt.hash(normalizedData.password, salt);
       
       // Generate verification token
       const verificationToken = crypto.randomBytes(32).toString('hex');
       
       // Prepare customer data for insertion
       const customerForDb = {
-        ...customerData,
+        ...normalizedData,
         password: hashedPassword,
         verificationToken: verificationToken,
         isVerified: false,
@@ -651,7 +659,11 @@ export class FileSystemStorage implements IStorage {
   
   async getCustomerByEmail(email: string): Promise<Customer | undefined> {
     try {
-      const result = await db.select().from(customers).where(eq(customers.email, email));
+      // Normalize email for consistent lookups
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log(`Fetching customer by email: ${normalizedEmail}`);
+      
+      const result = await db.select().from(customers).where(eq(customers.email, normalizedEmail));
       return result.length > 0 ? this.mapDatabaseCustomerToModel(result[0]) : undefined;
     } catch (error) {
       console.error('Error fetching customer by email:', error);
@@ -738,12 +750,16 @@ export class FileSystemStorage implements IStorage {
   
   async verifyCustomer(email: string, token: string): Promise<boolean> {
     try {
+      // Normalize email
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log(`Verifying customer with email: ${normalizedEmail}`);
+      
       // Find customer with matching email and verification token
       const customerResult = await db.select()
         .from(customers)
         .where(
           and(
-            eq(customers.email, email),
+            eq(customers.email, normalizedEmail),
             eq(customers.verificationToken, token)
           )
         );
@@ -769,10 +785,14 @@ export class FileSystemStorage implements IStorage {
   
   async requestPasswordReset(email: string): Promise<string | null> {
     try {
+      // Normalize email
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log(`Requesting password reset for email: ${normalizedEmail}`);
+      
       // Find customer with matching email
       const customerResult = await db.select()
         .from(customers)
-        .where(eq(customers.email, email));
+        .where(eq(customers.email, normalizedEmail));
       
       if (customerResult.length === 0) {
         return null;
@@ -802,12 +822,16 @@ export class FileSystemStorage implements IStorage {
   
   async resetPassword(email: string, token: string, newPassword: string): Promise<boolean> {
     try {
+      // Normalize email
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log(`Resetting password for email: ${normalizedEmail}`);
+      
       // Find customer with matching email and reset token
       const customerResult = await db.select()
         .from(customers)
         .where(
           and(
-            eq(customers.email, email),
+            eq(customers.email, normalizedEmail),
             eq(customers.passwordResetToken, token)
           )
         );
@@ -845,10 +869,13 @@ export class FileSystemStorage implements IStorage {
   
   async validateCustomerCredentials(email: string, password: string): Promise<Customer | null> {
     try {
-      // Find customer with matching email
+      // Find customer with matching email (case-insensitive)
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log(`Validating credentials for email: ${normalizedEmail}`);
+      
       const customerResult = await db.select()
         .from(customers)
-        .where(eq(customers.email, email));
+        .where(eq(customers.email, normalizedEmail));
       
       if (customerResult.length === 0) {
         return null;

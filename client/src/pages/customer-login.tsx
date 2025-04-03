@@ -28,7 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 // Login form validation schema
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -37,12 +37,15 @@ export default function CustomerLoginPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
-
+  
+  // Get email from session storage if available (from account creation)
+  const savedEmail = typeof window !== 'undefined' ? sessionStorage.getItem('loginEmail') || '' : '';
+  
   // Setup form with validation
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      email: savedEmail,
       password: '',
     },
   });
@@ -104,7 +107,12 @@ export default function CustomerLoginPage() {
   // Form submission handler
   function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
-    loginMutation.mutate(data);
+    // Ensure email is lowercase for consistency
+    const normalizedData = {
+      ...data,
+      email: data.email.toLowerCase().trim()
+    };
+    loginMutation.mutate(normalizedData);
   }
 
   return (

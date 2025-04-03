@@ -378,8 +378,27 @@ export default function BookingConfirmation() {
     // Start loading
     setAccountCreating(true);
     
+    // Log account creation data for debugging (except password)
+    console.log("Creating account with data:", {
+      name: bookingData.name,
+      email: bookingData.email,
+      phone: bookingData.phone,
+      streetAddress: bookingData.streetAddress,
+      addressLine2: bookingData.addressLine2 || "",
+      city: bookingData.city,
+      state: bookingData.state,
+      zipCode: bookingData.zipCode,
+      passwordLength: password.length
+    });
+    
     try {
+      // Format phone number by removing non-digit characters
+      const cleanedPhone = bookingData.phone.replace(/\D/g, '');
+      
       // Create the account with the customer's email and password
+      // Ensure email is lowercase for consistency
+      const normalizedEmail = bookingData.email.toLowerCase().trim();
+      
       const response = await fetch("/api/customers/register", {
         method: "POST",
         headers: {
@@ -387,8 +406,8 @@ export default function BookingConfirmation() {
         },
         body: JSON.stringify({
           name: bookingData.name,
-          email: bookingData.email,
-          phone: bookingData.phone,
+          email: normalizedEmail, // Use lowercase email
+          phone: cleanedPhone, // Use cleaned phone number
           password: password,
           streetAddress: bookingData.streetAddress,
           addressLine2: bookingData.addressLine2 || "",
@@ -400,12 +419,20 @@ export default function BookingConfirmation() {
       });
       
       const data = await response.json();
+      console.log("Account creation response:", {
+        status: response.status,
+        success: data.success,
+        message: data.message
+      });
       
       if (response.ok && data.success) {
         toast({
           title: "Account created successfully!",
           description: "You can now log in to view your bookings and manage your account.",
         });
+        
+        // Store the email in session storage to prefill the login form
+        sessionStorage.setItem("loginEmail", normalizedEmail);
         
         // Redirect to login page after account creation
         setTimeout(() => {
