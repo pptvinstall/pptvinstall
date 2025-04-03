@@ -65,6 +65,22 @@ interface SmartHomeDeviceOption {
   hasExistingWiring?: boolean;
 }
 
+interface BookingFormData {
+  name: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  notes: string;
+  consentToContact: boolean;
+  createAccount: boolean;
+  password: string;
+  confirmPassword: string;
+}
+
 // Main wizard props
 type IntegratedBookingWizardProps = {
   onSubmit: (data: any) => Promise<any>;
@@ -142,6 +158,11 @@ const formatPrice = (price: number) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price);
+};
+
+// Safe date formatter (handles undefined)
+const safeFormatDate = (date: Date | undefined, formatStr: string, fallback: string = 'Not selected') => {
+  return date ? format(date, formatStr) : fallback;
 };
 
 // Main wizard component
@@ -275,7 +296,7 @@ export function IntegratedBookingWizard({
     }
   }, [selectedDate, timeSlots, isTimePastOrTooSoon]);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
     phone: "",
@@ -287,7 +308,8 @@ export function IntegratedBookingWizard({
     notes: "",
     consentToContact: false,
     createAccount: false,
-    password: ""
+    password: "",
+    confirmPassword: ""
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
@@ -499,7 +521,7 @@ export function IntegratedBookingWizard({
       setSelectedTime(availableTime);
       toast({
         title: "Next available time selected",
-        description: `${format(availableDate, "EEEE, MMMM d")} at ${availableTime}`,
+        description: `${safeFormatDate(availableDate, "EEEE, MMMM d", "")} at ${availableTime}`,
       });
     } else {
       toast({
@@ -785,6 +807,18 @@ export function IntegratedBookingWizard({
           isValid = false;
           errorCount++;
         }
+        
+        if (!formData.confirmPassword) {
+          errors.confirmPassword = ["Please confirm your password"];
+          errorFieldIds.push('confirmPassword');
+          isValid = false;
+          errorCount++;
+        } else if (formData.password !== formData.confirmPassword) {
+          errors.confirmPassword = ["Passwords do not match"];
+          errorFieldIds.push('confirmPassword');
+          isValid = false;
+          errorCount++;
+        }
       }
     }
 
@@ -883,7 +917,7 @@ export function IntegratedBookingWizard({
       state: formData.state,
       zipCode: formData.zipCode,
       notes: formData.notes || undefined,
-      preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+      preferredDate: safeFormatDate(selectedDate, "yyyy-MM-dd", ""),
       appointmentTime: selectedTime || "",
       serviceType: tvInstallations.length > 0 ? "TV Installation" : "Smart Home Installation",
       status: "active",
@@ -1973,7 +2007,7 @@ export function IntegratedBookingWizard({
                         <div>
                           <span className="font-medium">Date:</span>{' '}
                           <span className="break-all">
-                            {selectedDate ? format(selectedDate, 'EEE, MMM d, yyyy') : 'Not selected'}
+                            {safeFormatDate(selectedDate, 'EEE, MMM d, yyyy')}
                           </span>
                         </div>
                         <div>

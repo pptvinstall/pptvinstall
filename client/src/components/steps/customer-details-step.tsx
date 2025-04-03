@@ -337,6 +337,25 @@ export const CustomerDetailsStep = React.memo(
                     <p className="text-xs text-muted-foreground">
                       Password must be at least 6 characters long.
                     </p>
+                    
+                    <label htmlFor="confirmPassword" className="text-sm font-medium flex items-center mt-4">
+                      <Lock className="mr-1.5 h-4 w-4" />
+                      Confirm Password
+                    </label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword || ""}
+                      onChange={handleInputChange}
+                      placeholder="Confirm your password"
+                      className={`${validationErrors.confirmPassword ? "border-destructive" : ""} h-10`}
+                    />
+                    {validationErrors.confirmPassword && (
+                      <p className="text-sm text-destructive">
+                        {validationErrors.confirmPassword[0]}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
