@@ -18,6 +18,11 @@ import {
   sendBookingCancellationEmail,
   emailTemplates
 } from "./services/emailService";
+import { 
+  sendEnhancedEmail, 
+  EmailType, 
+  sendEnhancedBookingConfirmation 
+} from "./services/enhancedEmailService";
 import { pushNotificationService } from "./services/pushNotificationService";
 
 // Extend Express Request type to include requestId
@@ -71,6 +76,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", (req, res) => {
     logger.debug('Health check requested');
     res.json({ status: "ok" });
+  });
+  
+  // Public route for email preview page to check basic email settings
+  app.get("/api/email/check-config", (req: Request, res: Response) => {
+    try {
+      logger.info('Email environment basic check requested');
+      
+      // Only provide basic information that's needed for the email preview UI
+      res.json({
+        success: true,
+        apiKeySet: !!process.env.SENDGRID_API_KEY,
+        fromEmail: process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVInstall@gmail.com>',
+        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com'
+      });
+    } catch (error: any) {
+      logger.error("Error checking basic email environment:", error);
+      res.status(500).json({
+        success: false,
+        message: "Unable to retrieve email configuration"
+      });
+    }
   });
   
   // Route to check email-related environment variables
@@ -228,6 +254,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "An error occurred while testing email functionality"
+      });
+    }
+  });
+  
+  // Test enhanced email sending functionality 
+  app.post("/api/email/test-send", async (req: Request, res: Response) => {
+    try {
+      const { 
+        email, 
+        emailType, 
+        sendCalendar = true 
+      } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email address is required"
+        });
+      }
+
+      logger.info(`Testing enhanced email functionality to address: ${email}, type: ${emailType || 'booking_confirmation'}`);
+      
+      const timestamp = new Date().toLocaleTimeString();
+      
+      // Create a test booking object with distinctive information
+      const testBooking = {
+        id: `TEST-${Date.now()}`,
+        name: "Test Customer",
+        email: email,
+        phone: "555-555-5555",
+        streetAddress: "123 Test Street", 
+        city: "Atlanta",
+        state: "GA",
+        zipCode: "30301",
+        serviceType: "TV Installation",
+        preferredDate: new Date().toISOString(),
+        appointmentTime: "7:00 PM",
+        notes: `This is a test email sent at ${timestamp} to verify the enhanced email functionality`,
+        pricingTotal: "199.99",
+        status: "active" as const,
+        pricingBreakdown: [
+          { type: "tv", size: "large", location: "standard", mountType: "fixed" }
+        ],
+        customer: {
+          id: 999,
+          name: "Test Customer",
+          email: email
+        }
+      };
+      
+      // Log SendGrid configuration
+      logger.debug("Enhanced Email Test - SendGrid Config:", {
+        apiKeySet: !!process.env.SENDGRID_API_KEY,
+        fromEmail: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
+        emailType: emailType || EmailType.BOOKING_CONFIRMATION
+      });
+      
+      let result = false;
+      
+      // Send the appropriate email based on type
+      switch (emailType) {
+        case EmailType.BOOKING_CONFIRMATION:
+          result = await sendEnhancedBookingConfirmation(testBooking);
+          break;
+        case EmailType.RESCHEDULE_CONFIRMATION:
+          result = await sendEnhancedEmail(
+            EmailType.RESCHEDULE_CONFIRMATION,
+            testBooking, 
+            { 
+              previousDate: '2023-04-01',
+              previousTime: '6:00 PM'
+            }
+          );
+          break;
+        case EmailType.BOOKING_CANCELLATION:
+          result = await sendEnhancedEmail(
+            EmailType.BOOKING_CANCELLATION,
+            testBooking, 
+            { reason: 'Customer requested cancellation' }
+          );
+          break;
+        case EmailType.SERVICE_EDIT:
+          result = await sendEnhancedEmail(
+            EmailType.SERVICE_EDIT,
+            testBooking, 
+            { 
+              updates: {
+                serviceType: 'TV Installation + Sound Bar Setup',
+                pricingTotal: '249.99'
+              }
+            }
+          );
+          break;
+        case EmailType.WELCOME:
+          result = await sendEnhancedEmail(
+            EmailType.WELCOME,
+            testBooking
+          );
+          break;
+        default:
+          // Default to booking confirmation
+          result = await sendEnhancedBookingConfirmation(testBooking);
+      }
+      
+      res.json({
+        success: true,
+        result: result,
+        message: "Enhanced email test completed. Check your inbox.",
+        emailType: emailType || EmailType.BOOKING_CONFIRMATION,
+        timestamp: timestamp
+      });
+    } catch (error: any) {
+      logger.error("Error in enhanced email test endpoint:", error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while testing enhanced email functionality",
+        error: error.message
       });
     }
   });

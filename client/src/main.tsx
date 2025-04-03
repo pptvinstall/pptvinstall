@@ -88,6 +88,7 @@ const PricingEditor = lazy(() => import('@/pages/admin/pricing-editor')); // Add
 const CustomerLogin = lazy(() => import('@/pages/customer-login'));
 const CustomerPortal = lazy(() => import('@/pages/customer-portal'));
 const CustomerProfile = lazy(() => import('@/pages/customer-profile'));
+const EmailPreviews = lazy(() => import('@/pages/email-previews')); // Added email previews page
 
 
 // ScrollToTop component to handle scroll restoration
@@ -174,6 +175,9 @@ createRoot(document.getElementById('root')!).render(
                   </Route>
                   <Route path="/customer-profile">
                     {() => <PageWrapper><CustomerProfile /></PageWrapper>}
+                  </Route>
+                  <Route path="/admin/email-previews">
+                    {() => <PageWrapper><EmailPreviews /></PageWrapper>}
                   </Route>
                   <Route component={NotFound} />
                 </Switch>

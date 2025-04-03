@@ -60,6 +60,7 @@
     "express-session": "^1.18.1",
     "framer-motion": "^12.4.10",
     "googleapis": "^146.0.0",
+    "ics": "^3.8.1",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
