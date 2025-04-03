@@ -415,7 +415,7 @@ export function IntegratedBookingWizard({
         return false;
       }
 
-      // Check if time slot conflicts with existing bookings
+      // Check if time slot conflicts with existing bookings - enhanced with better debugging
       if (existingBookings && existingBookings.length > 0) {
         try {
           const dateStr = safeFormatDate(new Date(date), "yyyy-MM-dd", date);
@@ -425,6 +425,8 @@ export function IntegratedBookingWizard({
             (booking) => booking.preferredDate === dateStr
           );
           
+          console.log(`Checking conflicts for ${dateStr} at ${time}. Found ${bookingsOnDate.length} bookings on this date.`);
+          
           // Check if any booking has the same time slot
           const conflictingBooking = bookingsOnDate.find(
             (booking) => booking.appointmentTime === time
@@ -433,10 +435,10 @@ export function IntegratedBookingWizard({
           const isSlotTaken = !!conflictingBooking;
           
           if (isSlotTaken) {
-            console.log(`Time slot ${time} on ${dateStr} is already booked`);
+            console.log(`Time slot ${time} on ${dateStr} is already booked (Conflict ID: ${conflictingBooking.id})`);
           }
           
-          // Use setTimeout to prevent state updates during render
+          // Cache the result for faster lookup later
           setTimeout(() => {
             setTimeSlotAvailability((prev) => {
               // Only update if value changed
@@ -450,14 +452,14 @@ export function IntegratedBookingWizard({
           return !isSlotTaken;
         } catch (error) {
           console.error("Error checking time slot availability:", error);
-          return true;
+          return false; // Changed to false for safety - don't assume available on error
         }
       }
-
-      // Use setTimeout to prevent state updates during render
+      
+      // If we get here, there are no existing bookings, so the slot is available
+      // Still cache the result for consistency
       setTimeout(() => {
         setTimeSlotAvailability((prev) => {
-          // Only update if not already set
           if (prev[key] !== true) {
             return { ...prev, [key]: true };
           }
@@ -470,7 +472,7 @@ export function IntegratedBookingWizard({
     [existingBookings, timeSlotAvailability, bookingBufferHours] // Include all dependencies
   );
   
-  // Function to find the next available time slot
+  // Function to find the next available time slot with enhanced reliability
   const findNextAvailableTimeSlot = useCallback(() => {
     // Get today's date
     const today = new Date();
@@ -480,6 +482,12 @@ export function IntegratedBookingWizard({
     const maxDaysToCheck = 14;
     let availableDate: Date | undefined = undefined;
     let availableTime: string | undefined = undefined;
+    
+    // Clear any previously cached availability data to ensure fresh checks
+    setTimeSlotAvailability({});
+    
+    console.log("Searching for next available time slot...");
+    console.log(`Existing bookings: ${existingBookings ? existingBookings.length : 0}`);
     
     // For each date, starting from today
     for (let dayOffset = 0; dayOffset < maxDaysToCheck; dayOffset++) {
@@ -492,6 +500,7 @@ export function IntegratedBookingWizard({
       
       // Skip days with no business hours or marked unavailable
       if (!hoursForDay || !hoursForDay.isAvailable) {
+        console.log(`Day ${dayOfWeek} (${safeFormatDate(checkDate, "yyyy-MM-dd", "")}) has no business hours or is marked unavailable`);
         continue;
       }
       
@@ -499,13 +508,36 @@ export function IntegratedBookingWizard({
       const slots = getTimeSlotsForDate(checkDate, 60);
       const dateString = safeFormatDate(checkDate, "yyyy-MM-dd", "");
       
-      // Find the first available time slot
+      console.log(`Checking ${slots.length} time slots for ${dateString}`);
+      
+      // Find the first available time slot with double-checking
       for (const time of slots) {
+        // First check - standard availability check
         const isAvailable = isTimeSlotAvailable(dateString, time);
+        
         if (isAvailable) {
-          availableDate = checkDate;
-          availableTime = time;
-          break;
+          // Double-check for conflicts with existing bookings
+          let hasConflict = false;
+          
+          if (existingBookings && existingBookings.length > 0) {
+            const conflictingBooking = existingBookings.find(
+              (booking) => booking.preferredDate === dateString && booking.appointmentTime === time
+            );
+            hasConflict = !!conflictingBooking;
+            
+            if (hasConflict) {
+              console.log(`Found conflict for ${dateString} at ${time}`);
+            }
+          }
+          
+          if (!hasConflict) {
+            console.log(`Found available slot: ${dateString} at ${time}`);
+            availableDate = checkDate;
+            availableTime = time;
+            break;
+          }
+        } else {
+          console.log(`Slot ${time} on ${dateString} is not available`);
         }
       }
       
@@ -520,17 +552,17 @@ export function IntegratedBookingWizard({
       setSelectedDate(availableDate);
       setSelectedTime(availableTime);
       toast({
-        title: "Next available time selected",
+        title: "Next available time found",
         description: `${safeFormatDate(availableDate, "EEEE, MMMM d", "")} at ${availableTime}`,
       });
     } else {
       toast({
-        title: "No available times",
-        description: "We couldn't find any available time slots in the next 14 days.",
+        title: "No available time slots",
+        description: "We couldn't find any available time slots in the next 14 days. Please select a date and time manually.",
         variant: "destructive",
       });
     }
-  }, [getTimeSlotsForDate, getBusinessHoursForDay, isTimeSlotAvailable, toast, setSelectedDate, setSelectedTime]);
+  }, [getTimeSlotsForDate, getBusinessHoursForDay, isTimeSlotAvailable, existingBookings, toast, setSelectedDate, setSelectedTime]);
 
   // Add TV installation option
   const addTvService = () => {
