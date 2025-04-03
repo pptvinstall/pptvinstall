@@ -89,9 +89,11 @@ export function MobileEditDialog({
 
   // Set initial date from booking
   useEffect(() => {
-    if (booking?.preferredDate) {
+    if (booking?.preferredDate || booking?.date) {
       try {
-        const date = new Date(booking.preferredDate);
+        // Handle both date field names that might be in the data
+        const dateString = booking.preferredDate || booking.date as unknown as string;
+        const date = new Date(dateString);
         setSelectedDate(date);
       } catch (error) {
         console.error("Error parsing date:", error);
@@ -103,8 +105,10 @@ export function MobileEditDialog({
   const form = useForm<BookingUpdateFormValues>({
     resolver: zodResolver(bookingUpdateSchema),
     defaultValues: {
-      preferredDate: booking?.preferredDate ? new Date(booking.preferredDate) : undefined,
-      appointmentTime: booking?.appointmentTime || "",
+      preferredDate: booking?.preferredDate 
+        ? new Date(booking.preferredDate) 
+        : (booking?.date ? new Date(booking.date as unknown as string) : undefined),
+      appointmentTime: booking?.appointmentTime || (booking?.time as unknown as string) || "",
       notes: booking?.notes || "",
     },
   });
@@ -240,7 +244,13 @@ export function MobileEditDialog({
               <span className="font-medium">Service:</span> {booking.serviceType}
             </div>
             <div>
-              <span className="font-medium">Current Time:</span> {booking.preferredDate ? format(new Date(booking.preferredDate), "MMM d, yyyy") : ''} at {booking.appointmentTime || 'Not set'}
+              <span className="font-medium">Current Time:</span> {
+                booking.preferredDate 
+                  ? format(new Date(booking.preferredDate), "EEE, MMM d, yyyy") 
+                  : booking.date 
+                    ? format(new Date(booking.date), "EEE, MMM d, yyyy") 
+                    : 'Not set'
+              } at {booking.appointmentTime || booking.time || 'Not set'}
             </div>
             <div>
               <span className="font-medium">Address:</span> {booking.streetAddress}, {booking.city}, {booking.state} {booking.zipCode}

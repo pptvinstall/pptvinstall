@@ -92,7 +92,21 @@ export default function CustomerPortalPage() {
       if (!customerToken?.id) {
         return { success: false, bookings: [] };
       }
-      return await fetch(`/api/customers/${customerToken.id}/bookings`).then(res => res.json());
+      const response = await fetch(`/api/customers/${customerToken.id}/bookings`);
+      const data = await response.json();
+      
+      // Make sure the data is always in a consistent format
+      if (data.success && Array.isArray(data.bookings)) {
+        // Ensure all date fields are properly formatted
+        data.bookings = data.bookings.map((booking: any) => ({
+          ...booking,
+          // Ensure date field consistency
+          preferredDate: booking.preferredDate || booking.date,
+          appointmentTime: booking.appointmentTime || booking.time
+        }));
+      }
+      
+      return data;
     },
     enabled: !!customerToken?.id,
   });
@@ -353,7 +367,9 @@ export default function CustomerPortalPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookingsData.bookings.map((booking: Booking) => (
+                  {bookingsData.bookings
+                    .filter((booking: Booking) => booking.status !== 'cancelled')
+                    .map((booking: Booking) => (
                     <TableRow key={booking.id}>
                       <TableCell className="font-medium">
                         {booking.serviceType}
@@ -365,12 +381,15 @@ export default function CustomerPortalPage() {
                           <div className="flex items-center">
                             <CalendarClock className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                             <span className="font-medium whitespace-nowrap">
-                              {booking.preferredDate ? format(new Date(booking.preferredDate), 'EEE, MMM d, yyyy') : '-'}
+                              {booking.preferredDate ? format(new Date(booking.preferredDate), 'EEE, MMM d, yyyy') : 
+                               booking.date ? format(new Date(booking.date), 'EEE, MMM d, yyyy') : '-'}
                             </span>
                           </div>
                           <div className="flex items-center mt-1 sm:mt-0 sm:ml-4">
                             <Clock className="w-3 h-3 mr-1 text-primary flex-shrink-0" />
-                            <span className="whitespace-nowrap font-medium">{booking.appointmentTime || '-'}</span>
+                            <span className="whitespace-nowrap font-medium">
+                              {booking.appointmentTime || booking.time || '-'}
+                            </span>
                           </div>
                         </div>
                       </TableCell>
@@ -446,17 +465,23 @@ export default function CustomerPortalPage() {
             <AlertDialogTitle>Cancel this appointment?</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to cancel this appointment? This action cannot be undone.
-              {bookingToCancel?.preferredDate && (
+              {bookingToCancel && (
                 <div className="mt-4 border rounded-md p-3 bg-muted/50">
                   <div className="flex items-center mb-2">
                     <CalendarClock className="w-4 h-4 mr-2 text-primary" />
                     <span className="font-medium">
-                      {format(new Date(bookingToCancel.preferredDate), 'EEEE, MMMM d, yyyy')}
+                      {bookingToCancel.preferredDate 
+                        ? format(new Date(bookingToCancel.preferredDate), 'EEEE, MMMM d, yyyy')
+                        : bookingToCancel.date 
+                          ? format(new Date(bookingToCancel.date), 'EEEE, MMMM d, yyyy')
+                          : 'Unknown date'}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2 text-primary" />
-                    <span className="font-medium">{bookingToCancel.appointmentTime}</span>
+                    <span className="font-medium">
+                      {bookingToCancel.appointmentTime || bookingToCancel.time || 'Unknown time'}
+                    </span>
                   </div>
                 </div>
               )}
