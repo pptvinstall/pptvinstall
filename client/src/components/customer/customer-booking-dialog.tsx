@@ -223,16 +223,25 @@ export function CustomerBookingDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="dialog-content sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-300 sm:data-[state=open]:slide-in-from-bottom-0"
+        className="dialog-content sm:max-w-[500px] w-full max-w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-300 sm:data-[state=open]:slide-in-from-bottom-0 p-4 sm:p-6 bottom-0 left-0 sm:bottom-auto sm:left-auto fixed sm:fixed top-auto sm:top-auto"
+        onEscapeKeyDown={onClose}
+        onInteractOutside={(e) => {
+          // Prevent closing when interacting with calendar or time popup
+          if (e.target instanceof HTMLElement && 
+              (e.target.closest('.rdp') || 
+               e.target.closest('.popover-content'))) {
+            e.preventDefault();
+          }
+        }}
         onOpenAutoFocus={(e) => {
           // Prevent autofocus and scroll to top of dialog when opened
           e.preventDefault();
-          // Scroll into view with smooth behavior
+          // Scroll dialog to top
           setTimeout(() => {
-            document.querySelector('.dialog-content')?.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
+            const dialogContent = document.querySelector('.dialog-content');
+            if (dialogContent) {
+              dialogContent.scrollTop = 0;
+            }
           }, 100);
         }}>
         <DialogHeader>
@@ -297,24 +306,30 @@ export function CustomerBookingDialog({
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => {
-                          // Can't select dates in the past
-                          const now = new Date();
-                          now.setHours(0, 0, 0, 0);
-                          
-                          // Can't select days when the business is closed
-                          const businessHours = getBusinessHoursForDay(date.getDay());
-                          const isClosed = !businessHours || !businessHours.isAvailable;
-                          
-                          return date < now || isClosed;
-                        }}
-                        initialFocus
-                      />
+                    <PopoverContent className="w-auto p-0 z-50 bg-white" align="start" side="bottom">
+                      <div className="bg-white rounded-md shadow-md border">
+                        <CalendarComponent
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            // Close the popover after selecting a date
+                            document.body.click();
+                          }}
+                          disabled={(date) => {
+                            // Can't select dates in the past
+                            const now = new Date();
+                            now.setHours(0, 0, 0, 0);
+                            
+                            // Can't select days when the business is closed
+                            const businessHours = getBusinessHoursForDay(date.getDay());
+                            const isClosed = !businessHours || !businessHours.isAvailable;
+                            
+                            return date < now || isClosed;
+                          }}
+                          initialFocus
+                        />
+                      </div>
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
@@ -346,13 +361,13 @@ export function CustomerBookingDialog({
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <div className="p-2">
-                        <div className="py-2 px-4 text-sm font-medium">
+                    <PopoverContent className="w-auto p-0 z-50 bg-white" align="start" side="bottom">
+                      <div className="p-2 bg-white rounded-md shadow-md border">
+                        <div className="py-2 px-4 text-sm font-medium border-b mb-2">
                           Available Time Slots
                         </div>
                         {timeSlots.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2 p-2 max-h-[300px] overflow-auto">
+                          <div className="grid grid-cols-2 gap-2 p-2 max-h-[200px] overflow-auto">
                             {timeSlots.map((time) => {
                               const isAvailable = isTimeSlotAvailable(selectedDate, time);
                               const key = `${format(selectedDate, 'yyyy-MM-dd')}|${time}`;
@@ -368,7 +383,11 @@ export function CustomerBookingDialog({
                                     field.value === time && "bg-primary text-primary-foreground"
                                   )}
                                   disabled={!isAvailable}
-                                  onClick={() => field.onChange(time)}
+                                  onClick={() => {
+                                    field.onChange(time);
+                                    // Close the popover after selecting a time
+                                    document.body.click();
+                                  }}
                                 >
                                   <Clock className="w-4 h-4 mr-1" />
                                   {time}
