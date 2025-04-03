@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -18,7 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { User, Home, Mail, Phone, Info } from "lucide-react";
+import { User, Home, Mail, Phone, Info, UserPlus, Lock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface CustomerDetailsStepProps {
   formData: any;
@@ -28,6 +29,8 @@ interface CustomerDetailsStepProps {
 
 export const CustomerDetailsStep = React.memo(
   ({ formData, setFormData, validationErrors }: CustomerDetailsStepProps) => {
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
       setFormData({ ...formData, [name]: value });
@@ -36,6 +39,15 @@ export const CustomerDetailsStep = React.memo(
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, checked } = e.target;
       setFormData({ ...formData, [name]: checked });
+    };
+    
+    // Toggle create account option
+    const handleCreateAccountToggle = (checked: boolean) => {
+      setFormData({ 
+        ...formData, 
+        createAccount: checked 
+      });
+      setPasswordVisible(checked);
     };
 
     return (
@@ -276,6 +288,57 @@ export const CustomerDetailsStep = React.memo(
                     </p>
                   )}
                 </div>
+              </div>
+              
+              {/* Create an account section */}
+              <div className="pt-4 mt-2 border-t border-border">
+                <div className="flex items-start space-x-2 pt-2">
+                  <Checkbox
+                    id="createAccount"
+                    name="createAccount"
+                    checked={formData.createAccount || false}
+                    onCheckedChange={(checked) => handleCreateAccountToggle(checked === true)}
+                    className="mt-1"
+                  />
+                  <div className="space-y-1 leading-tight">
+                    <label
+                      htmlFor="createAccount"
+                      className="text-sm font-medium cursor-pointer flex items-center"
+                    >
+                      <UserPlus className="mr-1.5 h-4 w-4" />
+                      Create an account for faster bookings
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Save your information for future bookings, track your appointments and access exclusive offers.
+                    </p>
+                  </div>
+                </div>
+                
+                {passwordVisible && (
+                  <div className="mt-4 space-y-2 animate-in fade-in duration-300">
+                    <label htmlFor="password" className="text-sm font-medium flex items-center">
+                      <Lock className="mr-1.5 h-4 w-4" />
+                      Password
+                    </label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={formData.password || ""}
+                      onChange={handleInputChange}
+                      placeholder="Choose a secure password"
+                      className={`${validationErrors.password ? "border-destructive" : ""} h-10`}
+                    />
+                    {validationErrors.password && (
+                      <p className="text-sm text-destructive">
+                        {validationErrors.password[0]}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Password must be at least 6 characters long.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </form>

@@ -2,7 +2,7 @@
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, XCircle, AlertTriangle } from "lucide-react";
+import { PencilIcon, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { 
@@ -269,6 +269,17 @@ export function ReviewBookingStep({
             <div>
               <span className="font-medium">Notes:</span> 
               <p className="mt-1 break-words">{formData.notes}</p>
+            </div>
+          )}
+          {formData.createAccount && (
+            <div className="mt-2 p-2 bg-primary/10 rounded-md">
+              <span className="font-medium flex items-center">
+                <UserPlus className="mr-1.5 h-4 w-4" />
+                Account Creation Requested
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">
+                An account will be created with your email address
+              </p>
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./stor
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { and, eq, sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { 
   sendBookingConfirmationEmail, 
   sendAdminNotificationEmail,
@@ -641,6 +642,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         logger.debug("Preparing to insert booking into database");
+        
+        // Handle account creation if requested
+        if (req.body.createAccount) {
+          logger.info("User requested account creation during booking");
+          
+          try {
+            // Check if user already exists
+            const existingCustomer = await db.select().from(customers).where(eq(customers.email, booking.email)).limit(1);
+            
+            if (existingCustomer.length > 0) {
+              logger.info("Customer already exists, not creating a new account");
+            } else {
+              // Create new customer account
+              const hashedPassword = req.body.password ? await bcrypt.hash(req.body.password, 10) : null;
+              logger.debug("Creating new customer account");
+              
+              await db.insert(customers).values({
+                name: booking.name,
+                email: booking.email,
+                phone: booking.phone,
+                streetAddress: booking.streetAddress,
+                addressLine2: booking.addressLine2,
+                city: booking.city,
+                state: booking.state,
+                zipCode: booking.zipCode,
+                password: hashedPassword,
+                memberSince: new Date().toISOString(),
+                isVerified: true, // Auto-verify since they're creating during booking
+                loyaltyPoints: 0
+              });
+              
+              logger.info("Customer account created successfully");
+            }
+          } catch (accountError) {
+            // Log error but continue with booking
+            logger.error("Error creating customer account:", accountError);
+          }
+        }
+        
         // Insert into database
         const insertedBookings = await db.insert(bookings).values({
           name: booking.name,

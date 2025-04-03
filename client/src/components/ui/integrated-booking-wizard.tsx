@@ -285,7 +285,9 @@ export function IntegratedBookingWizard({
     state: "",
     zipCode: "",
     notes: "",
-    consentToContact: false
+    consentToContact: false,
+    createAccount: false,
+    password: ""
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
@@ -769,6 +771,21 @@ export function IntegratedBookingWizard({
         isValid = false;
         errorCount++;
       }
+      
+      // Password validation when creating an account
+      if (formData.createAccount) {
+        if (!formData.password) {
+          errors.password = ["Password is required when creating an account"];
+          errorFieldIds.push('password');
+          isValid = false;
+          errorCount++;
+        } else if (formData.password.length < 6) {
+          errors.password = ["Password must be at least 6 characters long"];
+          errorFieldIds.push('password');
+          isValid = false;
+          errorCount++;
+        }
+      }
     }
 
     setValidationErrors(errors);
@@ -872,6 +889,9 @@ export function IntegratedBookingWizard({
       status: "active",
       pricingTotal,
       consentToContact: formData.consentToContact,
+      // Account creation data
+      createAccount: formData.createAccount || false,
+      password: formData.createAccount ? formData.password : undefined,
       tvInstallations,
       smartHomeInstallations,
       pricingBreakdown: [
