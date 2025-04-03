@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
@@ -30,7 +31,8 @@ import {
   Phone, 
   Mail, 
   Home,
-  Save
+  Save,
+  Settings
 } from 'lucide-react';
 
 // Profile update schema
@@ -44,6 +46,7 @@ const profileUpdateSchema = z.object({
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
   zipCode: z.string().min(5, 'Zip code must be at least 5 digits'),
+  autoFillEnabled: z.boolean().default(true),
 });
 
 type ProfileUpdateFormValues = z.infer<typeof profileUpdateSchema>;
@@ -140,6 +143,7 @@ export default function CustomerProfilePage() {
       city: profileData?.customer?.city || '',
       state: profileData?.customer?.state || '',
       zipCode: profileData?.customer?.zipCode || '',
+      autoFillEnabled: profileData?.customer?.autoFillEnabled !== false, // default to true if not specified
     },
   });
 
@@ -154,6 +158,7 @@ export default function CustomerProfilePage() {
         city: profileData.customer.city || '',
         state: profileData.customer.state || '',
         zipCode: profileData.customer.zipCode || '',
+        autoFillEnabled: profileData.customer.autoFillEnabled !== false, // default to true if not specified
       });
     }
   }, [profileData, form]);
@@ -361,7 +366,35 @@ export default function CustomerProfilePage() {
                   </div>
                 </div>
 
-                <div className="email-field flex items-center space-x-3 border p-3 rounded-md bg-muted">
+                <div className="pt-4">
+                  <h3 className="text-lg font-medium flex items-center mb-3">
+                    <Settings className="mr-2 h-5 w-5 text-muted-foreground" />
+                    Booking Preferences
+                  </h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="autoFillEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Always use saved info for bookings</FormLabel>
+                          <FormDescription>
+                            Automatically fill in your personal details when making a booking
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="email-field flex items-center space-x-3 border p-3 rounded-md bg-muted mt-4">
                   <Mail className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Email Address</p>

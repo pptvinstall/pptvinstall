@@ -2,7 +2,7 @@
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, XCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { PencilIcon, XCircle, AlertTriangle, UserPlus, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { 
@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RescheduleDialog } from "@/components/ui/reschedule-dialog";
 
 interface ReviewBookingStepProps {
   tvInstallations: any[];
@@ -27,6 +28,8 @@ interface ReviewBookingStepProps {
   pricingTotal: number;
   onEditServices?: () => void;
   onRemoveService?: (type: 'tv' | 'smartHome', id: string) => void;
+  onReschedule?: (date: Date, time: string) => void;
+  bookingId?: number | string;
   noServicesMessage?: string;
 }
 
@@ -41,6 +44,8 @@ export function ReviewBookingStep({
   pricingTotal,
   onEditServices,
   onRemoveService,
+  onReschedule,
+  bookingId,
   noServicesMessage = "No services selected. Please add at least one service before confirming."
 }: ReviewBookingStepProps) {
   const [serviceToRemove, setServiceToRemove] = useState<{type: 'tv' | 'smartHome', id: string} | null>(null);
@@ -227,7 +232,27 @@ export function ReviewBookingStep({
       
       {/* Appointment Details */}
       <div className="relative">
-        <h4 className="text-sm font-medium mb-2">Appointment</h4>
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="text-sm font-medium">Appointment</h4>
+          {bookingId && onReschedule && (
+            <RescheduleDialog 
+              bookingId={bookingId}
+              currentDate={selectedDate}
+              currentTime={selectedTime}
+              onRescheduleSuccess={(newDate, newTime) => onReschedule(newDate, newTime)}
+              trigger={
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs gap-1.5"
+                >
+                  <CalendarDays className="h-3 w-3" />
+                  Reschedule
+                </Button>
+              }
+            />
+          )}
+        </div>
         <div className="text-xs sm:text-sm space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2">
           <div>
             <span className="font-medium">Date:</span>{' '}

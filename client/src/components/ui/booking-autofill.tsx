@@ -40,6 +40,19 @@ export function BookingAutofill({ onAutofill, className }: BookingAutofillProps)
     enabled: !!customerToken?.id,
   });
 
+  // Check if automatic autofill is enabled and apply it on mount
+  useEffect(() => {
+    if (data?.customer && data.customer.autoFillEnabled && !isAutofilled) {
+      onAutofill(data.customer);
+      setIsAutofilled(true);
+      
+      // Reset the visual indicator after 5 seconds
+      setTimeout(() => {
+        setIsAutofilled(false);
+      }, 5000);
+    }
+  }, [data, onAutofill, isAutofilled]);
+
   const handleAutofill = () => {
     if (data?.customer) {
       onAutofill(data.customer);
@@ -66,7 +79,8 @@ export function BookingAutofill({ onAutofill, className }: BookingAutofillProps)
                         data.customer.state && 
                         data.customer.zipCode;
 
-  if (!hasProfileData) {
+  // Only show manual autofill button if auto-fill is disabled
+  if (!hasProfileData || (data.customer.autoFillEnabled && !className)) {
     return null;
   }
 
