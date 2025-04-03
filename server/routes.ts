@@ -1722,7 +1722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/customers/bookings/:id", async (req: Request, res: Response) => {
     try {
       const bookingId = parseInt(req.params.id);
-      const { preferredDate, appointmentTime, notes } = req.body;
+      const { preferredDate, appointmentTime, notes, status } = req.body;
       
       if (isNaN(bookingId)) {
         return res.status(400).json({
@@ -1743,16 +1743,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const existingBooking = existingBookingResult[0];
       
-      // Only allow editing of active bookings
-      if (existingBooking.status !== 'active') {
+      // Only allow editing of active bookings (except for cancellation)
+      if (existingBooking.status !== 'active' && status !== 'cancelled') {
         return res.status(400).json({
           success: false,
           message: "Only active bookings can be updated"
         });
       }
       
-      // Check if this time slot is already booked by someone else
-      if (preferredDate && appointmentTime) {
+      // If this is a cancellation, we don't need to check for time slot conflicts
+      // Otherwise check if this time slot is already booked by someone else
+      if (status !== 'cancelled' && preferredDate && appointmentTime) {
         const existingBookings = await db.select().from(bookings).where(
           and(
             sql`DATE(${bookings.preferredDate}) = ${preferredDate}`,
@@ -1775,6 +1776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (preferredDate) updates.preferredDate = preferredDate;
       if (appointmentTime) updates.appointmentTime = appointmentTime;
       if (notes !== undefined) updates.notes = notes;
+      if (status) updates.status = status;
       
       // Update the booking
       const result = await db.update(bookings)
@@ -1789,22 +1791,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Send notification email
+      // Send appropriate notification email
       try {
-        // Import the email service function
-        const { sendBookingUpdateEmail } = await import('./services/emailService');
-        
-        // Send the email
-        await sendBookingUpdateEmail(result[0], updates);
-        logger.info(`Customer booking update email sent for booking ID ${bookingId}`);
+        if (status === 'cancelled') {
+          // Import the email service function for cancellation
+          const { sendBookingCancellationEmail } = await import('./services/emailService');
+          
+          // Send cancellation email
+          await sendBookingCancellationEmail(result[0]);
+          logger.info(`Customer booking cancellation email sent for booking ID ${bookingId}`);
+        } else {
+          // Import the email service function for updates
+          const { sendBookingUpdateEmail } = await import('./services/emailService');
+          
+          // Send update email
+          await sendBookingUpdateEmail(result[0], updates);
+          logger.info(`Customer booking update email sent for booking ID ${bookingId}`);
+        }
       } catch (emailError) {
-        logger.error("Error sending customer booking update email:", emailError as Error);
+        logger.error("Error sending customer booking email:", emailError as Error);
         // We don't want to fail the request if the email fails
       }
       
       res.json({
         success: true,
-        message: "Booking updated successfully",
+        message: status === 'cancelled' ? "Booking cancelled successfully" : "Booking updated successfully",
         booking: result[0]
       });
     } catch (error) {
