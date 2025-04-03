@@ -130,18 +130,37 @@ export default function CustomerPortalPage() {
 
   // Open the edit dialog for a booking
   const openEditDialog = (booking: Booking) => {
-    // Ensure we have a valid booking object with proper date format
-    const formattedBooking = {
-      ...booking,
-      // Ensure preferredDate is in proper format (YYYY-MM-DD)
-      preferredDate: booking.preferredDate ? 
-        (typeof booking.preferredDate === 'string' ? booking.preferredDate : format(new Date(booking.preferredDate), 'yyyy-MM-dd')) 
-        : format(new Date(), 'yyyy-MM-dd')
-    };
-    
-    console.log("Opening edit dialog with booking:", formattedBooking);
-    setSelectedBooking(formattedBooking);
-    setIsBookingDialogOpen(true);
+    try {
+      // Ensure we have a valid booking object
+      // Keep the preferredDate as a string to match the Booking type
+      const formattedBooking = {
+        ...booking,
+        // Make sure we have preferredDate as string in ISO format
+        preferredDate: booking.preferredDate ? 
+          (typeof booking.preferredDate === 'string' ? 
+            booking.preferredDate : 
+            format(new Date(booking.preferredDate), 'yyyy-MM-dd')
+          ) : format(new Date(), 'yyyy-MM-dd')
+      };
+      
+      console.log("Opening edit dialog with booking:", formattedBooking);
+      
+      // First set dialog to open, then update the selected booking
+      // This helps prevent race conditions in React's state updates
+      setIsBookingDialogOpen(true);
+      
+      // Use a setTimeout to ensure the dialog is mounted before setting the selected booking
+      setTimeout(() => {
+        setSelectedBooking(formattedBooking);
+      }, 10);
+    } catch (error) {
+      console.error("Error opening edit dialog:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem opening the edit dialog. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle booking update
@@ -291,15 +310,18 @@ export default function CustomerPortalPage() {
         </CardContent>
       </Card>
 
-      {selectedBooking && (
-        <CustomerBookingDialog
-          booking={selectedBooking}
-          isOpen={isBookingDialogOpen}
-          onClose={() => setIsBookingDialogOpen(false)}
-          onUpdate={handleBookingUpdate}
-          isUpdating={updateBookingMutation.isPending}
-        />
-      )}
+      {/* Always render the dialog component, but control its visibility with isOpen prop */}
+      <CustomerBookingDialog
+        booking={selectedBooking || undefined}
+        isOpen={isBookingDialogOpen && selectedBooking !== null}
+        onClose={() => {
+          setIsBookingDialogOpen(false);
+          // Clear selected booking after dialog closes with a small delay
+          setTimeout(() => setSelectedBooking(null), 300);
+        }}
+        onUpdate={handleBookingUpdate}
+        isUpdating={updateBookingMutation.isPending}
+      />
     </div>
   );
 }

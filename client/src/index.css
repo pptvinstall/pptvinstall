@@ -99,6 +99,15 @@
   .section-padding {
     @apply py-12 md:py-16 lg:py-20;
   }
+  
+  /* Dialog customizations */
+  .dialog-overlay {
+    @apply fixed inset-0 bg-black/50 z-40 backdrop-blur-sm;
+  }
+  
+  .dialog-content {
+    @apply z-50 bg-background rounded-t-xl sm:rounded-xl shadow-xl focus:outline-none;
+  }
 
   .section-title {
     @apply text-3xl md:text-4xl font-bold mb-4 leading-tight;

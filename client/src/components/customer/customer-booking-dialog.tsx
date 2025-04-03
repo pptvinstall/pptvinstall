@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomerBookingDialogProps {
-  booking: Booking;
+  booking?: Booking | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (data: Partial<Booking>) => void;
@@ -105,12 +105,12 @@ export function CustomerBookingDialog({
     resolver: zodResolver(bookingUpdateSchema),
     defaultValues: {
       // Make sure to properly parse the date string to a Date object
-      preferredDate: booking.preferredDate ? 
+      preferredDate: booking?.preferredDate ? 
         (typeof booking.preferredDate === 'string' ? new Date(booking.preferredDate) : 
          (typeof booking.preferredDate === 'object' ? new Date(booking.preferredDate) : new Date())) 
         : new Date(),
-      appointmentTime: booking.appointmentTime || "",
-      notes: booking.notes || "",
+      appointmentTime: booking?.appointmentTime || "",
+      notes: booking?.notes || "",
     },
   });
   
@@ -121,75 +121,77 @@ export function CustomerBookingDialog({
 
   // Update time slots when date changes
   useEffect(() => {
-    if (selectedDate) {
-      const slots = getTimeSlotsForDate(selectedDate, 60);
-      setTimeSlots(slots);
+    if (!selectedDate || !booking) return;
 
-      // Check availability for each time slot
-      const availability: Record<string, boolean> = {};
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
-      
-      for (const slot of slots) {
-        // Skip checking for the current booking's time slot (it's available to itself)
-        // Convert booking.preferredDate to a consistent format for comparison
-        const bookingDateStr = typeof booking.preferredDate === 'string' ? 
+    const slots = getTimeSlotsForDate(selectedDate, 60);
+    setTimeSlots(slots);
+
+    // Check availability for each time slot
+    const availability: Record<string, boolean> = {};
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    for (const slot of slots) {
+      // Skip checking for the current booking's time slot (it's available to itself)
+      // Convert booking.preferredDate to a consistent format for comparison
+      const bookingDateStr = booking?.preferredDate ? 
+        (typeof booking.preferredDate === 'string' ? 
           booking.preferredDate : 
-          (booking.preferredDate && typeof booking.preferredDate === 'object' ? 
-            format(new Date(booking.preferredDate), "yyyy-MM-dd") : '');
-            
-        if (dateStr === bookingDateStr && slot === booking.appointmentTime) {
-          console.log(`Current booking time slot: ${dateStr} at ${slot} - marking as available`);
-          availability[`${dateStr}|${slot}`] = true;
+          (typeof booking.preferredDate === 'object' ? 
+            format(new Date(booking.preferredDate), "yyyy-MM-dd") : ''))
+        : '';
+          
+      if (dateStr === bookingDateStr && slot === booking?.appointmentTime) {
+        console.log(`Current booking time slot: ${dateStr} at ${slot} - marking as available`);
+        availability[`${dateStr}|${slot}`] = true;
+        continue;
+      }
+
+      // Check if slot is in the past
+      const slotDate = new Date(dateStr);
+      const timeMatch = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const period = timeMatch[3].toUpperCase();
+        
+        if (period === 'PM' && hours < 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        slotDate.setHours(hours, minutes, 0, 0);
+        
+        const now = new Date();
+        const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000);
+        
+        if (slotDate <= bufferTime) {
+          availability[`${dateStr}|${slot}`] = false;
           continue;
         }
-
-        // Check if slot is in the past
-        const slotDate = new Date(dateStr);
-        const timeMatch = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (timeMatch) {
-          let hours = parseInt(timeMatch[1], 10);
-          const minutes = parseInt(timeMatch[2], 10);
-          const period = timeMatch[3].toUpperCase();
-          
-          if (period === 'PM' && hours < 12) {
-            hours += 12;
-          } else if (period === 'AM' && hours === 12) {
-            hours = 0;
-          }
-          
-          slotDate.setHours(hours, minutes, 0, 0);
-          
-          const now = new Date();
-          const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000);
-          
-          if (slotDate <= bufferTime) {
-            availability[`${dateStr}|${slot}`] = false;
-            continue;
-          }
-        }
-
-        // Check if slot conflicts with other bookings
-        const conflictingBooking = existingBookings.find(
-          (b: any) => {
-            // Normalize the booking date for comparison
-            const bDate = typeof b.preferredDate === 'string' ? 
-                          b.preferredDate : 
-                          (b.preferredDate && typeof b.preferredDate === 'object' ? 
-                          format(new Date(b.preferredDate), "yyyy-MM-dd") : '');
-                          
-            return bDate === dateStr && 
-                   b.appointmentTime === slot && 
-                   b.id !== booking.id && 
-                   b.status === 'active';
-          }
-        );
-        
-        availability[`${dateStr}|${slot}`] = !conflictingBooking;
       }
+
+      // Check if slot conflicts with other bookings
+      const conflictingBooking = existingBookings.find(
+        (b: any) => {
+          // Normalize the booking date for comparison
+          const bDate = typeof b.preferredDate === 'string' ? 
+                        b.preferredDate : 
+                        (b.preferredDate && typeof b.preferredDate === 'object' ? 
+                        format(new Date(b.preferredDate), "yyyy-MM-dd") : '');
+                        
+          return bDate === dateStr && 
+                b.appointmentTime === slot && 
+                b.id !== booking?.id && 
+                b.status === 'active';
+        }
+      );
       
-      setTimeSlotAvailability(availability);
+      availability[`${dateStr}|${slot}`] = !conflictingBooking;
     }
-  }, [selectedDate, existingBookings, getTimeSlotsForDate, booking.preferredDate, booking.appointmentTime, booking.id, bookingBufferHours]);
+    
+    setTimeSlotAvailability(availability);
+  }, [selectedDate, existingBookings, getTimeSlotsForDate, booking?.preferredDate, booking?.appointmentTime, booking?.id, bookingBufferHours]);
 
   // Check if a time slot is available
   const isTimeSlotAvailable = (date: Date, time: string) => {
@@ -223,7 +225,7 @@ export function CustomerBookingDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="dialog-content sm:max-w-[500px] w-full max-w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-300 sm:data-[state=open]:slide-in-from-bottom-0 p-4 sm:p-6 bottom-0 left-0 sm:bottom-auto sm:left-auto fixed sm:fixed top-auto sm:top-auto"
+        className="dialog-content sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-10 data-[state=open]:duration-500 p-4 sm:p-6"
         onEscapeKeyDown={onClose}
         onInteractOutside={(e) => {
           // Prevent closing when interacting with calendar or time popup
@@ -236,13 +238,6 @@ export function CustomerBookingDialog({
         onOpenAutoFocus={(e) => {
           // Prevent autofocus and scroll to top of dialog when opened
           e.preventDefault();
-          // Scroll dialog to top
-          setTimeout(() => {
-            const dialogContent = document.querySelector('.dialog-content');
-            if (dialogContent) {
-              dialogContent.scrollTop = 0;
-            }
-          }, 100);
         }}>
         <DialogHeader>
           <DialogTitle>Edit Booking</DialogTitle>
@@ -252,29 +247,31 @@ export function CustomerBookingDialog({
         </DialogHeader>
         
         {/* Current Booking Summary */}
-        <div className="bg-muted p-3 rounded-md mb-4">
-          <h3 className="text-sm font-medium mb-2">Current Booking</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="font-medium">Date:</span> 
-              <div className="flex items-center mt-1">
-                <CalendarComponent className="w-4 h-4 mr-1 text-primary" />
-                {booking.preferredDate ? 
-                  (typeof booking.preferredDate === 'string' ? 
-                    new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) : 
-                    new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'})) : 
-                  'Not set'}
+        {booking && (
+          <div className="bg-muted p-3 rounded-md mb-4">
+            <h3 className="text-sm font-medium mb-2">Current Booking</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="font-medium">Date:</span> 
+                <div className="flex items-center mt-1">
+                  <CalendarComponent className="w-4 h-4 mr-1 text-primary" />
+                  {booking?.preferredDate ? 
+                    (typeof booking.preferredDate === 'string' ? 
+                      new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) : 
+                      new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'})) : 
+                    'Not set'}
+                </div>
               </div>
-            </div>
-            <div>
-              <span className="font-medium">Time:</span>
-              <div className="flex items-center mt-1">
-                <Clock className="w-4 h-4 mr-1 text-primary" />
-                {booking.appointmentTime || 'Not set'}
+              <div>
+                <span className="font-medium">Time:</span>
+                <div className="flex items-center mt-1">
+                  <Clock className="w-4 h-4 mr-1 text-primary" />
+                  {booking?.appointmentTime || 'Not set'}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
