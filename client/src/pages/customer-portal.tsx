@@ -51,22 +51,32 @@ import {
 
 import type { Booking } from '@shared/schema';
 
+// Extended booking type to handle both old and new property names
+interface ExtendedBooking extends Booking {
+  date?: string;
+  time?: string;
+  updatedAt?: string;
+}
+
 export default function CustomerPortalPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [customerToken, setCustomerToken] = useState<{ id: string, email: string, name: string } | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ExtendedBooking | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   
   // State for cancel dialog
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<ExtendedBooking | null>(null);
   
   // State for success dialog
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successDialogType, setSuccessDialogType] = useState<'reschedule' | 'cancel'>('reschedule');
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
   // Get customer token from localStorage
   useEffect(() => {
@@ -113,7 +123,7 @@ export default function CustomerPortalPage() {
 
   // Mutation for updating a booking
   const updateBookingMutation = useMutation({
-    mutationFn: async (data: { id: number, updates: Partial<Booking> }) => {
+    mutationFn: async (data: { id: number, updates: Partial<ExtendedBooking> }) => {
       const response = await fetch(`/api/customers/bookings/${data.id}`, {
         method: 'PUT',
         headers: {
@@ -223,7 +233,7 @@ export default function CustomerPortalPage() {
   };
 
   // Open the edit dialog for a booking
-  const openEditDialog = (booking: Booking) => {
+  const openEditDialog = (booking: ExtendedBooking) => {
     try {
       // Deep-clone the booking to avoid reference issues
       const formattedBooking = JSON.parse(JSON.stringify(booking));
@@ -248,7 +258,7 @@ export default function CustomerPortalPage() {
   };
 
   // Handle booking update
-  const handleBookingUpdate = (data: Partial<Booking>) => {
+  const handleBookingUpdate = (data: Partial<ExtendedBooking>) => {
     if (selectedBooking?.id) {
       updateBookingMutation.mutate({
         id: Number(selectedBooking.id),
@@ -304,7 +314,7 @@ export default function CustomerPortalPage() {
   };
   
   // Function to confirm cancellation
-  const confirmCancelBooking = (booking: Booking) => {
+  const confirmCancelBooking = (booking: ExtendedBooking) => {
     setBookingToCancel(booking);
     setShowCancelDialog(true);
   };
@@ -337,6 +347,30 @@ export default function CustomerPortalPage() {
           <CardDescription>
             View and manage your bookings with Picture Perfect TV Installation
           </CardDescription>
+          
+          {/* Tab Navigation */}
+          <div className="flex border-b mt-4">
+            <button
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'active'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground transition-colors'
+              }`}
+              onClick={() => setActiveTab('active')}
+            >
+              Active Bookings
+            </button>
+            <button
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'history'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground transition-colors'
+              }`}
+              onClick={() => setActiveTab('history')}
+            >
+              Booking History
+            </button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoadingBookings ? (
@@ -354,7 +388,8 @@ export default function CustomerPortalPage() {
               <p className="text-muted-foreground">You don't have any bookings yet.</p>
               <Button className="mt-4" onClick={() => navigate('/booking')}>Book a Service</Button>
             </div>
-          ) : (
+          ) : activeTab === 'active' ? (
+            // Active Bookings Table
             <div className="relative overflow-x-auto sm:rounded-md border">
               <Table className="min-w-full">
                 <TableHeader>
@@ -368,8 +403,8 @@ export default function CustomerPortalPage() {
                 </TableHeader>
                 <TableBody>
                   {bookingsData.bookings
-                    .filter((booking: Booking) => booking.status !== 'cancelled')
-                    .map((booking: Booking) => (
+                    .filter((booking: ExtendedBooking) => booking.status !== 'cancelled')
+                    .map((booking: ExtendedBooking) => (
                     <TableRow key={booking.id}>
                       <TableCell className="font-medium">
                         {booking.serviceType}
@@ -432,6 +467,84 @@ export default function CustomerPortalPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          ) : (
+            // Booking History Table (Cancelled Bookings)
+            <div>
+              <div className="bg-muted/30 rounded-md p-4 mb-4">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 mr-2 text-muted-foreground mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    This section shows your cancelled bookings. These time slots are now available for others to book.
+                  </p>
+                </div>
+              </div>
+              
+              {bookingsData.bookings.filter((booking: ExtendedBooking) => booking.status === 'cancelled').length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-muted-foreground">You don't have any cancelled bookings.</p>
+                </div>
+              ) : (
+                <div className="relative overflow-x-auto sm:rounded-md border">
+                  <Table className="min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Service</TableHead>
+                        <TableHead className="whitespace-nowrap">Date & Time</TableHead>
+                        <TableHead className="whitespace-nowrap hidden md:table-cell">Location</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                        <TableHead className="whitespace-nowrap">Cancelled On</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookingsData.bookings
+                        .filter((booking: ExtendedBooking) => booking.status === 'cancelled')
+                        .map((booking: ExtendedBooking) => (
+                        <TableRow key={booking.id} className="opacity-75">
+                          <TableCell className="font-medium">
+                            {booking.serviceType}
+                            {booking.tvSize && <span className="text-sm text-muted-foreground block">{booking.tvSize} TV</span>}
+                            {booking.mountType && <span className="text-sm text-muted-foreground block">{booking.mountType} Mount</span>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <div className="flex items-center">
+                                <CalendarClock className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                <span className="font-medium line-through whitespace-nowrap">
+                                  {booking.preferredDate ? format(new Date(booking.preferredDate), 'EEE, MMM d, yyyy') : 
+                                   booking.date ? format(new Date(booking.date as unknown as string), 'EEE, MMM d, yyyy') : '-'}
+                                </span>
+                              </div>
+                              <div className="flex items-center mt-1">
+                                <Clock className="w-3 h-3 mr-1 text-primary flex-shrink-0" />
+                                <span className="line-through whitespace-nowrap">
+                                  {booking.appointmentTime || booking.time as unknown as string || '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                              <span>
+                                {booking.city}, {booking.state} {booking.zipCode}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(booking.status)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-muted-foreground">
+                              {booking.updatedAt ? format(new Date(booking.updatedAt), 'MMM d, yyyy') : 'Unknown'}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
