@@ -1,20 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 import { useQueryParams } from "@/hooks/use-query-params";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, User, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/pricing";
 
 export default function BookingConfirmation() {
   const queryParams = useQueryParams();
+  const { toast } = useToast();
+  const [_, navigate] = useLocation();
   const [bookingData, setBookingData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
+  
+  // Account creation states
+  const [showAccountForm, setShowAccountForm] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
+  const [accountCreating, setAccountCreating] = useState<boolean>(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   // We're using useRef to track if we've already loaded the data
   // This will prevent the infinite update loop
@@ -339,6 +354,75 @@ export default function BookingConfirmation() {
     return [];
   };
 
+  // Account creation handler
+  const handleCreateAccount = async () => {
+    // Reset error state
+    setAccountError(null);
+    
+    // Basic validation
+    if (password.length < 6) {
+      setAccountError("Password must be at least 6 characters long");
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setAccountError("Passwords do not match");
+      return;
+    }
+    
+    if (!termsAccepted) {
+      setAccountError("You must accept the terms and conditions");
+      return;
+    }
+    
+    // Start loading
+    setAccountCreating(true);
+    
+    try {
+      // Create the account with the customer's email and password
+      const response = await fetch("/api/customers/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: bookingData.name,
+          email: bookingData.email,
+          phone: bookingData.phone,
+          password: password,
+          streetAddress: bookingData.streetAddress,
+          addressLine2: bookingData.addressLine2 || "",
+          city: bookingData.city,
+          state: bookingData.state,
+          zipCode: bookingData.zipCode,
+          consentToContact: true
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        toast({
+          title: "Account created successfully!",
+          description: "You can now log in to view your bookings and manage your account.",
+        });
+        
+        // Redirect to login page after account creation
+        setTimeout(() => {
+          navigate("/customer-login");
+        }, 2000);
+      } else {
+        // Handle error
+        setAccountError(data.message || "Failed to create account. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating account:", error);
+      setAccountError("An unexpected error occurred. Please try again.");
+    } finally {
+      setAccountCreating(false);
+    }
+  };
+
   // Calculate total price from the breakdown and actual price data
   const calculateTotalPrice = () => {
     // If we have the exact price from the booking data, use that
@@ -621,6 +705,114 @@ export default function BookingConfirmation() {
                 <h4 className="font-medium">Your Notes</h4>
                 <p className="text-sm italic">"{bookingData.notes}"</p>
               </>
+            )}
+          </div>
+
+          {/* Create Account Section */}
+          <div className="space-y-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Create an Account</h3>
+            </div>
+            
+            {showAccountForm ? (
+              <div className="space-y-4">
+                {accountError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{accountError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <p className="text-sm">
+                  Create an account to easily track your bookings and schedule future services.
+                </p>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input 
+                      id="email" 
+                      value={bookingData.email} 
+                      readOnly 
+                      disabled 
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="password">Password</Label>
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a password" 
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Must be at least 6 characters long
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your password" 
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="terms" 
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                    />
+                    <Label 
+                      htmlFor="terms" 
+                      className="text-sm font-normal"
+                    >
+                      I agree to the terms and conditions
+                    </Label>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <Button 
+                      onClick={handleCreateAccount} 
+                      disabled={accountCreating}
+                    >
+                      {accountCreating ? "Creating Account..." : "Create Account"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowAccountForm(false)}
+                      disabled={accountCreating}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm mb-4">
+                  Would you like to create an account using your email <strong>{bookingData.email}</strong>? Having an account lets you easily track your bookings and schedule future services.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => setShowAccountForm(true)}>
+                    Create Account
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    asChild
+                  >
+                    <Link href="/customer-login">I Already Have an Account</Link>
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
 
