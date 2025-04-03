@@ -46,7 +46,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Calendar
+  Calendar,
+  UserCircle
 } from 'lucide-react';
 
 import type { Booking } from '@shared/schema';
@@ -338,7 +339,17 @@ export default function CustomerPortalPage() {
           <h1 className="text-3xl font-bold">Customer Portal</h1>
           <p className="text-muted-foreground">Welcome back, {customerToken.name}</p>
         </div>
-        <Button variant="outline" onClick={handleLogout}>Logout</Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/customer-profile')}
+            className="flex items-center"
+          >
+            <UserCircle className="h-4 w-4 mr-2" />
+            Profile
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+        </div>
       </div>
 
       <Card>

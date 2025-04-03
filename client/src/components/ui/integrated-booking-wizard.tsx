@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BookingAssistant, BookingAssistantButton } from "./booking-assistant";
 import { BookingTutorial } from "./booking-tutorial";
 import { useFirstTimeUser, BookingStepGuide } from "./booking-step-guide";
+import { BookingAutofill } from "./booking-autofill";
 import { 
   Tooltip,
   TooltipContent,
@@ -703,6 +704,21 @@ export function IntegratedBookingWizard({
 
   const handleCheckboxChange = (checked: boolean, name: string) => {
     setFormData({ ...formData, [name]: checked });
+  };
+  
+  // Handle autofill from customer profile
+  const handleAutofill = (customerData: any) => {
+    setFormData({
+      ...formData,
+      name: customerData.name || '',
+      phone: customerData.phone || '',
+      email: customerData.email || '',
+      streetAddress: customerData.streetAddress || '',
+      addressLine2: customerData.addressLine2 || '',
+      city: customerData.city || '',
+      state: customerData.state || '',
+      zipCode: customerData.zipCode || '',
+    });
   };
 
   // Validation
@@ -1700,10 +1716,13 @@ export function IntegratedBookingWizard({
                     <div className="space-y-5">
                       {/* Personal Information */}
                       <div className="space-y-3">
-                        <h3 className="text-base sm:text-lg font-medium flex items-center">
-                          <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                          Personal Information
-                        </h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-base sm:text-lg font-medium flex items-center">
+                            <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                            Personal Information
+                          </h3>
+                          <BookingAutofill onAutofill={handleAutofill} />
+                        </div>
                         
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
