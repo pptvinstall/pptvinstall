@@ -2,7 +2,19 @@
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, XCircle, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ReviewBookingStepProps {
   tvInstallations: any[];
@@ -14,6 +26,8 @@ interface ReviewBookingStepProps {
   formData: any;
   pricingTotal: number;
   onEditServices?: () => void;
+  onRemoveService?: (type: 'tv' | 'smartHome', id: string) => void;
+  noServicesMessage?: string;
 }
 
 export function ReviewBookingStep({
@@ -25,8 +39,24 @@ export function ReviewBookingStep({
   selectedTime,
   formData,
   pricingTotal,
-  onEditServices
+  onEditServices,
+  onRemoveService,
+  noServicesMessage = "No services selected. Please add at least one service before confirming."
 }: ReviewBookingStepProps) {
+  const [serviceToRemove, setServiceToRemove] = useState<{type: 'tv' | 'smartHome', id: string} | null>(null);
+  const hasServices = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
+
+  const handleRemoveClick = (type: 'tv' | 'smartHome', id: string) => {
+    setServiceToRemove({ type, id });
+  };
+
+  const confirmRemoval = () => {
+    if (serviceToRemove && onRemoveService) {
+      onRemoveService(serviceToRemove.type, serviceToRemove.id);
+    }
+    setServiceToRemove(null);
+  };
+
   return (
     <div className="space-y-5 relative px-1">
       <div>
@@ -36,9 +66,36 @@ export function ReviewBookingStep({
         </p>
       </div>
       
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!serviceToRemove} onOpenChange={(open) => !open && setServiceToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Service?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this service? This will update your estimated total.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoval} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       {/* Services Summary */}
       <div className="relative">
         <h4 className="text-sm font-medium mb-2">Services</h4>
+        
+        {/* No Services Warning */}
+        {!hasServices && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 flex items-start gap-2 text-amber-800">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="text-sm">{noServicesMessage}</p>
+          </div>
+        )}
+        
         <div className="space-y-3">
           {/* TV Installations */}
           {tvInstallations.length > 0 && (
@@ -57,27 +114,47 @@ export function ReviewBookingStep({
                 )}
               </div>
               <ul className="text-xs sm:text-sm space-y-2">
-                {tvInstallations.map((tv, index) => (
-                  <li key={tv.id} className="flex flex-col p-2 bg-muted rounded-md">
-                    <span className="font-medium">TV {index + 1}:</span>
-                    <span>Size: {tv.size === 'large' ? '56" or larger' : '32"-55"'}</span>
-                    <span>Location: {tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}</span>
-                    <span className="line-clamp-2">
-                      Mount: {tv.mountType === 'fixed' 
-                        ? `Fixed Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
-                        : tv.mountType === 'tilting' 
-                        ? `Tilting Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
-                        : tv.mountType === 'full_motion' 
-                        ? `Full Motion Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
-                        : tv.mountType === 'customer' 
-                        ? 'Customer-Provided Mount' 
-                        : 'No Mount Required'}
-                    </span>
-                    {tv.masonryWall && <span>Non-Drywall Surface (Brick/Masonry)</span>}
-                    {tv.highRise && <span>High-Rise/Steel Studs</span>}
-                    {tv.outletNeeded && <span>With Wire Concealment & Outlet</span>}
-                  </li>
-                ))}
+                <AnimatePresence>
+                  {tvInstallations.map((tv, index) => (
+                    <motion.li 
+                      key={tv.id} 
+                      initial={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: "hidden" }}
+                      transition={{ duration: 0.2 }}
+                      className="relative flex flex-col p-2 bg-muted rounded-md pr-8"
+                    >
+                      {onRemoveService && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 p-0 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          onClick={() => handleRemoveClick('tv', tv.id)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      )}
+                      <span className="font-medium">TV {index + 1}:</span>
+                      <span>Size: {tv.size === 'large' ? '56" or larger' : '32"-55"'}</span>
+                      <span>Location: {tv.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}</span>
+                      <span className="line-clamp-2">
+                        Mount: {tv.mountType === 'fixed' 
+                          ? `Fixed Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                          : tv.mountType === 'tilting' 
+                          ? `Tilting Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                          : tv.mountType === 'full_motion' 
+                          ? `Full Motion Mount (${tv.size === 'large' ? '56"+ size' : '32"-55" size'}) - Included` 
+                          : tv.mountType === 'customer' 
+                          ? 'Customer-Provided Mount' 
+                          : 'No Mount Required'}
+                      </span>
+                      {tv.masonryWall && <span>Non-Drywall Surface (Brick/Masonry)</span>}
+                      {tv.highRise && <span>High-Rise/Steel Studs</span>}
+                      {tv.outletNeeded && <span>With Wire Concealment & Outlet</span>}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ul>
             </div>
           )}
@@ -100,13 +177,33 @@ export function ReviewBookingStep({
             <div className="space-y-2">
               <h5 className="text-sm font-medium">Smart Home Installations:</h5>
               <ul className="text-xs sm:text-sm space-y-2">
-                {smartHomeInstallations.map((device) => (
-                  <li key={device.id} className="p-2 bg-muted rounded-md">
-                    {device.type === 'camera' && `Smart Security Camera (Qty: ${device.count})`}
-                    {device.type === 'doorbell' && `Smart Doorbell (Qty: ${device.count})`}
-                    {device.type === 'floodlight' && `Smart Floodlight (Qty: ${device.count})${device.hasExistingWiring ? ' - Existing Wiring' : ' - Requires Assessment'}`}
-                  </li>
-                ))}
+                <AnimatePresence>
+                  {smartHomeInstallations.map((device) => (
+                    <motion.li 
+                      key={device.id} 
+                      initial={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: "hidden" }}
+                      transition={{ duration: 0.2 }}
+                      className="relative p-2 bg-muted rounded-md pr-8"
+                    >
+                      {onRemoveService && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 p-0 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          onClick={() => handleRemoveClick('smartHome', device.id)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      )}
+                      {device.type === 'camera' && `Smart Security Camera (Qty: ${device.count})`}
+                      {device.type === 'doorbell' && `Smart Doorbell (Qty: ${device.count})`}
+                      {device.type === 'floodlight' && `Smart Floodlight (Qty: ${device.count})${device.hasExistingWiring ? ' - Existing Wiring' : ' - Requires Assessment'}`}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ul>
             </div>
           )}

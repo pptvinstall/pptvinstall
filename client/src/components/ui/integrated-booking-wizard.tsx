@@ -795,6 +795,16 @@ export function IntegratedBookingWizard({
   const handleNextClick = () => {
     if (!validateCurrentStep()) return;
     
+    // If this is the last step, check if there are any services selected before proceeding
+    if (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0) {
+      toast({
+        title: "No services selected",
+        description: "Please add at least one service before confirming your booking.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -1843,6 +1853,32 @@ export function IntegratedBookingWizard({
                     formData={formData}
                     pricingTotal={pricingTotal}
                     onEditServices={() => goToEditServices()}
+                    onRemoveService={(type, id) => {
+                      // Create updated service arrays
+                      let updatedTvServices = [...tvServices];
+                      let updatedSmartHomeServices = [...smartHomeServices];
+                      
+                      if (type === 'tv') {
+                        updatedTvServices = tvServices.filter(tv => tv.id !== id);
+                        setTvServices(updatedTvServices);
+                      } else if (type === 'smartHome') {
+                        updatedSmartHomeServices = smartHomeServices.filter(device => device.id !== id);
+                        setSmartHomeServices(updatedSmartHomeServices);
+                      }
+                      
+                      // Recalculate pricing based on the updated service arrays
+                      calculatePricingTotal(
+                        type === 'tv' ? updatedTvServices : tvServices, 
+                        type === 'smartHome' ? updatedSmartHomeServices : smartHomeServices
+                      );
+                      
+                      // Toast to confirm removal
+                      toast({
+                        title: "Service removed",
+                        description: "Your estimated total has been updated",
+                        variant: "default"
+                      });
+                    }}
                   />
                 )}
                 
@@ -2004,7 +2040,7 @@ export function IntegratedBookingWizard({
 
                   <Button
                     onClick={handleNextClick}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0)}
                   >
                     {isSubmitting
                       ? <><LoadingSpinner size="sm" className="mr-2" /> Processing</>
