@@ -251,7 +251,7 @@ export function IntegratedBookingWizard({
     // First-time check when date changes
     if (selectedDate) {
       // Check each time slot for the selected date
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const dateStr = safeFormatDate(selectedDate, "yyyy-MM-dd", "");
       
       // We only want to update the UI, not create an infinite loop
       // So we handle this in a non-render-triggering way
@@ -272,7 +272,7 @@ export function IntegratedBookingWizard({
       // Set up an interval to refresh time slot availability every minute
       const refreshInterval = setInterval(() => {
         if (selectedDate) {
-          const dateStr = format(selectedDate, "yyyy-MM-dd");
+          const dateStr = safeFormatDate(selectedDate, "yyyy-MM-dd", "");
           
           // For each time slot, check if it's just become unavailable
           timeSlots.forEach(timeSlot => {
@@ -418,7 +418,7 @@ export function IntegratedBookingWizard({
       // Check if time slot conflicts with existing bookings
       if (existingBookings && existingBookings.length > 0) {
         try {
-          const dateStr = format(new Date(date), "yyyy-MM-dd");
+          const dateStr = safeFormatDate(new Date(date), "yyyy-MM-dd", date);
           
           // Filter bookings for the selected date
           const bookingsOnDate = existingBookings.filter(
@@ -497,7 +497,7 @@ export function IntegratedBookingWizard({
       
       // Get time slots for this date
       const slots = getTimeSlotsForDate(checkDate, 60);
-      const dateString = format(checkDate, "yyyy-MM-dd");
+      const dateString = safeFormatDate(checkDate, "yyyy-MM-dd", "");
       
       // Find the first available time slot
       for (const time of slots) {
@@ -1642,7 +1642,7 @@ export function IntegratedBookingWizard({
                       <div className="bg-primary/10 p-4 rounded-md mt-4">
                         <h3 className="font-medium mb-2">Your Appointment</h3>
                         <p className="text-sm sm:text-base">
-                          Date: <span className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
+                          Date: <span className="font-medium">{safeFormatDate(selectedDate, 'EEEE, MMMM d, yyyy', 'No date selected')}</span>
                         </p>
                         <p className="text-sm sm:text-base">
                           Time: <span className="font-medium">{selectedTime}</span>
