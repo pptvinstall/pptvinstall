@@ -1,18 +1,8 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
 import { Calendar, Clock } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -21,14 +11,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Booking } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-interface CustomerBookingDialogProps {
-  booking?: Booking | null;
+interface MobileEditDialogProps {
+  booking: Booking;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (data: Partial<Booking>) => void;
@@ -43,13 +33,13 @@ const bookingUpdateSchema = z.object({
 
 type BookingUpdateFormValues = z.infer<typeof bookingUpdateSchema>;
 
-export function CustomerBookingDialog({
+export function MobileEditDialog({
   booking,
   isOpen,
   onClose,
   onUpdate,
   isUpdating,
-}: CustomerBookingDialogProps) {
+}: MobileEditDialogProps) {
   const { toast } = useToast();
   const [displayDate, setDisplayDate] = useState<string>('');
   
@@ -57,7 +47,12 @@ export function CustomerBookingDialog({
     if (booking?.preferredDate) {
       try {
         const date = new Date(booking.preferredDate);
-        setDisplayDate(format(date, "EEEE, MMMM d, yyyy"));
+        setDisplayDate(date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        }));
       } catch (error) {
         console.error("Error formatting date:", error);
         setDisplayDate(String(booking.preferredDate));
@@ -73,49 +68,36 @@ export function CustomerBookingDialog({
       notes: booking?.notes || "",
     },
   });
-  
-  console.log("SimpleBookingDialog initialized with booking:", booking);
 
   // Function to handle form submission
-  function onSubmit(data: BookingUpdateFormValues) {
-    if (!booking) {
-      toast({
-        title: "Error",
-        description: "No booking selected",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  function onSubmit(data: BookingUpdateFormValues) {    
     onUpdate({
       appointmentTime: data.appointmentTime,
       notes: data.notes,
     });
   }
 
-  if (!booking) {
+  if (!isOpen) {
     return null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent 
-        className="sm:max-w-[450px] w-[95vw] p-4 sm:p-6 bg-background rounded-lg sm:rounded-xl shadow-xl overflow-y-auto"
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+      <div 
+        className="bg-white w-full max-h-[85vh] overflow-y-auto rounded-t-xl p-4"
         onClick={(e) => e.stopPropagation()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={onClose}>
-        <DialogHeader className="pb-2">
-          <DialogTitle className="text-xl">Update Your Booking</DialogTitle>
-          <DialogDescription>
+      >
+        <div className="mb-2">
+          <h2 className="text-xl font-bold">Update Your Booking</h2>
+          <p className="text-sm text-gray-500">
             Change your appointment time or add special instructions.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
         
         {/* Current Booking Info */}
-        <div className="bg-muted p-4 rounded-md mb-4">
+        <div className="bg-gray-100 p-4 rounded-md mb-4">
           <div className="flex items-center mb-2">
-            <Calendar className="w-5 h-5 mr-2 text-primary" />
+            <Calendar className="w-5 h-5 mr-2 text-blue-600" />
             <h3 className="font-medium">Appointment Details</h3>
           </div>
           
@@ -148,7 +130,7 @@ export function CustomerBookingDialog({
                     <Input placeholder="e.g. 2:30 PM" {...field} />
                   </FormControl>
                   <FormMessage />
-                  <p className="text-xs text-muted-foreground">Format: 2:30 PM, 5:00 PM, etc.</p>
+                  <p className="text-xs text-gray-500">Format: 2:30 PM, 5:00 PM, etc.</p>
                 </FormItem>
               )}
             />
@@ -172,17 +154,17 @@ export function CustomerBookingDialog({
               )}
             />
             
-            <DialogFooter className="pt-4">
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isUpdating}>
                 {isUpdating ? "Updating..." : "Update Booking"}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

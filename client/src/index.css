@@ -275,24 +275,27 @@ select,
   }
 }
 
+/* Dialog overlay fixes */
+[data-state="open"][data-scope="dialog"] {
+  pointer-events: auto !important;
+}
+
 /* Mobile dialog fixes - Custom styles */
 @media (max-width: 640px) {
-  .dialog-content {
+  [data-state="open"][data-scope="dialog"][data-scope-content="content"] {
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    border-radius: 1rem 1rem 0 0 !important;
+    border-radius: 1.25rem 1.25rem 0 0 !important;
     max-height: 85vh !important;
     margin: 0 !important;
-  }
-  
-  /* Fix dialog positioning */
-  [role="dialog"] {
-    align-items: flex-end !important;
-    justify-content: center !important;
+    transform: none !important;
+    animation: none !important;
+    transition: transform 0.2s ease-out !important;
+    z-index: 999 !important;
   }
 }
 

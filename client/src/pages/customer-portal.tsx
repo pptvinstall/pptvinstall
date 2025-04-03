@@ -12,7 +12,9 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomerBookingDialog } from '@/components/customer/customer-booking-dialog';
+import { MobileEditDialog } from '@/components/customer/mobile-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   Table,
   TableBody,
@@ -196,9 +198,18 @@ export default function CustomerPortalPage() {
     }
   };
 
+  // Check if we should use mobile version
+  const isMobile = useMediaQuery("(max-width: 640px)");
+
   if (!customerToken) {
     return null; // Will redirect to login via the useEffect
   }
+
+  const closeDialog = () => {
+    setIsBookingDialogOpen(false);
+    // Clear selected booking after dialog closes
+    setTimeout(() => setSelectedBooking(null), 300);
+  };
 
   return (
     <div className="container py-10 space-y-6">
@@ -300,18 +311,26 @@ export default function CustomerPortalPage() {
         </CardContent>
       </Card>
 
-      {/* Always render the dialog component, but control its visibility with isOpen prop */}
-      <CustomerBookingDialog
-        booking={selectedBooking || undefined}
-        isOpen={isBookingDialogOpen && selectedBooking !== null}
-        onClose={() => {
-          setIsBookingDialogOpen(false);
-          // Clear selected booking after dialog closes with a small delay
-          setTimeout(() => setSelectedBooking(null), 300);
-        }}
-        onUpdate={handleBookingUpdate}
-        isUpdating={updateBookingMutation.isPending}
-      />
+      {/* Render the appropriate dialog based on screen size */}
+      {selectedBooking && isMobile ? (
+        // Mobile version
+        <MobileEditDialog
+          booking={selectedBooking}
+          isOpen={isBookingDialogOpen}
+          onClose={closeDialog}
+          onUpdate={handleBookingUpdate}
+          isUpdating={updateBookingMutation.isPending}
+        />
+      ) : selectedBooking && (
+        // Desktop version
+        <CustomerBookingDialog
+          booking={selectedBooking}
+          isOpen={isBookingDialogOpen}
+          onClose={closeDialog}
+          onUpdate={handleBookingUpdate}
+          isUpdating={updateBookingMutation.isPending}
+        />
+      )}
     </div>
   );
 }
