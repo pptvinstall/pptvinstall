@@ -130,7 +130,17 @@ export default function CustomerPortalPage() {
 
   // Open the edit dialog for a booking
   const openEditDialog = (booking: Booking) => {
-    setSelectedBooking(booking);
+    // Ensure we have a valid booking object with proper date format
+    const formattedBooking = {
+      ...booking,
+      // Ensure preferredDate is in proper format (YYYY-MM-DD)
+      preferredDate: booking.preferredDate ? 
+        (typeof booking.preferredDate === 'string' ? booking.preferredDate : format(new Date(booking.preferredDate), 'yyyy-MM-dd')) 
+        : format(new Date(), 'yyyy-MM-dd')
+    };
+    
+    console.log("Opening edit dialog with booking:", formattedBooking);
+    setSelectedBooking(formattedBooking);
     setIsBookingDialogOpen(true);
   };
 

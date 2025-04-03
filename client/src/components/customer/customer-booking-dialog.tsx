@@ -104,11 +104,17 @@ export function CustomerBookingDialog({
   const form = useForm<BookingUpdateFormValues>({
     resolver: zodResolver(bookingUpdateSchema),
     defaultValues: {
-      preferredDate: booking.preferredDate ? new Date(booking.preferredDate) : new Date(),
+      // Make sure to properly parse the date string to a Date object
+      preferredDate: booking.preferredDate ? 
+        (typeof booking.preferredDate === 'string' ? new Date(booking.preferredDate) : 
+         (typeof booking.preferredDate === 'object' ? new Date(booking.preferredDate) : new Date())) 
+        : new Date(),
       appointmentTime: booking.appointmentTime || "",
       notes: booking.notes || "",
     },
   });
+  
+  console.log("CustomerBookingDialog initialized with booking:", booking);
 
   // Watch the date to update time slots
   const selectedDate = form.watch("preferredDate");
@@ -125,7 +131,14 @@ export function CustomerBookingDialog({
       
       for (const slot of slots) {
         // Skip checking for the current booking's time slot (it's available to itself)
-        if (dateStr === booking.preferredDate && slot === booking.appointmentTime) {
+        // Convert booking.preferredDate to a consistent format for comparison
+        const bookingDateStr = typeof booking.preferredDate === 'string' ? 
+          booking.preferredDate : 
+          (booking.preferredDate && typeof booking.preferredDate === 'object' ? 
+            format(new Date(booking.preferredDate), "yyyy-MM-dd") : '');
+            
+        if (dateStr === bookingDateStr && slot === booking.appointmentTime) {
+          console.log(`Current booking time slot: ${dateStr} at ${slot} - marking as available`);
           availability[`${dateStr}|${slot}`] = true;
           continue;
         }
@@ -157,11 +170,18 @@ export function CustomerBookingDialog({
 
         // Check if slot conflicts with other bookings
         const conflictingBooking = existingBookings.find(
-          (b: any) => 
-            b.preferredDate === dateStr && 
-            b.appointmentTime === slot && 
-            b.id !== booking.id && 
-            b.status === 'active'
+          (b: any) => {
+            // Normalize the booking date for comparison
+            const bDate = typeof b.preferredDate === 'string' ? 
+                          b.preferredDate : 
+                          (b.preferredDate && typeof b.preferredDate === 'object' ? 
+                          format(new Date(b.preferredDate), "yyyy-MM-dd") : '');
+                          
+            return bDate === dateStr && 
+                   b.appointmentTime === slot && 
+                   b.id !== booking.id && 
+                   b.status === 'active';
+          }
         );
         
         availability[`${dateStr}|${slot}`] = !conflictingBooking;
