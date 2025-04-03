@@ -2,7 +2,7 @@ import { MailService } from '@sendgrid/mail';
 import type { Booking, Customer } from '@shared/schema';
 import { format, parse, parseISO } from 'date-fns';
 import * as ics from 'ics';
-import type { EventAttributes } from 'ics';
+import type { EventAttributes, EventStatus } from 'ics';
 
 // Initialize SendGrid with API key
 const sgMail = new MailService();
@@ -749,4 +749,221 @@ export async function sendEnhancedCancellationEmail(
       sendToAdmin: true
     }
   );
+}
+
+/**
+ * Creates welcome email content
+ */
+function getWelcomeEmailContent(customer: Customer): string {
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Welcome to Picture Perfect TV Install</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      Dear ${customer.name},
+    </p>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      Thank you for creating your account with Picture Perfect TV Install! We're excited to have you as part of our community.
+    </p>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      With your account, you can:
+    </p>
+    
+    <ul style="margin-bottom: 25px; padding-left: 20px;">
+      <li style="margin-bottom: 10px; font-size: 16px; line-height: 1.5;">Book and manage your TV installation services</li>
+      <li style="margin-bottom: 10px; font-size: 16px; line-height: 1.5;">Track your appointment status</li>
+      <li style="margin-bottom: 10px; font-size: 16px; line-height: 1.5;">View your service history</li>
+      <li style="margin-bottom: 10px; font-size: 16px; line-height: 1.5;">Access exclusive offers and promotions</li>
+    </ul>
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Getting Started:</strong> Simply log in to your account on our website to start booking services or managing your appointments.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5;">
+      If you have any questions or need assistance, please don't hesitate to contact us at 
+      <a href="mailto:${ADMIN_EMAIL}" style="color: #005cb9;">${ADMIN_EMAIL}</a> or call us at ${COMPANY_PHONE}.
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.5;">
+      We look forward to providing you with exceptional service!
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.5;">
+      Warm regards,<br>
+      The Picture Perfect TV Install Team
+    </p>
+  `;
+}
+
+/**
+ * Creates password reset email content
+ */
+function getPasswordResetEmailContent(customer: Customer, resetToken: string): string {
+  const resetLink = `${COMPANY_WEBSITE}/reset-password?token=${resetToken}&email=${encodeURIComponent(customer.email)}`;
+  
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Password Reset Request</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      Dear ${customer.name},
+    </p>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      We received a request to reset your password for your Picture Perfect TV Install account.
+    </p>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      To reset your password, please click the button below:
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetLink}" style="background-color: #005cb9; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+    </div>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      If the button doesn't work, you can copy and paste the following link into your browser:
+    </p>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5; word-break: break-all; background-color: #f9f9f9; padding: 10px; border-radius: 4px;">
+      ${resetLink}
+    </p>
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Important:</strong> This password reset link will expire in 24 hours. If you didn't request a password reset, please ignore this email or contact us if you have concerns.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5;">
+      If you have any questions or need assistance, please don't hesitate to contact us at 
+      <a href="mailto:${ADMIN_EMAIL}" style="color: #005cb9;">${ADMIN_EMAIL}</a> or call us at ${COMPANY_PHONE}.
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.5;">
+      Thank you,<br>
+      The Picture Perfect TV Install Team
+    </p>
+  `;
+}
+
+/**
+ * Get the booking cancellation content (aliasing getCancellationContent for consistency in naming)
+ */
+function getBookingCancellationContent(booking: Booking, reason?: string): string {
+  return getCancellationContent(booking, reason);
+}
+
+/**
+ * Send a test email of the specified type
+ */
+export async function sendTestEmail(emailType: EmailType, to: string) {
+  // Sample booking data for testing
+  const testBooking: Booking = {
+    id: '12345',
+    name: 'Test Customer',
+    email: to,
+    phone: '404-555-6789',
+    status: 'active',
+    streetAddress: '123 Main Street',
+    addressLine2: 'Suite 456',
+    city: 'Atlanta',
+    state: 'GA',
+    zipCode: '30301',
+    serviceType: 'TV Wall Mount Installation',
+    tvSize: '65 inch',
+    mountType: 'Tilting Wall Mount',
+    preferredDate: new Date().toISOString().split('T')[0], // Today's date
+    appointmentTime: '10:00 AM',
+    notes: 'This is a test booking for email verification purposes.',
+    pricingTotal: '$249.99',
+    pricingBreakdown: [
+      { service: 'TV Wall Mount Installation', price: '$199.99' },
+      { service: 'Cable Management', price: '$50.00' }
+    ]
+  };
+  
+  let emailSubject = '';
+  let emailContent = '';
+  let calendarEvent: string | undefined;
+  
+  try {
+    switch(emailType) {
+      case EmailType.BOOKING_CONFIRMATION:
+        emailSubject = 'Your TV Installation Appointment Confirmation';
+        emailContent = masterEmailTemplate('Booking Confirmation', getBookingConfirmationContent(testBooking));
+        calendarEvent = await createCalendarEvent(testBooking);
+        break;
+        
+      case EmailType.RESCHEDULE_CONFIRMATION:
+        emailSubject = 'Your TV Installation Appointment Has Been Rescheduled';
+        emailContent = masterEmailTemplate('Appointment Rescheduled', getRescheduleConfirmationContent(
+          testBooking, 
+          new Date(new Date().setDate(new Date().getDate() - 2)).toISOString().split('T')[0], // 2 days ago
+          '3:30 PM'
+        ));
+        calendarEvent = await createCalendarEvent(testBooking);
+        break;
+        
+      case EmailType.SERVICE_EDIT:
+        emailSubject = 'Your TV Installation Service Details Updated';
+        emailContent = masterEmailTemplate('Service Details Updated', getServiceEditContent(testBooking, {
+          tvSize: '75 inch',
+          mountType: 'Full Motion Wall Mount'
+        }));
+        break;
+        
+      case EmailType.BOOKING_CANCELLATION:
+        emailSubject = 'Your TV Installation Appointment Has Been Cancelled';
+        emailContent = masterEmailTemplate('Booking Cancellation', getBookingCancellationContent(testBooking));
+        break;
+        
+      case EmailType.WELCOME:
+        emailSubject = 'Welcome to Picture Perfect TV Install';
+        emailContent = masterEmailTemplate('Welcome', getWelcomeEmailContent({
+          name: 'Test Customer',
+          email: to
+        } as Customer));
+        break;
+        
+      case EmailType.PASSWORD_RESET:
+        emailSubject = 'Password Reset Request';
+        emailContent = masterEmailTemplate('Password Reset', getPasswordResetEmailContent({
+          name: 'Test Customer',
+          email: to
+        } as Customer, 'test-reset-token-12345'));
+        break;
+        
+      default:
+        throw new Error(`Unknown email type: ${emailType}`);
+    }
+    
+    // Create message for SendGrid
+    const msg = {
+      to,
+      from: FROM_EMAIL,
+      subject: emailSubject,
+      text: createPlainTextVersion(emailContent),
+      html: emailContent,
+      attachments: calendarEvent ? [
+        {
+          content: Buffer.from(calendarEvent).toString('base64'),
+          filename: 'appointment.ics',
+          type: 'text/calendar',
+          disposition: 'attachment'
+        }
+      ] : undefined
+    };
+    
+    // Send the email
+    await sgMail.send(msg);
+    return { success: true, message: `Test ${emailType} email sent to ${to}` };
+    
+  } catch (error) {
+    console.error(`Error sending test ${emailType} email:`, error);
+    throw error;
+  }
 }

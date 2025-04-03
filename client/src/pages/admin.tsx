@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay, addDays, isSameDay, differenceInDays, formatDistanceToNow } from "date-fns";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   Table,
   TableBody,
@@ -1272,6 +1272,35 @@ export default function AdminDashboard() {
             {/* Booking Settings */}
             <SystemSettings />
             
+            {/* Email Testing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Testing</CardTitle>
+                <CardDescription>Test email notifications to verify your setup</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Use these tools to test your email system and verify that notifications are working correctly.
+                  </p>
+                  <div className="flex space-x-4">
+                    <Link href="/admin/send-test-emails">
+                      <Button>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Test Emails
+                      </Button>
+                    </Link>
+                    <Link href="/admin/email-previews">
+                      <Button variant="outline">
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Email Templates
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+              
             {/* Admin Password */}
             <Card>
               <CardHeader>

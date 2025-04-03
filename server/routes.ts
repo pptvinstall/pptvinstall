@@ -259,6 +259,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Test enhanced email sending functionality 
+  app.post("/api/email/send-test-to-multiple", async (req: Request, res: Response) => {
+    try {
+      const { emailType = EmailType.BOOKING_CONFIRMATION } = req.body;
+      
+      if (!Object.values(EmailType).includes(emailType)) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Invalid email type",
+          validTypes: Object.values(EmailType)
+        });
+      }
+      
+      logger.info(`Sending test emails to both user and JWoodceo@gmail.com, type: ${emailType}`);
+      
+      // Import dynamically to avoid circular dependencies
+      const { sendTestEmail } = await import('./services/enhancedEmailService');
+      
+      // Get admin email from environment variables or use default
+      const adminEmail = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
+      
+      // Send to JWoodceo@gmail.com
+      const jwoodResult = await sendTestEmail(emailType, 'JWoodceo@gmail.com');
+      
+      // Send to admin email
+      const yourResult = await sendTestEmail(emailType, adminEmail);
+      
+      return res.json({
+        success: true,
+        message: `Test ${emailType} emails sent to JWoodceo@gmail.com and ${adminEmail}`,
+        jwoodResult,
+        yourResult
+      });
+    } catch (error) {
+      console.error('Error sending test emails:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to send test emails',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.post("/api/email/test-send", async (req: Request, res: Response) => {
     try {
       const { 
