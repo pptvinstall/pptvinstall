@@ -4,7 +4,6 @@ import { Calendar, Clock } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -23,16 +21,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { Booking } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useBusinessHours } from "@/hooks/use-business-hours";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomerBookingDialogProps {
@@ -45,12 +37,7 @@ interface CustomerBookingDialogProps {
 
 // Schema for booking updates
 const bookingUpdateSchema = z.object({
-  preferredDate: z.date({
-    required_error: "Please select a date",
-  }),
-  appointmentTime: z.string({
-    required_error: "Please select a time",
-  }),
+  appointmentTime: z.string().min(1, "Please select a time"),
   notes: z.string().optional(),
 });
 
@@ -64,343 +51,105 @@ export function CustomerBookingDialog({
   isUpdating,
 }: CustomerBookingDialogProps) {
   const { toast } = useToast();
-  const { getTimeSlotsForDate, getBusinessHoursForDay } = useBusinessHours();
-  const [timeSlots, setTimeSlots] = useState<string[]>([]);
-  const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
-  const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
-
-  // Fetch booking buffer hours
+  const [displayDate, setDisplayDate] = useState<string>('');
+  
   useEffect(() => {
-    async function fetchBookingBuffer() {
+    if (booking?.preferredDate) {
       try {
-        const response = await fetch("/api/system-settings/booking-buffer");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.bookingBufferHours !== undefined) {
-            setBookingBufferHours(Number(data.bookingBufferHours));
-          }
-        }
+        const date = new Date(booking.preferredDate);
+        setDisplayDate(format(date, "EEEE, MMMM d, yyyy"));
       } catch (error) {
-        console.error("Error fetching booking buffer setting:", error);
+        console.error("Error formatting date:", error);
+        setDisplayDate(String(booking.preferredDate));
       }
     }
-    
-    fetchBookingBuffer();
-  }, []);
-
-  // Get existing bookings to check availability
-  const { data: existingBookingsData } = useQuery({
-    queryKey: ["/api/bookings"],
-    queryFn: async () => {
-      const response = await fetch("/api/bookings");
-      const data = await response.json();
-      return data;
-    },
-  });
-
-  const existingBookings = existingBookingsData?.bookings || [];
+  }, [booking]);
 
   // Setup the form with default values from the booking
   const form = useForm<BookingUpdateFormValues>({
     resolver: zodResolver(bookingUpdateSchema),
     defaultValues: {
-      // Make sure to properly parse the date string to a Date object
-      preferredDate: booking?.preferredDate ? 
-        (typeof booking.preferredDate === 'string' ? new Date(booking.preferredDate) : 
-         (typeof booking.preferredDate === 'object' ? new Date(booking.preferredDate) : new Date())) 
-        : new Date(),
       appointmentTime: booking?.appointmentTime || "",
       notes: booking?.notes || "",
     },
   });
   
-  console.log("CustomerBookingDialog initialized with booking:", booking);
-
-  // Watch the date to update time slots
-  const selectedDate = form.watch("preferredDate");
-
-  // Update time slots when date changes
-  useEffect(() => {
-    if (!selectedDate || !booking) return;
-
-    const slots = getTimeSlotsForDate(selectedDate, 60);
-    setTimeSlots(slots);
-
-    // Check availability for each time slot
-    const availability: Record<string, boolean> = {};
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    
-    for (const slot of slots) {
-      // Skip checking for the current booking's time slot (it's available to itself)
-      // Convert booking.preferredDate to a consistent format for comparison
-      const bookingDateStr = booking?.preferredDate ? 
-        (typeof booking.preferredDate === 'string' ? 
-          booking.preferredDate : 
-          (typeof booking.preferredDate === 'object' ? 
-            format(new Date(booking.preferredDate), "yyyy-MM-dd") : ''))
-        : '';
-          
-      if (dateStr === bookingDateStr && slot === booking?.appointmentTime) {
-        console.log(`Current booking time slot: ${dateStr} at ${slot} - marking as available`);
-        availability[`${dateStr}|${slot}`] = true;
-        continue;
-      }
-
-      // Check if slot is in the past
-      const slotDate = new Date(dateStr);
-      const timeMatch = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1], 10);
-        const minutes = parseInt(timeMatch[2], 10);
-        const period = timeMatch[3].toUpperCase();
-        
-        if (period === 'PM' && hours < 12) {
-          hours += 12;
-        } else if (period === 'AM' && hours === 12) {
-          hours = 0;
-        }
-        
-        slotDate.setHours(hours, minutes, 0, 0);
-        
-        const now = new Date();
-        const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000);
-        
-        if (slotDate <= bufferTime) {
-          availability[`${dateStr}|${slot}`] = false;
-          continue;
-        }
-      }
-
-      // Check if slot conflicts with other bookings
-      const conflictingBooking = existingBookings.find(
-        (b: any) => {
-          // Normalize the booking date for comparison
-          const bDate = typeof b.preferredDate === 'string' ? 
-                        b.preferredDate : 
-                        (b.preferredDate && typeof b.preferredDate === 'object' ? 
-                        format(new Date(b.preferredDate), "yyyy-MM-dd") : '');
-                        
-          return bDate === dateStr && 
-                b.appointmentTime === slot && 
-                b.id !== booking?.id && 
-                b.status === 'active';
-        }
-      );
-      
-      availability[`${dateStr}|${slot}`] = !conflictingBooking;
-    }
-    
-    setTimeSlotAvailability(availability);
-  }, [selectedDate, existingBookings, getTimeSlotsForDate, booking?.preferredDate, booking?.appointmentTime, booking?.id, bookingBufferHours]);
-
-  // Check if a time slot is available
-  const isTimeSlotAvailable = (date: Date, time: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const key = `${dateStr}|${time}`;
-    return timeSlotAvailability[key] !== false;
-  };
+  console.log("SimpleBookingDialog initialized with booking:", booking);
 
   // Function to handle form submission
   function onSubmit(data: BookingUpdateFormValues) {
-    // Format the date for the API
-    const formattedDate = format(data.preferredDate, "yyyy-MM-dd");
-    
-    // Check if the selected time slot is available
-    if (!isTimeSlotAvailable(data.preferredDate, data.appointmentTime)) {
+    if (!booking) {
       toast({
-        title: "Time slot unavailable",
-        description: "The selected time slot is no longer available. Please choose another time.",
+        title: "Error",
+        description: "No booking selected",
         variant: "destructive",
       });
       return;
     }
     
     onUpdate({
-      preferredDate: formattedDate,
       appointmentTime: data.appointmentTime,
       notes: data.notes,
     });
   }
 
+  if (!booking) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="dialog-content sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-10 data-[state=open]:duration-500 p-4 sm:p-6"
+        className="dialog-content sm:max-w-[450px] w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6 bg-background rounded-t-xl sm:rounded-xl shadow-xl"
         onEscapeKeyDown={onClose}
-        onInteractOutside={(e) => {
-          // Prevent closing when interacting with calendar or time popup
-          if (e.target instanceof HTMLElement && 
-              (e.target.closest('.rdp') || 
-               e.target.closest('.popover-content'))) {
-            e.preventDefault();
-          }
-        }}
         onOpenAutoFocus={(e) => {
-          // Prevent autofocus and scroll to top of dialog when opened
+          // Prevent autofocus
           e.preventDefault();
         }}>
-        <DialogHeader>
-          <DialogTitle>Edit Booking</DialogTitle>
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl">Update Your Booking</DialogTitle>
           <DialogDescription>
-            Update your booking details. Changes you make will be confirmed via email.
+            Change your appointment time or add special instructions.
           </DialogDescription>
         </DialogHeader>
         
-        {/* Current Booking Summary */}
-        {booking && (
-          <div className="bg-muted p-3 rounded-md mb-4">
-            <h3 className="text-sm font-medium mb-2">Current Booking</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="font-medium">Date:</span> 
-                <div className="flex items-center mt-1">
-                  <CalendarComponent className="w-4 h-4 mr-1 text-primary" />
-                  {booking?.preferredDate ? 
-                    (typeof booking.preferredDate === 'string' ? 
-                      new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) : 
-                      new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'})) : 
-                    'Not set'}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium">Time:</span>
-                <div className="flex items-center mt-1">
-                  <Clock className="w-4 h-4 mr-1 text-primary" />
-                  {booking?.appointmentTime || 'Not set'}
-                </div>
-              </div>
+        {/* Current Booking Info */}
+        <div className="bg-muted p-4 rounded-md mb-4">
+          <div className="flex items-center mb-2">
+            <Calendar className="w-5 h-5 mr-2 text-primary" />
+            <h3 className="font-medium">Appointment Details</h3>
+          </div>
+          
+          <div className="text-sm space-y-2">
+            <div>
+              <span className="font-medium">Date:</span> {displayDate}
+            </div>
+            <div>
+              <span className="font-medium">Current Time:</span> {booking.appointmentTime || 'Not set'}
+            </div>
+            <div>
+              <span className="font-medium">Service:</span> {booking.serviceType}
+            </div>
+            <div>
+              <span className="font-medium">Address:</span> {booking.streetAddress}, {booking.city}, {booking.state} {booking.zipCode}
             </div>
           </div>
-        )}
+        </div>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Date Picker */}
-            <FormField
-              control={form.control}
-              name="preferredDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Appointment Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "pl-3 text-left font-normal flex items-center justify-start",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">
-                          {field.value ? (
-                            format(field.value, "EEE, MMM d, yyyy")
-                          ) : (
-                            "Select a date"
-                          )}
-                          </span>
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50 bg-white" align="start" side="bottom">
-                      <div className="bg-white rounded-md shadow-md border">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            // Close the popover after selecting a date
-                            document.body.click();
-                          }}
-                          disabled={(date) => {
-                            // Can't select dates in the past
-                            const now = new Date();
-                            now.setHours(0, 0, 0, 0);
-                            
-                            // Can't select days when the business is closed
-                            const businessHours = getBusinessHoursForDay(date.getDay());
-                            const isClosed = !businessHours || !businessHours.isAvailable;
-                            
-                            return date < now || isClosed;
-                          }}
-                          initialFocus
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Time Picker */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Time Input */}
             <FormField
               control={form.control}
               name="appointmentTime"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Appointment Time</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "pl-3 text-left font-normal flex items-center justify-start",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">
-                            {field.value ? field.value : "Select a time"}
-                          </span>
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50 bg-white" align="start" side="bottom">
-                      <div className="p-2 bg-white rounded-md shadow-md border">
-                        <div className="py-2 px-4 text-sm font-medium border-b mb-2">
-                          Available Time Slots
-                        </div>
-                        {timeSlots.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2 p-2 max-h-[200px] overflow-auto">
-                            {timeSlots.map((time) => {
-                              const isAvailable = isTimeSlotAvailable(selectedDate, time);
-                              const key = `${format(selectedDate, 'yyyy-MM-dd')}|${time}`;
-                              
-                              return (
-                                <Button
-                                  key={time}
-                                  type="button"
-                                  variant={field.value === time ? "default" : "outline"}
-                                  className={cn(
-                                    "justify-center text-center w-full font-normal",
-                                    !isAvailable && "opacity-50 cursor-not-allowed",
-                                    field.value === time && "bg-primary text-primary-foreground"
-                                  )}
-                                  disabled={!isAvailable}
-                                  onClick={() => {
-                                    field.onChange(time);
-                                    // Close the popover after selecting a time
-                                    document.body.click();
-                                  }}
-                                >
-                                  <Clock className="w-4 h-4 mr-1" />
-                                  {time}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="py-6 text-center text-sm text-muted-foreground">
-                            No available time slots for the selected date.
-                          </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input placeholder="e.g. 2:30 PM" {...field} />
+                  </FormControl>
                   <FormMessage />
+                  <p className="text-xs text-muted-foreground">Format: 2:30 PM, 5:00 PM, etc.</p>
                 </FormItem>
               )}
             />
@@ -411,11 +160,11 @@ export function CustomerBookingDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Special Instructions or Notes (optional)</FormLabel>
+                  <FormLabel>Special Instructions (optional)</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Add any additional details or requests..."
-                      className="resize-none"
+                      className="resize-none h-20"
                       {...field}
                     />
                   </FormControl>
@@ -424,7 +173,7 @@ export function CustomerBookingDialog({
               )}
             />
             
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>

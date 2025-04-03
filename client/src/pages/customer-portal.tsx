@@ -131,28 +131,18 @@ export default function CustomerPortalPage() {
   // Open the edit dialog for a booking
   const openEditDialog = (booking: Booking) => {
     try {
-      // Ensure we have a valid booking object
-      // Keep the preferredDate as a string to match the Booking type
-      const formattedBooking = {
-        ...booking,
-        // Make sure we have preferredDate as string in ISO format
-        preferredDate: booking.preferredDate ? 
-          (typeof booking.preferredDate === 'string' ? 
-            booking.preferredDate : 
-            format(new Date(booking.preferredDate), 'yyyy-MM-dd')
-          ) : format(new Date(), 'yyyy-MM-dd')
-      };
+      // Deep-clone the booking to avoid reference issues
+      const formattedBooking = JSON.parse(JSON.stringify(booking));
+      
+      // Set the dialog data in a specific order to prevent race conditions
+      setSelectedBooking(formattedBooking);
+      
+      // Give a small delay before opening the dialog to ensure state is updated
+      setTimeout(() => {
+        setIsBookingDialogOpen(true);
+      }, 50);
       
       console.log("Opening edit dialog with booking:", formattedBooking);
-      
-      // First set dialog to open, then update the selected booking
-      // This helps prevent race conditions in React's state updates
-      setIsBookingDialogOpen(true);
-      
-      // Use a setTimeout to ensure the dialog is mounted before setting the selected booking
-      setTimeout(() => {
-        setSelectedBooking(formattedBooking);
-      }, 10);
     } catch (error) {
       console.error("Error opening edit dialog:", error);
       toast({
