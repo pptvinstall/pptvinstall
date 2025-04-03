@@ -222,13 +222,50 @@ export function CustomerBookingDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent 
+        className="dialog-content sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-300 sm:data-[state=open]:slide-in-from-bottom-0"
+        onOpenAutoFocus={(e) => {
+          // Prevent autofocus and scroll to top of dialog when opened
+          e.preventDefault();
+          // Scroll into view with smooth behavior
+          setTimeout(() => {
+            document.querySelector('.dialog-content')?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }, 100);
+        }}>
         <DialogHeader>
           <DialogTitle>Edit Booking</DialogTitle>
           <DialogDescription>
             Update your booking details. Changes you make will be confirmed via email.
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Current Booking Summary */}
+        <div className="bg-muted p-3 rounded-md mb-4">
+          <h3 className="text-sm font-medium mb-2">Current Booking</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="font-medium">Date:</span> 
+              <div className="flex items-center mt-1">
+                <CalendarComponent className="w-4 h-4 mr-1 text-primary" />
+                {booking.preferredDate ? 
+                  (typeof booking.preferredDate === 'string' ? 
+                    new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) : 
+                    new Date(booking.preferredDate).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'})) : 
+                  'Not set'}
+              </div>
+            </div>
+            <div>
+              <span className="font-medium">Time:</span>
+              <div className="flex items-center mt-1">
+                <Clock className="w-4 h-4 mr-1 text-primary" />
+                {booking.appointmentTime || 'Not set'}
+              </div>
+            </div>
+          </div>
+        </div>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -245,16 +282,18 @@ export function CustomerBookingDialog({
                         <Button
                           variant="outline"
                           className={cn(
-                            "pl-3 text-left font-normal",
+                            "pl-3 text-left font-normal flex items-center justify-start",
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          <Calendar className="mr-2 h-4 w-4" />
+                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">
                           {field.value ? (
                             format(field.value, "EEE, MMM d, yyyy")
                           ) : (
-                            <span>Select a date</span>
+                            "Select a date"
                           )}
+                          </span>
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
@@ -296,12 +335,14 @@ export function CustomerBookingDialog({
                         <Button
                           variant="outline"
                           className={cn(
-                            "pl-3 text-left font-normal",
+                            "pl-3 text-left font-normal flex items-center justify-start",
                             !field.value && "text-muted-foreground"
                           )}
                         >
-                          <Clock className="mr-2 h-4 w-4" />
-                          {field.value ? field.value : <span>Select a time</span>}
+                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">
+                            {field.value ? field.value : "Select a time"}
+                          </span>
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
@@ -322,12 +363,14 @@ export function CustomerBookingDialog({
                                   type="button"
                                   variant={field.value === time ? "default" : "outline"}
                                   className={cn(
-                                    "justify-start text-left font-normal",
-                                    !isAvailable && "opacity-50 cursor-not-allowed"
+                                    "justify-center text-center w-full font-normal",
+                                    !isAvailable && "opacity-50 cursor-not-allowed",
+                                    field.value === time && "bg-primary text-primary-foreground"
                                   )}
                                   disabled={!isAvailable}
                                   onClick={() => field.onChange(time)}
                                 >
+                                  <Clock className="w-4 h-4 mr-1" />
                                   {time}
                                 </Button>
                               );

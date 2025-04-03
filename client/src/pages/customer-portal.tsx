@@ -225,15 +225,15 @@ export default function CustomerPortalPage() {
               <Button className="mt-4" onClick={() => navigate('/booking')}>Book a Service</Button>
             </div>
           ) : (
-            <div className="relative overflow-x-auto">
-              <Table>
+            <div className="relative overflow-x-auto sm:rounded-md border">
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="whitespace-nowrap">Service</TableHead>
+                    <TableHead className="whitespace-nowrap">Date & Time</TableHead>
+                    <TableHead className="whitespace-nowrap hidden md:table-cell">Location</TableHead>
+                    <TableHead className="whitespace-nowrap">Status</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -245,20 +245,22 @@ export default function CustomerPortalPage() {
                         {booking.mountType && <span className="text-sm text-muted-foreground block">{booking.mountType} Mount</span>}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center">
-                          <CalendarClock className="w-4 h-4 mr-2 text-muted-foreground" />
-                          <span>
-                            {booking.preferredDate && format(new Date(booking.preferredDate), 'MMM d, yyyy')}
-                            <div className="text-sm text-muted-foreground flex items-center mt-1">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {booking.appointmentTime}
-                            </div>
-                          </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center">
+                          <div className="flex items-center">
+                            <CalendarClock className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                            <span className="whitespace-nowrap">
+                              {booking.preferredDate && format(new Date(booking.preferredDate), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                          <div className="flex items-center mt-1 sm:mt-0 sm:ml-4">
+                            <Clock className="w-3 h-3 mr-1 text-primary flex-shrink-0" />
+                            <span className="whitespace-nowrap">{booking.appointmentTime}</span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex items-center">
-                          <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                          <MapPin className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                           <span>
                             {booking.city}, {booking.state} {booking.zipCode}
                           </span>
@@ -273,10 +275,10 @@ export default function CustomerPortalPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => openEditDialog(booking)}
-                            className="flex items-center"
+                            className="flex items-center bg-primary/10 hover:bg-primary/20 border-primary/20"
                           >
-                            <FileEdit className="w-4 h-4 mr-1" />
-                            Edit
+                            <FileEdit className="w-4 h-4 mr-1 text-primary" />
+                            <span className="text-primary font-medium">Edit</span>
                           </Button>
                         )}
                       </TableCell>
