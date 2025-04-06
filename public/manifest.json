@@ -64,7 +64,22 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/app-screenshot-1.jpg",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Homepage"
+    },
+    {
+      "src": "/screenshots/app-screenshot-2.jpg",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Booking Page"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Book Service",

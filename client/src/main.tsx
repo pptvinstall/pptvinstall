@@ -89,6 +89,8 @@ const CustomerPortal = lazy(() => import('@/pages/customer-portal'));
 const CustomerProfile = lazy(() => import('@/pages/customer-profile'));
 const EmailPreviews = lazy(() => import('@/pages/email-previews')); // Added email previews page
 const SendTestEmails = lazy(() => import('@/pages/send-test-emails')); // Added test emails page
+const ForgotPassword = lazy(() => import('@/pages/forgot-password')); // Added forgot password page
+const ResetPassword = lazy(() => import('@/pages/reset-password')); // Added reset password page
 
 
 // ScrollToTop component to handle scroll restoration
@@ -181,6 +183,12 @@ createRoot(document.getElementById('root')!).render(
                   </Route>
                   <Route path="/admin/send-test-emails">
                     {() => <PageWrapper><SendTestEmails /></PageWrapper>}
+                  </Route>
+                  <Route path="/forgot-password">
+                    {() => <PageWrapper><ForgotPassword /></PageWrapper>}
+                  </Route>
+                  <Route path="/reset-password">
+                    {() => <PageWrapper><ResetPassword /></PageWrapper>}
                   </Route>
                   <Route component={NotFound} />
                 </Switch>
