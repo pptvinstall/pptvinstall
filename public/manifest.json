@@ -64,13 +64,7 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/images/screenshot1.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg"
-    }
-  ],
+  "screenshots": [],
   "shortcuts": [
     {
       "name": "Book Service",
@@ -83,7 +77,7 @@
       "name": "Login",
       "short_name": "Login",
       "description": "Login to your account",
-      "url": "/login",
+      "url": "/customer-login",
       "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],

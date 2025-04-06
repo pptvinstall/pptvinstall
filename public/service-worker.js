@@ -1,9 +1,8 @@
 // Service Worker for Picture Perfect TV Install PWA
 
-const CACHE_NAME = 'pptv-cache-v2';
+const CACHE_NAME = 'pptv-cache-v3'; // Updated cache version
 const ASSETS_TO_CACHE = [
   '/',
-  '/index.html',
   '/offline.html',
   '/manifest.json',
   '/icons/icon-72x72.png',
@@ -18,8 +17,6 @@ const ASSETS_TO_CACHE = [
   '/icons/pptv/apple-touch-icon.png',
   '/icons/pptv/apple-touch-icon-precomposed.png',
   '/icons/offline-image.svg',
-  '/assets/index.css',
-  '/assets/index.js',
   // Apple splash screens
   '/icons/apple-splash-640-1136.png',
   '/icons/apple-splash-750-1334.png',

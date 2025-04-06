@@ -15,51 +15,50 @@ import './index.css';
 
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('Service Worker registered with scope:', registration.scope);
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      console.log('Service Worker registered with scope:', registration.scope);
+      
+      // Handle Service Worker updates
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+          return;
+        }
         
-        // Handle Service Worker updates
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
-          if (installingWorker == null) {
-            return;
-          }
-          
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
-                console.log('New content is available; please refresh.');
-                // Notify the user that a new version is available
-                toast({
-                  title: "Update Available",
-                  description: "A new version of the app is available. Refresh to update.",
-                  variant: "default",
-                  action: (
-                    <button 
-                      className="rounded bg-primary px-3 py-1 text-sm font-medium text-primary-foreground"
-                      onClick={() => window.location.reload()}
-                    >
-                      Refresh
-                    </button>
-                  )
-                });
-              } else {
-                console.log('Content is cached for offline use.');
-                toast({
-                  title: "Ready for offline use",
-                  description: "The app is now available offline.",
-                  variant: "default",
-                });
-              }
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              console.log('New content is available; please refresh.');
+              // Notify the user that a new version is available
+              toast({
+                title: "Update Available",
+                description: "A new version of the app is available. Refresh to update.",
+                variant: "default",
+                action: (
+                  <button 
+                    className="rounded bg-primary px-3 py-1 text-sm font-medium text-primary-foreground"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh
+                  </button>
+                )
+              });
+            } else {
+              console.log('Content is cached for offline use.');
+              toast({
+                title: "Ready for offline use",
+                description: "The app is now available offline.",
+                variant: "default",
+              });
             }
-          };
+          }
         };
-      })
-      .catch(error => {
-        console.error('Error during service worker registration:', error);
-      });
+      };
+    } catch (error) {
+      console.error('Error during service worker registration:', error);
+    }
   });
 }
 
