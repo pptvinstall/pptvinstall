@@ -16,7 +16,10 @@ const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVIn
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
 const COMPANY_WEBSITE = 'https://PPTVInstall.com';
-const LOGO_URL = 'https://i.ibb.co/Pjb48FQ/logo-blue.png';
+// For production emails use the hosted path, for local preview use the relative path
+const LOGO_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://pictureperfecttvinstall.com/images/pptv-logo.png' 
+  : '/images/pptv-logo.png';
 
 /**
  * Email notification types
@@ -157,7 +160,7 @@ function masterEmailTemplate(title: string, content: string): string {
   <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
     <!-- Header with Logo -->
     <tr>
-      <td align="center" style="padding: 0; background-color: #005cb9;">
+      <td align="center" style="padding: 0; background-color: #000000;">
         <a href="${COMPANY_WEBSITE}" style="display: block; padding: 15px 0;">
           <img src="${LOGO_URL}" alt="${COMPANY_NAME}" style="height: 50px; width: auto;">
         </a>
@@ -434,10 +437,10 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     </div>
     
     <div style="text-align: center;">
-      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; font-weight: 500;">
+      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #000000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; font-weight: 500;">
         📞 Call Us
       </a>
-      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #4caf50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: 500;">
+      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #ff0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: 500;">
         🌐 Visit Website
       </a>
     </div>
@@ -529,10 +532,10 @@ function getRescheduleConfirmationContent(booking: Booking & { smartHomeItems?: 
     </p>
     
     <p style="font-size: 16px; line-height: 1.5; text-align: center;">
-      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #000000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
         <span style="font-weight: bold;">📞 Call Us</span>
       </a>
-      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #4caf50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #ff0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
         <span style="font-weight: bold;">🌐 Visit Website</span>
       </a>
     </p>
