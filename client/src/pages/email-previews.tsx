@@ -191,6 +191,7 @@ export default function EmailPreviewsPage() {
                   <SelectItem value="booking_cancellation">Cancellation Notification</SelectItem>
                   <SelectItem value="welcome">Welcome Email</SelectItem>
                   <SelectItem value="password_reset">Password Reset</SelectItem>
+                  <SelectItem value="admin_notification">Admin Notification</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -218,13 +219,14 @@ export default function EmailPreviewsPage() {
         {/* Email Previews */}
         <div className="md:col-span-2">
           <Tabs defaultValue="booking_confirmation" className="w-full" onValueChange={setEmailType}>
-            <TabsList className="grid grid-cols-6 mb-6">
+            <TabsList className="grid grid-cols-7 mb-6">
               <TabsTrigger value="booking_confirmation">Booking</TabsTrigger>
               <TabsTrigger value="reschedule_confirmation">Reschedule</TabsTrigger>
               <TabsTrigger value="service_edit">Edit</TabsTrigger>
               <TabsTrigger value="booking_cancellation">Cancel</TabsTrigger>
               <TabsTrigger value="welcome">Welcome</TabsTrigger>
               <TabsTrigger value="password_reset">Password</TabsTrigger>
+              <TabsTrigger value="admin_notification">Admin</TabsTrigger>
             </TabsList>
             
             <TabsContent value="booking_confirmation">
@@ -758,6 +760,112 @@ export default function EmailPreviewsPage() {
                 </CardFooter>
               </Card>
             </TabsContent>
+            
+            <TabsContent value="admin_notification">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Admin Notification Email</CardTitle>
+                  <CardDescription>
+                    Professional notification sent to administrators when new bookings are made
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-[#005cb9] p-4 text-center">
+                      <img 
+                        src="/assets/logo-pptv.jpg" 
+                        alt="Picture Perfect TV Install" 
+                        className="h-10 inline-block"
+                      />
+                    </div>
+                    
+                    <div className="p-6">
+                      <h2 className="text-xl font-bold text-[#005cb9] text-center mb-4">New Booking Alert</h2>
+                      
+                      <p className="text-sm mb-4">
+                        A new booking has been made on your website. Here are the details:
+                      </p>
+                      
+                      <div className="bg-slate-50 p-4 rounded-md mb-4">
+                        <h3 className="font-medium mb-2">Customer Information</h3>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="text-slate-500">Name:</div>
+                          <div>John Smith</div>
+                          <div className="text-slate-500">Email:</div>
+                          <div><a href="#" className="text-[#005cb9]">john.smith@example.com</a></div>
+                          <div className="text-slate-500">Phone:</div>
+                          <div><a href="#" className="text-[#005cb9]">(404) 555-7890</a></div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 p-4 rounded-md mb-4">
+                        <h3 className="font-medium mb-2">Service Details</h3>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="text-slate-500">Service Type:</div>
+                          <div className="font-medium">TV Installation</div>
+                          <div className="text-slate-500">Date:</div>
+                          <div className="font-medium">Thursday, April 4, 2025</div>
+                          <div className="text-slate-500">Time:</div>
+                          <div className="font-medium">3:00 PM</div>
+                          <div className="text-slate-500">TV Size:</div>
+                          <div>65" - 75"</div>
+                          <div className="text-slate-500">Mount Type:</div>
+                          <div>Articulating</div>
+                          <div className="text-slate-500">Pricing Total:</div>
+                          <div>$249.99</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-4 rounded-md mb-4">
+                        <h3 className="font-medium mb-2">Location Information</h3>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="text-slate-500">Address:</div>
+                          <div>123 Main Street</div>
+                          <div className="text-slate-500">City, State:</div>
+                          <div>Atlanta, GA</div>
+                          <div className="text-slate-500">Zip Code:</div>
+                          <div>30303</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-4 rounded-md mb-4">
+                        <h3 className="font-medium mb-2">Customer Notes</h3>
+                        <p className="text-sm">Please call me before arriving. The gate code is #1234. TV is already unboxed.</p>
+                      </div>
+                      
+                      <div className="border-l-4 border-[#005cb9] bg-blue-50 p-3 text-sm mb-4">
+                        <p className="m-0">
+                          <strong>Action Required:</strong> Please contact the customer to confirm this booking.
+                        </p>
+                      </div>
+                      
+                      <div className="text-center mb-4">
+                        <a href="#" className="inline-block bg-[#005cb9] text-white py-2 px-4 rounded mr-2 font-medium">
+                          📞 Call Customer
+                        </a>
+                        <a href="#" className="inline-block bg-green-600 text-white py-2 px-4 rounded font-medium">
+                          ✉️ Email Customer
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-slate-100 p-4 text-center text-xs text-slate-500">
+                      <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
+                      <p className="mb-1">
+                        <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
+                        Phone: (404) 555-1234 | 
+                        Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <p className="text-xs text-muted-foreground">
+                    This admin notification includes action buttons to quickly contact the customer.
+                  </p>
+                </CardFooter>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
@@ -817,7 +925,8 @@ export default function EmailPreviewsPage() {
                 <li>Visual highlighting of changes in updates</li>
                 <li>Complete booking information in all emails</li>
                 <li>Clear calls-to-action when needed</li>
-                <li>Admin copies of all customer communications</li>
+                <li>Dedicated admin notification emails with quick-action buttons</li>
+                <li>Customized email content for administrators vs. customers</li>
               </ul>
             </CardContent>
           </Card>

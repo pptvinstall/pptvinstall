@@ -29,6 +29,7 @@ export enum EmailType {
   BOOKING_CANCELLATION = 'booking_cancellation',
   PASSWORD_RESET = 'password_reset',
   WELCOME = 'welcome',
+  ADMIN_NOTIFICATION = 'admin_notification',
 }
 
 /**
@@ -668,12 +669,27 @@ export async function sendEnhancedEmail(
     // Send customer email
     await sgMail.send(msg);
     
-    // Send admin copy if requested
+    // Send admin notification if requested
     if (options?.sendToAdmin) {
+      // Create custom admin notification instead of just copying the customer email
+      const adminContent = masterEmailTemplate('New Booking Alert', getAdminNotificationContent(booking));
+      const adminSubject = emailType === EmailType.BOOKING_CONFIRMATION 
+        ? 'New Booking Alert - Picture Perfect TV Install'
+        : emailType === EmailType.RESCHEDULE_CONFIRMATION
+          ? 'Booking Rescheduled - Picture Perfect TV Install'
+          : emailType === EmailType.SERVICE_EDIT
+            ? 'Booking Updated - Picture Perfect TV Install'
+            : emailType === EmailType.BOOKING_CANCELLATION
+              ? 'Booking Canceled - Picture Perfect TV Install'
+              : `[ADMIN COPY] ${subject}`; // Fallback for other types
+
       const adminMsg = {
-        ...msg,
         to: ADMIN_EMAIL,
-        subject: `[ADMIN COPY] ${subject}`,
+        from: FROM_EMAIL,
+        subject: adminSubject,
+        text: createPlainTextVersion(adminContent),
+        html: adminContent,
+        attachments: msg.attachments // Reuse any attachments from the customer email
       };
       await sgMail.send(adminMsg);
     }
@@ -851,6 +867,116 @@ function getPasswordResetEmailContent(customer: Customer, resetToken: string): s
 }
 
 /**
+ * Create admin notification email for new bookings
+ */
+function getAdminNotificationContent(booking: Booking): string {
+  const formattedDate = booking.preferredDate 
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+    
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">New Booking Alert</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A new booking has been made on your website. Here are the details:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone}</a></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Service Details</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${booking.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0;">${booking.tvSize || 'Not specified'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0;">${booking.mountType || 'Not specified'}</td>
+        </tr>
+        ${booking.pricingTotal ? `
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Pricing Total:</strong></td>
+          <td style="padding: 8px 0;">${booking.pricingTotal}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
+          <td style="padding: 8px 0;">${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City, State:</strong></td>
+          <td style="padding: 8px 0;">${booking.city}, ${booking.state}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
+          <td style="padding: 8px 0;">${booking.zipCode}</td>
+        </tr>
+      </table>
+    </div>
+    
+    ${booking.notes ? `
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Notes</h2>
+      <p style="margin: 0; font-size: 15px;">${booking.notes}</p>
+    </div>
+    ` : ''}
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Action Required:</strong> Please contact the customer to confirm this booking.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5; text-align: center;">
+      <a href="tel:${booking.phone}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+        <span style="font-weight: bold;">📞 Call Customer</span>
+      </a>
+      <a href="mailto:${booking.email}" style="display: inline-block; background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <span style="font-weight: bold;">✉️ Email Customer</span>
+      </a>
+    </p>
+  `;
+}
+
+/**
  * Get the booking cancellation content (aliasing getCancellationContent for consistency in naming)
  */
 function getBookingCancellationContent(booking: Booking, reason?: string): string {
@@ -935,6 +1061,11 @@ export async function sendTestEmail(emailType: EmailType, to: string) {
           name: 'Test Customer',
           email: to
         } as Customer, 'test-reset-token-12345'));
+        break;
+        
+      case EmailType.ADMIN_NOTIFICATION:
+        emailSubject = 'New Booking Alert - Picture Perfect TV Install';
+        emailContent = masterEmailTemplate('New Booking Alert', getAdminNotificationContent(testBooking));
         break;
         
       default:
