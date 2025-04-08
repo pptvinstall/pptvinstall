@@ -192,7 +192,7 @@ function masterEmailTemplate(title: string, content: string): string {
 /**
  * Create booking confirmation email content
  */
-function getBookingConfirmationContent(booking: Booking): string {
+function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any[] }): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -200,17 +200,26 @@ function getBookingConfirmationContent(booking: Booking): string {
   // Extract service details from pricingBreakdown and smartHomeItems if available
   let tvSize = 'Not specified';
   let mountType = 'Not specified';
+  let mountPrice = '';
   let hasWireConcealment = false;
   let hasOutletRelocation = false;
   let hasMasonryWall = false;
   let hasHighRise = false;
-  let locationDescription = 'Standard';
+  let locationDescription = 'Standard Wall';
+  let locationPrice = '';
+  let wallMaterial = '';
+  let wallMaterialPrice = '';
   let additionalServicesHtml = '';
   
   // Handle Smart Home installations
   let smartHomeItems: any[] = [];
-  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
-  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+  
+  // Try to get smartHomeItems directly if it exists
+  if (booking.smartHomeItems && Array.isArray(booking.smartHomeItems)) {
+    smartHomeItems = booking.smartHomeItems;
+  }
+  // Or try to get from pricingBreakdown as string
+  else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
     try {
       const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
       if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
@@ -219,12 +228,43 @@ function getBookingConfirmationContent(booking: Booking): string {
     } catch (e) {
       // Unable to parse JSON, continue with empty smartHomeItems
     }
-  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
-    // If pricingBreakdown is already an object
+  } 
+  // Or try to get from pricingBreakdown as object
+  else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
     const breakdown = booking.pricingBreakdown as any;
     if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
       smartHomeItems = breakdown.smartHomeItems;
     }
+  }
+  
+  // Process smart home items if present to add price information and format them correctly
+  if (smartHomeItems.length > 0) {
+    smartHomeItems = smartHomeItems.map(item => {
+      const quantity = item.quantity || 1;
+      let deviceName = item.name || item.type || 'Smart Device';
+      let price = item.price || 0;
+      
+      // Map device types to proper names to match booking wizard
+      if (item.type === 'securityCamera' || deviceName === 'securityCamera') {
+        deviceName = 'Security Camera';
+        price = price || 75;
+      }
+      else if (item.type === 'videoDoorbell' || deviceName === 'videoDoorbell') {
+        deviceName = 'Video Doorbell';
+        price = price || 85;
+      }
+      else if (item.type === 'floodlightCamera' || deviceName === 'floodlightCamera') {
+        deviceName = 'Floodlight Camera';
+        price = price || 125;
+      }
+      
+      return {
+        ...item,
+        quantity,
+        formattedName: quantity > 1 ? `${quantity}x ${deviceName}` : deviceName,
+        formattedPrice: price ? ` ($${price})` : ''
+      };
+    });
   }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
@@ -232,84 +272,110 @@ function getBookingConfirmationContent(booking: Booking): string {
     const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
     if (tvItem) {
       if (tvItem.size) {
-        // Convert size from 'small', 'medium', 'large' to actual dimensions
-        if (tvItem.size === 'small') tvSize = 'Up to 43"';
-        else if (tvItem.size === 'medium') tvSize = '44"-65"';
-        else if (tvItem.size === 'large') tvSize = '65"+'
+        // Convert size codes to match the booking wizard options
+        if (tvItem.size === 'small') tvSize = '32"-55"';
+        else if (tvItem.size === 'medium') tvSize = '56" or larger';
+        else if (tvItem.size === 'large') tvSize = '65" or larger';
         else tvSize = tvItem.size; // Use as-is if it's already descriptive
       }
       
       if (tvItem.mountType) {
-        // Convert mountType codes to readable descriptions
-        if (tvItem.mountType === 'fixed') mountType = 'Fixed Wall Mount';
-        else if (tvItem.mountType === 'tilting') mountType = 'Tilting Wall Mount';
-        else if (tvItem.mountType === 'fullMotion') mountType = 'Full Motion Wall Mount';
-        else if (tvItem.mountType === 'ceiling') mountType = 'Ceiling Mount';
-        else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
+        // Convert mountType codes to match the booking wizard options with pricing
+        if (tvItem.mountType === 'fixed') {
+          mountType = 'Fixed (No Tilt)';
+          mountPrice = ' ($30)';
+        }
+        else if (tvItem.mountType === 'tilting') {
+          mountType = 'Tilting';
+          mountPrice = ' ($40)';
+        }
+        else if (tvItem.mountType === 'fullMotion') {
+          mountType = 'Full Motion';
+          mountPrice = ' ($60)';
+        }
+        else if (tvItem.mountType === 'ceiling') {
+          mountType = 'Ceiling Mount';
+        }
+        else if (tvItem.mountType === 'customer') {
+          mountType = 'Customer-Provided';
+          mountPrice = ' (No additional charge)';
+        }
         else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
       
       // Check for additional services
       if (tvItem.wireConcealment) hasWireConcealment = true;
       if (tvItem.outletRelocation) hasOutletRelocation = true;
-      if (tvItem.masonryWall) hasMasonryWall = true;
-      if (tvItem.highRise) hasHighRise = true;
       
-      // Location description
+      // Wall material based on the booking wizard options
+      if (tvItem.masonryWall) {
+        hasMasonryWall = true;
+        wallMaterial = 'Brick/Stone Surface';
+        wallMaterialPrice = ' (+$50)';
+      }
+      
+      if (tvItem.highRise) {
+        hasHighRise = true;
+        wallMaterial = 'High-Rise/Steel Studs';
+        wallMaterialPrice = ' (+$25)';
+      }
+      
+      // Location description with pricing to match booking wizard
       if (tvItem.location) {
-        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
-        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
-        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
-        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        if (tvItem.location === 'standard') {
+          locationDescription = 'Standard Wall';
+        }
+        else if (tvItem.location === 'complex') {
+          locationDescription = 'Complex Installation';
+        }
+        else if (tvItem.location === 'corner') {
+          locationDescription = 'Corner Installation';
+        }
+        else if (tvItem.location === 'fireplace') {
+          locationDescription = 'Above Fireplace';
+          locationPrice = ' (+$100)';
+        }
         else locationDescription = tvItem.location;
       }
     }
   }
   
-  // Build additional services HTML
-  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+  // Build additional services HTML with the updated details from booking wizard
+  const hasAdditionalOptions = hasWireConcealment || hasOutletRelocation || wallMaterial || smartHomeItems.length > 0;
+  
+  if (hasAdditionalOptions) {
     additionalServicesHtml = `
       <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Options</h2>
         
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
-          ${hasWireConcealment ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasOutletRelocation ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasMasonryWall ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasHighRise ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
           <tr>
             <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
-            <td style="padding: 8px 0;">${locationDescription}</td>
+            <td style="padding: 8px 0;">${locationDescription}${locationPrice}</td>
           </tr>
+          
+          ${wallMaterial ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wall Material:</strong></td>
+            <td style="padding: 8px 0;">${wallMaterial}${wallMaterialPrice}</td>
+          </tr>
+          ` : ''}
+          
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment & Outlet:</strong></td>
+            <td style="padding: 8px 0;">Yes (+$100)</td>
+          </tr>
+          ` : ''}
           
           ${smartHomeItems.length > 0 ? `
           <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
-            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Devices:</strong></td>
+            <td style="padding: 8px 0;">
+              ${smartHomeItems.map((item: any) => 
+                `${item.formattedName}${item.formattedPrice}`
+              ).join('<br>')}
+            </td>
           </tr>
           ` : ''}
         </table>
@@ -407,7 +473,7 @@ function getBookingConfirmationContent(booking: Booking): string {
 /**
  * Create reschedule confirmation email content
  */
-function getRescheduleConfirmationContent(booking: Booking, previousDate?: string, previousTime?: string): string {
+function getRescheduleConfirmationContent(booking: Booking & { smartHomeItems?: any[] }, previousDate?: string, previousTime?: string): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -419,17 +485,26 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
   // Extract service details from pricingBreakdown and smartHomeItems if available
   let tvSize = 'Not specified';
   let mountType = 'Not specified';
+  let mountPrice = '';
   let hasWireConcealment = false;
   let hasOutletRelocation = false;
   let hasMasonryWall = false;
   let hasHighRise = false;
-  let locationDescription = 'Standard';
+  let locationDescription = 'Standard Wall';
+  let locationPrice = '';
+  let wallMaterial = '';
+  let wallMaterialPrice = '';
   let additionalServicesHtml = '';
   
   // Handle Smart Home installations
   let smartHomeItems: any[] = [];
-  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
-  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+  
+  // Try to get smartHomeItems directly if it exists
+  if (booking.smartHomeItems && Array.isArray(booking.smartHomeItems)) {
+    smartHomeItems = booking.smartHomeItems;
+  }
+  // Or try to get from pricingBreakdown as string
+  else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
     try {
       const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
       if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
@@ -438,12 +513,43 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
     } catch (e) {
       // Unable to parse JSON, continue with empty smartHomeItems
     }
-  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
-    // If pricingBreakdown is already an object
+  } 
+  // Or try to get from pricingBreakdown as object
+  else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
     const breakdown = booking.pricingBreakdown as any;
     if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
       smartHomeItems = breakdown.smartHomeItems;
     }
+  }
+  
+  // Process smart home items if present to add price information and format them correctly
+  if (smartHomeItems.length > 0) {
+    smartHomeItems = smartHomeItems.map(item => {
+      const quantity = item.quantity || 1;
+      let deviceName = item.name || item.type || 'Smart Device';
+      let price = item.price || 0;
+      
+      // Map device types to proper names to match booking wizard
+      if (item.type === 'securityCamera' || deviceName === 'securityCamera') {
+        deviceName = 'Security Camera';
+        price = price || 75;
+      }
+      else if (item.type === 'videoDoorbell' || deviceName === 'videoDoorbell') {
+        deviceName = 'Video Doorbell';
+        price = price || 85;
+      }
+      else if (item.type === 'floodlightCamera' || deviceName === 'floodlightCamera') {
+        deviceName = 'Floodlight Camera';
+        price = price || 125;
+      }
+      
+      return {
+        ...item,
+        quantity,
+        formattedName: quantity > 1 ? `${quantity}x ${deviceName}` : deviceName,
+        formattedPrice: price ? ` ($${price})` : ''
+      };
+    });
   }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
@@ -451,84 +557,110 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
     const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
     if (tvItem) {
       if (tvItem.size) {
-        // Convert size from 'small', 'medium', 'large' to actual dimensions
-        if (tvItem.size === 'small') tvSize = 'Up to 43"';
-        else if (tvItem.size === 'medium') tvSize = '44"-65"';
-        else if (tvItem.size === 'large') tvSize = '65"+'
+        // Convert size codes to match the booking wizard options
+        if (tvItem.size === 'small') tvSize = '32"-55"';
+        else if (tvItem.size === 'medium') tvSize = '56" or larger';
+        else if (tvItem.size === 'large') tvSize = '65" or larger';
         else tvSize = tvItem.size; // Use as-is if it's already descriptive
       }
       
       if (tvItem.mountType) {
-        // Convert mountType codes to readable descriptions
-        if (tvItem.mountType === 'fixed') mountType = 'Fixed Wall Mount';
-        else if (tvItem.mountType === 'tilting') mountType = 'Tilting Wall Mount';
-        else if (tvItem.mountType === 'fullMotion') mountType = 'Full Motion Wall Mount';
-        else if (tvItem.mountType === 'ceiling') mountType = 'Ceiling Mount';
-        else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
+        // Convert mountType codes to match the booking wizard options with pricing
+        if (tvItem.mountType === 'fixed') {
+          mountType = 'Fixed (No Tilt)';
+          mountPrice = ' ($30)';
+        }
+        else if (tvItem.mountType === 'tilting') {
+          mountType = 'Tilting';
+          mountPrice = ' ($40)';
+        }
+        else if (tvItem.mountType === 'fullMotion') {
+          mountType = 'Full Motion';
+          mountPrice = ' ($60)';
+        }
+        else if (tvItem.mountType === 'ceiling') {
+          mountType = 'Ceiling Mount';
+        }
+        else if (tvItem.mountType === 'customer') {
+          mountType = 'Customer-Provided';
+          mountPrice = ' (No additional charge)';
+        }
         else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
       
       // Check for additional services
       if (tvItem.wireConcealment) hasWireConcealment = true;
       if (tvItem.outletRelocation) hasOutletRelocation = true;
-      if (tvItem.masonryWall) hasMasonryWall = true;
-      if (tvItem.highRise) hasHighRise = true;
       
-      // Location description
+      // Wall material based on the booking wizard options
+      if (tvItem.masonryWall) {
+        hasMasonryWall = true;
+        wallMaterial = 'Brick/Stone Surface';
+        wallMaterialPrice = ' (+$50)';
+      }
+      
+      if (tvItem.highRise) {
+        hasHighRise = true;
+        wallMaterial = 'High-Rise/Steel Studs';
+        wallMaterialPrice = ' (+$25)';
+      }
+      
+      // Location description with pricing to match booking wizard
       if (tvItem.location) {
-        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
-        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
-        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
-        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        if (tvItem.location === 'standard') {
+          locationDescription = 'Standard Wall';
+        }
+        else if (tvItem.location === 'complex') {
+          locationDescription = 'Complex Installation';
+        }
+        else if (tvItem.location === 'corner') {
+          locationDescription = 'Corner Installation';
+        }
+        else if (tvItem.location === 'fireplace') {
+          locationDescription = 'Above Fireplace';
+          locationPrice = ' (+$100)';
+        }
         else locationDescription = tvItem.location;
       }
     }
   }
   
-  // Build additional services HTML
-  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+  // Build additional services HTML with the updated details from booking wizard
+  const hasAdditionalOptions = hasWireConcealment || hasOutletRelocation || wallMaterial || smartHomeItems.length > 0;
+  
+  if (hasAdditionalOptions) {
     additionalServicesHtml = `
       <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Options</h2>
         
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
-          ${hasWireConcealment ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasOutletRelocation ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasMasonryWall ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
-          ${hasHighRise ? `
-          <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
-            <td style="padding: 8px 0;">Yes</td>
-          </tr>
-          ` : ''}
-          
           <tr>
             <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
-            <td style="padding: 8px 0;">${locationDescription}</td>
+            <td style="padding: 8px 0;">${locationDescription}${locationPrice}</td>
           </tr>
+          
+          ${wallMaterial ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wall Material:</strong></td>
+            <td style="padding: 8px 0;">${wallMaterial}${wallMaterialPrice}</td>
+          </tr>
+          ` : ''}
+          
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment & Outlet:</strong></td>
+            <td style="padding: 8px 0;">Yes (+$100)</td>
+          </tr>
+          ` : ''}
           
           ${smartHomeItems.length > 0 ? `
           <tr>
-            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
-            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Devices:</strong></td>
+            <td style="padding: 8px 0;">
+              ${smartHomeItems.map((item: any) => 
+                `${item.formattedName}${item.formattedPrice}`
+              ).join('<br>')}
+            </td>
           </tr>
           ` : ''}
         </table>
@@ -634,7 +766,7 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
 /**
  * Create service edit notification email content
  */
-function getServiceEditContent(booking: Booking, updates: Partial<Booking>): string {
+function getServiceEditContent(booking: Booking & { smartHomeItems?: any[] }, updates: Partial<Booking>): string {
   // Extract service details from pricingBreakdown and smartHomeItems if available
   let bookingTvSize = 'Not specified';
   let bookingMountType = 'Not specified';
@@ -927,7 +1059,7 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
 /**
  * Create cancellation email content
  */
-function getCancellationContent(booking: Booking, reason?: string): string {
+function getCancellationContent(booking: Booking & { smartHomeItems?: any[] }, reason?: string): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -1120,7 +1252,7 @@ function getCancellationContent(booking: Booking, reason?: string): string {
 export async function sendEnhancedEmail(
   emailType: EmailType,
   to: string,
-  booking: Booking,
+  booking: Booking & { smartHomeItems?: any[] },
   options?: {
     previousDate?: string;
     previousTime?: string;
@@ -1604,7 +1736,7 @@ function getPasswordResetEmailContent(customer: Customer, resetToken: string): s
 /**
  * Create admin notification email based on email type
  */
-function getAdminNotificationContent(booking: Booking, emailType?: EmailType, options?: EmailOptions): string {
+function getAdminNotificationContent(booking: Booking & { smartHomeItems?: any[] }, emailType?: EmailType, options?: EmailOptions): string {
   // Use custom notification content based on the email type
   if (emailType === EmailType.BOOKING_CANCELLATION) {
     return getAdminCancellationContent(booking, options?.reason);
@@ -1630,7 +1762,7 @@ function getAdminNotificationContent(booking: Booking, emailType?: EmailType, op
 /**
  * Create admin notification email for new bookings
  */
-function getAdminBookingNotificationContent(booking: Booking): string {
+function getAdminBookingNotificationContent(booking: Booking & { smartHomeItems?: any[] }): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -1740,7 +1872,7 @@ function getAdminBookingNotificationContent(booking: Booking): string {
 /**
  * Create admin notification email for rescheduled bookings
  */
-function getAdminRescheduleContent(booking: Booking, previousDate?: string, previousTime?: string): string {
+function getAdminRescheduleContent(booking: Booking & { smartHomeItems?: any[] }, previousDate?: string, previousTime?: string): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -1863,7 +1995,7 @@ function getAdminRescheduleContent(booking: Booking, previousDate?: string, prev
 /**
  * Create admin notification email for service edits
  */
-function getAdminServiceEditContent(booking: Booking, updates: Partial<Booking>): string {
+function getAdminServiceEditContent(booking: Booking & { smartHomeItems?: any[] }, updates: Partial<Booking>): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -2025,7 +2157,7 @@ function getAdminServiceEditContent(booking: Booking, updates: Partial<Booking>)
 /**
  * Create admin notification email for booking cancellations
  */
-function getAdminCancellationContent(booking: Booking, reason?: string): string {
+function getAdminCancellationContent(booking: Booking & { smartHomeItems?: any[] }, reason?: string): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -2129,7 +2261,7 @@ function getAdminCancellationContent(booking: Booking, reason?: string): string 
 /**
  * Create admin notification email for password reset requests
  */
-function getAdminPasswordResetContent(booking: Booking): string {
+function getAdminPasswordResetContent(booking: Booking & { smartHomeItems?: any[] }): string {
   return `
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Password Reset Request</h1>
     
@@ -2167,7 +2299,7 @@ function getAdminPasswordResetContent(booking: Booking): string {
 /**
  * Create admin notification email for new account registrations
  */
-function getAdminWelcomeContent(booking: Booking): string {
+function getAdminWelcomeContent(booking: Booking & { smartHomeItems?: any[] }): string {
   return `
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">New Customer Registration</h1>
     
@@ -2218,7 +2350,7 @@ function getAdminWelcomeContent(booking: Booking): string {
 /**
  * Get the booking cancellation content (aliasing getCancellationContent for consistency in naming)
  */
-function getBookingCancellationContent(booking: Booking, reason?: string): string {
+function getBookingCancellationContent(booking: Booking & { smartHomeItems?: any[] }, reason?: string): string {
   return getCancellationContent(booking, reason);
 }
 
