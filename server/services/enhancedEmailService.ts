@@ -16,7 +16,7 @@ const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVIn
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
 const COMPANY_WEBSITE = 'https://PPTVInstall.com';
-const LOGO_URL = '/assets/logo-pptv-black.png';
+const LOGO_URL = 'https://i.ibb.co/Pjb48FQ/logo-blue.png';
 
 /**
  * Email notification types
@@ -156,8 +156,10 @@ function masterEmailTemplate(title: string, content: string): string {
   <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
     <!-- Header with Logo -->
     <tr>
-      <td align="center" style="padding: 20px 0; background-color: #005cb9;">
-        <img src="${LOGO_URL}" alt="${COMPANY_NAME}" style="max-height: 60px; max-width: 80%;">
+      <td align="center" style="padding: 0; background-color: #005cb9;">
+        <a href="${COMPANY_WEBSITE}" style="display: block; padding: 15px 0;">
+          <img src="${LOGO_URL}" alt="${COMPANY_NAME}" style="height: 50px; width: auto;">
+        </a>
       </td>
     </tr>
     
@@ -408,9 +410,12 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
         if (tv.mountType === 'fixed') mountName = 'Fixed Mount';
         else if (tv.mountType === 'tilting') mountName = 'Tilting Mount';
         else if (tv.mountType === 'full_motion') mountName = 'Full Motion Mount';
-        else if (tv.mountType === 'customer_provided') mountName = 'Customer-Provided Mount';
-        
-        details.push(`With ${mountName} (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        else if (tv.mountType === 'customer_provided' || tv.mountType === 'customer') {
+          mountName = 'Customer Mount';
+          details.push(`With Customer Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        } else {
+          details.push(`With ${mountName} (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        }
       }
       
       // Add surface type detail
@@ -433,7 +438,7 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
       
       return {
         name: tvName,
-        details: details
+        details: details.filter(d => d) // Filter out empty details
       };
     });
     
@@ -446,7 +451,11 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     const details = [];
     
     if (mountType !== 'Not specified') {
-      details.push(`With ${mountType}`);
+      if (mountType.toLowerCase().includes('customer')) {
+        details.push('With Customer Mount');
+      } else {
+        details.push(`With ${mountType}`);
+      }
     }
     
     if (hasOutletRelocation) {
@@ -460,7 +469,7 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     serviceCategories.push({
       category: 'TV Mounting',
       items: [{
-        name: `TV: ${tvSize} - ${locationDescription}`,
+        name: `TV ${tvSize === 'large' || tvSize.includes("56") ? '1: 56" or larger' : '2: 32"-55"'} - ${locationDescription === 'Above Fireplace' ? 'fireplace' : 'standard'}`,
         details: details
       }]
     });
@@ -470,7 +479,10 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   if (smartHomeItems.length > 0) {
     const smartHomeRows = smartHomeItems.map((item: any) => {
       return {
-        name: item.formattedName || `Smart ${item.type || 'Device'}`,
+        name: item.type === 'securityCamera' ? 'Smart Camera' :
+             item.type === 'videoDoorbell' ? 'Smart Doorbell' :
+             item.type === 'floodlightCamera' ? 'Smart Floodlight' :
+             item.formattedName || `Smart ${item.type || 'Device'}`,
         details: []
       };
     });
@@ -485,7 +497,7 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   const servicesHtml = serviceCategories.map((category: any) => {
     const itemsHtml = category.items.map((item: any) => {
       const detailsHtml = item.details && item.details.length > 0 
-        ? `<ul style="list-style-type: disc; padding-left: 20px; margin: 5px 0 0 0; color: #666666; font-size: 14px;">
+        ? `<ul style="list-style-type: disc; padding-left: 20px; margin: 5px 0 0 0; font-size: 14px;">
             ${item.details.map((detail: string) => `<li>${detail}</li>`).join('')}
           </ul>`
         : '';
@@ -573,7 +585,13 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 600; font-size: 16px;">Total Price</span>
-        <span style="font-size: 20px; font-weight: 700;">${booking.pricingTotal || 'To be determined'}</span>
+        <span style="font-size: 20px; font-weight: 700;">${
+          booking.pricingTotal 
+            ? booking.pricingTotal.toString().startsWith('$') 
+              ? booking.pricingTotal
+              : `$${booking.pricingTotal}`
+            : 'To be determined'
+        }</span>
       </div>
     </div>
     
