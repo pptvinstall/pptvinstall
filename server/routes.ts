@@ -410,10 +410,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       logger.error("Error in enhanced email test endpoint:", error);
+      
+      // Detailed error handling for better client feedback
+      let errorMessage = "An error occurred while testing enhanced email functionality";
+      let errorDetails = null;
+      
+      // Check for SendGrid specific errors
+      if (error?.response?.body) {
+        logger.error("SendGrid API error response:", error.response.body);
+        errorDetails = error.response.body;
+        
+        // Extract specific SendGrid error if available
+        if (error.response.body.errors && error.response.body.errors.length > 0) {
+          errorMessage = `SendGrid error: ${error.response.body.errors[0].message}`;
+        }
+      }
+      
       res.status(500).json({
         success: false,
-        message: "An error occurred while testing enhanced email functionality",
-        error: error.message
+        message: errorMessage,
+        error: error.message,
+        details: errorDetails
       });
     }
   });

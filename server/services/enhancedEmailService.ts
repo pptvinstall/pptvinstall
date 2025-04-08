@@ -697,9 +697,43 @@ export async function sendEnhancedEmail(
     return true;
   } catch (error: unknown) {
     console.error('Error sending email:', error);
-    if (error && typeof error === 'object' && 'response' in error) {
-      console.error('SendGrid API response error:', (error as any).response?.body);
+    
+    // Enhanced error logging
+    if (error && typeof error === 'object') {
+      if ('response' in error) {
+        const sgError = error as any;
+        console.error('SendGrid API response error:', sgError.response?.body);
+        
+        // Check if there's a more specific error like authentication failure
+        if (sgError.response?.body?.errors) {
+          const sgErrors = sgError.response.body.errors;
+          sgErrors.forEach((err: any) => {
+            console.error(`SendGrid error code ${err.code}: ${err.message}`);
+          });
+          
+          // Check for typical auth errors
+          const hasAuthError = sgErrors.some((err: any) => 
+            err.message?.includes('authorization') || 
+            err.message?.includes('apikey') || 
+            err.message?.includes('api key') ||
+            err.message?.includes('credentials')
+          );
+          
+          if (hasAuthError) {
+            console.error('SendGrid API key authentication error detected. Please verify API key.');
+          }
+        }
+      } else if ('code' in error) {
+        // Network or other non-API errors
+        console.error(`Error code: ${(error as any).code}`);
+        
+        if ((error as any).code === 'ECONNREFUSED') {
+          console.error('Could not connect to SendGrid API. Check network connectivity.');
+        }
+      }
     }
+    
+    // Return false to indicate failure - the error details will be available in logs
     return false;
   }
 }

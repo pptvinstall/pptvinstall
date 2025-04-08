@@ -94,7 +94,7 @@ export default function EmailPreviewsPage() {
       if (enhancedResponse && enhancedResponse.success) {
         toast({
           title: "Test Email Sent",
-          description: `Email sent successfully to ${testEmail}`,
+          description: `Email sent successfully to ${testEmail}. Please check your inbox (and spam folder).`,
           variant: "default"
         });
       } else {
@@ -103,11 +103,28 @@ export default function EmailPreviewsPage() {
           description: enhancedResponse?.message || "An error occurred sending the test email",
           variant: "destructive"
         });
+        
+        // Log details for debugging
+        if (enhancedResponse?.error) {
+          console.error("Email sending failed with error:", enhancedResponse.error);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Improved error handling with more details
+      let errorMessage = "An unexpected error occurred sending the test email";
+      
+      // Check if error has response data from SendGrid
+      if (error.details) {
+        console.error("SendGrid API error details:", error.details);
+        // Extract specific error message if available
+        if (error.message) {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error Sending Email",
-        description: "An unexpected error occurred sending the test email",
+        title: "Email Sending Failed",
+        description: errorMessage,
         variant: "destructive"
       });
       console.error("Email sending error:", error);
