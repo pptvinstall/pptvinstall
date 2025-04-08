@@ -32,6 +32,18 @@ export enum EmailType {
 }
 
 /**
+ * Interface for email sending options
+ */
+export interface EmailOptions {
+  previousDate?: string;
+  previousTime?: string;
+  updates?: Partial<Booking>;
+  reason?: string;
+  sendToAdmin?: boolean;
+  resetToken?: string; // For password reset emails
+}
+
+/**
  * Create an ICS calendar event from booking data
  */
 function createCalendarEvent(booking: Booking): Promise<string> {
@@ -278,7 +290,7 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
   
-  const formattedPreviousDate = previousDate
+  const formattedPreviousDate = previousDate && typeof previousDate === 'string'
     ? format(new Date(previousDate), 'EEEE, MMMM d, yyyy')
     : 'Not available';
   
@@ -377,7 +389,7 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
     updatedFieldsHtml += `
       <tr>
         <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
-        <td style="padding: 8px 0; color: #005cb9;">${format(new Date(updates.preferredDate), 'EEEE, MMMM d, yyyy')}</td>
+        <td style="padding: 8px 0; color: #005cb9;">${updates.preferredDate && typeof updates.preferredDate === 'string' ? format(new Date(updates.preferredDate), 'EEEE, MMMM d, yyyy') : 'Not specified'}</td>
       </tr>
     `;
   }
@@ -448,7 +460,13 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
-          <td style="padding: 8px 0;">${format(new Date(updates.preferredDate || booking.preferredDate), 'EEEE, MMMM d, yyyy')}</td>
+          <td style="padding: 8px 0;">${
+  (updates.preferredDate && typeof updates.preferredDate === 'string') 
+  ? format(new Date(updates.preferredDate), 'EEEE, MMMM d, yyyy') 
+  : (booking.preferredDate && typeof booking.preferredDate === 'string')
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified'
+}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
@@ -734,24 +752,48 @@ export async function sendEnhancedEmail(
     
     // Send admin notification if requested
     if (options?.sendToAdmin) {
-      // Create custom admin notification instead of just copying the customer email
-      const adminContent = masterEmailTemplate('New Booking Alert', getAdminNotificationContent(booking));
-      const adminSubject = emailType === EmailType.BOOKING_CONFIRMATION 
-        ? 'New Booking Alert - Picture Perfect TV Install'
-        : emailType === EmailType.RESCHEDULE_CONFIRMATION
-          ? 'Booking Rescheduled - Picture Perfect TV Install'
-          : emailType === EmailType.SERVICE_EDIT
-            ? 'Booking Updated - Picture Perfect TV Install'
-            : emailType === EmailType.BOOKING_CANCELLATION
-              ? 'Booking Canceled - Picture Perfect TV Install'
-              : `[ADMIN COPY] ${subject}`; // Fallback for other types
+      // Create appropriate admin notification based on email type
+      let adminContent;
+      let adminTitle;
+      let adminSubject;
+      
+      switch (emailType) {
+        case EmailType.BOOKING_CONFIRMATION:
+          adminTitle = 'New Booking Alert';
+          adminContent = getAdminNotificationContent(booking, emailType, options);
+          adminSubject = 'New Booking Alert - Picture Perfect TV Install';
+          break;
+          
+        case EmailType.RESCHEDULE_CONFIRMATION:
+          adminTitle = 'Booking Rescheduled';
+          adminContent = getAdminNotificationContent(booking, emailType, options);
+          adminSubject = 'Booking Rescheduled - Picture Perfect TV Install';
+          break;
+          
+        case EmailType.SERVICE_EDIT:
+          adminTitle = 'Booking Updated';
+          adminContent = getAdminNotificationContent(booking, emailType, options);
+          adminSubject = 'Booking Updated - Picture Perfect TV Install';
+          break;
+          
+        case EmailType.BOOKING_CANCELLATION:
+          adminTitle = 'Booking Canceled';
+          adminContent = getAdminNotificationContent(booking, emailType, options);
+          adminSubject = 'Booking Canceled - Picture Perfect TV Install';
+          break;
+          
+        default:
+          adminTitle = `Admin Copy: ${subject}`;
+          adminContent = content; // Use the same content as the customer email
+          adminSubject = `[ADMIN COPY] ${subject}`;
+      }
 
       const adminMsg = {
         to: ADMIN_EMAIL,
         from: FROM_EMAIL,
         subject: adminSubject,
-        text: createPlainTextVersion(adminContent),
-        html: adminContent,
+        text: createPlainTextVersion(masterEmailTemplate(adminTitle, adminContent)),
+        html: masterEmailTemplate(adminTitle, adminContent),
         attachments: msg.attachments // Reuse any attachments from the customer email
       };
       await sgMail.send(adminMsg);
@@ -1031,9 +1073,35 @@ function getPasswordResetEmailContent(customer: Customer, resetToken: string): s
 }
 
 /**
+ * Create admin notification email based on email type
+ */
+function getAdminNotificationContent(booking: Booking, emailType?: EmailType, options?: EmailOptions): string {
+  // Use custom notification content based on the email type
+  if (emailType === EmailType.BOOKING_CANCELLATION) {
+    return getAdminCancellationContent(booking, options?.reason);
+  } 
+  else if (emailType === EmailType.RESCHEDULE_CONFIRMATION) {
+    return getAdminRescheduleContent(booking, options?.previousDate, options?.previousTime);
+  } 
+  else if (emailType === EmailType.SERVICE_EDIT) {
+    return getAdminServiceEditContent(booking, options?.updates || {});
+  } 
+  else if (emailType === EmailType.PASSWORD_RESET) {
+    return getAdminPasswordResetContent(booking);
+  } 
+  else if (emailType === EmailType.WELCOME) {
+    return getAdminWelcomeContent(booking);
+  }
+  else {
+    // Default to booking confirmation notification content
+    return getAdminBookingNotificationContent(booking);
+  }
+}
+
+/**
  * Create admin notification email for new bookings
  */
-function getAdminNotificationContent(booking: Booking): string {
+function getAdminBookingNotificationContent(booking: Booking): string {
   const formattedDate = booking.preferredDate 
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
@@ -1141,6 +1209,484 @@ function getAdminNotificationContent(booking: Booking): string {
 }
 
 /**
+ * Create admin notification email for rescheduled bookings
+ */
+function getAdminRescheduleContent(booking: Booking, previousDate?: string, previousTime?: string): string {
+  const formattedDate = booking.preferredDate 
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+  
+  const formattedPreviousDate = previousDate && typeof previousDate === 'string'
+    ? format(new Date(previousDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+    
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Booking Rescheduled</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A customer has rescheduled their booking. Here are the updated details:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone}</a></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #ffe8e8; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Previous Appointment</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${formattedPreviousDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${previousTime || 'Not specified'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #e8f4ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">New Appointment</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${booking.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0;">${booking.tvSize || 'Not specified'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0;">${booking.mountType || 'Not specified'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
+          <td style="padding: 8px 0;">${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City, State:</strong></td>
+          <td style="padding: 8px 0;">${booking.city}, ${booking.state}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
+          <td style="padding: 8px 0;">${booking.zipCode}</td>
+        </tr>
+      </table>
+    </div>
+    
+    ${booking.notes ? `
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Notes</h2>
+      <p style="margin: 0; font-size: 15px;">${booking.notes}</p>
+    </div>
+    ` : ''}
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Action Required:</strong> Please update your calendar with this rescheduled appointment.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5; text-align: center;">
+      <a href="tel:${booking.phone}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+        <span style="font-weight: bold;">📞 Call Customer</span>
+      </a>
+      <a href="mailto:${booking.email}" style="display: inline-block; background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <span style="font-weight: bold;">✉️ Email Customer</span>
+      </a>
+    </p>
+  `;
+}
+
+/**
+ * Create admin notification email for service edits
+ */
+function getAdminServiceEditContent(booking: Booking, updates: Partial<Booking>): string {
+  const formattedDate = booking.preferredDate 
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+    
+  // Create an array of updated fields for display
+  const updatedFields: {field: string, oldValue: string, newValue: string}[] = [];
+  
+  if (updates.serviceType && updates.serviceType !== booking.serviceType) {
+    updatedFields.push({
+      field: 'Service Type',
+      oldValue: booking.serviceType || 'Not specified',
+      newValue: updates.serviceType
+    });
+  }
+  
+  if (updates.tvSize && updates.tvSize !== booking.tvSize) {
+    updatedFields.push({
+      field: 'TV Size',
+      oldValue: booking.tvSize || 'Not specified',
+      newValue: updates.tvSize
+    });
+  }
+  
+  if (updates.mountType && updates.mountType !== booking.mountType) {
+    updatedFields.push({
+      field: 'Mount Type',
+      oldValue: booking.mountType || 'Not specified',
+      newValue: updates.mountType
+    });
+  }
+  
+  if (updates.notes && updates.notes !== booking.notes) {
+    updatedFields.push({
+      field: 'Notes',
+      oldValue: booking.notes || 'None',
+      newValue: updates.notes
+    });
+  }
+  
+  // More fields could be added as needed
+    
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Booking Updated</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A booking has been updated with new service details. Here is the information:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone}</a></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #fff8e0; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Updated Fields</h2>
+      
+      ${updatedFields.length > 0 ? `
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+          <tr>
+            <th style="padding: 8px 0; text-align: left; width: 25%; color: #666666;">Field</th>
+            <th style="padding: 8px 0; text-align: left; width: 37.5%; color: #666666;">Previous Value</th>
+            <th style="padding: 8px 0; text-align: left; width: 37.5%; color: #666666;">New Value</th>
+          </tr>
+          ${updatedFields.map(field => `
+            <tr>
+              <td style="padding: 8px 0; color: #666666;"><strong>${field.field}:</strong></td>
+              <td style="padding: 8px 0; text-decoration: line-through;">${field.oldValue}</td>
+              <td style="padding: 8px 0; font-weight: bold;">${field.newValue}</td>
+            </tr>
+          `).join('')}
+        </table>
+      ` : `<p style="margin: 0; font-size: 15px;">No significant fields were updated.</p>`}
+    </div>
+    
+    <div style="background-color: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Current Appointment Details</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${updates.serviceType || booking.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0;">${updates.tvSize || booking.tvSize || 'Not specified'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0;">${updates.mountType || booking.mountType || 'Not specified'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
+          <td style="padding: 8px 0;">${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City, State:</strong></td>
+          <td style="padding: 8px 0;">${booking.city}, ${booking.state}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
+          <td style="padding: 8px 0;">${booking.zipCode}</td>
+        </tr>
+      </table>
+    </div>
+    
+    ${updates.notes || booking.notes ? `
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Notes</h2>
+      <p style="margin: 0; font-size: 15px;">${updates.notes || booking.notes}</p>
+    </div>
+    ` : ''}
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Action Required:</strong> Please review these changes and update your records accordingly.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5; text-align: center;">
+      <a href="tel:${booking.phone}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+        <span style="font-weight: bold;">📞 Call Customer</span>
+      </a>
+      <a href="mailto:${booking.email}" style="display: inline-block; background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <span style="font-weight: bold;">✉️ Email Customer</span>
+      </a>
+    </p>
+  `;
+}
+
+/**
+ * Create admin notification email for booking cancellations
+ */
+function getAdminCancellationContent(booking: Booking, reason?: string): string {
+  const formattedDate = booking.preferredDate 
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+    
+  return `
+    <h1 style="color: #d32f2f; margin-top: 0; font-size: 24px; text-align: center;">Booking Canceled</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A booking has been canceled by the customer. Here are the details of the canceled appointment:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone}</a></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #ffebee; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Canceled Appointment</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${booking.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${booking.tvSize || 'Not specified'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0; text-decoration: line-through;">${booking.mountType || 'Not specified'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
+          <td style="padding: 8px 0;">${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City, State:</strong></td>
+          <td style="padding: 8px 0;">${booking.city}, ${booking.state}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
+          <td style="padding: 8px 0;">${booking.zipCode}</td>
+        </tr>
+      </table>
+    </div>
+    
+    ${reason ? `
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Cancellation Reason</h2>
+      <p style="margin: 0; font-size: 15px;">${reason}</p>
+    </div>
+    ` : ''}
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #d32f2f; background-color: #ffebee;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Action Required:</strong> Please update your calendar to remove this appointment.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5; text-align: center;">
+      <a href="tel:${booking.phone}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+        <span style="font-weight: bold;">📞 Call Customer</span>
+      </a>
+      <a href="mailto:${booking.email}" style="display: inline-block; background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <span style="font-weight: bold;">✉️ Email Customer</span>
+      </a>
+    </p>
+  `;
+}
+
+/**
+ * Create admin notification email for password reset requests
+ */
+function getAdminPasswordResetContent(booking: Booking): string {
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Password Reset Request</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A password reset was requested by a customer. Here are their details:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Request Time:</strong></td>
+          <td style="padding: 8px 0;">${format(new Date(), 'EEEE, MMMM d, yyyy h:mm a')}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Note:</strong> No action is required. This is for your information only. The customer has been sent an automated password reset email.
+      </p>
+    </div>
+  `;
+}
+
+/**
+ * Create admin notification email for new account registrations
+ */
+function getAdminWelcomeContent(booking: Booking): string {
+  return `
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">New Customer Registration</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A new customer has created an account. Here are their details:
+    </p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone || 'Not provided'}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Registered:</strong></td>
+          <td style="padding: 8px 0;">${booking.createdAt ? format(new Date(booking.createdAt), 'EEEE, MMMM d, yyyy h:mm a') : 'Recently'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #4caf50; background-color: #e8f5e9;">
+      <p style="margin: 0; font-size: 15px;">
+        <strong>Note:</strong> The customer has been sent an automated welcome email. You may want to follow up with a personal welcome message.
+      </p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.5; text-align: center;">
+      <a href="tel:${booking.phone}" style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+        <span style="font-weight: bold;">📞 Call Customer</span>
+      </a>
+      <a href="mailto:${booking.email}" style="display: inline-block; background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <span style="font-weight: bold;">✉️ Email Customer</span>
+      </a>
+    </p>
+  `;
+}
+
+/**
  * Get the booking cancellation content (aliasing getCancellationContent for consistency in naming)
  */
 function getBookingCancellationContent(booking: Booking, reason?: string): string {
@@ -1229,7 +1775,7 @@ export async function sendTestEmail(emailType: EmailType, to: string) {
         
       case EmailType.ADMIN_NOTIFICATION:
         emailSubject = 'New Booking Alert - Picture Perfect TV Install';
-        emailContent = masterEmailTemplate('New Booking Alert', getAdminNotificationContent(testBooking));
+        emailContent = masterEmailTemplate('New Booking Alert', getAdminNotificationContent(testBooking, EmailType.BOOKING_CONFIRMATION));
         break;
         
       default:
