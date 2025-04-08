@@ -53,7 +53,16 @@ export default function EmailPreviewsPage() {
   // Get email environment information
   const { data: emailEnv, isLoading: loadingEnv } = useQuery<EmailEnvironmentResponse>({
     queryKey: ["/api/email/check-config"],
-    enabled: true
+    enabled: true,
+    queryFn: async ({ queryKey }) => {
+      const response = await fetch(queryKey[0] as string, {
+        credentials: "include"
+      });
+      if (!response.ok) {
+        throw new Error('Failed to load email configuration');
+      }
+      return response.json();
+    }
   });
 
   // Function to send test email
