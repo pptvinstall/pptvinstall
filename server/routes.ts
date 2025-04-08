@@ -4,7 +4,7 @@ import { db } from "./db";
 import { 
   bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
   insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema,
-  promotions, promotionSchema, insertPromotionSchema, Promotion
+  promotions, promotionSchema, insertPromotionSchema, Promotion, Booking
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
@@ -21,7 +21,10 @@ import {
 import { 
   sendEnhancedEmail, 
   EmailType, 
-  sendEnhancedBookingConfirmation 
+  sendEnhancedBookingConfirmation,
+  sendRescheduleConfirmation,
+  sendEnhancedCancellationEmail,
+  sendServiceEditNotification
 } from "./services/enhancedEmailService";
 import { pushNotificationService } from "./services/pushNotificationService";
 
@@ -225,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Send directly through SendGrid for custom subject
           import('@sendgrid/mail').then(sgModule => {
-            const sgMail = new sgModule.MailService();
+            const sgMail = sgModule.default;
             sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
             return sgMail.send(adminMsg);
           });
@@ -321,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const timestamp = new Date().toLocaleTimeString();
       
       // Create a test booking object with distinctive information
-      const testBooking = {
+      const testBooking: Booking = {
         id: `TEST-${Date.now()}`,
         name: "Test Customer",
         email: email,
@@ -336,6 +339,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: `This is a test email sent at ${timestamp} to verify the enhanced email functionality`,
         pricingTotal: "199.99",
         status: "active" as const,
+        tvSize: "65 inch",
+        mountType: "Full-Motion Mount",
         pricingBreakdown: [
           { type: "tv", size: "large", location: "standard", mountType: "fixed" }
         ],
@@ -362,37 +367,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           result = await sendEnhancedBookingConfirmation(testBooking);
           break;
         case EmailType.RESCHEDULE_CONFIRMATION:
-          result = await sendEnhancedEmail(
-            EmailType.RESCHEDULE_CONFIRMATION,
+          result = await sendRescheduleConfirmation(
             testBooking, 
-            { 
-              previousDate: '2023-04-01',
-              previousTime: '6:00 PM'
-            }
+            '2023-04-01',
+            '6:00 PM'
           );
           break;
         case EmailType.BOOKING_CANCELLATION:
-          result = await sendEnhancedEmail(
-            EmailType.BOOKING_CANCELLATION,
+          result = await sendEnhancedCancellationEmail(
             testBooking, 
-            { reason: 'Customer requested cancellation' }
+            'Customer requested cancellation'
           );
           break;
         case EmailType.SERVICE_EDIT:
-          result = await sendEnhancedEmail(
-            EmailType.SERVICE_EDIT,
+          result = await sendServiceEditNotification(
             testBooking, 
-            { 
-              updates: {
-                serviceType: 'TV Installation + Sound Bar Setup',
-                pricingTotal: '249.99'
-              }
+            {
+              serviceType: 'TV Installation + Sound Bar Setup',
+              pricingTotal: '249.99'
             }
           );
           break;
         case EmailType.WELCOME:
           result = await sendEnhancedEmail(
             EmailType.WELCOME,
+            testBooking.email,
             testBooking
           );
           break;

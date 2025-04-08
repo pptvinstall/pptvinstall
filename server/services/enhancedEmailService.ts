@@ -1,11 +1,10 @@
-import { MailService } from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 import type { Booking, Customer } from '@shared/schema';
 import { format, parse, parseISO } from 'date-fns';
 import * as ics from 'ics';
 import type { EventAttributes, EventStatus } from 'ics';
 
 // Initialize SendGrid with API key
-const sgMail = new MailService();
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -581,6 +580,7 @@ export async function sendEnhancedEmail(
     updates?: Partial<Booking>;
     reason?: string;
     sendToAdmin?: boolean;
+    resetToken?: string; // Added for password reset emails
   }
 ): Promise<boolean> {
   if (!SENDGRID_API_KEY) {
@@ -619,6 +619,69 @@ export async function sendEnhancedEmail(
     case EmailType.BOOKING_CANCELLATION:
       subject = 'Booking Cancellation Confirmation - Picture Perfect TV Install';
       content = getCancellationContent(booking, options?.reason);
+      needsCalendar = false;
+      break;
+      
+    case EmailType.WELCOME:
+      subject = 'Welcome to Picture Perfect TV Install!';
+      // For the welcome email, we use booking data as customer data
+      // Create a compatible Customer object using booking data
+      const customerData: Customer = {
+        id: 0,
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        password: 'placeholder', // Required by Customer type but not used
+        loyaltyPoints: 0,
+        memberSince: new Date().toISOString(),
+        verificationToken: '',
+        isVerified: true,
+        passwordResetToken: "",
+        passwordResetExpires: undefined,
+        streetAddress: booking.streetAddress,
+        city: booking.city,
+        state: booking.state,
+        zipCode: booking.zipCode,
+        notificationSettings: {
+          bookingConfirmation: true,
+          reminderDay: true,
+          reminderHour: true,
+          marketing: false
+        }
+      };
+      content = getWelcomeEmailContent(customerData);
+      needsCalendar = false;
+      break;
+      
+    case EmailType.PASSWORD_RESET:
+      subject = 'Password Reset Request - Picture Perfect TV Install';
+      // For password reset, we need a reset token which should be provided in options
+      const resetToken = options?.resetToken as string || 'DEMO-TOKEN';
+      // Use the same customer data format as welcome email, correctly matching the Customer type
+      const passwordResetCustomer: Customer = {
+        id: 0,
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        password: 'placeholder', // Required by Customer type but not used
+        loyaltyPoints: 0,
+        memberSince: new Date().toISOString(),
+        verificationToken: '',
+        isVerified: true,
+        passwordResetToken: resetToken,
+        passwordResetExpires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+        streetAddress: booking.streetAddress,
+        city: booking.city,
+        state: booking.state,
+        zipCode: booking.zipCode,
+        notificationSettings: {
+          bookingConfirmation: true,
+          reminderDay: true,
+          reminderHour: true,
+          marketing: false
+        }
+      };
+      content = getPasswordResetEmailContent(passwordResetCustomer, resetToken);
       needsCalendar = false;
       break;
       
@@ -798,6 +861,73 @@ export async function sendEnhancedCancellationEmail(
       reason,
       sendToAdmin: true
     }
+  );
+}
+
+/**
+ * Send a password reset email with a reset token
+ */
+export async function sendPasswordResetEmail(
+  customer: Customer, 
+  resetToken: string
+): Promise<boolean> {
+  // Create a compatible booking object from customer data
+  const bookingData: Booking = {
+    id: customer.id ? customer.id.toString() : '0',
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone || '',
+    status: "active", // Default status
+    streetAddress: customer.streetAddress || "",
+    city: customer.city || "",
+    state: customer.state || "",
+    zipCode: customer.zipCode || "",
+    serviceType: "Password Reset",
+    preferredDate: "",
+    appointmentTime: "",
+    createdAt: customer.memberSince || new Date().toISOString(),
+    notes: ""
+  };
+  
+  return sendEnhancedEmail(
+    EmailType.PASSWORD_RESET,
+    customer.email,
+    bookingData,
+    {
+      resetToken
+    }
+  );
+}
+
+/**
+ * Send a welcome email to a new customer
+ */
+export async function sendWelcomeEmail(
+  customer: Customer
+): Promise<boolean> {
+  // Create a compatible booking object from customer data
+  const bookingData: Booking = {
+    id: customer.id ? customer.id.toString() : '0',
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone || '',
+    status: "active", // Default status
+    streetAddress: customer.streetAddress || "",
+    city: customer.city || "",
+    state: customer.state || "",
+    zipCode: customer.zipCode || "",
+    serviceType: "New Account",
+    preferredDate: "",
+    appointmentTime: "",
+    createdAt: customer.memberSince || new Date().toISOString(),
+    notes: ""
+  };
+  
+  return sendEnhancedEmail(
+    EmailType.WELCOME,
+    customer.email,
+    bookingData,
+    { sendToAdmin: false } // No need to notify admin for welcome emails
   );
 }
 
