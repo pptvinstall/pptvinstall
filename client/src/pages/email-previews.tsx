@@ -290,7 +290,7 @@ export default function EmailPreviewsPage() {
                       
                       <p className="text-sm mb-4">
                         If you need to make any changes to your booking or have any questions, 
-                        please contact us at PPTVInstall@gmail.com or call us at (404) 555-1234.
+                        please contact us at PPTVInstall@gmail.com or call us at (404) 867-5309.
                       </p>
                       
                       <p className="text-sm">
@@ -304,7 +304,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -377,7 +377,7 @@ export default function EmailPreviewsPage() {
                       
                       <p className="text-sm mb-2">
                         If you need to make any further changes or have any questions, 
-                        please contact us at PPTVInstall@gmail.com or call us at (404) 555-1234.
+                        please contact us at PPTVInstall@gmail.com or call us at (404) 867-5309.
                       </p>
                       
                       <p className="text-sm mb-4">
@@ -394,7 +394,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -481,7 +481,7 @@ export default function EmailPreviewsPage() {
                       
                       <p className="text-sm mb-2">
                         If you have any questions about these changes or need further assistance, 
-                        please contact us at PPTVInstall@gmail.com or call us at (404) 555-1234.
+                        please contact us at PPTVInstall@gmail.com or call us at (404) 867-5309.
                       </p>
                       
                       <p className="text-sm mb-4">
@@ -498,7 +498,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -563,7 +563,7 @@ export default function EmailPreviewsPage() {
                       
                       <p className="text-sm mb-4">
                         If you have any questions about this cancellation or would like to schedule a new appointment, 
-                        please contact us at PPTVInstall@gmail.com or call us at (404) 555-1234.
+                        please contact us at PPTVInstall@gmail.com or call us at (404) 867-5309.
                       </p>
                       
                       <p className="text-sm">
@@ -577,7 +577,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -655,7 +655,7 @@ export default function EmailPreviewsPage() {
                       
                       <p className="text-sm mb-4">
                         If you have any questions or need assistance, please contact us at 
-                        PPTVInstall@gmail.com or call us at (404) 555-1234.
+                        PPTVInstall@gmail.com or call us at (404) 867-5309.
                       </p>
                       
                       <p className="text-sm">
@@ -669,7 +669,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -743,7 +743,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                       <p className="text-slate-400 text-[10px]">
@@ -853,7 +853,7 @@ export default function EmailPreviewsPage() {
                       <p className="mb-1">© 2025 Picture Perfect TV Install. All rights reserved.</p>
                       <p className="mb-1">
                         <a href="#" className="text-[#005cb9]">pictureperfecttvinstall.com</a> | 
-                        Phone: (404) 555-1234 | 
+                        Phone: (404) 867-5309 | 
                         Email: <a href="#" className="text-[#005cb9]">PPTVInstall@gmail.com</a>
                       </p>
                     </div>

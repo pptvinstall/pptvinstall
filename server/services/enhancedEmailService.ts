@@ -15,7 +15,7 @@ if (SENDGRID_API_KEY) {
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
 const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVInstall@gmail.com>';
 const COMPANY_NAME = 'Picture Perfect TV Install';
-const COMPANY_PHONE = '(404) 555-1234'; // Replace with actual phone number
+const COMPANY_PHONE = '(404) 867-5309';
 const COMPANY_WEBSITE = 'https://pictureperfecttvinstall.com';
 const LOGO_URL = 'https://2b4bea43-2b6d-4b0a-9eb9-d6522fa92ebb-00-1fxiiwh9qlcvx.pike.replit.dev/assets/logo-pptv.jpg';
 
