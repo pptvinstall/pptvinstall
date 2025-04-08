@@ -197,9 +197,35 @@ function getBookingConfirmationContent(booking: Booking): string {
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
     
-  // Extract TV size and mount type from pricingBreakdown if available
+  // Extract service details from pricingBreakdown and smartHomeItems if available
   let tvSize = 'Not specified';
   let mountType = 'Not specified';
+  let hasWireConcealment = false;
+  let hasOutletRelocation = false;
+  let hasMasonryWall = false;
+  let hasHighRise = false;
+  let locationDescription = 'Standard';
+  let additionalServicesHtml = '';
+  
+  // Handle Smart Home installations
+  let smartHomeItems: any[] = [];
+  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
+  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+    try {
+      const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
+      if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
+        smartHomeItems = parsedBreakdown.smartHomeItems;
+      }
+    } catch (e) {
+      // Unable to parse JSON, continue with empty smartHomeItems
+    }
+  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
+    // If pricingBreakdown is already an object
+    const breakdown = booking.pricingBreakdown as any;
+    if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
+      smartHomeItems = breakdown.smartHomeItems;
+    }
+  }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
     // Find the first TV item
@@ -222,7 +248,73 @@ function getBookingConfirmationContent(booking: Booking): string {
         else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
         else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
+      
+      // Check for additional services
+      if (tvItem.wireConcealment) hasWireConcealment = true;
+      if (tvItem.outletRelocation) hasOutletRelocation = true;
+      if (tvItem.masonryWall) hasMasonryWall = true;
+      if (tvItem.highRise) hasHighRise = true;
+      
+      // Location description
+      if (tvItem.location) {
+        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
+        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
+        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
+        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        else locationDescription = tvItem.location;
+      }
     }
+  }
+  
+  // Build additional services HTML
+  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+    additionalServicesHtml = `
+      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasOutletRelocation ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasMasonryWall ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasHighRise ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
+            <td style="padding: 8px 0;">${locationDescription}</td>
+          </tr>
+          
+          ${smartHomeItems.length > 0 ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
+            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+    `;
   }
 
   return `
@@ -279,6 +371,8 @@ function getBookingConfirmationContent(booking: Booking): string {
       </table>
     </div>
     
+    ${additionalServicesHtml}
+    
     ${booking.notes ? `
     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
       <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Notes</h2>
@@ -322,9 +416,35 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
     ? format(new Date(previousDate), 'EEEE, MMMM d, yyyy')
     : 'Not available';
     
-  // Extract TV size and mount type from pricingBreakdown if available
+  // Extract service details from pricingBreakdown and smartHomeItems if available
   let tvSize = 'Not specified';
   let mountType = 'Not specified';
+  let hasWireConcealment = false;
+  let hasOutletRelocation = false;
+  let hasMasonryWall = false;
+  let hasHighRise = false;
+  let locationDescription = 'Standard';
+  let additionalServicesHtml = '';
+  
+  // Handle Smart Home installations
+  let smartHomeItems: any[] = [];
+  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
+  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+    try {
+      const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
+      if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
+        smartHomeItems = parsedBreakdown.smartHomeItems;
+      }
+    } catch (e) {
+      // Unable to parse JSON, continue with empty smartHomeItems
+    }
+  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
+    // If pricingBreakdown is already an object
+    const breakdown = booking.pricingBreakdown as any;
+    if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
+      smartHomeItems = breakdown.smartHomeItems;
+    }
+  }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
     // Find the first TV item
@@ -347,7 +467,73 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
         else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
         else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
+      
+      // Check for additional services
+      if (tvItem.wireConcealment) hasWireConcealment = true;
+      if (tvItem.outletRelocation) hasOutletRelocation = true;
+      if (tvItem.masonryWall) hasMasonryWall = true;
+      if (tvItem.highRise) hasHighRise = true;
+      
+      // Location description
+      if (tvItem.location) {
+        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
+        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
+        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
+        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        else locationDescription = tvItem.location;
+      }
     }
+  }
+  
+  // Build additional services HTML
+  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+    additionalServicesHtml = `
+      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasOutletRelocation ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasMasonryWall ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasHighRise ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
+            <td style="padding: 8px 0;">${locationDescription}</td>
+          </tr>
+          
+          ${smartHomeItems.length > 0 ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
+            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+    `;
   }
   
   return `
@@ -419,6 +605,8 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
       </table>
     </div>
     
+    ${additionalServicesHtml}
+    
     <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
       <p style="margin: 0; font-size: 15px;">
         <strong>Important:</strong> We've attached an updated calendar invitation for your appointment. 
@@ -447,9 +635,35 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
  * Create service edit notification email content
  */
 function getServiceEditContent(booking: Booking, updates: Partial<Booking>): string {
-  // Extract TV size and mount type from pricingBreakdown if available
+  // Extract service details from pricingBreakdown and smartHomeItems if available
   let bookingTvSize = 'Not specified';
   let bookingMountType = 'Not specified';
+  let hasWireConcealment = false;
+  let hasOutletRelocation = false;
+  let hasMasonryWall = false;
+  let hasHighRise = false;
+  let locationDescription = 'Standard';
+  let additionalServicesHtml = '';
+  
+  // Handle Smart Home installations
+  let smartHomeItems: any[] = [];
+  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
+  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+    try {
+      const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
+      if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
+        smartHomeItems = parsedBreakdown.smartHomeItems;
+      }
+    } catch (e) {
+      // Unable to parse JSON, continue with empty smartHomeItems
+    }
+  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
+    // If pricingBreakdown is already an object
+    const breakdown = booking.pricingBreakdown as any;
+    if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
+      smartHomeItems = breakdown.smartHomeItems;
+    }
+  }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
     // Find the first TV item
@@ -472,7 +686,73 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
         else if (tvItem.mountType === 'customer') bookingMountType = 'Customer Provided Mount';
         else bookingMountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
+      
+      // Check for additional services
+      if (tvItem.wireConcealment) hasWireConcealment = true;
+      if (tvItem.outletRelocation) hasOutletRelocation = true;
+      if (tvItem.masonryWall) hasMasonryWall = true;
+      if (tvItem.highRise) hasHighRise = true;
+      
+      // Location description
+      if (tvItem.location) {
+        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
+        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
+        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
+        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        else locationDescription = tvItem.location;
+      }
     }
+  }
+  
+  // Build additional services HTML
+  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+    additionalServicesHtml = `
+      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasOutletRelocation ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasMasonryWall ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasHighRise ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
+            <td style="padding: 8px 0;">${locationDescription}</td>
+          </tr>
+          
+          ${smartHomeItems.length > 0 ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
+            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+    `;
   }
   
   // Check if updates contains pricingBreakdown changes
@@ -618,6 +898,8 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
       </table>
     </div>
     
+    ${additionalServicesHtml}
+    
     <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
       <p style="margin: 0; font-size: 15px;">
         <strong>Note:</strong> If the date or time of your appointment has changed, 
@@ -650,9 +932,35 @@ function getCancellationContent(booking: Booking, reason?: string): string {
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
     
-  // Extract TV size and mount type from pricingBreakdown if available
+  // Extract service details from pricingBreakdown and smartHomeItems if available
   let tvSize = 'Not specified';
   let mountType = 'Not specified';
+  let hasWireConcealment = false;
+  let hasOutletRelocation = false;
+  let hasMasonryWall = false;
+  let hasHighRise = false;
+  let locationDescription = 'Standard';
+  let additionalServicesHtml = '';
+  
+  // Handle Smart Home installations
+  let smartHomeItems: any[] = [];
+  // Since smartHomeItems isn't in the schema, we'll try to get it from pricingBreakdown.smartHome or similar
+  if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'string') {
+    try {
+      const parsedBreakdown = JSON.parse(booking.pricingBreakdown);
+      if (parsedBreakdown.smartHomeItems && Array.isArray(parsedBreakdown.smartHomeItems)) {
+        smartHomeItems = parsedBreakdown.smartHomeItems;
+      }
+    } catch (e) {
+      // Unable to parse JSON, continue with empty smartHomeItems
+    }
+  } else if (booking.pricingBreakdown && typeof booking.pricingBreakdown === 'object') {
+    // If pricingBreakdown is already an object
+    const breakdown = booking.pricingBreakdown as any;
+    if (breakdown.smartHomeItems && Array.isArray(breakdown.smartHomeItems)) {
+      smartHomeItems = breakdown.smartHomeItems;
+    }
+  }
   
   if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
     // Find the first TV item
@@ -675,7 +983,73 @@ function getCancellationContent(booking: Booking, reason?: string): string {
         else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
         else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
       }
+      
+      // Check for additional services
+      if (tvItem.wireConcealment) hasWireConcealment = true;
+      if (tvItem.outletRelocation) hasOutletRelocation = true;
+      if (tvItem.masonryWall) hasMasonryWall = true;
+      if (tvItem.highRise) hasHighRise = true;
+      
+      // Location description
+      if (tvItem.location) {
+        if (tvItem.location === 'standard') locationDescription = 'Standard Wall';
+        else if (tvItem.location === 'complex') locationDescription = 'Complex Installation';
+        else if (tvItem.location === 'corner') locationDescription = 'Corner Installation';
+        else if (tvItem.location === 'fireplace') locationDescription = 'Above Fireplace';
+        else locationDescription = tvItem.location;
+      }
     }
+  }
+  
+  // Build additional services HTML
+  if (hasWireConcealment || hasOutletRelocation || hasMasonryWall || hasHighRise || smartHomeItems.length > 0) {
+    additionalServicesHtml = `
+      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Services</h2>
+        
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+          ${hasWireConcealment ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Wire Concealment:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasOutletRelocation ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Outlet Relocation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasMasonryWall ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Masonry Wall:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          ${hasHighRise ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>High Rise Installation:</strong></td>
+            <td style="padding: 8px 0;">Yes</td>
+          </tr>
+          ` : ''}
+          
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Installation Location:</strong></td>
+            <td style="padding: 8px 0;">${locationDescription}</td>
+          </tr>
+          
+          ${smartHomeItems.length > 0 ? `
+          <tr>
+            <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Smart Home Items:</strong></td>
+            <td style="padding: 8px 0;">${smartHomeItems.map((item: any) => item.name || item.type).join(', ')}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+    `;
   }
   
   return `
@@ -721,6 +1095,8 @@ function getCancellationContent(booking: Booking, reason?: string): string {
         ` : ''}
       </table>
     </div>
+    
+    ${additionalServicesHtml}
     
     <p style="font-size: 16px; line-height: 1.5;">
       If you would like to schedule a new appointment, you can do so by visiting our website 
