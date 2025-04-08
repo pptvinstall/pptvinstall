@@ -447,6 +447,123 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   `;
 }
 
+/**
+ * Creates HTML content for admin notification emails
+ * The admin notification contains all booking details with clear sections
+ */
+function getAdminNotificationContent(booking: Booking & { smartHomeItems?: any[] }): string {
+  // Format the booking date for display
+  const formattedDate = booking.preferredDate
+    ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+    
+  // Get service details using the same function as booking confirmation
+  const serviceDetails = getBookingConfirmationContent(booking);
+  
+  return `
+    <div style="margin-bottom: 15px; text-align: center;">
+      <img src="https://i.ibb.co/DKDc3mZ/notification-bell.png" alt="Admin Alert" width="64" height="64" style="display: inline-block;">
+    </div>
+    
+    <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">New Booking Alert!</h1>
+    
+    <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
+      A new booking has been received. Here are the details:
+    </p>
+    
+    <div style="background-color: #e8f4ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Customer Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${booking.name || 'Not provided'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;"><a href="mailto:${booking.email}" style="color: #005cb9;">${booking.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Phone:</strong></td>
+          <td style="padding: 8px 0;"><a href="tel:${booking.phone}" style="color: #005cb9;">${booking.phone}</a></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f0faff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Appointment Details</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
+          <td style="padding: 8px 0;"><strong>${formattedDate}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
+          <td style="padding: 8px 0;"><strong>${booking.appointmentTime || 'Not specified'}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
+          <td style="padding: 8px 0;">${booking.serviceType || 'TV Installation'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Total Amount:</strong></td>
+          <td style="padding: 8px 0; font-weight: bold;">$${typeof booking.pricingTotal === 'number' ? booking.pricingTotal.toFixed(2) : booking.pricingTotal || '0.00'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="background-color: #f2f7ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
+      
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
+          <td style="padding: 8px 0;">${booking.streetAddress || 'Not provided'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City:</strong></td>
+          <td style="padding: 8px 0;">${booking.city || 'Not provided'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>State:</strong></td>
+          <td style="padding: 8px 0;">${booking.state || 'Not provided'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
+          <td style="padding: 8px 0;">${booking.zipCode || 'Not provided'}</td>
+        </tr>
+      </table>
+      
+      <div style="margin-top: 15px;">
+        <a href="https://maps.google.com/?q=${encodeURIComponent(`${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`)}" 
+           style="display: inline-block; background-color: #005cb9; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+          View on Google Maps
+        </a>
+      </div>
+    </div>
+    
+    <div style="background-color: #f5f9ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Service Details</h2>
+      
+      <div style="font-size: 15px; line-height: 1.5;">
+        ${serviceDetails}
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+      <a href="tel:${booking.phone}" 
+         style="display: inline-block; background-color: #2e7d32; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-right: 10px;">
+        Call Customer
+      </a>
+      <a href="mailto:${booking.email}" 
+         style="display: inline-block; background-color: #1976d2; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+        Email Customer
+      </a>
+    </div>
+  `;
+}
+
 function getRescheduleConfirmationContent(booking: Booking & { smartHomeItems?: any[] }, previousDate?: string, previousTime?: string): string {
   // Implementation for reschedule confirmation emails
   const formattedDate = booking.preferredDate
@@ -606,7 +723,216 @@ export async function sendEnhancedEmail(
           console.warn('Failed to create calendar event:', calendarError);
         }
         break;
-
+        
+      case EmailType.ADMIN_NOTIFICATION:
+        if (!booking) {
+          console.error('Booking data is required for admin notification email');
+          return false;
+        }
+        emailContent = getAdminNotificationContent(booking);
+        emailSubject = `New Booking Alert: ${booking.name} - ${format(new Date(booking.preferredDate), 'MM/dd/yyyy')} at ${booking.appointmentTime}`;
+        break;
+        
+      case EmailType.SERVICE_EDIT:
+        if (!booking) {
+          console.error('Booking data is required for service edit notification email');
+          return false;
+        }
+        
+        const editFormattedDate = booking.preferredDate 
+          ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+          : 'Not specified';
+        
+        const updates = options?.updates || {};
+        const updatesList: string[] = [];
+        
+        // Build a list of updates to show in the email
+        if (updates.preferredDate) {
+          const formattedNewDate = format(new Date(updates.preferredDate), 'EEEE, MMMM d, yyyy');
+          updatesList.push(`<li>Appointment date changed to: <strong>${formattedNewDate}</strong></li>`);
+        }
+        
+        if (updates.appointmentTime) {
+          updatesList.push(`<li>Appointment time changed to: <strong>${updates.appointmentTime}</strong></li>`);
+        }
+        
+        if (updates.streetAddress || updates.city || updates.state || updates.zipCode) {
+          updatesList.push(`<li>Service location updated</li>`);
+        }
+        
+        if (updates.pricingBreakdown) {
+          updatesList.push(`<li>Service selections modified</li>`);
+        }
+        
+        if (updates.pricingTotal) {
+          const formattedPrice = typeof updates.pricingTotal === 'number' 
+            ? `$${updates.pricingTotal.toFixed(2)}` 
+            : updates.pricingTotal;
+          updatesList.push(`<li>Total price updated to: <strong>${formattedPrice}</strong></li>`);
+        }
+        
+        if (updates.notes) {
+          updatesList.push(`<li>Special instructions updated</li>`);
+        }
+        
+        const updatesHtml = updatesList.length > 0 
+          ? `<ul style="margin-top: 10px;">${updatesList.join('')}</ul>` 
+          : '<p>Your booking details have been updated.</p>';
+          
+        emailSubject = `Your TV Installation Service Has Been Updated - ${COMPANY_NAME}`;
+        
+        emailContent = `
+          <h1>Service Update Confirmation</h1>
+          
+          <div style="background-color: #f0f7ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+            <p style="margin-top: 0;"><strong>Your booking has been updated</strong></p>
+            <p style="margin-bottom: 0;">Booking Reference: ${booking.id}</p>
+          </div>
+          
+          <p>Hello ${booking.name},</p>
+          
+          <p>Your TV installation appointment scheduled for <strong>${editFormattedDate}</strong> at <strong>${booking.appointmentTime}</strong> has been updated with the following changes:</p>
+          
+          <div style="padding: 15px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
+            <p style="margin-top: 0;"><strong>Updates to your booking:</strong></p>
+            ${updatesHtml}
+          </div>
+          
+          <p>If you have any questions about these changes or need to make further adjustments, please contact us at:</p>
+          <ul>
+            <li>Phone: ${COMPANY_PHONE}</li>
+            <li>Email: ${ADMIN_EMAIL}</li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://pptvinstall.com/booking" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">View Booking Details</a>
+          </div>
+          
+          <p>Thank you for choosing Picture Perfect TV Install for your installation needs.</p>
+        `;
+        break;
+        
+      case EmailType.BOOKING_CANCELLATION:
+        if (!booking) {
+          console.error('Booking data is required for booking cancellation email');
+          return false;
+        }
+        
+        const cancelFormattedDate = booking.preferredDate 
+          ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+          : 'Not specified';
+          
+        const reason = options?.reason || 'No reason provided';
+        
+        emailSubject = `Your TV Installation Booking Has Been Cancelled - ${COMPANY_NAME}`;
+        
+        emailContent = `
+          <h1>Booking Cancellation Confirmation</h1>
+          
+          <div style="background-color: #fff5f5; border-left: 4px solid #e53e3e; padding: 15px; margin: 20px 0;">
+            <p style="margin-top: 0;"><strong>Your booking has been cancelled</strong></p>
+            <p style="margin-bottom: 0;">Booking Reference: ${booking.id}</p>
+          </div>
+          
+          <p>Hello ${booking.name},</p>
+          
+          <p>Your TV installation appointment scheduled for <strong>${cancelFormattedDate}</strong> at <strong>${booking.appointmentTime}</strong> has been cancelled.</p>
+          
+          <div style="padding: 15px; background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
+            <p style="margin-top: 0;"><strong>Cancellation reason:</strong></p>
+            <p style="margin-bottom: 0;">${reason}</p>
+          </div>
+          
+          <p>If you'd like to reschedule your appointment or have any questions about this cancellation, please contact us at:</p>
+          <ul>
+            <li>Phone: ${COMPANY_PHONE}</li>
+            <li>Email: ${ADMIN_EMAIL}</li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://pptvinstall.com/booking" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Reschedule Appointment</a>
+          </div>
+          
+          <p>We appreciate your understanding and hope to serve you soon.</p>
+        `;
+        break;
+        
+      case EmailType.PASSWORD_RESET:
+        if (!options?.resetToken) {
+          console.error('Reset token is required for password reset email');
+          return false;
+        }
+        
+        const userName = booking?.name || 'Customer';
+        emailSubject = `Password Reset Request - ${COMPANY_NAME}`;
+        
+        // Create a reset link - in production this would point to your actual reset page
+        const resetToken = options.resetToken;
+        const resetLink = `https://pptvinstall.com/reset-password?token=${resetToken}`;
+        
+        emailContent = `
+          <h1>Password Reset Request</h1>
+          <p>Hello ${userName},</p>
+          <p>We received a request to reset your password for your Picture Perfect TV Install account. Click the button below to reset your password:</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+          </div>
+          
+          <p>If you didn't request this password reset, you can safely ignore this email. Your password will not be changed.</p>
+          
+          <div style="background-color: #f0f7ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+            <p><strong>Note:</strong> This password reset link is valid for 24 hours.</p>
+          </div>
+          
+          <p>If you have any questions or need assistance, please contact us at:</p>
+          <p>Email: PPTVInstall@gmail.com</p>
+          <p>Phone: ${COMPANY_PHONE}</p>
+        `;
+        break;
+        
+      case EmailType.WELCOME:
+        const welcomeName = booking?.name || 'Customer';
+        emailSubject = `Welcome to ${COMPANY_NAME}!`;
+        
+        emailContent = `
+          <h1>Welcome to Picture Perfect TV Install!</h1>
+          
+          <p>Hello ${welcomeName},</p>
+          
+          <p>Thank you for creating an account with Picture Perfect TV Install. We're excited to have you join our community of satisfied customers!</p>
+          
+          <div style="background-color: #f0f7ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">What happens next?</h3>
+            <p>You can now book TV installation and smart home services through our website. Your account helps us keep track of your service history and preferences.</p>
+          </div>
+          
+          <p>Here are some of our popular services:</p>
+          <ul style="list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 10px; padding-left: 24px; position: relative;">
+              <span style="position: absolute; left: 0; top: 2px;">✓</span> TV Mounting (Standard and Over Fireplace)
+            </li>
+            <li style="margin-bottom: 10px; padding-left: 24px; position: relative;">
+              <span style="position: absolute; left: 0; top: 2px;">✓</span> Smart Home Device Installation
+            </li>
+            <li style="margin-bottom: 10px; padding-left: 24px; position: relative;">
+              <span style="position: absolute; left: 0; top: 2px;">✓</span> Wire Concealment
+            </li>
+            <li style="margin-bottom: 10px; padding-left: 24px; position: relative;">
+              <span style="position: absolute; left: 0; top: 2px;">✓</span> TV Remounting & Unmounting
+            </li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://pptvinstall.com/booking" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Book Your Service</a>
+          </div>
+          
+          <p>If you have any questions or need assistance, please don't hesitate to contact us:</p>
+          <p>Phone: ${COMPANY_PHONE}</p>
+          <p>Email: ${ADMIN_EMAIL}</p>
+        `;
+        break;
+        
       // Add other email types as needed
 
       default:
@@ -692,4 +1018,110 @@ export async function sendServiceEditNotification(
   );
 }
 
-// More specific email sending functions can be added here
+/**
+ * Send password reset email with reset token
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  name: string,
+  resetToken: string
+): Promise<boolean> {
+  try {
+    // Create a minimal booking object with just name and email
+    const userInfo: Partial<Booking> = {
+      name,
+      email
+    };
+    
+    return await sendEnhancedEmail(
+      EmailType.PASSWORD_RESET,
+      email,
+      userInfo as Booking,
+      { resetToken }
+    );
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return false;
+  }
+}
+
+/**
+ * Helper function for testing email templates
+ * This creates a sample booking and sends the specified email type
+ */
+export async function sendTestEmail(emailType: EmailType, recipientEmail: string): Promise<boolean> {
+  // Create a test booking with all needed fields
+  const testBooking: Booking = {
+    id: "9999",
+    name: "Test Customer",
+    email: recipientEmail,
+    phone: "404-702-4748",
+    status: "active",
+    streetAddress: "123 Test Street",
+    city: "Atlanta",
+    state: "GA",
+    zipCode: "30303",
+    serviceType: "TV Installation",
+    preferredDate: new Date().toISOString().split('T')[0], // Today
+    appointmentTime: "3:00 PM",
+    notes: "This is a test booking",
+    pricingTotal: 249.99,
+    pricingBreakdown: [
+      {
+        type: "tv",
+        size: "large",
+        location: "standard",
+        mountType: "fullMotion",
+        masonryWall: false,
+        highRise: false,
+        outletRelocation: true
+      },
+      {
+        type: "camera",
+        count: 2,
+        hasExistingWiring: true
+      }
+    ],
+    createdAt: new Date().toISOString()
+  };
+  
+  // Handle special case for password reset
+  if (emailType === EmailType.PASSWORD_RESET) {
+    return sendPasswordResetEmail(
+      recipientEmail,
+      "Test Customer",
+      "test-reset-token-12345"
+    );
+  }
+  
+  // Send the appropriate email based on type
+  return sendEnhancedEmail(
+    emailType,
+    recipientEmail,
+    testBooking
+  );
+}
+
+/**
+ * Send admin notification email for new bookings
+ * This sends a notification to the admin with all booking details
+ */
+export async function sendAdminNotification(booking: Booking): Promise<boolean> {
+  if (!ADMIN_EMAIL) {
+    console.warn('Admin email not set. Admin notification not sent.');
+    return false;
+  }
+  
+  try {
+    // Send email using our enhanced email function with the ADMIN_NOTIFICATION type
+    return await sendEnhancedEmail(
+      EmailType.ADMIN_NOTIFICATION,
+      ADMIN_EMAIL,
+      booking
+    );
+  } catch (error) {
+    console.error('Error sending admin notification email:', error);
+    // Don't rethrow error for admin emails to prevent booking failures
+    return false;
+  }
+}

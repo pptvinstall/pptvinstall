@@ -292,7 +292,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: `Test ${emailType} emails sent to JWoodceo@gmail.com and ${adminEmail}`,
         jwoodResult,
-        yourResult
+        yourResult,
+        apiKey: process.env.SENDGRID_API_KEY ? 'Configured' : 'Not configured',
+        adminEmail: process.env.ADMIN_EMAIL || 'Using default: PPTVInstall@gmail.com'
       });
     } catch (error) {
       console.error('Error sending test emails:', error);
@@ -920,6 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let adminEmailSent = false;
         
         if (process.env.SENDGRID_API_KEY) {
+          // Send customer confirmation email
           try {
             customerEmailSent = await sendEnhancedBookingConfirmation(bookingWithId);
             logger.info(`Enhanced customer confirmation email sent successfully: ${customerEmailSent}`);
@@ -931,11 +934,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // We don't want to fail the booking if notifications fail
           }
           
-          // The sendEnhancedBookingConfirmation function already sends the admin notification email
-          // We're setting the flag to true since the function handles both emails
-          adminEmailSent = customerEmailSent;
-          if (!customerEmailSent) {
-            logger.warn("Admin notification email not sent because customer email failed");
+          // Send separate admin notification email (independent of customer email)
+          try {
+            // Import admin notification function from enhanced email service
+            const { sendAdminNotification } = await import('./services/enhancedEmailService');
+            adminEmailSent = await sendAdminNotification(bookingWithId);
+            logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
+          } catch (adminError: any) {
+            logger.error("Error sending admin notification email:", adminError as Error);
+            if (adminError?.response) {
+              logger.error("SendGrid API error response for admin email:", adminError.response.body);
+            }
+            // Don't fail booking if admin notification fails
           }
           
           logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
@@ -1300,8 +1310,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         if (process.env.SENDGRID_API_KEY) {
           const booking = result[0];
+          
+          // Send customer confirmation email
           await sendEnhancedBookingConfirmation(booking);
-          logger.info("Enhanced confirmation email sent successfully");
+          logger.info("Enhanced customer confirmation email sent successfully");
+          
+          // Send separate admin notification
+          try {
+            // Import admin notification function from enhanced email service
+            const { sendAdminNotification } = await import('./services/enhancedEmailService');
+            const adminEmailSent = await sendAdminNotification(booking);
+            logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
+          } catch (adminError: any) {
+            logger.error("Error sending admin notification email:", adminError as Error);
+            if (adminError?.response) {
+              logger.error("SendGrid API error response for admin email:", adminError.response.body);
+            }
+          }
         }
       } catch (error) {
         logger.error("Error sending enhanced confirmation:", error as Error);
