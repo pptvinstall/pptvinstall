@@ -383,62 +383,185 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     `;
   }
 
+  // Process booking breakdown to match confirmation page
+  const serviceCategories = [];
+  
+  // Process TV installations
+  const tvInstallations = [];
+  
+  // Extract TV installations from pricingBreakdown if it exists and is an array
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown)) {
+    booking.pricingBreakdown.filter((item: any) => item.type === 'tv' && !item.isUnmountOnly && !item.isRemountOnly)
+      .forEach((tv: any) => {
+        tvInstallations.push(tv);
+      });
+  }
+  
+  // Build TV Mounting category
+  if (tvInstallations.length > 0) {
+    const tvItems = tvInstallations.map((tv: any, index: number) => {
+      const details = [];
+      
+      // Add mount type detail
+      if (tv.mountType) {
+        let mountName = 'Mount';
+        if (tv.mountType === 'fixed') mountName = 'Fixed Mount';
+        else if (tv.mountType === 'tilting') mountName = 'Tilting Mount';
+        else if (tv.mountType === 'full_motion') mountName = 'Full Motion Mount';
+        else if (tv.mountType === 'customer_provided') mountName = 'Customer-Provided Mount';
+        
+        details.push(`With ${mountName} (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+      }
+      
+      // Add surface type detail
+      if (tv.masonryWall) {
+        details.push('Non-Drywall Surface');
+      }
+      
+      // Add high-rise detail
+      if (tv.highRise) {
+        details.push('High-Rise/Steel Studs');
+      }
+      
+      // Add outlet installation detail
+      if (tv.outletRelocation) {
+        details.push('With Outlet Installation');
+      }
+      
+      // Create the TV name
+      const tvName = `TV ${index + 1}: ${tv.size === 'large' ? '56" or larger' : '32"-55"'} - ${tv.location === 'fireplace' ? 'fireplace' : 'standard'}`;
+      
+      return {
+        name: tvName,
+        details: details
+      };
+    });
+    
+    serviceCategories.push({
+      category: 'TV Mounting',
+      items: tvItems
+    });
+  } else if (tvSize !== 'Not specified' || mountType !== 'Not specified') {
+    // Fallback if there's no detailed TV installations but we have basic info
+    const details = [];
+    
+    if (mountType !== 'Not specified') {
+      details.push(`With ${mountType}`);
+    }
+    
+    if (hasOutletRelocation) {
+      details.push('With Outlet Installation');
+    }
+    
+    if (hasMasonryWall) {
+      details.push('Non-Drywall Surface');
+    }
+    
+    serviceCategories.push({
+      category: 'TV Mounting',
+      items: [{
+        name: `TV: ${tvSize} - ${locationDescription}`,
+        details: details
+      }]
+    });
+  }
+  
+  // Process Smart Home devices if any
+  if (smartHomeItems.length > 0) {
+    const smartHomeRows = smartHomeItems.map((item: any) => {
+      return {
+        name: item.formattedName || `Smart ${item.type || 'Device'}`,
+        details: []
+      };
+    });
+    
+    serviceCategories.push({
+      category: 'Smart Home',
+      items: smartHomeRows
+    });
+  }
+  
+  // Generate HTML for service categories
+  const servicesHtml = serviceCategories.map((category: any) => {
+    const itemsHtml = category.items.map((item: any) => {
+      const detailsHtml = item.details && item.details.length > 0 
+        ? `<ul style="list-style-type: disc; padding-left: 20px; margin: 5px 0 0 0; color: #666666; font-size: 14px;">
+            ${item.details.map((detail: string) => `<li>${detail}</li>`).join('')}
+          </ul>`
+        : '';
+        
+      return `
+        <div style="margin-bottom: 10px;">
+          <div style="font-weight: 500;">${item.name}</div>
+          ${detailsHtml}
+        </div>
+      `;
+    }).join('');
+    
+    return `
+      <div style="margin-bottom: 15px;">
+        <h3 style="color: #005cb9; margin-bottom: 10px; font-size: 16px;">${category.category}</h3>
+        ${itemsHtml}
+      </div>
+    `;
+  }).join('');
+
   return `
+    <div style="margin-bottom: 15px; text-align: center;">
+      <img src="https://i.ibb.co/4dygmQP/check-circle.png" alt="Success" width="64" height="64" style="display: inline-block;">
+    </div>
+    
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Booking Confirmation</h1>
     
     <p style="margin-bottom: 25px; font-size: 16px; line-height: 1.5;">
-      Thank you for choosing Picture Perfect TV Install for your home entertainment needs. 
-      We're excited to confirm your booking and look forward to providing you with exceptional service.
+      Thank you for choosing Picture Perfect TV Install! Your TV installation appointment is confirmed.
     </p>
     
     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Service Details</h2>
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Appointment Details</h2>
       
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
-        <tr>
-          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Service Type:</strong></td>
-          <td style="padding: 8px 0;">${booking.serviceType}</td>
-        </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Date:</strong></td>
           <td style="padding: 8px 0;">${formattedDate}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
-          <td style="padding: 8px 0;">${booking.appointmentTime}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
-          <td style="padding: 8px 0;">${tvSize}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
-          <td style="padding: 8px 0;">${mountType}</td>
+          <td style="padding: 8px 0;">${booking.appointmentTime || 'Not specified'}</td>
         </tr>
       </table>
     </div>
     
+    <!-- Services Section - Matches Booking Confirmation Page -->
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Services</h2>
+      ${servicesHtml || `
+        <div style="margin-bottom: 15px;">
+          <h3 style="color: #005cb9; margin-bottom: 10px; font-size: 16px;">TV Mounting</h3>
+          <div style="margin-bottom: 10px;">
+            <div style="font-weight: 500;">TV Installation</div>
+          </div>
+        </div>
+      `}
+    </div>
+    
+    <!-- Location Information -->
     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
       <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Location Information</h2>
       
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 15px;">
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
-          <td style="padding: 8px 0;">${booking.streetAddress}${booking.addressLine2 ? ', ' + booking.addressLine2 : ''}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>City, State:</strong></td>
-          <td style="padding: 8px 0;">${booking.city}, ${booking.state}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Zip Code:</strong></td>
-          <td style="padding: 8px 0;">${booking.zipCode}</td>
+          <td style="padding: 8px 0;">
+            ${booking.streetAddress || ''}<br>
+            ${booking.addressLine2 ? booking.addressLine2 + '<br>' : ''}
+            ${booking.city || ''}, ${booking.state || ''} ${booking.zipCode || ''}
+          </td>
         </tr>
       </table>
     </div>
     
-    ${additionalServicesHtml}
-    
+    <!-- Notes Section -->
     ${booking.notes ? `
     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
       <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Additional Notes</h2>
@@ -446,27 +569,27 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     </div>
     ` : ''}
     
-    <div style="margin: 25px 0; padding: 15px; border-left: 4px solid #005cb9; background-color: #f0f7ff;">
+    <!-- Total Price -->
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600; font-size: 16px;">Total Price</span>
+        <span style="font-size: 20px; font-weight: 700;">${booking.pricingTotal || 'To be determined'}</span>
+      </div>
+    </div>
+    
+    <!-- Next Steps -->
+    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+      <h3 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Next Steps</h3>
       <p style="margin: 0; font-size: 15px;">
-        <strong>Important:</strong> We've attached a calendar invitation for your appointment. 
-        Please add it to your calendar to help you remember your scheduled service.
+        You'll receive a confirmation email shortly with your booking details. 
+        Our team will contact you before your appointment to confirm all details.
       </p>
     </div>
     
-    <p style="font-size: 16px; line-height: 1.5;">
-      If you need to make any changes to your booking or have any questions, 
-      please contact us at <a href="mailto:${ADMIN_EMAIL}" style="color: #005cb9;">${ADMIN_EMAIL}</a> 
-      or call us at ${COMPANY_PHONE}.
-    </p>
-    
-    <p style="font-size: 16px; line-height: 1.5;">
-      We look forward to serving you!
-    </p>
-    
-    <p style="font-size: 16px; line-height: 1.5;">
-      Warm regards,<br>
-      The Picture Perfect TV Install Team
-    </p>
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="tel:404-702-4748" style="display: inline-block; background-color: #005cb9; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-right: 10px;">Call Us</a>
+      <a href="https://PPTVInstall.com" style="display: inline-block; background-color: #005cb9; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Visit Website</a>
+    </div>
   `;
 }
 
