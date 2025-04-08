@@ -2,8 +2,8 @@
 export const emailConfig = {
   // Company info
   companyName: 'Picture Perfect TV Install',
-  companyPhone: '(404) 555-1234', // Replace with actual phone number
-  companyWebsite: 'https://pictureperfecttvinstall.com',
+  companyPhone: '404-702-4748',
+  companyWebsite: 'https://PPTVInstall.com',
   companyLogo: '/assets/logo-pptv.jpg', // Path relative to public directory
   primaryColor: '#005cb9',
   

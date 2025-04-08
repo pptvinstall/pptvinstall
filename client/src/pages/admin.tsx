@@ -1534,7 +1534,7 @@ export default function AdminDashboard() {
                         Email Support
                       </h4>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Email us at <a href="mailto:support@pictureperfecttvinstall.com" className="text-primary">support@pictureperfecttvinstall.com</a>
+                        Email us at <a href="mailto:PPTVInstall@gmail.com" className="text-primary">PPTVInstall@gmail.com</a>
                       </p>
                     </div>
                     <div className="border rounded-lg p-4">
@@ -1543,7 +1543,7 @@ export default function AdminDashboard() {
                         Phone Support
                       </h4>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Call us at (555) 123-4567 during business hours
+                        Call us at 404-702-4748 during business hours
                       </p>
                     </div>
                   </div>
