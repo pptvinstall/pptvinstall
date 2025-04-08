@@ -291,14 +291,14 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
           mountType = 'Tilting';
           mountPrice = ' ($40)';
         }
-        else if (tvItem.mountType === 'fullMotion') {
+        else if (tvItem.mountType === 'fullMotion' || tvItem.mountType === 'full_motion') {
           mountType = 'Full Motion';
           mountPrice = ' ($60)';
         }
         else if (tvItem.mountType === 'ceiling') {
           mountType = 'Ceiling Mount';
         }
-        else if (tvItem.mountType === 'customer') {
+        else if (tvItem.mountType === 'customer' || tvItem.mountType === 'customer_provided') {
           mountType = 'Customer-Provided';
           mountPrice = ' (No additional charge)';
         }
@@ -407,9 +407,18 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
       // Add mount type detail
       if (tv.mountType) {
         let mountName = 'Mount';
-        if (tv.mountType === 'fixed') mountName = 'Fixed Mount';
-        else if (tv.mountType === 'tilting') mountName = 'Tilting Mount';
-        else if (tv.mountType === 'full_motion') mountName = 'Full Motion Mount';
+        if (tv.mountType === 'fixed') {
+          mountName = 'Fixed Mount';
+          details.push(`With Fixed Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        }
+        else if (tv.mountType === 'tilting') {
+          mountName = 'Tilting Mount';
+          details.push(`With Tilting Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        }
+        else if (tv.mountType === 'full_motion' || tv.mountType === 'fullMotion') {
+          mountName = 'Full Motion Mount';
+          details.push(`With Full Motion Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
+        }
         else if (tv.mountType === 'customer_provided' || tv.mountType === 'customer') {
           mountName = 'Customer Mount';
           details.push(`With Customer Mount (${tv.size === 'large' ? '56"+' : '32"-55"'})`);
@@ -715,14 +724,14 @@ function getRescheduleConfirmationContent(booking: Booking & { smartHomeItems?: 
           mountType = 'Tilting';
           mountPrice = ' ($40)';
         }
-        else if (tvItem.mountType === 'fullMotion') {
+        else if (tvItem.mountType === 'fullMotion' || tvItem.mountType === 'full_motion') {
           mountType = 'Full Motion';
           mountPrice = ' ($60)';
         }
         else if (tvItem.mountType === 'ceiling') {
           mountType = 'Ceiling Mount';
         }
-        else if (tvItem.mountType === 'customer') {
+        else if (tvItem.mountType === 'customer' || tvItem.mountType === 'customer_provided') {
           mountType = 'Customer-Provided';
           mountPrice = ' (No additional charge)';
         }
