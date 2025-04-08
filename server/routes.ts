@@ -915,32 +915,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileBookings.push(bookingWithId);
         saveBookings(fileBookings);
 
-        // Send customer confirmation email
+        // Send customer confirmation email using enhanced email templates
         let customerEmailSent = false;
         let adminEmailSent = false;
         
         if (process.env.SENDGRID_API_KEY) {
           try {
-            customerEmailSent = await sendBookingConfirmationEmail(bookingWithId);
-            logger.info(`Customer confirmation email sent successfully: ${customerEmailSent}`);
+            customerEmailSent = await sendEnhancedBookingConfirmation(bookingWithId);
+            logger.info(`Enhanced customer confirmation email sent successfully: ${customerEmailSent}`);
           } catch (error: any) {
-            logger.error("Error sending customer confirmation email:", error as Error);
+            logger.error("Error sending enhanced customer confirmation email:", error as Error);
             if (error?.response) {
               logger.error("SendGrid API error response for customer email:", error.response.body);
             }
             // We don't want to fail the booking if notifications fail
           }
           
-          // Send admin notification email separately
-          try {
-            adminEmailSent = await sendAdminNotificationEmail(bookingWithId);
-            logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
-          } catch (error: any) {
-            logger.error("Error sending admin notification email:", error as Error);
-            if (error?.response) {
-              logger.error("SendGrid API error response for admin email:", error.response.body);
-            }
-            // We don't want to fail the booking if notifications fail
+          // The sendEnhancedBookingConfirmation function already sends the admin notification email
+          // We're setting the flag to true since the function handles both emails
+          adminEmailSent = customerEmailSent;
+          if (!customerEmailSent) {
+            logger.warn("Admin notification email not sent because customer email failed");
           }
           
           logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
@@ -1301,15 +1296,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
-      // Send confirmation email
+      // Send confirmation email with enhanced template
       try {
         if (process.env.SENDGRID_API_KEY) {
           const booking = result[0];
-          await sendBookingConfirmationEmail(booking);
-          logger.info("Confirmation email sent successfully");
+          await sendEnhancedBookingConfirmation(booking);
+          logger.info("Enhanced confirmation email sent successfully");
         }
       } catch (error) {
-        logger.error("Error sending confirmation:", error as Error);
+        logger.error("Error sending enhanced confirmation:", error as Error);
         // Don't fail the approval if email fails
       }
 
@@ -1516,13 +1511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       saveBookings(fileBookings);
 
-      // Send notification email if requested
+      // Send notification email if requested using enhanced templates
       let emailSent = false;
       if (sendUpdateEmail && originalBooking) {
         try {
-          // Import the email service function
-          const { sendBookingUpdateEmail } = await import('./services/emailService');
-          
           // Calculate what fields have changed
           const updatedBooking = result[0];
           const changes: Record<string, any> = {};
@@ -1537,13 +1529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Only send email if there were actual changes
           if (Object.keys(changes).length > 0) {
-            emailSent = await sendBookingUpdateEmail(updatedBooking, changes);
-            logger.info(`Booking update email ${emailSent ? 'sent' : 'failed to send'} for booking ID ${id}`);
+            emailSent = await sendServiceEditNotification(updatedBooking, changes);
+            logger.info(`Enhanced booking update email ${emailSent ? 'sent' : 'failed to send'} for booking ID ${id}`);
           } else {
             logger.info(`No changes detected for booking ID ${id}, skipping update email`);
           }
         } catch (emailError) {
-          logger.error("Error sending booking update email:", emailError as Error);
+          logger.error("Error sending enhanced booking update email:", emailError as Error);
         }
       }
 
@@ -1993,25 +1985,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Send appropriate notification email
+      // Send appropriate enhanced notification email
       try {
         if (status === 'cancelled') {
-          // Import the email service function for cancellation
-          const { sendBookingCancellationEmail } = await import('./services/emailService');
-          
-          // Send cancellation email
-          await sendBookingCancellationEmail(result[0]);
-          logger.info(`Customer booking cancellation email sent for booking ID ${bookingId}`);
+          // Send enhanced cancellation email
+          await sendEnhancedCancellationEmail(result[0]);
+          logger.info(`Enhanced customer booking cancellation email sent for booking ID ${bookingId}`);
+        } else if (preferredDate || appointmentTime) {
+          // Send reschedule confirmation if date or time changed
+          await sendRescheduleConfirmation(
+            result[0], 
+            existingBooking.preferredDate,
+            existingBooking.appointmentTime
+          );
+          logger.info(`Enhanced reschedule confirmation email sent for booking ID ${bookingId}`);
         } else {
-          // Import the email service function for updates
-          const { sendBookingUpdateEmail } = await import('./services/emailService');
-          
-          // Send update email
-          await sendBookingUpdateEmail(result[0], updates);
-          logger.info(`Customer booking update email sent for booking ID ${bookingId}`);
+          // Send service edit notification for other updates
+          await sendServiceEditNotification(result[0], updates);
+          logger.info(`Enhanced service edit notification email sent for booking ID ${bookingId}`);
         }
       } catch (emailError) {
-        logger.error("Error sending customer booking email:", emailError as Error);
+        logger.error("Error sending enhanced customer booking email:", emailError as Error);
         // We don't want to fail the request if the email fails
       }
       
