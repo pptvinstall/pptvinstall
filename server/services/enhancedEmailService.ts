@@ -16,7 +16,7 @@ const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVIn
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
 const COMPANY_WEBSITE = 'https://PPTVInstall.com';
-const LOGO_URL = 'https://2b4bea43-2b6d-4b0a-9eb9-d6522fa92ebb-00-1fxiiwh9qlcvx.pike.replit.dev/assets/logo-pptv.jpg';
+const LOGO_URL = '/assets/logo-pptv-black.png';
 
 /**
  * Email notification types
@@ -197,6 +197,34 @@ function getBookingConfirmationContent(booking: Booking): string {
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
     
+  // Extract TV size and mount type from pricingBreakdown if available
+  let tvSize = 'Not specified';
+  let mountType = 'Not specified';
+  
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
+    // Find the first TV item
+    const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
+    if (tvItem) {
+      if (tvItem.size) {
+        // Convert size from 'small', 'medium', 'large' to actual dimensions
+        if (tvItem.size === 'small') tvSize = 'Up to 43"';
+        else if (tvItem.size === 'medium') tvSize = '44"-65"';
+        else if (tvItem.size === 'large') tvSize = '65"+'
+        else tvSize = tvItem.size; // Use as-is if it's already descriptive
+      }
+      
+      if (tvItem.mountType) {
+        // Convert mountType codes to readable descriptions
+        if (tvItem.mountType === 'fixed') mountType = 'Fixed Wall Mount';
+        else if (tvItem.mountType === 'tilting') mountType = 'Tilting Wall Mount';
+        else if (tvItem.mountType === 'fullMotion') mountType = 'Full Motion Wall Mount';
+        else if (tvItem.mountType === 'ceiling') mountType = 'Ceiling Mount';
+        else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
+        else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
+      }
+    }
+  }
+
   return `
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Booking Confirmation</h1>
     
@@ -223,11 +251,11 @@ function getBookingConfirmationContent(booking: Booking): string {
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
-          <td style="padding: 8px 0;">${booking.tvSize}</td>
+          <td style="padding: 8px 0;">${tvSize}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
-          <td style="padding: 8px 0;">${booking.mountType}</td>
+          <td style="padding: 8px 0;">${mountType}</td>
         </tr>
       </table>
     </div>
@@ -293,6 +321,34 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
   const formattedPreviousDate = previousDate && typeof previousDate === 'string'
     ? format(new Date(previousDate), 'EEEE, MMMM d, yyyy')
     : 'Not available';
+    
+  // Extract TV size and mount type from pricingBreakdown if available
+  let tvSize = 'Not specified';
+  let mountType = 'Not specified';
+  
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
+    // Find the first TV item
+    const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
+    if (tvItem) {
+      if (tvItem.size) {
+        // Convert size from 'small', 'medium', 'large' to actual dimensions
+        if (tvItem.size === 'small') tvSize = 'Up to 43"';
+        else if (tvItem.size === 'medium') tvSize = '44"-65"';
+        else if (tvItem.size === 'large') tvSize = '65"+'
+        else tvSize = tvItem.size; // Use as-is if it's already descriptive
+      }
+      
+      if (tvItem.mountType) {
+        // Convert mountType codes to readable descriptions
+        if (tvItem.mountType === 'fixed') mountType = 'Fixed Wall Mount';
+        else if (tvItem.mountType === 'tilting') mountType = 'Tilting Wall Mount';
+        else if (tvItem.mountType === 'fullMotion') mountType = 'Full Motion Wall Mount';
+        else if (tvItem.mountType === 'ceiling') mountType = 'Ceiling Mount';
+        else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
+        else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
+      }
+    }
+  }
   
   return `
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Appointment Rescheduled</h1>
@@ -317,6 +373,14 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>New Time:</strong></td>
           <td style="padding: 8px 0; font-weight: bold; color: #005cb9;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0;">${tvSize}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0;">${mountType}</td>
         </tr>
       </table>
     </div>
@@ -383,6 +447,59 @@ function getRescheduleConfirmationContent(booking: Booking, previousDate?: strin
  * Create service edit notification email content
  */
 function getServiceEditContent(booking: Booking, updates: Partial<Booking>): string {
+  // Extract TV size and mount type from pricingBreakdown if available
+  let bookingTvSize = 'Not specified';
+  let bookingMountType = 'Not specified';
+  
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
+    // Find the first TV item
+    const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
+    if (tvItem) {
+      if (tvItem.size) {
+        // Convert size from 'small', 'medium', 'large' to actual dimensions
+        if (tvItem.size === 'small') bookingTvSize = 'Up to 43"';
+        else if (tvItem.size === 'medium') bookingTvSize = '44"-65"';
+        else if (tvItem.size === 'large') bookingTvSize = '65"+'
+        else bookingTvSize = tvItem.size; // Use as-is if it's already descriptive
+      }
+      
+      if (tvItem.mountType) {
+        // Convert mountType codes to readable descriptions
+        if (tvItem.mountType === 'fixed') bookingMountType = 'Fixed Wall Mount';
+        else if (tvItem.mountType === 'tilting') bookingMountType = 'Tilting Wall Mount';
+        else if (tvItem.mountType === 'fullMotion') bookingMountType = 'Full Motion Wall Mount';
+        else if (tvItem.mountType === 'ceiling') bookingMountType = 'Ceiling Mount';
+        else if (tvItem.mountType === 'customer') bookingMountType = 'Customer Provided Mount';
+        else bookingMountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
+      }
+    }
+  }
+  
+  // Check if updates contains pricingBreakdown changes
+  let updatesTvSize = null;
+  let updatesMountType = null;
+  
+  if (updates.pricingBreakdown && Array.isArray(updates.pricingBreakdown) && updates.pricingBreakdown.length > 0) {
+    const tvItem = updates.pricingBreakdown.find(item => item.type === 'tv');
+    if (tvItem) {
+      if (tvItem.size) {
+        if (tvItem.size === 'small') updatesTvSize = 'Up to 43"';
+        else if (tvItem.size === 'medium') updatesTvSize = '44"-65"';
+        else if (tvItem.size === 'large') updatesTvSize = '65"+'
+        else updatesTvSize = tvItem.size;
+      }
+      
+      if (tvItem.mountType) {
+        if (tvItem.mountType === 'fixed') updatesMountType = 'Fixed Wall Mount';
+        else if (tvItem.mountType === 'tilting') updatesMountType = 'Tilting Wall Mount';
+        else if (tvItem.mountType === 'fullMotion') updatesMountType = 'Full Motion Wall Mount';
+        else if (tvItem.mountType === 'ceiling') updatesMountType = 'Ceiling Mount';
+        else if (tvItem.mountType === 'customer') updatesMountType = 'Customer Provided Mount';
+        else updatesMountType = tvItem.mountType;
+      }
+    }
+  }
+  
   // Create a list of what was updated
   let updatedFieldsHtml = '';
   if (updates.preferredDate) {
@@ -409,19 +526,19 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
       </tr>
     `;
   }
-  if (updates.tvSize) {
+  if (updatesTvSize) {
     updatedFieldsHtml += `
       <tr>
         <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
-        <td style="padding: 8px 0; color: #005cb9;">${updates.tvSize}</td>
+        <td style="padding: 8px 0; color: #005cb9;">${updatesTvSize}</td>
       </tr>
     `;
   }
-  if (updates.mountType) {
+  if (updatesMountType) {
     updatedFieldsHtml += `
       <tr>
         <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
-        <td style="padding: 8px 0; color: #005cb9;">${updates.mountType}</td>
+        <td style="padding: 8px 0; color: #005cb9;">${updatesMountType}</td>
       </tr>
     `;
   }
@@ -474,11 +591,11 @@ function getServiceEditContent(booking: Booking, updates: Partial<Booking>): str
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
-          <td style="padding: 8px 0;">${updates.tvSize || booking.tvSize}</td>
+          <td style="padding: 8px 0;">${updatesTvSize || bookingTvSize}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
-          <td style="padding: 8px 0;">${updates.mountType || booking.mountType}</td>
+          <td style="padding: 8px 0;">${updatesMountType || bookingMountType}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
@@ -533,6 +650,34 @@ function getCancellationContent(booking: Booking, reason?: string): string {
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
     
+  // Extract TV size and mount type from pricingBreakdown if available
+  let tvSize = 'Not specified';
+  let mountType = 'Not specified';
+  
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown) && booking.pricingBreakdown.length > 0) {
+    // Find the first TV item
+    const tvItem = booking.pricingBreakdown.find(item => item.type === 'tv');
+    if (tvItem) {
+      if (tvItem.size) {
+        // Convert size from 'small', 'medium', 'large' to actual dimensions
+        if (tvItem.size === 'small') tvSize = 'Up to 43"';
+        else if (tvItem.size === 'medium') tvSize = '44"-65"';
+        else if (tvItem.size === 'large') tvSize = '65"+'
+        else tvSize = tvItem.size; // Use as-is if it's already descriptive
+      }
+      
+      if (tvItem.mountType) {
+        // Convert mountType codes to readable descriptions
+        if (tvItem.mountType === 'fixed') mountType = 'Fixed Wall Mount';
+        else if (tvItem.mountType === 'tilting') mountType = 'Tilting Wall Mount';
+        else if (tvItem.mountType === 'fullMotion') mountType = 'Full Motion Wall Mount';
+        else if (tvItem.mountType === 'ceiling') mountType = 'Ceiling Mount';
+        else if (tvItem.mountType === 'customer') mountType = 'Customer Provided Mount';
+        else mountType = tvItem.mountType; // Use as-is if it doesn't match predefined types
+      }
+    }
+  }
+  
   return `
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">Booking Cancellation</h1>
     
@@ -555,6 +700,14 @@ function getCancellationContent(booking: Booking, reason?: string): string {
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Time:</strong></td>
           <td style="padding: 8px 0; text-decoration: line-through;">${booking.appointmentTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>TV Size:</strong></td>
+          <td style="padding: 8px 0;">${tvSize}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Mount Type:</strong></td>
+          <td style="padding: 8px 0;">${mountType}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; width: 40%; color: #666666;"><strong>Address:</strong></td>
