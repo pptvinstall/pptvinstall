@@ -325,7 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const timestamp = new Date().toLocaleTimeString();
       
-      // Create a test booking object with distinctive information
+      // Create a comprehensive test booking object with all possible options
       const testBooking: Booking = {
         id: `TEST-${Date.now()}`,
         name: "Test Customer",
@@ -335,22 +335,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         city: "Atlanta",
         state: "GA",
         zipCode: "30301",
-        serviceType: "TV Installation",
+        serviceType: "TV Installation & Smart Home Setup",
         preferredDate: new Date().toISOString(),
         appointmentTime: "7:00 PM",
-        notes: `This is a test email sent at ${timestamp} to verify the enhanced email functionality`,
-        pricingTotal: "199.99",
+        notes: `This is a test email sent at ${timestamp} to verify the enhanced email functionality. Customer requested careful handling of the premium OLED TV.`,
+        pricingTotal: "549.99",
         status: "active" as const,
         tvSize: "65 inch",
         mountType: "Full-Motion Mount",
+        // Comprehensive pricing breakdown with different TV types and smart home devices
         pricingBreakdown: [
-          { type: "tv", size: "large", location: "standard", mountType: "fixed" }
-        ],
-        customer: {
-          id: 999,
-          name: "Test Customer",
-          email: email
-        }
+          // Standard TV with fixed mount
+          { 
+            type: "tv", 
+            size: "standard", 
+            location: "standard", 
+            mountType: "fixed"
+          },
+          // Large TV over fireplace with full motion mount
+          { 
+            type: "tv", 
+            size: "large", 
+            location: "over_fireplace", 
+            mountType: "full_motion",
+            masonryWall: true
+          },
+          // TV with customer provided mount
+          { 
+            type: "tv", 
+            size: "standard", 
+            location: "standard", 
+            mountType: "customer_provided",
+            outletRelocation: true
+          },
+          // Smart doorbell
+          {
+            type: "doorbell",
+            brickInstallation: true,
+            count: 1
+          },
+          // Multiple smart cameras
+          {
+            type: "camera",
+            mountHeight: 10,
+            count: 2,
+            hasExistingWiring: false
+          },
+          // Smart floodlight
+          {
+            type: "floodlight",
+            count: 1
+          }
+        ]
+        // No longer including the customer property as it's not part of the Booking type
       };
       
       // Log SendGrid configuration
@@ -396,6 +433,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             testBooking.email,
             testBooking
           );
+          break;
+        case EmailType.ADMIN_NOTIFICATION:
+          // Test admin notification emails - import dynamically to avoid circular dependencies
+          const { sendAdminNotification } = await import('./services/enhancedEmailService');
+          result = await sendAdminNotification(testBooking);
           break;
         default:
           // Default to booking confirmation
