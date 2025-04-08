@@ -455,8 +455,63 @@ function getAdminNotificationContent(booking: Booking & { smartHomeItems?: any[]
     ? format(new Date(booking.preferredDate), 'EEEE, MMMM d, yyyy')
     : 'Not specified';
     
-  // Get service details using the same function as booking confirmation
-  const serviceDetails = getBookingConfirmationContent(booking);
+  // Create a simplified service details section for admin emails
+  // Parse pricing breakdown to get relevant items
+  const pricingBreakdown = booking.pricingBreakdown || [];
+  
+  // Get TV installations
+  const tvItems = pricingBreakdown.filter((item: any) => item.type === 'tv');
+  const tvHTML = tvItems.length > 0 
+    ? `<h3 style="color: #005cb9; margin-top: 15px; margin-bottom: 10px;">TV Mounting (${tvItems.length})</h3>
+       <ul style="margin-top: 5px; padding-left: 20px;">
+         ${tvItems.map((tv: any, index: number) => `
+           <li style="margin-bottom: 8px;">
+             TV ${index + 1}: ${tv.size === 'large' ? '56"+' : '32"-55"'} - 
+             ${tv.location === 'over_fireplace' ? 'Over Fireplace' : 'Standard Wall'} - 
+             ${tv.mountType === 'full_motion' || tv.mountType === 'fullMotion' ? 'Full-Motion Mount' : 
+               tv.mountType === 'tilting' ? 'Tilting Mount' : 
+               tv.mountType === 'fixed' ? 'Fixed Mount' : 
+               tv.mountType === 'customer_provided' || tv.mountType === 'customer' ? 'Customer-Provided Mount' : 'Standard Mount'}
+             ${tv.masonryWall ? ' - Masonry/Brick Wall' : ''}
+             ${tv.highRise ? ' - High-Rise/Steel Studs' : ''}
+             ${tv.outletRelocation ? ' - Outlet Relocation' : ''}
+           </li>
+         `).join('')}
+       </ul>`
+    : '';
+  
+  // Get smart home items
+  const smartHomeItems = pricingBreakdown.filter((item: any) => 
+    ['doorbell', 'camera', 'floodlight', 'smartlock', 'thermostat', 'speaker'].includes(item.type)
+  );
+  
+  const smartHomeHTML = smartHomeItems.length > 0
+    ? `<h3 style="color: #005cb9; margin-top: 15px; margin-bottom: 10px;">Smart Home Devices (${smartHomeItems.length})</h3>
+       <ul style="margin-top: 5px; padding-left: 20px;">
+         ${smartHomeItems.map((item: any) => `
+           <li style="margin-bottom: 8px;">
+             ${item.type === 'doorbell' ? 'Smart Doorbell' : 
+               item.type === 'camera' ? 'Smart Camera' : 
+               item.type === 'floodlight' ? 'Smart Floodlight' : 
+               item.type === 'smartlock' ? 'Smart Lock' : 
+               item.type === 'thermostat' ? 'Smart Thermostat' : 
+               item.type === 'speaker' ? 'Smart Speaker' : 
+               'Smart Device'} 
+             ${item.count && item.count > 1 ? `(${item.count})` : ''}
+             ${item.brickInstallation ? ' - Brick Installation' : ''}
+             ${item.mountHeight ? ` - Mount Height: ${item.mountHeight} ft` : ''}
+           </li>
+         `).join('')}
+       </ul>`
+    : '';
+  
+  // Special notes
+  const notesHTML = booking.notes 
+    ? `<div style="margin-top: 15px; padding: 15px; background-color: #fff7e5; border-left: 4px solid #ffc107; border-radius: 4px;">
+         <h3 style="color: #b88600; margin-top: 0; margin-bottom: 8px; font-size: 16px;">Customer Notes:</h3>
+         <p style="margin: 0; white-space: pre-wrap;">${booking.notes}</p>
+       </div>`
+    : '';
   
   return `
     <div style="margin-bottom: 15px; text-align: center;">
@@ -545,7 +600,9 @@ function getAdminNotificationContent(booking: Booking & { smartHomeItems?: any[]
       <h2 style="color: #333333; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Service Details</h2>
       
       <div style="font-size: 15px; line-height: 1.5;">
-        ${serviceDetails}
+        ${tvHTML}
+        ${smartHomeHTML}
+        ${notesHTML}
       </div>
     </div>
     
