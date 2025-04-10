@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { contactMessageSchema, type InsertContactMessage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Phone, Mail, MapPin } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Contact() {
   const { toast } = useToast();
@@ -41,6 +42,11 @@ export default function Contact() {
         description: "We'll get back to you soon!",
       });
       form.reset();
+      
+      // Track contact form submission with Meta Pixel
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'Contact');
+      }
     },
     onError: () => {
       toast({

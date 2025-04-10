@@ -22,6 +22,20 @@ export default function BookingConfirmation() {
   const [error, setError] = useState<Error | null>(null);
   const [formattedTime, setFormattedTime] = useState<string | null>(null);
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
+
+  // Track booking confirmation with Meta Pixel
+  useEffect(() => {
+    // Only fire the event when data is successfully loaded and not in error state
+    if (bookingData && !loading && !error) {
+      // Check if fbq is available (Meta Pixel is loaded)
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        // Track successful booking/schedule
+        (window as any).fbq('track', 'Schedule');
+        // Also track as a lead
+        (window as any).fbq('track', 'Lead');
+      }
+    }
+  }, [bookingData, loading, error]);
   
   // Account creation states
   const [showAccountForm, setShowAccountForm] = useState<boolean>(false);
