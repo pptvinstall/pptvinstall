@@ -461,7 +461,11 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link href="/booking">
-                <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-blue-700 hover:bg-gray-100"
+                  onClick={() => trackLead({ source: 'cta_section' })}
+                >
                   Book Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
