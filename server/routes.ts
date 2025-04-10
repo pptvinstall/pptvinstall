@@ -18,6 +18,7 @@ import {
   sendBookingCancellationEmail,
   emailTemplates
 } from "./services/emailService";
+import { handleGetAnalytics } from "./analytics";
 import { 
   sendEnhancedEmail, 
   EmailType, 
@@ -2572,6 +2573,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // System Settings API Routes
+  // Analytics API - Get Meta Pixel event data
+  app.get("/api/admin/analytics", handleGetAnalytics);
+  
   app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSystemSettings();
