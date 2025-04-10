@@ -54,6 +54,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { formatPrice } from "@/lib/pricing";
+import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import {
   Popover,
   PopoverContent,
@@ -627,6 +628,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="time-blocking">Availability</TabsTrigger>
           <TabsTrigger value="business-hours">Business Hours</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="help">Help</TabsTrigger>
           <TabsTrigger value="archives">Archives</TabsTrigger>
