@@ -13,7 +13,8 @@ import {
   BookOpen,
   ImageIcon,
   Archive,
-  Tag
+  Tag,
+  PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -67,6 +68,12 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
       href: '/admin?tab=business-hours',
       tab: 'business-hours',
       icon: BarChart3
+    },
+    {
+      name: 'Analytics',
+      href: '/admin?tab=analytics',
+      tab: 'analytics',
+      icon: PieChart
     },
     {
       name: 'Gallery',

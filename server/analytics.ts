@@ -1,7 +1,8 @@
-import { db } from './db';
 import { Request, Response } from 'express';
-import { logger } from './services/loggingService';
+import { db } from './db';
+import logger from './logger';
 
+// Define data types for analytics
 interface EventCount {
   event: string;
   count: number;
@@ -30,54 +31,69 @@ interface AnalyticsData {
   conversionRate: number;
 }
 
-// Mock data - In a real application, this would be fetched from the Meta Pixel API
-// or a database where your application stores tracking data
+/**
+ * Generate analytics data from the events in the database
+ * This is a simulated implementation since we don't have actual event tracking data
+ */
 export function getAnalyticsData(): AnalyticsData {
-  // Generate some sample data
-  const today = new Date();
-  const dailyEvents = [];
+  // For the purposes of this implementation, we'll generate mock analytics data
+  // In a real implementation, this would query a database table of tracked events
   
-  // Generate last 14 days of data
-  for (let i = 13; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
+  // Last 30 days of dates
+  const dates = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29 + i);
+    return date.toISOString().split('T')[0];
+  });
+  
+  // Total counts for each event type
+  const totalViews = 2483;
+  const totalLeads = 187;
+  const totalContacts = 95;
+  const totalSchedules = 62;
+  
+  // Daily event data - distribute total events across days with some randomness
+  const dailyEvents = dates.map(date => {
+    // Generate a weight for this day (random between 0.5 and 1.5)
+    const dayWeight = 0.5 + Math.random();
     
-    // Generate some random but realistic data
-    const viewContent = Math.floor(Math.random() * 30) + 20; // 20-50 views per day
-    const lead = Math.floor(viewContent * (Math.random() * 0.2 + 0.1)); // 10-30% conversion
-    const contact = Math.floor(viewContent * (Math.random() * 0.15 + 0.05)); // 5-20% conversion
-    const schedule = Math.floor(lead * (Math.random() * 0.4 + 0.3)); // 30-70% of leads schedule
+    // Calculate roughly 1/30th of each total with some randomness
+    const viewContent = Math.floor((totalViews / 30) * dayWeight);
+    const lead = Math.floor((totalLeads / 30) * dayWeight);
+    const contact = Math.floor((totalContacts / 30) * dayWeight);
+    const schedule = Math.floor((totalSchedules / 30) * dayWeight);
     
-    dailyEvents.push({
-      date: date.toISOString().split('T')[0],
+    return {
+      date,
       viewContent,
       lead,
       contact,
       schedule
-    });
-  }
+    };
+  });
   
-  // Calculate totals
-  const totalViews = dailyEvents.reduce((sum, day) => sum + day.viewContent, 0);
-  const totalLeads = dailyEvents.reduce((sum, day) => sum + day.lead, 0);
-  const totalSchedules = dailyEvents.reduce((sum, day) => sum + day.schedule, 0);
-  const totalContacts = dailyEvents.reduce((sum, day) => sum + day.contact, 0);
+  // Event counts for each event type
+  const eventCounts: EventCount[] = [
+    { event: 'ViewContent', count: totalViews },
+    { event: 'Lead', count: totalLeads },
+    { event: 'Contact', count: totalContacts },
+    { event: 'Schedule', count: totalSchedules }
+  ];
   
-  // Overall conversion rate (leads to bookings)
-  const conversionRate = totalLeads > 0 ? (totalSchedules / totalLeads) * 100 : 0;
+  // Conversion rates from different traffic sources
+  const conversionRates: ConversionRate[] = [
+    { source: 'facebook', rate: 0.052, count: 872 },
+    { source: 'google', rate: 0.037, count: 1124 },
+    { source: 'direct', rate: 0.024, count: 325 },
+    { source: 'referral', rate: 0.038, count: 162 }
+  ];
+  
+  // Overall conversion rate (ratio of conversions to views)
+  const conversionRate = (totalLeads + totalContacts + totalSchedules) / totalViews;
   
   return {
-    eventCounts: [
-      { event: 'ViewContent', count: totalViews },
-      { event: 'Lead', count: totalLeads },
-      { event: 'Schedule', count: totalSchedules },
-      { event: 'Contact', count: totalContacts }
-    ],
-    conversionRates: [
-      { source: 'Direct', rate: 8.2, count: Math.floor(totalLeads * 0.35) },
-      { source: 'Google', rate: 6.8, count: Math.floor(totalLeads * 0.25) },
-      { source: 'Facebook', rate: 10.5, count: Math.floor(totalLeads * 0.4) }
-    ],
+    eventCounts,
+    conversionRates,
     dailyEvents,
     totalViews,
     totalLeads,
@@ -87,12 +103,16 @@ export function getAnalyticsData(): AnalyticsData {
   };
 }
 
+/**
+ * Handle GET request for analytics data
+ */
 export async function handleGetAnalytics(req: Request, res: Response) {
   try {
+    log.info('Analytics data requested');
     const analyticsData = getAnalyticsData();
     res.json(analyticsData);
   } catch (error) {
-    logger.error('Error fetching analytics data', error as Error);
-    res.status(500).json({ error: 'Failed to fetch analytics data' });
+    log.error('Error fetching analytics data', { error });
+    res.status(500).json({ error: 'Failed to retrieve analytics data' });
   }
 }
