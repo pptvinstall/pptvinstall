@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { InstallationSlideshow } from "@/components/ui/installation-gallery";
 import { PWAInstallBanner } from "@/components/ui/pwa-install-banner";
+import { trackViewContent, trackLead } from "@/lib/fbPixel";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -32,9 +33,7 @@ export default function HomePage() {
   
   // Track page view with Meta Pixel ViewContent event
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'ViewContent');
-    }
+    trackViewContent({ content_name: 'Home Page', content_category: 'page_view' });
   }, []);
 
   const servicesInView = useInView(servicesRef, { once: true, amount: 0.2 });
@@ -159,6 +158,7 @@ export default function HomePage() {
                   <Button
                     size="lg"
                     className="bg-blue-600 hover:bg-blue-700 w-full h-12 flex items-center justify-center gap-2"
+                    onClick={() => trackLead({ source: 'home_hero' })}
                   >
                     <span>Book Now</span>
                     <ArrowRight className="h-4 w-4" />
@@ -229,6 +229,7 @@ export default function HomePage() {
                   <Link href="/booking">
                     <Button 
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 transform hover:scale-105"
+                      onClick={() => trackLead({ source: 'facebook_ad' })}
                     >
                       Book Now
                     </Button>
@@ -265,6 +266,7 @@ export default function HomePage() {
               <Button 
                 size="lg" 
                 className="bg-blue-600 hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                onClick={() => trackLead({ source: 'gallery_section' })}
               >
                 Book Your Professional Installation
                 <ArrowRight className="ml-2 h-4 w-4" />
