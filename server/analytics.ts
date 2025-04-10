@@ -108,11 +108,11 @@ export function getAnalyticsData(): AnalyticsData {
  */
 export async function handleGetAnalytics(req: Request, res: Response) {
   try {
-    log.info('Analytics data requested');
+    logger.info('Analytics data requested');
     const analyticsData = getAnalyticsData();
     res.json(analyticsData);
   } catch (error) {
-    log.error('Error fetching analytics data', { error });
+    logger.error('Error fetching analytics data', { error });
     res.status(500).json({ error: 'Failed to retrieve analytics data' });
   }
 }
