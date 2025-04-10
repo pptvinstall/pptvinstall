@@ -1599,6 +1599,12 @@ export default function AdminDashboard() {
           </div>
         </TabsContent>
         
+        <TabsContent value="analytics">
+          <div className="space-y-6">
+            <AnalyticsDashboard />
+          </div>
+        </TabsContent>
+        
         <TabsContent value="archives">
           <div className="space-y-6">
             <div>
