@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Monitor, Cable, Tv, Package, Wrench, DoorClosed, Camera, Lightbulb } from "lucide-react";
+import { Monitor, Cable, Tv, Package, Wrench, DoorClosed, Camera, Lightbulb, Check } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const tvServices = [
