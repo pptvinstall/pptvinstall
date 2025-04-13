@@ -471,14 +471,25 @@ export function ServiceWizard({ onComplete }: ServiceWizardProps) {
                   <Checkbox 
                     id="tv-removal-needed" 
                     checked={needsTvRemoval}
-                    onCheckedChange={(checked) => setNeedsTvRemoval(checked === true)}
+                    onCheckedChange={(checked) => {
+                      setNeedsTvRemoval(checked === true);
+                      if (!checked) {
+                        setTvRemovalType('unmount');
+                        setTvRemovalCount(1);
+                      }
+                    }}
                   />
-                  <Label 
-                    htmlFor="tv-removal-needed"
-                    className="cursor-pointer"
-                  >
-                    I need a TV unmounted or remounted separately
-                  </Label>
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor="tv-removal-needed"
+                      className="cursor-pointer font-medium"
+                    >
+                      TV Unmounting Service
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Professional TV removal and wall restoration, including mount removal and hardware disposal
+                    </p>
+                  </div>
                 </div>
                 
                 {needsTvRemoval && (

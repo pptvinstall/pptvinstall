@@ -6,21 +6,6 @@ import { Separator } from "@/components/ui/separator";
 
 const tvServices = [
   {
-    title: "TV Unmounting",
-    price: "$50",
-    description: "Professional TV removal and wall restoration",
-    features: [
-      "Safe TV removal",
-      "Mount removal",
-      "Basic wall repair",
-      "All TV sizes",
-      "Cable organization",
-      "Hardware disposal",
-      "Mount storage available"
-    ],
-    icon: Package
-  },
-  {
     title: "Standard TV Mounting",
     price: "From $100",
     description: "Professional TV mounting on standard walls",
@@ -116,8 +101,46 @@ export default function Services() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Our Services</h1>
           <p className="text-xl text-gray-600">
-            Professional TV mounting and smart home installation solutions
+            Professional TV mounting, unmounting, and smart home installation solutions
           </p>
+        </div>
+
+        <div className="mb-12 max-w-3xl mx-auto">
+          <Card className="bg-brand-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-6 w-6" />
+                TV Unmounting Service
+              </CardTitle>
+              <div className="flex justify-between items-center">
+                <p className="text-xl font-bold text-brand-blue-500">$50</p>
+                <Link href="/booking">
+                  <Button>Book Now</Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">Professional TV removal and wall restoration service</p>
+              <ul className="grid gap-2">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Safe TV and mount removal
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Basic wall repair included
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Cable organization and hardware disposal
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  All TV sizes supported
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-12">
