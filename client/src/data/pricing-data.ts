@@ -1,4 +1,3 @@
-
 // pricing-data.ts - Centralized pricing data that's easily editable
 
 export const pricingData = {

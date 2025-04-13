@@ -6,6 +6,21 @@ import { Separator } from "@/components/ui/separator";
 
 const tvServices = [
   {
+    title: "TV Unmounting",
+    price: "$50",
+    description: "Professional TV removal and wall restoration",
+    features: [
+      "Safe TV removal",
+      "Mount removal",
+      "Basic wall repair",
+      "All TV sizes",
+      "Cable organization",
+      "Hardware disposal",
+      "Mount storage available"
+    ],
+    icon: Package
+  },
+  {
     title: "Standard TV Mounting",
     price: "From $100",
     description: "Professional TV mounting on standard walls",
