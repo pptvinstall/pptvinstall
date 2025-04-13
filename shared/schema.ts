@@ -16,11 +16,11 @@ export const insertContactMessageSchema = contactMessageSchema;
 
 // Booking schema
 export const bookingSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
+  name: z.string().min(2, "Name must be at least 2 characters").nullable(),
+  email: z.string().email("Please enter a valid email address").nullable(),
   phone: z.string()
-    .transform(val => val.replace(/\D/g, '')) // Remove all non-digits
-    .refine(val => val.length >= 7 && val.length <= 15, "Please enter a valid phone number"),
+    .transform(val => val?.replace(/\D/g, '') || '')
+    .refine(val => val.length >= 10 && val.length <= 15, "Phone number must be at least 10 digits"),
   streetAddress: z.string().min(2, "Street address is required"),
   addressLine2: z.string().optional(),
   city: z.string().min(2, "City is required"),
@@ -30,7 +30,7 @@ export const bookingSchema = z.object({
   serviceType: z.string(),
   preferredDate: z.string(),
   appointmentTime: z.string(),
-  status: z.enum(['active', 'cancelled', 'completed']).optional().default('active'),
+  status: z.enum(['active', 'cancelled', 'completed', 'scheduled']).optional().default('active'),
   pricingTotal: z.union([z.string(), z.number()]).optional(),
   pricingBreakdown: z.any().optional(),
   // Additional fields that we use in the admin panel

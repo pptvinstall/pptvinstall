@@ -1017,7 +1017,7 @@ export function IntegratedBookingWizard({
         textSizeMode === 'extra-large' && "text-xl",
         highContrastMode && "high-contrast-mode"
       )} 
-      style={{ position: 'relative', overflow: 'visible' }}
+      style={{ position: 'relative', overflow: 'visible', transform: 'translate3d(0,0,0)' }}
     >
       {/* Tutorial modal for first-time users */}
       {showTutorial && (

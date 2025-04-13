@@ -59,6 +59,18 @@ export async function updateCustomerBooking(req: Request, res: Response) {
     if (preferredDate) updates.preferredDate = preferredDate;
     if (appointmentTime) updates.appointmentTime = appointmentTime;
     if (notes !== undefined) updates.notes = notes;
+    if (updates.pricingBreakdown) {
+      try {
+        updates.pricingBreakdown = typeof updates.pricingBreakdown === 'string' 
+          ? JSON.parse(updates.pricingBreakdown)
+          : updates.pricingBreakdown;
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid pricing breakdown format"
+        });
+      }
+    }
     
     // Update the booking
     const result = await db.update(bookings)
