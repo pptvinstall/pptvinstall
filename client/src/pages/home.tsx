@@ -8,6 +8,7 @@ import {
   Star,
   Wrench,
   CheckCircle,
+  Check,
   Tv,
   Camera,
   Home,
@@ -186,6 +187,72 @@ export default function HomePage() {
                 </div>
               </div>
             </motion.div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Featured Service Section */}
+      <section className="py-8 bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-6">
+            <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">Most Popular Service</span>
+            <h2 className="text-3xl font-bold mt-2 mb-2">Basic TV Mounting</h2>
+            <p className="text-gray-600">Professional mounting with your own TV mount</p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-5 bg-white overflow-hidden rounded-xl shadow-md border border-blue-100">
+              <div className="md:col-span-2 relative bg-blue-600 p-6 flex items-center justify-center">
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('/assets/pattern-bg.svg')] bg-repeat"></div>
+                <div className="text-center relative z-10">
+                  <Monitor className="h-16 w-16 text-white mx-auto mb-3" />
+                  <div className="text-3xl font-bold text-white">$100</div>
+                  <div className="text-blue-100 mt-1">Flat Rate</div>
+                  <Link href="/booking" className="mt-4 block">
+                    <Button 
+                      className="bg-white text-blue-600 hover:bg-blue-50" 
+                      onClick={() => trackLead({ source: 'featured_service' })}
+                    >
+                      Book Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="md:col-span-3 p-6">
+                <h3 className="text-xl font-semibold mb-3">What's Included:</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>Customer-provided mount</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>Level installation</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>All TV sizes supported</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>Stud finding & secure mounting</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>Basic cable management</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <span>Professional installation</span>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <div className="text-sm text-gray-600">
+                    Add-ons available: Outlet installation ($100), Non-drywall surface mounting ($50)
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
