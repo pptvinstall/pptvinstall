@@ -102,6 +102,8 @@ export function ServiceSelectionGrid({
                         description={service.description}
                         icon={<TVServiceIcon type={service.type} />}
                         price={service.basePrice}
+                        isMostPopular={service.isMostPopular}
+                        isPromoted={service.isPromoted}
                         onClick={() => onServiceSelect("tv", service)}
                       />
                     </motion.div>
@@ -187,6 +189,8 @@ interface ServiceCardProps {
   icon: React.ReactNode;
   price: number;
   onClick: () => void;
+  isMostPopular?: boolean;
+  isPromoted?: boolean;
 }
 
 function ServiceCard({
@@ -195,27 +199,39 @@ function ServiceCard({
   icon,
   price,
   onClick,
+  isMostPopular,
+  isPromoted
 }: ServiceCardProps) {
   return (
     <button
       className="w-full text-left focus:outline-none"
       onClick={onClick}
     >
-      <Card className="w-full h-full transition-all hover:bg-primary/5 hover:border-primary/30 hover:shadow-md">
+      <Card className={`w-full h-full transition-all hover:bg-primary/5 hover:border-primary/30 hover:shadow-md relative ${isMostPopular ? 'border-2 border-blue-500 shadow-md' : isPromoted ? 'border-blue-300' : ''}`}>
+        {isMostPopular && (
+          <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 font-medium z-10">
+            Most Popular
+          </div>
+        )}
+        {isPromoted && !isMostPopular && (
+          <div className="absolute -top-2 -right-2 bg-blue-400 text-white text-xs rounded-full px-2 py-1 font-medium z-10">
+            Featured
+          </div>
+        )}
         <CardContent className="p-4 flex flex-col h-full">
           <div className="flex items-start">
-            <div className="mr-3 mt-1 p-1.5 rounded-full bg-primary/10 text-primary">
+            <div className={`mr-3 mt-1 p-1.5 rounded-full ${isMostPopular ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
               {icon}
             </div>
             <div className="flex-1">
-              <h3 className="font-medium">{title}</h3>
+              <h3 className={`font-medium ${isMostPopular ? 'text-blue-700' : ''}`}>{title}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
                 {description}
               </p>
             </div>
           </div>
           <div className="mt-auto pt-2 text-right">
-            <span className="font-semibold text-primary">${price}</span>
+            <span className={`font-semibold ${isMostPopular ? 'text-blue-600 text-lg' : 'text-primary'}`}>${price}</span>
           </div>
         </CardContent>
       </Card>

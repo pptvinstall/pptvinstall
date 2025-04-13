@@ -6,6 +6,8 @@ export interface TVInstallation {
   description: string;
   type: string;
   basePrice: number;
+  isMostPopular?: boolean;
+  isPromoted?: boolean;
 }
 
 // Define types for Smart Home installations

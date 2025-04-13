@@ -252,18 +252,34 @@ const ServiceSelectionStep = React.memo(
     // Import pricing.ts values for consistency
     const tvInstallations: TVInstallation[] = [
       {
-        id: "tv-mount-1",
-        name: "TV Installation (Small)",
-        description: "Standard installation with customer mount",
+        id: "tv-basic-mount-1",
+        name: "Basic TV Mounting - Most Popular",
+        description: "Professional installation with your own mount",
         type: "mount",
+        isMostPopular: true,
         basePrice: pricing.tvMounting.standard.price, // $100
       },
       {
-        id: "tv-mount-2",
-        name: "TV Installation (Large)",
-        description: "Standard installation with customer mount",
+        id: "tv-unmount-1",
+        name: "TV Unmounting Service",
+        description: "Professional removal and wall restoration",
+        type: "unmount",
+        isPromoted: true,
+        basePrice: pricing.tvMounting.unmount.price, // $50
+      },
+      {
+        id: "tv-mount-1",
+        name: "Standard TV Installation (Small)",
+        description: "Standard installation with mount provided by us",
         type: "mount",
-        basePrice: pricing.tvMounting.standard.price, // $100
+        basePrice: pricing.tvMounting.standard.price + 50, // $150
+      },
+      {
+        id: "tv-mount-2",
+        name: "Standard TV Installation (Large)",
+        description: "Standard installation with mount provided by us",
+        type: "mount",
+        basePrice: pricing.tvMounting.standard.price + 50, // $150
       },
       {
         id: "tv-mount-3",
@@ -271,13 +287,6 @@ const ServiceSelectionStep = React.memo(
         description: "Installation above a fireplace",
         type: "mount",
         basePrice: pricing.tvMounting.fireplace.price, // $200
-      },
-      {
-        id: "tv-unmount-1",
-        name: "TV Unmounting",
-        description: "Removal of an existing TV from wall mount",
-        type: "unmount",
-        basePrice: pricing.tvMounting.unmount.price, // $50
       },
       {
         id: "tv-remount-1",
