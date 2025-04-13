@@ -6,14 +6,30 @@ import { Separator } from "@/components/ui/separator";
 
 const tvServices = [
   {
-    title: "Standard TV Mounting",
-    price: "From $100",
-    description: "Professional TV mounting on standard walls",
+    title: "Basic TV Mounting",
+    price: "$100",
+    isMostPopular: true,
+    description: "Professional TV mounting with your own mount",
     features: [
+      "Customer-provided mount",
       "32\"-55\" or 56\"+ TVs",
       "Level installation",
       "Basic cable management",
-      "Mount options available",
+      "Hardware included",
+      "+$50 for non-drywall surfaces (brick/concrete/stone)",
+      "+$100 for outlet relocation"
+    ],
+    icon: Monitor
+  },
+  {
+    title: "Standard TV Mounting",
+    price: "From $150",
+    description: "Professional TV mounting with mount provided by us",
+    features: [
+      "We provide the mount",
+      "32\"-55\" or 56\"+ TVs",
+      "Level installation",
+      "Basic cable management",
       "Hardware included",
       "+$50 for non-drywall surfaces (brick/concrete/stone)",
       "+$100 for outlet relocation"
@@ -106,39 +122,55 @@ export default function Services() {
         </div>
 
         <div className="mb-12 max-w-3xl mx-auto">
-          <Card className="bg-brand-blue-50/50">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-semibold">TV Unmounting Service</h2>
+            <p className="text-gray-600">Need to remove a mounted TV? Our professionals will handle it safely.</p>
+          </div>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-6 w-6" />
-                TV Unmounting Service
-              </CardTitle>
-              <div className="flex justify-between items-center">
-                <p className="text-xl font-bold text-brand-blue-500">$50</p>
-                <Link href="/booking">
-                  <Button>Book Now</Button>
-                </Link>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-blue-700">
+                  <Package className="h-6 w-6 text-blue-500" />
+                  Professional TV Unmounting
+                </CardTitle>
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-1 px-2 rounded mr-2">
+                    <p className="text-xl font-bold text-blue-700">$50</p>
+                  </div>
+                  <Link href="/booking">
+                    <Button className="bg-blue-600 hover:bg-blue-700">Book Now</Button>
+                  </Link>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 mb-4">Professional TV removal and wall restoration service</p>
-              <ul className="grid gap-2">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Safe TV and mount removal
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Basic wall repair included
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Cable organization and hardware disposal
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  All TV sizes supported
-                </li>
-              </ul>
+              <p className="text-gray-700 mb-4">Complete TV removal and wall restoration service</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">Safe TV and mount removal</span>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">Basic wall repair included</span>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">Cable organization</span>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">All TV sizes supported</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -148,7 +180,12 @@ export default function Services() {
             <h2 className="text-2xl font-semibold mb-6">TV Mounting Services</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {tvServices.map((service) => (
-                <Card key={service.title} className="relative">
+                <Card key={service.title} className={`relative ${service.isMostPopular ? 'border-2 border-blue-500 shadow-lg' : ''}`}>
+                  {service.isMostPopular && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
+                      Most Popular
+                    </div>
+                  )}
                   <CardHeader>
                     <service.icon className="h-12 w-12 text-brand-blue-500 mb-4" />
                     <CardTitle className="text-2xl">{service.title}</CardTitle>
