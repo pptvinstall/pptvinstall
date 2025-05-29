@@ -257,56 +257,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Facebook Ad Section */}
-      <section
-        className="py-10 bg-white border-t border-blue-100"
-        style={{ position: 'relative' }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="grid md:grid-cols-2 gap-0">
-              <div className="relative">
-                <img 
-                  src="https://scontent-atl3-2.cdninstagram.com/v/t51.75761-15/481355951_18487495720014219_2228373431960695079_n.jpg" 
-                  alt="TV installation in Atlanta" 
-                  className="w-full h-full object-cover object-center"
-                  style={{ minHeight: "300px" }}
-                />
-                <span className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full flex items-center">
-                  <span className="mr-1">📍</span> Local Service
-                </span>
-              </div>
-              <div className="p-6 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold text-blue-700 mb-2">Home</h3>
-                  <p className="text-gray-700 mb-4">
-                    📺✨ Another TV install done right! Whether it's a sleek wall mount or a custom setup, we make sure your space looks Picture Perfect.
-                    <br /><br />
-                    🏠 Serving Atlanta & surrounding areas – Don't wait, Book now! Click the link in @PPTVInstall's bio to schedule your installation today!
-                  </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="text-blue-600 text-sm">#TVMounting</span>
-                    <span className="text-blue-600 text-sm">#HomeTheater</span>
-                    <span className="text-blue-600 text-sm">#Atlanta</span>
-                    <span className="text-blue-600 text-sm">#PPTVInstall</span>
-                    <span className="text-blue-600 text-sm">#BookNow</span>
-                  </div>
-                </div>
-                <div>
-                  <Link href="/booking">
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 transform hover:scale-105"
-                      onClick={() => trackLead({ source: 'facebook_ad' })}
-                    >
-                      Book Now
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Recent Installations Gallery */}
       <section
