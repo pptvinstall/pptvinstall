@@ -139,16 +139,34 @@ export default function AdminDashboard() {
   
   // Parse the tab from URL on initial load and when URL changes
   useEffect(() => {
-    console.log("URL change detected, updating active tab");
-    const searchParams = new URLSearchParams(window.location.search);
-    const tab = searchParams.get('tab');
-    console.log(`Tab from URL: ${tab || 'dashboard'}`);
-    
-    if (tab) {
-      setActiveTab(tab);
-    } else {
-      setActiveTab('dashboard');
-    }
+    const updateTabFromUrl = () => {
+      console.log("URL change detected, updating active tab");
+      const searchParams = new URLSearchParams(window.location.search);
+      const tab = searchParams.get('tab');
+      console.log(`Tab from URL: ${tab || 'dashboard'}`);
+      
+      if (tab) {
+        setActiveTab(tab);
+      } else {
+        setActiveTab('dashboard');
+      }
+    };
+
+    // Initial update
+    updateTabFromUrl();
+
+    // Listen for custom tab change events
+    const handleTabChange = (event: any) => {
+      setActiveTab(event.detail.tab);
+    };
+
+    window.addEventListener('adminTabChange', handleTabChange);
+    window.addEventListener('popstate', updateTabFromUrl);
+
+    return () => {
+      window.removeEventListener('adminTabChange', handleTabChange);
+      window.removeEventListener('popstate', updateTabFromUrl);
+    };
   }, []);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({

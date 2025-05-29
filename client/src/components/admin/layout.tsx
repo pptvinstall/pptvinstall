@@ -129,23 +129,28 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
               {navItems.map((item) => {
                 const isActive = location.includes(item.href);
                 return (
-                  <Link
+                  <button
                     key={item.name}
-                    href={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setLocation(item.href);
+                    type="button"
+                    onClick={() => {
+                      const newUrl = item.tab === 'dashboard' ? '/admin' : `/admin?tab=${item.tab}`;
+                      setLocation(newUrl);
+                      
+                      // Trigger a custom event for tab change
+                      window.dispatchEvent(new CustomEvent('adminTabChange', { 
+                        detail: { tab: item.tab } 
+                      }));
                     }}
                     className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200",
-                      location === item.href
+                      "flex w-full items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-left",
+                      location.includes(`tab=${item.tab}`) || (item.tab === 'dashboard' && !location.includes('tab='))
                         ? "bg-primary text-primary-foreground shadow-sm" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.name}
-                  </Link>
+                  </button>
                 );
               })}
             </nav>
@@ -196,15 +201,15 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
                   onClick={() => {
                     console.log(`Clicked on ${item.name}, tab: ${item.tab}`);
                     
-                    // Force a hard navigation
                     try {
-                      if (item.tab === 'dashboard') {
-                        // We need to reset the URL to the root admin page
-                        window.location.replace('/admin');
-                      } else {
-                        // Navigate to the specific tab
-                        window.location.replace(`/admin?tab=${item.tab}`);
-                      }
+                      // Update URL with proper tab parameter
+                      const newUrl = item.tab === 'dashboard' ? '/admin' : `/admin?tab=${item.tab}`;
+                      setLocation(newUrl);
+                      
+                      // Trigger a custom event for tab change
+                      window.dispatchEvent(new CustomEvent('adminTabChange', { 
+                        detail: { tab: item.tab } 
+                      }));
                     } catch (e) {
                       console.error('Navigation error:', e);
                     }
