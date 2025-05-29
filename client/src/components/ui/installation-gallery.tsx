@@ -114,7 +114,7 @@ export function InstallationSlideshow() {
           align: "start",
           loop: true,
         }}
-        className="w-full mx-auto"
+        className="w-full mx-auto relative"
       >
         <CarouselContent>
           {installationImages.slice(6).map((image, index) => (

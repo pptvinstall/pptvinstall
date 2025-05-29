@@ -9,6 +9,7 @@ import Footer from '@/components/footer';
 import { PromotionBannerGroup } from '@/components/ui/promotion-banner';
 import { PWAInstallBanner } from '@/components/ui/pwa-install-banner';
 import { toast } from '@/hooks/use-toast';
+import ErrorBoundary from './components/error-boundary';
 
 import './lib/process-polyfill';
 import './index.css';
@@ -111,24 +112,7 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-//Error Boundary Component
-const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
-  const [hasError, setHasError] = React.useState(false);
 
-  function handleError() {
-    setHasError(true);
-  }
-
-  if (hasError) {
-    return (
-      <div>
-        <h1>Something went wrong.</h1>
-      </div>
-    );
-  }
-
-  return children;
-};
 
 
 createRoot(document.getElementById('root')!).render(

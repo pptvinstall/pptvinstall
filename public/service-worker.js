@@ -14,13 +14,8 @@ const DYNAMIC_CACHE_NAME = 'pptv-dynamic-cache-v1';
 // Install event - cache essential files for offline usage
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open('v1').then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/offline.html',
-        '/manifest.json'
-      ]);
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
 });
