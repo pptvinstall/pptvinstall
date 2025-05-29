@@ -130,6 +130,10 @@ export function InstallationSlideshow() {
                           className="w-full object-contain transition-all duration-300 group-hover:scale-105"
                           style={{ maxHeight: "220px", width: "100%" }}
                           loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
                         />
                       </div>
                       <div className="py-2 px-3 bg-white">
