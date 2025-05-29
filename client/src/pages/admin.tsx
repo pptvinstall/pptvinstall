@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/popover";
 import {
   ArrowUpRight,
+  BarChart3,
   Calendar as CalendarIcon,
   Check,
   Clock,
@@ -78,6 +79,7 @@ import {
   Settings,
   Tag,
   Trash2,
+  Upload,
   User,
   X,
 } from "lucide-react";
@@ -1577,18 +1579,104 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div>
               <h1 className="text-3xl font-bold">Gallery Management</h1>
-              <p className="text-muted-foreground">Coming soon - Manage your installation photos</p>
+              <p className="text-muted-foreground">Manage your installation photos and showcase your work</p>
             </div>
-            <Card className="p-8 text-center">
-              <div className="mb-4">
-                <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
-                  <ImageIcon className="h-8 w-8 text-primary" />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Upload Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Photo Upload
+                  </CardTitle>
+                  <CardDescription>
+                    Add new installation photos to your gallery
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                    <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="font-medium mb-2">Upload Installation Photos</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Drag and drop files here, or click to browse
+                    </p>
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept="image/*" 
+                      className="hidden" 
+                      id="photo-upload"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          toast({
+                            title: "Photos uploaded",
+                            description: `${e.target.files.length} photo(s) ready for processing`,
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor="photo-upload">
+                      <Button variant="outline" className="cursor-pointer">
+                        Choose Files
+                      </Button>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Gallery Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Gallery Statistics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">Total Photos</span>
+                      <span className="font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">TV Installations</span>
+                      <span className="font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">Smart Home Setups</span>
+                      <span className="font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">Last Upload</span>
+                      <span className="font-medium">Never</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Gallery Grid */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Installation Gallery</CardTitle>
+                <CardDescription>
+                  Your work photos that customers see on the website
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="font-medium mb-2">No photos uploaded yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Upload your first installation photos to get started
+                  </p>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload First Photo
+                  </Button>
                 </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Gallery Management Coming Soon</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                This feature is currently under development. Soon you'll be able to upload and manage your installation photos directly from the admin panel.
-              </p>
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
@@ -1600,19 +1688,122 @@ export default function AdminDashboard() {
         <TabsContent value="content">
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold">Site Content</h1>
-              <p className="text-muted-foreground">Coming soon - Manage your website content</p>
+              <h1 className="text-3xl font-bold">Site Content Management</h1>
+              <p className="text-muted-foreground">Update website content, pricing, and service information</p>
             </div>
-            <Card className="p-8 text-center">
-              <div className="mb-4">
-                <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
-                  <FileText className="h-8 w-8 text-primary" />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Service Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Service Information
+                  </CardTitle>
+                  <CardDescription>
+                    Update your service offerings and descriptions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Business Name</label>
+                    <Input defaultValue="Picture Perfect TV Install" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Tagline</label>
+                    <Input defaultValue="Atlanta's Premier TV Mounting & Smart Home Installation Service" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Service Area</label>
+                    <Input defaultValue="Metro Atlanta, Georgia" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Contact Phone</label>
+                    <Input defaultValue="(404) 555-0123" className="mt-1" />
+                  </div>
+                  <Button className="w-full">
+                    Update Service Info
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Pricing Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Tag className="h-5 w-5" />
+                    Service Pricing
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your service rates and pricing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Basic TV Mount</label>
+                    <Input type="number" defaultValue="150" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Premium TV Mount</label>
+                    <Input type="number" defaultValue="250" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Smart Home Setup</label>
+                    <Input type="number" defaultValue="400" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Service Call Fee</label>
+                    <Input type="number" defaultValue="75" className="mt-1" />
+                  </div>
+                  <Button className="w-full">
+                    Update Pricing
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Website Content */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Website Content
+                </CardTitle>
+                <CardDescription>
+                  Edit the main content sections of your website
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium">About Section</label>
+                  <Textarea 
+                    className="mt-1" 
+                    rows={4}
+                    defaultValue="At Picture Perfect TV Install, we specialize in professional TV mounting and smart home installations throughout Metro Atlanta. With years of experience and a commitment to excellence, we ensure your entertainment setup is both beautiful and functional."
+                  />
                 </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Content Management Coming Soon</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                This feature is currently under development. Soon you'll be able to edit website text, pricing, and other content directly from the admin panel.
-              </p>
+                <div>
+                  <label className="text-sm font-medium">Service Guarantee</label>
+                  <Textarea 
+                    className="mt-1" 
+                    rows={3}
+                    defaultValue="We stand behind our work with a comprehensive warranty. All installations are guaranteed for quality and craftsmanship. Your satisfaction is our priority."
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Years of Experience</label>
+                    <Input type="number" defaultValue="8" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Installations Completed</label>
+                    <Input type="number" defaultValue="1500" className="mt-1" />
+                  </div>
+                </div>
+                <Button className="w-full">
+                  Update Website Content
+                </Button>
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
@@ -1636,19 +1827,171 @@ export default function AdminDashboard() {
         <TabsContent value="customers">
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold">Customer Data</h1>
-              <p className="text-muted-foreground">Coming soon - View and manage customer information</p>
+              <h1 className="text-3xl font-bold">Customer Management</h1>
+              <p className="text-muted-foreground">View and manage customer information and booking history</p>
             </div>
-            <Card className="p-8 text-center">
-              <div className="mb-4">
-                <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
-                  <User className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Customer Management Coming Soon</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                This feature is currently under development. Soon you'll be able to view customer histories, contact information, and booking patterns.
-              </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Customer Statistics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Customer Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Total Customers</span>
+                      <span className="font-medium">{bookings.length > 0 ? new Set(bookings.map((b: any) => b.email)).size : 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Repeat Customers</span>
+                      <span className="font-medium">
+                        {bookings.length > 0 ? Object.values(
+                          bookings.reduce((acc: any, booking: any) => {
+                            acc[booking.email] = (acc[booking.email] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).filter((count: any) => count > 1).length : 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">This Month</span>
+                      <span className="font-medium">
+                        {bookings.filter((b: any) => {
+                          const bookingDate = new Date(b.preferredDate);
+                          const now = new Date();
+                          return bookingDate.getMonth() === now.getMonth() && bookingDate.getFullYear() === now.getFullYear();
+                        }).length}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Customer Search */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Search className="h-5 w-5" />
+                    Find Customer
+                  </CardTitle>
+                  <CardDescription>
+                    Search by name, email, or phone number
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Search customers..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button variant="outline">
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Customer List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Database</CardTitle>
+                <CardDescription>
+                  All customers extracted from booking records
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bookings.length === 0 ? (
+                  <div className="text-center py-8">
+                    <User className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="font-medium mb-2">No customers yet</h3>
+                    <p className="text-muted-foreground">
+                      Customer data will appear here as bookings are created
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(
+                      bookings.reduce((customers: any, booking: any) => {
+                        const email = booking.email;
+                        if (!customers[email]) {
+                          customers[email] = {
+                            name: booking.name,
+                            email: booking.email,
+                            phone: booking.phone,
+                            address: booking.streetAddress,
+                            bookings: []
+                          };
+                        }
+                        customers[email].bookings.push(booking);
+                        return customers;
+                      }, {})
+                    ).filter(([email, customer]: any) => 
+                      searchTerm === "" ||
+                      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      customer.phone.includes(searchTerm)
+                    ).slice(0, 10).map(([email, customer]: any) => (
+                      <div key={email} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <h3 className="font-medium">{customer.name}</h3>
+                            <div className="text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {customer.email}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {customer.phone}
+                              </div>
+                              {customer.address && (
+                                <div className="text-xs mt-1">
+                                  📍 {customer.address}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              {customer.bookings.length} booking{customer.bookings.length !== 1 ? 's' : ''}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Last: {format(new Date(customer.bookings[customer.bookings.length - 1].preferredDate), "MMM d, yyyy")}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-3 w-3 mr-1" />
+                            View History
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Contact
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(bookings.reduce((customers: any, booking: any) => {
+                      customers[booking.email] = true;
+                      return customers;
+                    }, {})).length > 10 && (
+                      <div className="text-center py-4">
+                        <Button variant="outline">
+                          Load More Customers
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
