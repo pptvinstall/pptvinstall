@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,17 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Upload, 
-  Eye, 
   Ruler, 
   Lightbulb, 
   CheckCircle, 
   AlertTriangle,
-  Download,
   RotateCcw,
   Monitor,
   Sofa,
-  Home
+  Home,
+  Target,
+  Eye,
+  ArrowRight,
+  Star
 } from 'lucide-react';
 
 interface RoomDimensions {
@@ -68,112 +69,83 @@ export function TVPlacementTool() {
   const [placementSuggestions, setPlacementSuggestions] = useState<TVPlacement[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Calculate optimal TV placements based on room layout
+  // Calculate optimal TV placements
   const calculatePlacements = useCallback(() => {
     const placements: TVPlacement[] = [];
     const { width, height, ceilingHeight } = roomDimensions;
     
-    // Find main seating (largest sofa)
     const mainSeating = furniture
       .filter(item => item.type === 'sofa')
       .sort((a, b) => (b.width * b.height) - (a.width * a.height))[0];
 
     if (!mainSeating) {
-      return placements;
+      setPlacementSuggestions([]);
+      return;
     }
 
     const seatX = mainSeating.x + mainSeating.width / 2;
     const seatY = mainSeating.y + mainSeating.height / 2;
 
-    // Check each wall for TV placement
+    // Wall placements with scoring
     const walls = [
-      { x: 0, y: height/2, wall: 'left', direction: 'horizontal' },
-      { x: width, y: height/2, wall: 'right', direction: 'horizontal' },
-      { x: width/2, y: 0, wall: 'top', direction: 'vertical' },
-      { x: width/2, y: height, wall: 'bottom', direction: 'vertical' }
+      { x: width/2, y: 0, wall: 'North Wall', direction: 'horizontal' },
+      { x: width/2, y: height, wall: 'South Wall', direction: 'horizontal' },
+      { x: 0, y: height/2, wall: 'West Wall', direction: 'vertical' },
+      { x: width, y: height/2, wall: 'East Wall', direction: 'vertical' }
     ];
 
-    walls.forEach(wall => {
+    walls.forEach((wall, index) => {
       const distance = Math.sqrt(
         Math.pow(wall.x - seatX, 2) + Math.pow(wall.y - seatY, 2)
       );
       
-      // Optimal viewing distance is 1.5-2.5 times TV diagonal
-      const tvDiagonal = tvSize;
-      const minDistance = (tvDiagonal * 1.5) / 12; // Convert to feet
-      const maxDistance = (tvDiagonal * 2.5) / 12;
+      // Optimal viewing distance calculation
+      const optimalDistance = tvSize * 0.15; // 1.5-2.5x TV diagonal
+      const distanceScore = Math.max(0, 100 - Math.abs(distance - optimalDistance) * 10);
       
-      let score = 100;
+      // Angle calculation
+      const angle = Math.atan2(wall.y - seatY, wall.x - seatX) * (180 / Math.PI);
+      const angleScore = Math.max(0, 100 - Math.abs(angle) * 2);
+      
+      const totalScore = (distanceScore + angleScore) / 2;
+      
       const issues: string[] = [];
       const benefits: string[] = [];
       
-      // Distance scoring
-      if (distance < minDistance) {
-        score -= 30;
-        issues.push(`Too close (${distance.toFixed(1)}ft vs recommended ${minDistance.toFixed(1)}ft+)`);
-      } else if (distance > maxDistance) {
-        score -= 20;
-        issues.push(`Quite far (${distance.toFixed(1)}ft vs recommended max ${maxDistance.toFixed(1)}ft)`);
+      if (distance < optimalDistance * 0.8) {
+        issues.push('TV may be too close for comfortable viewing');
+      } else if (distance > optimalDistance * 1.5) {
+        issues.push('TV may be too far for optimal detail viewing');
       } else {
-        benefits.push(`Perfect viewing distance (${distance.toFixed(1)}ft)`);
+        benefits.push('Optimal viewing distance achieved');
       }
-
-      // Wall suitability
-      if (wall.wall === 'left' || wall.wall === 'right') {
-        benefits.push('Side wall allows flexible furniture arrangement');
-      }
-
-      // Check for conflicts with other furniture
-      const hasConflict = furniture.some(item => {
-        if (item === mainSeating) return false;
-        const itemDistance = Math.sqrt(
-          Math.pow(wall.x - (item.x + item.width/2), 2) + 
-          Math.pow(wall.y - (item.y + item.height/2), 2)
-        );
-        return itemDistance < 2;
-      });
-
-      if (hasConflict) {
-        score -= 25;
-        issues.push('Furniture may block view or placement');
-      } else {
-        benefits.push('Clear space for installation');
-      }
-
-      // Height considerations
-      const recommendedHeight = 42; // inches from floor to TV center
-      if (ceilingHeight < 8) {
-        score -= 10;
-        issues.push('Low ceiling may limit mounting options');
-      } else {
-        benefits.push('Good ceiling height for optimal mounting');
-      }
-
-      // Angle calculation
-      const angle = Math.atan2(wall.y - seatY, wall.x - seatX) * (180 / Math.PI);
-      if (Math.abs(angle) > 30) {
-        score -= 15;
+      
+      if (Math.abs(angle) < 15) {
+        benefits.push('Perfect viewing angle alignment');
+      } else if (Math.abs(angle) > 30) {
         issues.push('Viewing angle may cause neck strain');
-      } else {
-        benefits.push('Comfortable viewing angle');
+      }
+      
+      if (totalScore > 60) {
+        benefits.push('Professional installation recommended');
       }
 
       placements.push({
         x: wall.x,
         y: wall.y,
-        wallHeight: recommendedHeight,
+        wallHeight: ceilingHeight * 0.4, // TV center at 40% wall height
         viewingDistance: distance,
-        angle: Math.abs(angle),
-        score: Math.max(0, score),
+        angle: angle,
+        score: Math.round(totalScore),
         issues,
         benefits
       });
     });
 
-    return placements.sort((a, b) => b.score - a.score);
+    setPlacementSuggestions(placements.sort((a, b) => b.score - a.score));
   }, [roomDimensions, tvSize, furniture]);
 
-  // Draw room layout on canvas
+  // Draw room layout
   const drawRoom = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -181,414 +153,495 @@ export function TVPlacementTool() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const scale = 20; // pixels per foot
-    const canvasWidth = roomDimensions.width * scale;
-    const canvasHeight = roomDimensions.height * scale;
-    
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+    const scale = 25;
+    const offsetX = 50;
+    const offsetY = 50;
 
     // Clear canvas
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw room outline
-    ctx.strokeStyle = '#334155';
+    // Room outline
+    ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 3;
-    ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+    ctx.strokeRect(offsetX, offsetY, roomDimensions.width * scale, roomDimensions.height * scale);
 
-    // Draw furniture
+    // Grid
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < roomDimensions.width; i++) {
+      ctx.beginPath();
+      ctx.moveTo(offsetX + i * scale, offsetY);
+      ctx.lineTo(offsetX + i * scale, offsetY + roomDimensions.height * scale);
+      ctx.stroke();
+    }
+    for (let i = 1; i < roomDimensions.height; i++) {
+      ctx.beginPath();
+      ctx.moveTo(offsetX, offsetY + i * scale);
+      ctx.lineTo(offsetX + roomDimensions.width * scale, offsetY + i * scale);
+      ctx.stroke();
+    }
+
+    // Furniture
     furniture.forEach((item, index) => {
-      const x = item.x * scale;
-      const y = item.y * scale;
-      const width = item.width * scale;
-      const height = item.height * scale;
+      const isSelected = selectedFurniture === index;
+      
+      ctx.fillStyle = item.type === 'sofa' ? '#10b981' : '#6b7280';
+      if (isSelected) ctx.fillStyle = '#3b82f6';
+      
+      ctx.fillRect(
+        offsetX + item.x * scale - (item.width * scale) / 2,
+        offsetY + item.y * scale - (item.height * scale) / 2,
+        item.width * scale,
+        item.height * scale
+      );
 
-      // Furniture color based on type
-      const colors: Record<string, string> = {
-        sofa: '#3b82f6',
-        chair: '#10b981',
-        table: '#f59e0b',
-        fireplace: '#dc2626',
-        window: '#06b6d4',
-        door: '#8b5cf6'
-      };
-
-      ctx.fillStyle = selectedFurniture === index ? '#fbbf24' : colors[item.type];
-      ctx.fillRect(x, y, width, height);
-
-      // Draw label
-      ctx.fillStyle = '#1f2937';
+      // Label
+      ctx.fillStyle = '#ffffff';
       ctx.font = '12px sans-serif';
-      ctx.fillText(item.label, x + 5, y + 15);
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        item.label,
+        offsetX + item.x * scale,
+        offsetY + item.y * scale + 4
+      );
     });
 
-    // Draw TV placement suggestions
+    // TV placement suggestions
     placementSuggestions.slice(0, 3).forEach((placement, index) => {
-      const x = placement.x * scale;
-      const y = placement.y * scale;
+      const color = index === 0 ? '#10b981' : index === 1 ? '#f59e0b' : '#ef4444';
       
-      // TV icon
-      ctx.fillStyle = index === 0 ? '#22c55e' : index === 1 ? '#f59e0b' : '#ef4444';
-      ctx.fillRect(x - 10, y - 5, 20, 10);
-      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(
+        offsetX + placement.x * scale,
+        offsetY + placement.y * scale,
+        8,
+        0,
+        2 * Math.PI
+      );
+      ctx.fill();
+
       // Score badge
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px sans-serif';
-      ctx.fillText(`${placement.score}`, x - 8, y + 2);
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        placement.score.toString(),
+        offsetX + placement.x * scale,
+        offsetY + placement.y * scale + 3
+      );
     });
 
-    // Draw grid
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= roomDimensions.width; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * scale, 0);
-      ctx.lineTo(i * scale, canvasHeight);
-      ctx.stroke();
-    }
-    for (let i = 0; i <= roomDimensions.height; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, i * scale);
-      ctx.lineTo(canvasWidth, i * scale);
-      ctx.stroke();
-    }
   }, [roomDimensions, furniture, selectedFurniture, placementSuggestions]);
 
-  // Update placements when parameters change
-  React.useEffect(() => {
-    const placements = calculatePlacements();
-    setPlacementSuggestions(placements);
-  }, [calculatePlacements]);
-
-  // Redraw canvas when data changes
-  React.useEffect(() => {
+  useEffect(() => {
     drawRoom();
   }, [drawRoom]);
+
+  useEffect(() => {
+    calculatePlacements();
+  }, [calculatePlacements]);
 
   const addFurniture = (type: FurnitureItem['type']) => {
     const newItem: FurnitureItem = {
       type,
-      x: 2,
-      y: 2,
-      width: type === 'sofa' ? 6 : type === 'table' ? 3 : 2,
+      x: roomDimensions.width / 2,
+      y: roomDimensions.height / 2,
+      width: type === 'sofa' ? 6 : type === 'table' ? 4 : 2,
       height: type === 'sofa' ? 3 : 2,
       label: `${type.charAt(0).toUpperCase() + type.slice(1)} ${furniture.length + 1}`
     };
     setFurniture([...furniture, newItem]);
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50 border-green-200';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-red-600 bg-red-50 border-red-200';
-  };
-
-  const getScoreIcon = (score: number) => {
-    if (score >= 80) return <CheckCircle className="h-4 w-4" />;
-    return <AlertTriangle className="h-4 w-4" />;
+  const resetRoom = () => {
+    setFurniture([{
+      type: 'sofa',
+      x: 6,
+      y: 7,
+      width: 6,
+      height: 3,
+      label: 'Main Sofa'
+    }]);
+    setSelectedFurniture(null);
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-blue-600 mb-2">TV Placement Visualization Tool</h2>
-        <p className="text-gray-600">Design your perfect room layout and get AI-powered TV placement recommendations</p>
-      </div>
+    <div className="max-w-7xl mx-auto">
+      <Card className="border-2 border-blue-100 shadow-xl">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+          <CardTitle className="flex items-center gap-3 text-2xl text-blue-700">
+            <Monitor className="h-8 w-8" />
+            Interactive Room Designer
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-gray-50 border-b">
+              <TabsTrigger value="dimensions" className="flex items-center gap-2">
+                <Ruler className="h-4 w-4" />
+                Room Setup
+              </TabsTrigger>
+              <TabsTrigger value="furniture" className="flex items-center gap-2">
+                <Sofa className="h-4 w-4" />
+                Furniture
+              </TabsTrigger>
+              <TabsTrigger value="visualize" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Visualize
+              </TabsTrigger>
+              <TabsTrigger value="suggestions" className="flex items-center gap-2">
+                <Lightbulb className="h-4 w-4" />
+                Suggestions
+              </TabsTrigger>
+            </TabsList>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dimensions">
-            <Home className="w-4 h-4 mr-2" />
-            Room Setup
-          </TabsTrigger>
-          <TabsTrigger value="furniture">
-            <Sofa className="w-4 h-4 mr-2" />
-            Furniture
-          </TabsTrigger>
-          <TabsTrigger value="visualize">
-            <Eye className="w-4 h-4 mr-2" />
-            Visualize
-          </TabsTrigger>
-          <TabsTrigger value="recommendations">
-            <Lightbulb className="w-4 h-4 mr-2" />
-            Suggestions
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dimensions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ruler className="h-5 w-5" />
-                Room Dimensions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="width">Room Width (feet)</Label>
-                  <Input
-                    id="width"
-                    type="number"
-                    value={roomDimensions.width}
-                    onChange={(e) => setRoomDimensions(prev => ({ ...prev, width: Number(e.target.value) }))}
-                    min="6"
-                    max="30"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="height">Room Length (feet)</Label>
-                  <Input
-                    id="height"
-                    type="number"
-                    value={roomDimensions.height}
-                    onChange={(e) => setRoomDimensions(prev => ({ ...prev, height: Number(e.target.value) }))}
-                    min="6"
-                    max="30"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ceiling">Ceiling Height (feet)</Label>
-                  <Input
-                    id="ceiling"
-                    type="number"
-                    value={roomDimensions.ceilingHeight}
-                    onChange={(e) => setRoomDimensions(prev => ({ ...prev, ceilingHeight: Number(e.target.value) }))}
-                    min="7"
-                    max="12"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="tvSize">TV Size (inches)</Label>
-                <Select value={tvSize.toString()} onValueChange={(value) => setTvSize(Number(value))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="32">32"</SelectItem>
-                    <SelectItem value="43">43"</SelectItem>
-                    <SelectItem value="50">50"</SelectItem>
-                    <SelectItem value="55">55"</SelectItem>
-                    <SelectItem value="65">65"</SelectItem>
-                    <SelectItem value="75">75"</SelectItem>
-                    <SelectItem value="85">85"</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="furniture" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Furniture</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {(['sofa', 'chair', 'table', 'fireplace', 'window', 'door'] as const).map(type => (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    onClick={() => addFurniture(type)}
-                    className="capitalize"
-                  >
-                    {type}
-                  </Button>
-                ))}
-              </div>
-              
-              <div className="space-y-2">
-                {furniture.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 border rounded-lg cursor-pointer ${
-                      selectedFurniture === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                    onClick={() => setSelectedFurniture(selectedFurniture === index ? null : index)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{item.label}</span>
-                      <Badge variant="outline" className="capitalize">{item.type}</Badge>
-                    </div>
-                    {selectedFurniture === index && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <Input
-                          type="number"
-                          placeholder="X position"
-                          value={item.x}
-                          onChange={(e) => {
-                            const newFurniture = [...furniture];
-                            newFurniture[index].x = Number(e.target.value);
-                            setFurniture(newFurniture);
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Y position"
-                          value={item.y}
-                          onChange={(e) => {
-                            const newFurniture = [...furniture];
-                            newFurniture[index].y = Number(e.target.value);
-                            setFurniture(newFurniture);
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Width"
-                          value={item.width}
-                          onChange={(e) => {
-                            const newFurniture = [...furniture];
-                            newFurniture[index].width = Number(e.target.value);
-                            setFurniture(newFurniture);
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Height"
-                          value={item.height}
-                          onChange={(e) => {
-                            const newFurniture = [...furniture];
-                            newFurniture[index].height = Number(e.target.value);
-                            setFurniture(newFurniture);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="visualize" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Room Layout</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-50 p-4 rounded-lg overflow-auto">
-                <canvas 
-                  ref={canvasRef}
-                  className="border border-gray-300 rounded max-w-full"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                <p><strong>Legend:</strong></p>
-                <div className="flex flex-wrap gap-4 mt-2">
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    Best Placement
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                    Good Placement
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded"></div>
-                    Poor Placement
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-600 rounded"></div>
-                    Furniture
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="recommendations" className="space-y-6">
-          <div className="grid gap-4">
-            {placementSuggestions.slice(0, 3).map((placement, index) => (
-              <Card key={index} className={`border ${getScoreColor(placement.score)}`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      {getScoreIcon(placement.score)}
-                      Option {index + 1}
-                    </span>
-                    <Badge className={getScoreColor(placement.score)}>
-                      Score: {placement.score}/100
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-semibold text-green-600 mb-2">Benefits:</h4>
-                      <ul className="space-y-1">
-                        {placement.benefits.map((benefit, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {benefit}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {placement.issues.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-orange-600 mb-2">Considerations:</h4>
-                        <ul className="space-y-1">
-                          {placement.issues.map((issue, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm">
-                              <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                              {issue}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Viewing Distance:</span>
-                        <div className="font-semibold">{placement.viewingDistance.toFixed(1)} ft</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Viewing Angle:</span>
-                        <div className="font-semibold">{placement.angle.toFixed(0)}°</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Mount Height:</span>
-                        <div className="font-semibold">{placement.wallHeight}"</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Position:</span>
-                        <div className="font-semibold">({placement.x.toFixed(1)}, {placement.y.toFixed(1)})</div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {placementSuggestions.length > 0 && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="pt-6">
+            <TabsContent value="dimensions" className="p-8">
+              <div className="space-y-8">
                 <div className="text-center">
-                  <Monitor className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-blue-800 mb-2">Ready to Install?</h3>
-                  <p className="text-blue-600 mb-4">
-                    Based on your room layout, we recommend Option 1 for the best viewing experience.
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Room Dimensions</h3>
+                  <p className="text-gray-600">Enter your room measurements to get started</p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                  <Card className="border border-gray-200">
+                    <CardContent className="p-6">
+                      <div className="space-y-6">
+                        <div>
+                          <Label htmlFor="width" className="text-sm font-medium text-gray-700">
+                            Room Width (feet)
+                          </Label>
+                          <Input
+                            id="width"
+                            type="number"
+                            value={roomDimensions.width}
+                            onChange={(e) => setRoomDimensions(prev => ({
+                              ...prev,
+                              width: Number(e.target.value)
+                            }))}
+                            className="mt-2"
+                            min="8"
+                            max="30"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="height" className="text-sm font-medium text-gray-700">
+                            Room Length (feet)
+                          </Label>
+                          <Input
+                            id="height"
+                            type="number"
+                            value={roomDimensions.height}
+                            onChange={(e) => setRoomDimensions(prev => ({
+                              ...prev,
+                              height: Number(e.target.value)
+                            }))}
+                            className="mt-2"
+                            min="8"
+                            max="30"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="ceiling" className="text-sm font-medium text-gray-700">
+                            Ceiling Height (feet)
+                          </Label>
+                          <Input
+                            id="ceiling"
+                            type="number"
+                            value={roomDimensions.ceilingHeight}
+                            onChange={(e) => setRoomDimensions(prev => ({
+                              ...prev,
+                              ceilingHeight: Number(e.target.value)
+                            }))}
+                            className="mt-2"
+                            min="7"
+                            max="12"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-gray-200">
+                    <CardContent className="p-6">
+                      <div>
+                        <Label htmlFor="tvSize" className="text-sm font-medium text-gray-700">
+                          TV Size (inches)
+                        </Label>
+                        <Select value={tvSize.toString()} onValueChange={(value) => setTvSize(Number(value))}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="43">43"</SelectItem>
+                            <SelectItem value="50">50"</SelectItem>
+                            <SelectItem value="55">55"</SelectItem>
+                            <SelectItem value="65">65"</SelectItem>
+                            <SelectItem value="75">75"</SelectItem>
+                            <SelectItem value="85">85"</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                          <h4 className="font-medium text-blue-900 mb-2">Quick Tips</h4>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• Measure wall-to-wall for accurate dimensions</li>
+                            <li>• Consider ceiling fans and light fixtures</li>
+                            <li>• Account for baseboards and crown molding</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="text-center">
+                  <Button onClick={() => setActiveTab('furniture')} className="bg-blue-600 hover:bg-blue-700">
+                    Next: Add Furniture
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="furniture" className="p-8">
+              <div className="space-y-8">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Furniture Placement</h3>
+                  <p className="text-gray-600">Add your existing furniture to optimize TV placement</p>
+                </div>
+                
+                <div className="flex flex-wrap gap-3 justify-center">
+                  <Button variant="outline" onClick={() => addFurniture('sofa')} className="flex items-center gap-2">
+                    <Sofa className="h-4 w-4" />
+                    Add Sofa
+                  </Button>
+                  <Button variant="outline" onClick={() => addFurniture('chair')} className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Add Chair
+                  </Button>
+                  <Button variant="outline" onClick={() => addFurniture('table')} className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Add Table
+                  </Button>
+                  <Button variant="outline" onClick={resetRoom} className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    Reset
+                  </Button>
+                </div>
+                
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <Card className="border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Room Layout</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <canvas 
+                        ref={canvasRef}
+                        width={500}
+                        height={400}
+                        className="border border-gray-200 rounded-lg w-full"
+                        style={{ maxWidth: '100%', height: 'auto' }}
+                      />
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Furniture List</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {furniture.map((item, index) => (
+                          <div 
+                            key={index}
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              selectedFurniture === index 
+                                ? 'border-blue-300 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => setSelectedFurniture(selectedFurniture === index ? null : index)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{item.label}</span>
+                              <Badge variant="secondary">
+                                {item.width}' × {item.height}'
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="text-center">
+                  <Button onClick={() => setActiveTab('visualize')} className="bg-blue-600 hover:bg-blue-700">
+                    Next: View Layout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="visualize" className="p-8">
+              <div className="space-y-8">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Room Visualization</h3>
+                  <p className="text-gray-600">See your room layout with TV placement suggestions</p>
+                </div>
+                
+                <Card className="border border-gray-200">
+                  <CardContent className="p-6">
+                    <canvas 
+                      ref={canvasRef}
+                      width={700}
+                      height={500}
+                      className="border border-gray-200 rounded-lg w-full mx-auto"
+                      style={{ maxWidth: '100%', height: 'auto' }}
+                    />
+                    
+                    <div className="mt-6 flex justify-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Best Placement</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Good Alternative</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Consider Carefully</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <div className="text-center">
+                  <Button onClick={() => setActiveTab('suggestions')} className="bg-blue-600 hover:bg-blue-700">
+                    Get Recommendations
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="suggestions" className="p-8">
+              <div className="space-y-8">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Professional Recommendations</h3>
+                  <p className="text-gray-600">Expert placement suggestions based on your room layout</p>
+                </div>
+                
+                {placementSuggestions.length > 0 ? (
+                  <div className="grid gap-6">
+                    {placementSuggestions.slice(0, 3).map((placement, index) => (
+                      <Card key={index} className={`border-2 ${
+                        index === 0 ? 'border-green-200 bg-green-50' : 
+                        index === 1 ? 'border-yellow-200 bg-yellow-50' : 
+                        'border-red-200 bg-red-50'
+                      }`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                                index === 0 ? 'bg-green-500' : 
+                                index === 1 ? 'bg-yellow-500' : 
+                                'bg-red-500'
+                              } text-white font-bold text-lg`}>
+                                {index + 1}
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-semibold text-gray-900">
+                                  {index === 0 ? 'Recommended' : index === 1 ? 'Alternative' : 'Possible'} Placement
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Star className="h-4 w-4 text-yellow-500" />
+                                  <span className="text-sm text-gray-600">Score: {placement.score}/100</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Badge className={
+                              index === 0 ? 'bg-green-100 text-green-800' : 
+                              index === 1 ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-red-100 text-red-800'
+                            }>
+                              {index === 0 ? 'Best' : index === 1 ? 'Good' : 'Fair'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                Benefits
+                              </h5>
+                              <ul className="space-y-2">
+                                {placement.benefits.map((benefit, i) => (
+                                  <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    {benefit}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            
+                            {placement.issues.length > 0 && (
+                              <div>
+                                <h5 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                  Considerations
+                                </h5>
+                                <ul className="space-y-2">
+                                  {placement.issues.map((issue, i) => (
+                                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                                      {issue}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Viewing Distance:</span> {placement.viewingDistance.toFixed(1)} feet
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="border border-gray-200">
+                    <CardContent className="p-8 text-center">
+                      <Monitor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">Add Furniture to Get Started</h4>
+                      <p className="text-gray-600">Add at least one sofa to receive placement recommendations</p>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h4 className="font-semibold text-blue-900 mb-3">Ready for Professional Installation?</h4>
+                  <p className="text-blue-700 mb-4">
+                    Get expert TV mounting services from Picture Perfect TV Install. Our certified technicians 
+                    ensure safe, secure, and aesthetically pleasing installations.
                   </p>
                   <Button className="bg-blue-600 hover:bg-blue-700">
-                    Schedule Professional Installation
+                    Schedule Installation
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
