@@ -46,6 +46,7 @@ import {
 } from './tooltip';
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
+import { BookingConfirmationModal } from "@/components/ui/booking-confirmation-modal";
 
 // Service-related interfaces 
 interface TVServiceOption {

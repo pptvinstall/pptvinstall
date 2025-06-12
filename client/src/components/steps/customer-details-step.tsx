@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { User, Home, Mail, Phone, Info, UserPlus, Lock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { FieldValidation, validationRules } from "@/components/ui/field-validation";
 
 interface CustomerDetailsStepProps {
   formData: any;
@@ -103,6 +104,10 @@ export const CustomerDetailsStep = React.memo(
                       className={`${validationErrors.email ? "border-destructive" : ""} pl-10 h-10`}
                     />
                   </div>
+                  <FieldValidation 
+                    value={formData.email || ""} 
+                    rules={[validationRules.email]} 
+                  />
                   {validationErrors.email && (
                     <p className="text-sm text-destructive">
                       {validationErrors.email[0]}
@@ -126,6 +131,10 @@ export const CustomerDetailsStep = React.memo(
                       className={`${validationErrors.phone ? "border-destructive" : ""} pl-10 h-10`}
                     />
                   </div>
+                  <FieldValidation 
+                    value={formData.phone || ""} 
+                    rules={[validationRules.phone]} 
+                  />
                   {validationErrors.phone && (
                     <p className="text-sm text-destructive">
                       {validationErrors.phone[0]}
