@@ -93,6 +93,7 @@ const EmailPreviews = lazy(() => import('@/pages/email-previews')); // Added ema
 const SendTestEmails = lazy(() => import('@/pages/send-test-emails')); // Added test emails page
 const ForgotPassword = lazy(() => import('@/pages/forgot-password')); // Added forgot password page
 const ResetPassword = lazy(() => import('@/pages/reset-password')); // Added reset password page
+const AdminBookings = lazy(() => import('@/pages/admin-bookings')); // Added admin bookings page
 
 
 
@@ -176,6 +177,9 @@ createRoot(document.getElementById('root')!).render(
                   </Route>
                   <Route path="/reset-password">
                     {() => <PageWrapper><ResetPassword /></PageWrapper>}
+                  </Route>
+                  <Route path="/admin/bookings">
+                    {() => <PageWrapper><AdminBookings /></PageWrapper>}
                   </Route>
 
                   <Route component={NotFound} />

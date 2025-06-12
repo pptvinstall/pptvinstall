@@ -183,6 +183,7 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   
   // Accessibility and guidance features
   const [guidanceMode, setGuidanceMode] = useState<'full' | 'minimal' | 'hidden'>('minimal');
@@ -1000,7 +1001,8 @@ export function IntegratedBookingWizard({
     };
 
     // Submit booking directly without nesting
-    onSubmit(bookingData);
+    // Show confirmation modal instead of submitting directly
+    setShowConfirmationModal(true);
   };
 
   // Animation variants
