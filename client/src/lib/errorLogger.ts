@@ -42,20 +42,15 @@ class ErrorLogger {
       this.errors = this.errors.slice(-this.maxStoredErrors);
     }
 
-    // Console logging with context (only in development/staging)
-    if (typeof window !== 'undefined') {
-      const { featureFlags } = await import('@/lib/environment');
-      if (featureFlags.enableDebugLogs) {
-        const consoleMethod = level === 'error' ? console.error : 
-                             level === 'warning' ? console.warn : console.info;
-        
-        consoleMethod(`[${level.toUpperCase()}] ${loggedError.message}`, {
-          context: loggedError.context,
-          stack: loggedError.stack,
-          timestamp: loggedError.timestamp
-        });
-      }
-    }
+    // Console logging with context
+    const consoleMethod = level === 'error' ? console.error : 
+                         level === 'warning' ? console.warn : console.info;
+    
+    consoleMethod(`[${level.toUpperCase()}] ${loggedError.message}`, {
+      context: loggedError.context,
+      stack: loggedError.stack,
+      timestamp: loggedError.timestamp
+    });
 
     // Send to Sentry if available
     if (this.hasSentry && level === 'error') {
