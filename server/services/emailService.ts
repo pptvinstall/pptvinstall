@@ -12,6 +12,72 @@ if (SENDGRID_API_KEY) {
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
 const FROM_EMAIL = process.env.EMAIL_FROM || 'PPTVInstall@gmail.com';
 
+// Email template interfaces
+interface BookingEmailData {
+  customerName: string;
+  customerEmail: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  serviceAddress: string;
+  services: string[];
+  totalAmount: number;
+  bookingId: string;
+  notes?: string;
+  isTestMode?: boolean;
+}
+
+/**
+ * Send booking confirmation emails to customer and admin
+ */
+export async function sendBookingConfirmationEmails(booking: Booking, isTestMode = false): Promise<boolean> {
+  if (!SENDGRID_API_KEY) {
+    console.warn('SendGrid API key not set. Emails not sent.');
+    return false;
+  }
+
+  try {
+    const emailData: BookingEmailData = {
+      customerName: booking.name,
+      customerEmail: booking.email,
+      appointmentDate: booking.preferredDate,
+      appointmentTime: booking.appointmentTime || '',
+      serviceAddress: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
+      services: generateServicesList(booking),
+      totalAmount: booking.pricingTotal || 0,
+      bookingId: booking.id?.toString() || 'Unknown',
+      notes: booking.notes,
+      isTestMode
+    };
+
+    // Send customer confirmation email (skip in test mode)
+    if (!isTestMode) {
+      const customerEmail = generateCustomerConfirmationEmail(emailData);
+      await sgMail.send({
+        to: booking.email,
+        from: FROM_EMAIL,
+        subject: customerEmail.subject,
+        html: customerEmail.html,
+        text: customerEmail.text
+      });
+    }
+
+    // Send admin notification (always send, even in test mode for monitoring)
+    const adminEmail = generateAdminNotificationEmail(emailData);
+    await sgMail.send({
+      to: ADMIN_EMAIL,
+      from: FROM_EMAIL,
+      subject: adminEmail.subject,
+      html: adminEmail.html,
+      text: adminEmail.text
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Failed to send booking confirmation emails:', error);
+    return false;
+  }
+}
+
 /**
  * Send a notification email to admin when a new booking is created
  */

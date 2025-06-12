@@ -47,6 +47,8 @@ import {
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
 import { BookingConfirmationModal } from "@/components/ui/booking-confirmation-modal";
+import { TestModeToggle } from "@/components/ui/test-mode-toggle";
+import { createCalendarEvent, downloadICSFile, generateGoogleCalendarURL } from "@/lib/calendar-export";
 
 // Service-related interfaces 
 interface TVServiceOption {
@@ -184,6 +186,7 @@ export function IntegratedBookingWizard({
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
   
   // Accessibility and guidance features
   const [guidanceMode, setGuidanceMode] = useState<'full' | 'minimal' | 'hidden'>('minimal');

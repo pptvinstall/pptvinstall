@@ -181,6 +181,10 @@ export default function AdminBookingsPage() {
       let aValue = a[sortField as keyof Booking];
       let bValue = b[sortField as keyof Booking];
       
+      // Handle undefined values
+      if (aValue === undefined) aValue = '';
+      if (bValue === undefined) bValue = '';
+      
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
       if (typeof bValue === 'string') bValue = bValue.toLowerCase();
       

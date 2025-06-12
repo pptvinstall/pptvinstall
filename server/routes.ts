@@ -1625,6 +1625,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer API Endpoints
   
   // Register a new customer
+  // Import email service
+  const { sendBookingConfirmationEmails } = await import('./services/emailService');
+
   app.post("/api/customers/register", async (req: Request, res: Response) => {
     try {
       const { name, email, phone, password, streetAddress, addressLine2, city, state, zipCode } = req.body;
