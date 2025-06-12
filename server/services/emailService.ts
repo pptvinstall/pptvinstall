@@ -355,7 +355,7 @@ function getBookingConfirmationEmailTemplate(booking: Booking): string {
           <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
             <h2 style="color: #ffffff; margin: 0 0 15px 0; font-size: 20px;">📞 Need to Make Changes?</h2>
             <p style="color: #dbeafe; margin: 0 0 20px 0; font-size: 16px;">Contact us if you need to reschedule or have questions</p>
-            <a href="tel:+16782632859" style="display: inline-block; background-color: #ffffff; color: #2563eb; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700; margin-right: 15px;">📞 Call Us</a>
+            <a href="tel:404-702-4748" style="display: inline-block; background-color: #ffffff; color: #2563eb; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700; margin-right: 15px;">📞 Call Us</a>
             <a href="mailto:${ADMIN_EMAIL}" style="display: inline-block; background-color: #1e40af; color: #ffffff; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700;">✉️ Email Us</a>
           </div>
 

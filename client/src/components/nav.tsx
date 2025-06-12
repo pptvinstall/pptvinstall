@@ -44,7 +44,7 @@ export default function Nav() {
   
   // Phone call handler
   const handlePhoneCall = useCallback(() => {
-    window.location.href = "tel:+16782632859";
+    window.location.href = "tel:404-702-4748";
     closeMenu();
   }, [closeMenu]);
 
@@ -268,7 +268,7 @@ export default function Nav() {
                   onClick={handlePhoneCall}
                 >
                   <PhoneCall className="mr-2 h-4 w-4" />
-                  Call (678) 263-2859
+                  Call 404-702-4748
                 </Button>
               </div>
             </div>

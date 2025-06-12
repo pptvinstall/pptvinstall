@@ -33,7 +33,7 @@ const Footer: React.FC = () => {
             <p className="text-muted-foreground">
               Atlanta, GA<br />
               Email: pptvinstall@gmail.com<br />
-              Phone: (678) 263-2859
+              Phone: 404-702-4748
             </p>
           </div>
         </div>
