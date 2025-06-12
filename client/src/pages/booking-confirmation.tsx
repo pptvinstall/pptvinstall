@@ -576,8 +576,8 @@ export default function BookingConfirmation() {
       const quantityMatch = floodlightSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      // Updated price to $89 per smart floodlight to match price-calculator.tsx
-      totalPrice += 89 * quantity;
+      // Use correct price from pricing data
+      totalPrice += 125 * quantity;
     }
 
     // Smart camera
@@ -589,8 +589,8 @@ export default function BookingConfirmation() {
       const quantityMatch = cameraSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      // Updated price to $89 per smart camera to match price-calculator.tsx
-      let cameraPrice = 89 * quantity;
+      // Use correct price from pricing data
+      let cameraPrice = 75 * quantity;
 
       // No additional height surcharge (included in base price)
       totalPrice += cameraPrice;
