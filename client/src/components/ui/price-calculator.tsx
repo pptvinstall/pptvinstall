@@ -5,6 +5,7 @@ import { Separator } from "./separator"
 import { Button } from "./button"
 import { Trash2, Plus, Tv, Camera, BellRing, LampFloor, PowerCircle } from "lucide-react"
 import { formatPrice, type ServiceOptions, pricing } from "@/lib/pricing"
+import { pricingData } from "@/data/pricing-data"
 import type { TVInstallation, SmartHomeInstallation } from "@/types/booking"
 
 interface PriceCalculatorProps {
@@ -36,10 +37,10 @@ export function PriceCalculator({
   
   // Calculate pricing based on selections
   React.useEffect(() => {
-    // Import pricing directly from pricing.ts
-    const cameraPrice = pricing.smartHome.securityCamera.price;   // $75 per camera
-    const doorbellPrice = pricing.smartHome.doorbell.price; // $85 per doorbell
-    const floodlightPrice = pricing.smartHome.floodlight.price; // $125 per floodlight
+    // Use centralized pricing data as single source of truth
+    const cameraPrice = pricingData.smartHome.securityCamera.price;   // $75 per camera
+    const doorbellPrice = pricingData.smartHome.doorbell.price; // $85 per doorbell
+    const floodlightPrice = pricingData.smartHome.floodlight.price; // $125 per floodlight
     
     // Calculate total based on services
     let totalPrice = 0;
@@ -66,16 +67,18 @@ export function PriceCalculator({
     onUpdate?.(totalPrice);
   }, [tvs, smartHome, distance, onUpdate]);
   
-  // Get prices for each device type directly from pricing.ts
+  // Get prices for each device type from centralized pricing data
   const getPriceForDeviceType = (type: string) => {
-    if (type === 'camera') {
-      return pricing.smartHome.securityCamera.price;
-    } else if (type === 'doorbell') {
-      return pricing.smartHome.doorbell.price;
-    } else if (type === 'floodlight') {
-      return pricing.smartHome.floodlight.price;
+    switch (type) {
+      case 'camera':
+        return pricingData.smartHome.securityCamera.price;
+      case 'doorbell':
+        return pricingData.smartHome.doorbell.price;
+      case 'floodlight':
+        return pricingData.smartHome.floodlight.price;
+      default:
+        return 0;
     }
-    return 0;
   };
   
   // Calculate total for display

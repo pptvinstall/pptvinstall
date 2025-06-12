@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { bookingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { errorLogger } from "@/lib/errorLogger";
 import { IntegratedBookingWizard } from "@/components/ui/integrated-booking-wizard";
 
 export default function BookingPage() {
@@ -47,6 +48,10 @@ export default function BookingPage() {
           console.error('Network error while fetching bookings');
         } else {
           console.error('Error fetching bookings:', error);
+          errorLogger.error(error instanceof Error ? error : 'Unknown booking fetch error', {
+            component: 'BookingPage',
+            action: 'fetchBookings'
+          });
         }
         return [];
       }
@@ -90,6 +95,13 @@ export default function BookingPage() {
 
         return responseData;
       } catch (error) {
+        // Log error for debugging
+        errorLogger.error(error instanceof Error ? error : 'Unknown booking mutation error', {
+          component: 'BookingPage',
+          action: 'createBooking',
+          metadata: { bookingData: data }
+        });
+
         // Handle specific error types
         if (error instanceof DOMException && error.name === 'AbortError') {
           throw new Error('Request timed out. Please try again.');
