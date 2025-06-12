@@ -3,7 +3,7 @@ import { type Booking, type ContactMessage, type InsertBooking, type InsertConta
   type SystemSettings, type InsertSystemSettings, type BookingArchive, type InsertBookingArchive,
   bookings, customers, businessHours, systemSettings, bookingArchives } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -232,51 +232,110 @@ export class FileSystemStorage implements IStorage {
   }
 
   async createBooking(booking: any): Promise<Booking> {
-    const bookings = loadBookings();
-    const newBooking = {
-      id: bookings.length + 1,
-      ...booking,
-      createdAt: new Date().toISOString(),
-    };
-    bookings.push(newBooking);
-    saveBookings(bookings);
-    return newBooking;
+    try {
+      const result = await db.insert(bookings).values({
+        name: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        streetAddress: booking.streetAddress,
+        addressLine2: booking.addressLine2,
+        city: booking.city,
+        state: booking.state,
+        zipCode: booking.zipCode,
+        notes: booking.notes,
+        serviceType: booking.serviceType,
+        preferredDate: booking.preferredDate,
+        appointmentTime: booking.appointmentTime,
+        status: booking.status || 'active',
+        pricingTotal: booking.pricingTotal,
+        pricingBreakdown: booking.pricingBreakdown,
+        tvSize: booking.tvSize,
+        mountType: booking.mountType,
+        wallMaterial: booking.wallMaterial,
+        specialInstructions: booking.specialInstructions,
+        consentToContact: booking.consentToContact || false,
+        cancellationReason: booking.cancellationReason
+      }).returning();
+      
+      if (result.length === 0) {
+        throw new Error('Failed to create booking');
+      }
+      
+      return this.mapDatabaseBookingToModel(result[0]);
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      throw error;
+    }
   }
 
   async getBooking(id: number): Promise<Booking | undefined> {
-    const bookings = loadBookings();
-    return bookings.find((booking: any) => Number(booking.id) === id || String(booking.id) === String(id));
+    try {
+      const result = await db.select().from(bookings).where(eq(bookings.id, id));
+      if (result.length === 0) {
+        return undefined;
+      }
+      return this.mapDatabaseBookingToModel(result[0]);
+    } catch (error) {
+      console.error('Error getting booking:', error);
+      return undefined;
+    }
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    return loadBookings();
+    try {
+      const result = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
+      return result.map(booking => this.mapDatabaseBookingToModel(booking));
+    } catch (error) {
+      console.error('Error getting all bookings:', error);
+      return [];
+    }
   }
 
   async getBookingsByDate(date: string): Promise<Booking[]> {
-    const bookings = loadBookings();
-    return bookings.filter((booking: any) => booking.preferredDate.startsWith(date));
+    try {
+      const result = await db.select().from(bookings);
+      const filtered = result.filter(booking => booking.preferredDate.startsWith(date));
+      return filtered.map(booking => this.mapDatabaseBookingToModel(booking));
+    } catch (error) {
+      console.error('Error getting bookings by date:', error);
+      return [];
+    }
   }
 
   async updateBooking(id: number, bookingData: Partial<Booking>): Promise<Booking> {
-    const bookings = loadBookings();
-    const index = bookings.findIndex((booking: any) => 
-      Number(booking.id) === id || String(booking.id) === String(id)
-    );
-    
-    if (index === -1) {
-      throw new Error('Booking not found');
+    try {
+      const updateData: any = {};
+      
+      // Map the booking data to database fields
+      if (bookingData.name !== undefined) updateData.name = bookingData.name;
+      if (bookingData.email !== undefined) updateData.email = bookingData.email;
+      if (bookingData.phone !== undefined) updateData.phone = bookingData.phone;
+      if (bookingData.streetAddress !== undefined) updateData.streetAddress = bookingData.streetAddress;
+      if (bookingData.addressLine2 !== undefined) updateData.addressLine2 = bookingData.addressLine2;
+      if (bookingData.city !== undefined) updateData.city = bookingData.city;
+      if (bookingData.state !== undefined) updateData.state = bookingData.state;
+      if (bookingData.zipCode !== undefined) updateData.zipCode = bookingData.zipCode;
+      if (bookingData.notes !== undefined) updateData.notes = bookingData.notes;
+      if (bookingData.serviceType !== undefined) updateData.serviceType = bookingData.serviceType;
+      if (bookingData.status !== undefined) updateData.status = bookingData.status;
+      if (bookingData.pricingTotal !== undefined) updateData.pricingTotal = bookingData.pricingTotal;
+      if (bookingData.pricingBreakdown !== undefined) updateData.pricingBreakdown = bookingData.pricingBreakdown;
+      // Note: cancellationReason is handled separately in booking cancellation logic
+      
+      const result = await db.update(bookings)
+        .set(updateData)
+        .where(eq(bookings.id, id))
+        .returning();
+      
+      if (result.length === 0) {
+        throw new Error('Booking not found');
+      }
+      
+      return this.mapDatabaseBookingToModel(result[0]);
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      throw error;
     }
-    
-    const updatedBooking = {
-      ...bookings[index],
-      ...bookingData,
-      id: bookings[index].id, // Ensure ID is not overwritten
-      createdAt: bookings[index].createdAt, // Ensure createdAt is not overwritten
-    };
-    
-    bookings[index] = updatedBooking;
-    saveBookings(bookings);
-    return updatedBooking;
   }
 
   async deleteBooking(id: number, archiveReason?: string, archiveNote?: string): Promise<void> {
