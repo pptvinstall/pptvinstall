@@ -1040,7 +1040,7 @@ export function IntegratedBookingWizard({
       
       {/* Test Mode Toggle - Only show for development */}
       {import.meta.env.DEV && (
-        <div className="mb-6">
+        <div className="mb-4 px-2 sm:px-0">
           <TestModeToggle 
             isTestMode={isTestMode}
             onToggle={setIsTestMode}
@@ -1049,25 +1049,26 @@ export function IntegratedBookingWizard({
       )}
 
       {/* Accessibility tools */}
-      <div className="flex justify-between mb-4">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setGuidanceMode(guidanceMode === 'hidden' ? 'full' : 'hidden')}
-                className="flex items-center"
-              >
-                <HelpCircle className="h-4 w-4 mr-1.5" />
-                Help
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Toggle help assistant</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 mb-4 px-2 sm:px-0">
+        <div className="flex flex-wrap gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setGuidanceMode(guidanceMode === 'hidden' ? 'full' : 'hidden')}
+                  className="flex items-center text-xs sm:text-sm"
+                >
+                  <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  Help
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle help assistant</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         
         <TooltipProvider>
           <Tooltip>
@@ -2137,27 +2138,28 @@ export function IntegratedBookingWizard({
               </Card>
 
               {/* Navigation Buttons */}
-              <div className="space-y-4">
-                <div className="bg-muted/30 p-3 rounded-md">
-                  <div className="flex items-center justify-between">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="bg-muted/30 p-2 sm:p-3 rounded-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
-                      <p className="text-sm font-medium">Selected Services:</p>
+                      <p className="text-xs sm:text-sm font-medium">Selected Services:</p>
                       <p className="text-xs text-muted-foreground">
                         {tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}, {smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">Estimated Total:</p>
-                      <p className="text-lg font-bold">{formatPrice(pricingTotal)}</p>
+                    <div className="text-left sm:text-right">
+                      <p className="text-xs sm:text-sm font-medium">Estimated Total:</p>
+                      <p className="text-base sm:text-lg font-bold">{formatPrice(pricingTotal)}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
                   <Button
                     variant="outline"
                     onClick={handlePrevClick}
                     disabled={currentStep === 0 || isSubmitting}
+                    className="w-full sm:w-auto"
                   >
                     Previous
                   </Button>
@@ -2165,6 +2167,7 @@ export function IntegratedBookingWizard({
                   <Button
                     onClick={handleNextClick}
                     disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0)}
+                    className="w-full sm:w-auto"
                   >
                     {isSubmitting
                       ? <><LoadingSpinner size="sm" className="mr-2" /> Processing</>

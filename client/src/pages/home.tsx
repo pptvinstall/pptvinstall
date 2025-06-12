@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { InstallationSlideshow } from "@/components/ui/installation-gallery";
 import { PWAInstallBanner } from "@/components/ui/pwa-install-banner";
 import { trackViewContent, trackLead } from "@/lib/fbPixel";
+import { MetaTags, META_CONFIGS } from "@/components/ui/meta-tags";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);

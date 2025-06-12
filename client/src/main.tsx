@@ -94,6 +94,7 @@ const SendTestEmails = lazy(() => import('@/pages/send-test-emails')); // Added 
 const ForgotPassword = lazy(() => import('@/pages/forgot-password')); // Added forgot password page
 const ResetPassword = lazy(() => import('@/pages/reset-password')); // Added reset password page
 const AdminBookings = lazy(() => import('@/pages/admin-bookings')); // Added admin bookings page
+const CustomerPortal = lazy(() => import('@/pages/customer-portal')); // Added customer portal page
 
 
 
@@ -180,6 +181,9 @@ createRoot(document.getElementById('root')!).render(
                   </Route>
                   <Route path="/admin/bookings">
                     {() => <PageWrapper><AdminBookings /></PageWrapper>}
+                  </Route>
+                  <Route path="/customer-portal/:email/:token">
+                    {() => <PageWrapper><CustomerPortal /></PageWrapper>}
                   </Route>
 
                   <Route component={NotFound} />

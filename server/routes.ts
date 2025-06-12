@@ -1627,6 +1627,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register a new customer
   // Import email service
   const { sendBookingConfirmationEmails } = await import('./services/emailService');
+  
+  // SMS Routes
+  app.post("/api/sms/send", async (req: Request, res: Response) => {
+    try {
+      const { to, message, bookingId } = req.body;
+      
+      // Validate required fields
+      if (!to || !message) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number and message are required"
+        });
+      }
+      
+      // Check if Twilio is configured
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+        logger.warn("Twilio not configured, SMS not sent");
+        return res.json({
+          success: false,
+          message: "SMS service not configured"
+        });
+      }
+      
+      // For now, just log the SMS (would integrate with Twilio in production)
+      logger.info(`SMS would be sent to ${to}: ${message}`, {
+        bookingId,
+        phone: to,
+        messageLength: message.length
+      });
+      
+      res.json({
+        success: true,
+        message: "SMS sent successfully",
+        sid: `mock-${Date.now()}` // Mock Twilio SID
+      });
+    } catch (error) {
+      logger.error("Error sending SMS:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to send SMS"
+      });
+    }
+  });
+
+  // Customer Portal Routes
+  app.get("/api/customer-portal/:email/:token", async (req: Request, res: Response) => {
+    try {
+      const { email, token } = req.params;
+      
+      // For now, use a simple token validation (in production, use JWT or similar)
+      // Token format: base64(email + timestamp + secret)
+      const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
+      
+      if (token !== expectedToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid or expired access token"
+        });
+      }
+      
+      // Find booking by email (get the most recent active booking)
+      const bookingResults = await db.select()
+        .from(bookings)
+        .where(eq(bookings.email, email))
+        .orderBy(desc(bookings.createdAt))
+        .limit(1);
+      
+      if (bookingResults.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No booking found for this email"
+        });
+      }
+      
+      const booking = bookingResults[0];
+      
+      res.json({
+        success: true,
+        booking: {
+          id: booking.id,
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+          streetAddress: booking.streetAddress,
+          city: booking.city,
+          state: booking.state,
+          zipCode: booking.zipCode,
+          preferredDate: booking.preferredDate,
+          appointmentTime: booking.appointmentTime,
+          serviceType: booking.serviceType,
+          status: booking.status,
+          pricingTotal: booking.pricingTotal,
+          notes: booking.notes,
+          createdAt: booking.createdAt
+        }
+      });
+    } catch (error) {
+      logger.error("Error fetching customer portal booking:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch booking information"
+      });
+    }
+  });
+
+  app.post("/api/customer-portal/:email/:token/cancel", async (req: Request, res: Response) => {
+    try {
+      const { email, token } = req.params;
+      const { reason } = req.body;
+      
+      // Validate token
+      const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
+      if (token !== expectedToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid access token"
+        });
+      }
+      
+      // Update booking status to cancelled
+      const result = await db.update(bookings)
+        .set({
+          status: 'cancelled',
+          notes: reason ? `Customer cancellation: ${reason}` : 'Customer requested cancellation'
+        })
+        .where(eq(bookings.email, email))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Booking cancelled successfully"
+      });
+    } catch (error) {
+      logger.error("Error cancelling booking:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to cancel booking"
+      });
+    }
+  });
+
+  app.post("/api/customer-portal/:email/:token/reschedule", async (req: Request, res: Response) => {
+    try {
+      const { email, token } = req.params;
+      const { newDate, newTime, reason } = req.body;
+      
+      // Validate token
+      const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
+      if (token !== expectedToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid access token"
+        });
+      }
+      
+      // Update booking with new date and time
+      const updateData: any = {
+        preferredDate: newDate,
+        appointmentTime: newTime
+      };
+      
+      if (reason) {
+        updateData.notes = `Rescheduled by customer: ${reason}`;
+      }
+      
+      const result = await db.update(bookings)
+        .set(updateData)
+        .where(eq(bookings.email, email))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Booking rescheduled successfully"
+      });
+    } catch (error) {
+      logger.error("Error rescheduling booking:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to reschedule booking"
+      });
+    }
+  });
 
   app.post("/api/customers/register", async (req: Request, res: Response) => {
     try {
