@@ -1,2 +1,5 @@
-// This file will be deleted as it's deprecated.
-// All routing logic has been moved to main.tsx
+// Legacy App component - kept for compatibility
+// Main routing is handled in main.tsx
+export default function App() {
+  return null;
+}

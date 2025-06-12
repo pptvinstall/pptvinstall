@@ -560,8 +560,8 @@ export default function BookingConfirmation() {
       const quantityMatch = doorbellSection.match(/\(×(\d+)\)/);
       const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-      // Updated price to $89 per smart doorbell to match price-calculator.tsx
-      let doorbellPrice = 89 * quantity;
+      // Use correct price from pricing data
+      let doorbellPrice = 85 * quantity;
 
       // No additional charge for brick installation (included in base price)
       totalPrice += doorbellPrice;
@@ -595,6 +595,8 @@ export default function BookingConfirmation() {
       // No additional height surcharge (included in base price)
       totalPrice += cameraPrice;
     }
+
+
 
     return formatPrice(totalPrice);
   };
