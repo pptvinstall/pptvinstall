@@ -61,7 +61,7 @@ export default function Nav() {
         { href: '/services#commercial', name: 'Commercial' },
       ]
     },
-    { href: '/tv-placement-tool', name: 'TV Placement Tool', icon: Layout, badge: 'New' },
+
     { href: '/booking', name: 'Book Now', icon: Calendar, badge: 'Best Value' },
     { href: '/contact', name: 'Contact', icon: MessagesSquare },
     { href: '/faq', name: 'FAQ', icon: HelpCircle },

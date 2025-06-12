@@ -30,7 +30,7 @@ export interface SiteConfig {
 export const siteConfig: SiteConfig = {
   businessInfo: {
     name: "Picture Perfect TV Install",
-    phone: "(404) 334-9844",
+    phone: "404-702-4748",
     email: "PPTVInstall@gmail.com",
     serviceArea: "Metro Atlanta",
     hours: {
