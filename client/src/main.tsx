@@ -8,6 +8,7 @@ import Nav from '@/components/nav';
 import Footer from '@/components/footer';
 import { PromotionBannerGroup } from '@/components/ui/promotion-banner';
 import { PWAInstallBanner } from '@/components/ui/pwa-install-banner';
+import { EnvironmentIndicator } from '@/components/ui/environment-indicator';
 import { toast } from '@/hooks/use-toast';
 import ErrorBoundary from './components/error-boundary';
 
@@ -121,6 +122,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary> {/* Added Error Boundary */}
       <QueryClientProvider client={queryClient}>
         <div className="min-h-screen flex flex-col relative"> {/* Added relative positioning */}
+          <EnvironmentIndicator />
           <PromotionBannerGroup />
           <Nav />
           <PWAInstallBanner />
