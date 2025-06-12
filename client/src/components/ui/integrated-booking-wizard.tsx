@@ -1038,6 +1038,16 @@ export function IntegratedBookingWizard({
         </div>
       )}
       
+      {/* Test Mode Toggle - Only show for development */}
+      {import.meta.env.DEV && (
+        <div className="mb-6">
+          <TestModeToggle 
+            isTestMode={isTestMode}
+            onToggle={setIsTestMode}
+          />
+        </div>
+      )}
+
       {/* Accessibility tools */}
       <div className="flex justify-between mb-4">
         <TooltipProvider>
@@ -2168,6 +2178,79 @@ export function IntegratedBookingWizard({
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Booking Confirmation Modal */}
+      <BookingConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => setShowConfirmationModal(false)}
+        bookingData={{
+          name: formData.name || "",
+          email: formData.email || "",
+          phone: formData.phone || "",
+          streetAddress: formData.streetAddress || "",
+          addressLine2: formData.addressLine2,
+          city: formData.city || "",
+          state: formData.state || "",
+          zipCode: formData.zipCode || "",
+          preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : "",
+          appointmentTime: selectedTime || "",
+          pricingTotal: pricingTotal,
+          tvInstallations: tvServices.map(tv => ({
+            size: tv.size === 'large' ? '56"+' : '32"-55"',
+            mountType: tv.mountType,
+            masonryWall: tv.masonryWall,
+            highRise: tv.highRise,
+            outletNeeded: tv.outletNeeded
+          })),
+          smartHomeInstallations: smartHomeServices.map(device => ({
+            deviceType: device.deviceType,
+            location: device.location
+          }))
+        }}
+        onConfirm={async () => {
+          try {
+            // Create the booking data for submission
+            const bookingData = {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              streetAddress: formData.streetAddress,
+              addressLine2: formData.addressLine2,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+              appointmentTime: selectedTime,
+              notes: formData.notes,
+              consentToContact: formData.consentToContact,
+              serviceType: 'Mixed Services',
+              pricingTotal: pricingTotal,
+              tvInstallations: tvServices,
+              smartHomeInstallations: smartHomeServices,
+              isTestMode: isTestMode
+            };
+
+            // Submit the booking
+            const result = await onSubmit(bookingData);
+            
+            // Generate and download calendar file after successful booking
+            if (result && selectedDate && selectedTime) {
+              const calendarEvent = createCalendarEvent({
+                ...bookingData,
+                customerName: bookingData.name,
+                customerEmail: bookingData.email
+              });
+              downloadICSFile(calendarEvent, `TV_Installation_${bookingData.name.replace(/\s+/g, '_')}`);
+            }
+            
+            setShowConfirmationModal(false);
+          } catch (error) {
+            console.error('Error submitting booking:', error);
+            setShowConfirmationModal(false);
+          }
+        }}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

@@ -42,7 +42,7 @@ export async function sendBookingConfirmationEmails(booking: Booking, isTestMode
       appointmentDate: booking.preferredDate,
       appointmentTime: booking.appointmentTime || '',
       serviceAddress: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
-      services: generateServicesList(booking),
+      services: generateServicesListFromBooking(booking),
       totalAmount: Number(booking.pricingTotal || 0),
       bookingId: booking.id?.toString() || 'Unknown',
       notes: booking.notes,

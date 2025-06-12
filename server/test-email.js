@@ -1,5 +1,5 @@
 // Quick test to verify SendGrid integration
-const { MailService } = require('@sendgrid/mail');
+import { MailService } from '@sendgrid/mail';
 
 const sgMail = new MailService();
 const apiKey = process.env.SENDGRID_API_KEY;
