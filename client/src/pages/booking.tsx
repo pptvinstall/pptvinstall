@@ -51,8 +51,9 @@ export default function BookingPage() {
         return [];
       }
     },
-    retry: 2,
-    retryDelay: 1000
+    retry: 1,
+    retryDelay: 2000,
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   const mutation = useMutation({

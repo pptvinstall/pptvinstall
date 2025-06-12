@@ -320,7 +320,7 @@ export class FileSystemStorage implements IStorage {
       if (bookingData.status !== undefined) updateData.status = bookingData.status;
       if (bookingData.pricingTotal !== undefined) updateData.pricingTotal = bookingData.pricingTotal;
       if (bookingData.pricingBreakdown !== undefined) updateData.pricingBreakdown = bookingData.pricingBreakdown;
-      // Note: cancellationReason is handled separately in booking cancellation logic
+      if ((bookingData as any).cancellationReason !== undefined) updateData.cancellationReason = (bookingData as any).cancellationReason;
       
       const result = await db.update(bookings)
         .set(updateData)
