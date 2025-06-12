@@ -43,7 +43,7 @@ export async function sendBookingConfirmationEmails(booking: Booking, isTestMode
       appointmentTime: booking.appointmentTime || '',
       serviceAddress: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
       services: generateServicesList(booking),
-      totalAmount: booking.pricingTotal || 0,
+      totalAmount: Number(booking.pricingTotal || 0),
       bookingId: booking.id?.toString() || 'Unknown',
       notes: booking.notes,
       isTestMode
@@ -51,7 +51,7 @@ export async function sendBookingConfirmationEmails(booking: Booking, isTestMode
 
     // Send customer confirmation email (skip in test mode)
     if (!isTestMode) {
-      const customerEmail = generateCustomerConfirmationEmail(emailData);
+      const customerEmail = generateCustomerConfirmationEmailTemplate(emailData);
       await sgMail.send({
         to: booking.email,
         from: FROM_EMAIL,
@@ -62,7 +62,7 @@ export async function sendBookingConfirmationEmails(booking: Booking, isTestMode
     }
 
     // Send admin notification (always send, even in test mode for monitoring)
-    const adminEmail = generateAdminNotificationEmail(emailData);
+    const adminEmail = generateAdminNotificationEmailTemplate(emailData);
     await sgMail.send({
       to: ADMIN_EMAIL,
       from: FROM_EMAIL,
