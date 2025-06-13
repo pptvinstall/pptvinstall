@@ -1273,11 +1273,52 @@ export function IntegratedBookingWizard({
                       </p>
                     </div>
 
-                    <Tabs defaultValue="tv" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="tv">TV Installation</TabsTrigger>
-                        <TabsTrigger value="smarthome">Smart Home</TabsTrigger>
-                      </TabsList>
+                    <ServiceSelectionGrid
+                      onServiceSelect={handleServiceSelect}
+                      tvInstallations={[
+                        {
+                          id: "standard-tv-install",
+                          name: "Standard TV Installation",
+                          description: "Professional TV mounting on standard wall",
+                          type: "standard",
+                          basePrice: 100,
+                          isMostPopular: true
+                        },
+                        {
+                          id: "fireplace-tv-install", 
+                          name: "Fireplace TV Installation",
+                          description: "TV mounting over fireplace with enhanced safety",
+                          type: "fireplace",
+                          basePrice: 200,
+                          isPromoted: true
+                        }
+                      ]}
+                      smartHomeInstallations={[
+                        {
+                          id: "security-camera",
+                          name: "Security Camera Installation", 
+                          description: "Professional camera setup and configuration",
+                          type: "camera",
+                          basePrice: 75
+                        },
+                        {
+                          id: "smart-doorbell",
+                          name: "Smart Doorbell Installation",
+                          description: "Video doorbell installation and setup", 
+                          type: "doorbell",
+                          basePrice: 85
+                        },
+                        {
+                          id: "smart-floodlight",
+                          name: "Smart Floodlight Installation",
+                          description: "Outdoor floodlight with smart controls",
+                          type: "floodlight", 
+                          basePrice: 125
+                        }
+                      ]}
+                      tvDeinstallations={[]}
+                      isLoading={false}
+                    />
 
                       {/* TV Installation */}
                       <TabsContent value="tv" className="space-y-4 mt-4">
@@ -1616,10 +1657,6 @@ export function IntegratedBookingWizard({
                           >
                             <Plus className="h-4 w-4 mr-2" /> Add Device
                           </Button>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-
                     {/* Service Selection Summary */}
                     <div className="mt-6 space-y-3">
                       <Separator />
@@ -1627,13 +1664,19 @@ export function IntegratedBookingWizard({
                         <h4 className="text-sm font-medium">Total Selected:</h4>
                         <div>
                           <Badge variant="outline" className="mr-2">{tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}</Badge>
-                          <Badge variant="outline">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline" className="mr-2">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline">{deinstallationServices.length} Removal{deinstallationServices.length !== 1 ? 's' : ''}</Badge>
                         </div>
                       </div>
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                         <span className="font-medium">Estimated Total:</span>
                         <span className="text-xl font-bold">{formatPrice(pricingTotal)}</span>
                       </div>
+                      {deinstallationServices.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Includes {deinstallationServices.length} TV de-installation{deinstallationServices.length > 1 ? 's' : ''}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
