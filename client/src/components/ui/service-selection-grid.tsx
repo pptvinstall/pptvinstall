@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
@@ -6,21 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Icons } from "../icons";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "./scroll-area";
-import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { motion } from "framer-motion";
-import { pricing } from "@/lib/pricing";
 import { ServiceCardSkeleton } from "./skeleton";
-
-interface TVDeinstallation {
-  id: string;
-  name: string;
-  description: string;
-  type: "deinstallation";
-  basePrice: number;
-  tvSize?: "small" | "large";
-  wallType?: "standard" | "brick" | "highrise";
-  cableCleanup?: boolean;
-}
 
 interface Service {
   type: "tv" | "smartHome" | "deinstallation";
@@ -40,6 +26,63 @@ interface ServiceGridProps {
   isLoading?: boolean;
 }
 
+// Service Card Component
+function ServiceCard({
+  title,
+  description,
+  icon,
+  price,
+  isMostPopular = false,
+  onClick,
+  className
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  price: number;
+  isMostPopular?: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <Card 
+      className={cn(
+        "relative cursor-pointer transition-all hover:shadow-lg border-2 hover:border-blue-300",
+        isMostPopular && "border-blue-500 bg-blue-50",
+        className
+      )}
+      onClick={onClick}
+    >
+      {isMostPopular && (
+        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+          <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+            Most Popular
+          </span>
+        </div>
+      )}
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            {icon}
+          </div>
+          <div className="flex-1">
+            <CardTitle className="text-base">{title}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex justify-between items-center">
+          <span className="text-2xl font-bold text-blue-600">${price}</span>
+          <Button size="sm" className="ml-2">
+            Add Service
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ServiceSelectionGrid({
   onServiceAdd,
   services,
@@ -54,307 +97,200 @@ export function ServiceSelectionGrid({
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-      },
-    },
+        staggerChildren: 0.1
+      }
+    }
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-    },
-  };
-  
-  // Function to get correct price from pricing.ts
-  const getPriceForSmartHome = (type: string): number => {
-    switch (type) {
-      case "camera":
-        return pricing.smartHome.securityCamera.price; // $75
-      case "doorbell":
-        return pricing.smartHome.doorbell.price; // $85
-      case "floodlight":
-        return pricing.smartHome.floodlight.price; // $125
-      default:
-        return 0;
-    }
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-center sm:text-left">
-          Select Your Services
-        </CardTitle>
+        <CardTitle className="text-center">Select Your Services</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs
-          defaultValue="tv"
-          value={activeTab}
+        <Tabs 
+          value={activeTab} 
           onValueChange={(value) => setActiveTab(value as "tv" | "smartHome" | "deinstallation")}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="tv" className="text-sm">
-              <Icons.tv className="mr-2 h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="tv" className="flex items-center gap-2">
+              <Icons.tv className="h-4 w-4" />
               TV Install
             </TabsTrigger>
-            <TabsTrigger value="deinstallation" className="text-sm">
-              <Icons.tvUnmount className="mr-2 h-4 w-4" />
+            <TabsTrigger value="deinstallation" className="flex items-center gap-2">
+              <Icons.tvUnmount className="h-4 w-4" />
               TV Removal
             </TabsTrigger>
-            <TabsTrigger value="smartHome" className="text-sm">
-              <Icons.smartHome className="mr-2 h-4 w-4" />
+            <TabsTrigger value="smartHome" className="flex items-center gap-2">
+              <Icons.home className="h-4 w-4" />
               Smart Home
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="tv" className="mt-0 relative">
-            <div className="scroll-container">
-              <ScrollArea className="h-[280px] pr-2 scroll-container">
-                {isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <ServiceCardSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : (
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
-                  >
-                    <motion.div variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title="TV Installation"
-                        description="Professional TV mounting and setup with wire concealment"
-                        icon={<Icons.tv className="h-6 w-6" />}
-                        price={199}
-                          isMostPopular={service.isMostPopular}
-                          isPromoted={service.isPromoted}
-                          onClick={() => onServiceAdd("tv", {
-                            type: "tv",
-                            size: "small",
-                            location: "standard",
-                            mountType: "fixed",
-                            masonryWall: false,
-                            highRise: false,
-                            outletNeeded: false
-                          })}
-                        />
-                    </motion.div>
+          {/* TV Installation Tab */}
+          <TabsContent value="tv" className="mt-4">
+            <ScrollArea className="h-[300px] pr-2">
+              {isLoading ? (
+                <div className="grid grid-cols-1 gap-4">
+                  <ServiceCardSkeleton />
+                </div>
+              ) : (
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-4"
+                >
+                  <motion.div variants={itemVariants}>
+                    <ServiceCard
+                      title="TV Installation"
+                      description="Professional TV mounting and setup with wire concealment"
+                      icon={<Icons.tv className="h-6 w-6" />}
+                      price={199}
+                      isMostPopular={true}
+                      onClick={() => onServiceAdd("tv", {
+                        type: "tv",
+                        size: "small",
+                        location: "standard",
+                        mountType: "fixed",
+                        masonryWall: false,
+                        highRise: false,
+                        outletNeeded: false
+                      })}
+                    />
                   </motion.div>
-                )}
-              </ScrollArea>
-            </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-800 mb-2">What's Included:</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Professional wall mounting</li>
+                      <li>• Wire concealment and cable management</li>
+                      <li>• TV setup and testing</li>
+                      <li>• Bracket and hardware included</li>
+                    </ul>
+                  </div>
+                </motion.div>
+              )}
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="deinstallation" className="mt-0 relative">
-            <div className="scroll-container">
-              <ScrollArea className="h-[280px] pr-2 scroll-container">
-                {isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                      <ServiceCardSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : (
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="service-selection-grid grid grid-cols-1 gap-4 mx-auto w-full"
-                  >
-                    <motion.div variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title="TV De-Installation"
-                        description="Safe removal of mounted TV and bracket, includes cable cleanup. Can be booked by itself or with a new install."
-                        icon={<Icons.tvUnmount className="h-6 w-6" />}
-                        price={50}
-                        onClick={() => onServiceAdd("deinstallation", {
-                          id: "tv-deinstall-service",
-                          name: "TV De-Installation",
-                          description: "Professional TV and bracket removal with cable cleanup",
-                          type: "deinstallation",
-                          basePrice: 50
-                        })}
-                      />
-                    </motion.div>
-                    
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-800 mb-2">What's Included:</h4>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Safe TV removal from wall mount</li>
-                        <li>• Complete bracket and hardware removal</li>
-                        <li>• Cable management and cleanup</li>
-                        <li>• Wall restoration (filling mounting holes)</li>
-                        <li>• Disposal of old mounting hardware</li>
-                      </ul>
-                      <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-600">
-                        <strong>Flat Rate:</strong> $50 per TV regardless of size or wall type
-                      </div>
+          {/* TV De-Installation Tab */}
+          <TabsContent value="deinstallation" className="mt-4">
+            <ScrollArea className="h-[300px] pr-2">
+              {isLoading ? (
+                <div className="grid grid-cols-1 gap-4">
+                  <ServiceCardSkeleton />
+                </div>
+              ) : (
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-4"
+                >
+                  <motion.div variants={itemVariants}>
+                    <ServiceCard
+                      title="TV De-Installation"
+                      description="Safe removal of mounted TV and bracket, includes cable cleanup"
+                      icon={<Icons.tvUnmount className="h-6 w-6" />}
+                      price={50}
+                      onClick={() => onServiceAdd("deinstallation", {
+                        type: "deinstallation",
+                        tvSize: "small",
+                        wallType: "standard",
+                        cableCleanup: true,
+                        basePrice: 50
+                      })}
+                    />
+                  </motion.div>
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-800 mb-2">What's Included:</h4>
+                    <ul className="text-sm text-green-700 space-y-1">
+                      <li>• Safe TV removal from wall mount</li>
+                      <li>• Complete bracket and hardware removal</li>
+                      <li>• Cable management and cleanup</li>
+                      <li>• Wall restoration (filling mounting holes)</li>
+                      <li>• Disposal of old mounting hardware</li>
+                    </ul>
+                    <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-600">
+                      <strong>Flat Rate:</strong> $50 per TV regardless of size or wall type
                     </div>
-                  </motion.div>
-                )}
-              </ScrollArea>
-            </div>
+                  </div>
+                </motion.div>
+              )}
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="smartHome" className="mt-0 relative">
-            <div className="scroll-container">
-              <ScrollArea className="h-[280px] pr-2 scroll-container">
-                {isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <ServiceCardSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : (
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
-                  >
-                    <motion.div variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title="Smart Doorbell"
-                        description="Professional installation of smart doorbell with wiring setup"
-                        icon={<Icons.doorbell className="h-6 w-6" />}
-                            price={correctPrice}
-                            onClick={() => {
-                              // Create an updated service with the correct price
-                              const updatedService = {
-                                ...service,
-                                basePrice: correctPrice
-                              };
-                              onServiceSelect("smartHome", updatedService);
-                            }}
-                      />
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title="Security Camera"
-                        description="Professional security camera installation and setup"
-                        icon={<Icons.camera className="h-6 w-6" />}
-                        price={199}
-                        onClick={() => onServiceAdd("smartHome", {
-                          type: "camera",
-                          count: 1,
-                          hasExistingWiring: false
-                        })}
-                      />
-                    </motion.div>
-                    
-                    <motion.div variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title="Smart Floodlight"
-                        description="Smart floodlight installation with motion detection"
-                        icon={<Icons.lightbulb className="h-6 w-6" />}
-                        price={249}
-                        onClick={() => onServiceAdd("smartHome", {
-                          type: "floodlight",
-                          count: 1,
-                          hasExistingWiring: false
-                        })}
-                      />
-                    </motion.div>
+          {/* Smart Home Tab */}
+          <TabsContent value="smartHome" className="mt-4">
+            <ScrollArea className="h-[300px] pr-2">
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <ServiceCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                >
+                  <motion.div variants={itemVariants}>
+                    <ServiceCard
+                      title="Smart Doorbell"
+                      description="Professional installation of smart doorbell with wiring setup"
+                      icon={<Icons.doorbell className="h-6 w-6" />}
+                      price={149}
+                      onClick={() => onServiceAdd("smartHome", {
+                        type: "doorbell",
+                        count: 1,
+                        hasExistingWiring: false
+                      })}
+                    />
                   </motion.div>
-                )}
-              </ScrollArea>
-            </div>
+                  
+                  <motion.div variants={itemVariants}>
+                    <ServiceCard
+                      title="Security Camera"
+                      description="Professional security camera installation and setup"
+                      icon={<Icons.camera className="h-6 w-6" />}
+                      price={199}
+                      onClick={() => onServiceAdd("smartHome", {
+                        type: "camera",
+                        count: 1,
+                        hasExistingWiring: false
+                      })}
+                    />
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants} className="sm:col-span-2">
+                    <ServiceCard
+                      title="Smart Floodlight"
+                      description="Smart floodlight installation with motion detection"
+                      icon={<Icons.lightBulb className="h-6 w-6" />}
+                      price={249}
+                      onClick={() => onServiceAdd("smartHome", {
+                        type: "floodlight",
+                        count: 1,
+                        hasExistingWiring: false
+                      })}
+                    />
+                  </motion.div>
+                </motion.div>
+              )}
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
-  );
-}
-
-function TVServiceIcon({ type }: { type: string }) {
-  switch (type) {
-    case "mount":
-      return <Icons.tvMount className="h-6 w-6" />;
-    case "unmount":
-      return <Icons.tvUnmount className="h-6 w-6" />;
-    case "deinstallation":
-      return <Icons.tvUnmount className="h-6 w-6" />;
-    case "remount":
-      return <Icons.tvRemount className="h-6 w-6" />;
-    case "outlet":
-      return <Icons.outlet className="h-6 w-6" />;
-    default:
-      return <Icons.tv className="h-6 w-6" />;
-  }
-}
-
-function SmartHomeServiceIcon({ type }: { type: string }) {
-  switch (type) {
-    case "camera":
-      return <Icons.camera className="h-6 w-6" />;
-    case "doorbell":
-      return <Icons.doorbell className="h-6 w-6" />;
-    case "lighting":
-      return <Icons.lighting className="h-6 w-6" />;
-    default:
-      return <Icons.smartHome className="h-6 w-6" />;
-  }
-}
-
-interface ServiceCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  price: number;
-  onClick: () => void;
-  isMostPopular?: boolean;
-  isPromoted?: boolean;
-}
-
-function ServiceCard({
-  title,
-  description,
-  icon,
-  price,
-  onClick,
-  isMostPopular,
-  isPromoted
-}: ServiceCardProps) {
-  return (
-    <button
-      className="w-full text-left focus:outline-none"
-      onClick={onClick}
-    >
-      <Card className={`w-full h-full transition-all hover:bg-primary/5 hover:border-primary/30 hover:shadow-md relative ${isMostPopular ? 'border-2 border-blue-500 shadow-md' : isPromoted ? 'border-blue-300' : ''}`}>
-        {isMostPopular && (
-          <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 font-medium z-10">
-            Most Popular
-          </div>
-        )}
-        {isPromoted && !isMostPopular && (
-          <div className="absolute -top-2 -right-2 bg-blue-400 text-white text-xs rounded-full px-2 py-1 font-medium z-10">
-            Featured
-          </div>
-        )}
-        <CardContent className="p-4 flex flex-col h-full">
-          <div className="flex items-start">
-            <div className={`mr-3 mt-1 p-1.5 rounded-full ${isMostPopular ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-              {icon}
-            </div>
-            <div className="flex-1">
-              <h3 className={`font-medium ${isMostPopular ? 'text-blue-700' : ''}`}>{title}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                {description}
-              </p>
-            </div>
-          </div>
-          <div className="mt-auto pt-2 text-right">
-            <span className={`font-semibold ${isMostPopular ? 'text-blue-600 text-lg' : 'text-primary'}`}>${price}</span>
-          </div>
-        </CardContent>
-      </Card>
-    </button>
   );
 }
