@@ -1274,7 +1274,28 @@ export function IntegratedBookingWizard({
                     </div>
 
                     <ServiceSelectionGrid
-                      onServiceSelect={handleServiceSelect}
+                      onServiceSelect={(type: "tv" | "smartHome" | "deinstallation", service: any) => {
+                        console.log("Service selected:", type, service);
+                        // Handle service selection based on type
+                        if (type === "tv") {
+                          // Add TV installation logic here
+                          console.log("Adding TV installation service");
+                        } else if (type === "smartHome") {
+                          // Add smart home service logic here  
+                          console.log("Adding smart home service");
+                        } else if (type === "deinstallation") {
+                          // Add deinstallation service logic here
+                          console.log("Adding TV deinstallation service");
+                          const newDeinstallation: TVDeinstallationOption = {
+                            id: `deinstall-${Date.now()}`,
+                            tvSize: 'small',
+                            wallType: 'standard',
+                            cableCleanup: false,
+                            basePrice: 50
+                          };
+                          setDeinstallationServices(prev => [...prev, newDeinstallation]);
+                        }
+                      }}
                       tvInstallations={[
                         {
                           id: "standard-tv-install",
@@ -1316,22 +1337,18 @@ export function IntegratedBookingWizard({
                           basePrice: 125
                         }
                       ]}
-                      tvDeinstallations={[]}
+                      tvDeinstallations={[
+                        {
+                          id: "tv-removal-flat",
+                          name: "TV De-Installation",
+                          description: "Safe removal of mounted TV from wall",
+                          type: "deinstallation",
+                          basePrice: 50,
+                          isMostPopular: true
+                        }
+                      ]}
                       isLoading={false}
                     />
-
-                      {/* TV Installation */}
-                      <TabsContent value="tv" className="space-y-4 mt-4">
-                        {/* Base Price Notification */}
-                        <div className="bg-primary/10 p-3 rounded-md mb-3">
-                          <p className="text-sm font-medium flex items-center">
-                            <Info className="h-4 w-4 mr-2" />
-                            Base Installation Price: $100 per TV
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Additional charges apply based on your selections below.
-                          </p>
-                        </div>
 
                         {/* Current TVs */}
                         {tvServices.length > 0 && (
