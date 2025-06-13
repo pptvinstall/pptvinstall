@@ -1,104 +1,27 @@
 [
   {
-    "name": "Test Customer Debug",
+    "name": "Unified Email Test",
     "email": "jwoodceo@gmail.com",
     "phone": "4045550199",
-    "streetAddress": "123 Debug Street",
+    "streetAddress": "789 Unified Confirmation Blvd",
     "city": "Atlanta",
     "state": "GA",
-    "zipCode": "30309",
-    "notes": "Email debugging test",
+    "zipCode": "30310",
+    "notes": "Testing unified confirmation email system",
     "serviceType": "TV Installation",
-    "preferredDate": "2025-06-14",
-    "appointmentTime": "3:00 PM",
+    "preferredDate": "2025-06-15",
+    "appointmentTime": "11:00 AM",
     "status": "active",
-    "pricingTotal": 150,
-    "pricingBreakdown": [
-      {
-        "type": "tv",
-        "size": "small",
-        "location": "standard",
-        "mountType": "fixed"
-      }
-    ],
-    "id": "117",
-    "createdAt": "2025-06-13T14:27:43.593Z"
-  },
-  {
-    "name": "Final Test Customer",
-    "email": "jwoodceo@gmail.com",
-    "phone": "4045550200",
-    "streetAddress": "456 Final Test Ave",
-    "city": "Atlanta",
-    "state": "GA",
-    "zipCode": "30309",
-    "notes": "Final email system verification test",
-    "serviceType": "TV Installation",
-    "preferredDate": "2025-06-14",
-    "appointmentTime": "4:30 PM",
-    "status": "active",
-    "pricingTotal": 175,
-    "pricingBreakdown": [
-      {
-        "type": "tv",
-        "size": "small",
-        "location": "standard",
-        "mountType": "fixed"
-      }
-    ],
-    "id": "118",
-    "createdAt": "2025-06-13T14:30:24.789Z"
-  },
-  {
-    "name": "Jwood",
-    "email": "jwoodceo@gmail.com",
-    "phone": "4047024748",
-    "streetAddress": "2627 main st",
-    "city": "Decatur ",
-    "state": "GA",
-    "zipCode": "38388",
-    "serviceType": "TV Installation",
-    "preferredDate": "2025-06-13",
-    "appointmentTime": "6:30 PM",
-    "status": "active",
-    "pricingTotal": 100,
-    "pricingBreakdown": [
-      {
-        "type": "tv",
-        "size": "small",
-        "location": "standard",
-        "mountType": "customer",
-        "masonryWall": false,
-        "highRise": false,
-        "outletRelocation": false
-      }
-    ],
-    "id": "119",
-    "createdAt": "2025-06-13T14:36:52.129Z"
-  },
-  {
-    "name": "Enhanced Email Test",
-    "email": "jwoodceo@gmail.com",
-    "phone": "4045550123",
-    "streetAddress": "123 Enhanced Email St",
-    "city": "Atlanta",
-    "state": "GA",
-    "zipCode": "30308",
-    "notes": "Testing enhanced deliverability features",
-    "serviceType": "TV Installation",
-    "preferredDate": "2025-06-14",
-    "appointmentTime": "2:00 PM",
-    "status": "active",
-    "pricingTotal": 150,
+    "pricingTotal": 225,
     "pricingBreakdown": [
       {
         "type": "tv",
         "size": "large",
-        "location": "standard",
-        "mountType": "full_motion"
+        "location": "over_fireplace",
+        "mountType": "tilting"
       }
     ],
-    "id": "120",
-    "createdAt": "2025-06-13T14:59:20.929Z"
+    "id": "122",
+    "createdAt": "2025-06-13T15:17:16.941Z"
   }
 ]

@@ -1032,44 +1032,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileBookings.push(bookingWithId);
         saveBookings(fileBookings);
 
-        // Send customer confirmation email using enhanced email templates
+        // Send unified confirmation email to both customer and admin
         let customerEmailSent = false;
         let adminEmailSent = false;
         
-        logger.info("Starting email sending process...");
+        logger.info("Starting unified email sending process...");
         logger.debug("SendGrid API Key available:", !!process.env.SENDGRID_API_KEY);
         
         if (process.env.SENDGRID_API_KEY) {
-          // Send customer confirmation email
+          const { sendEnhancedBookingConfirmation } = await import('./services/enhancedEmailService');
+          
+          // Send the same customer-facing confirmation email to the customer
           try {
-            logger.info("Attempting to send customer confirmation email...");
+            logger.info("Sending unified confirmation email to customer...");
             customerEmailSent = await sendEnhancedBookingConfirmation(bookingWithId);
-            logger.info(`Enhanced customer confirmation email sent successfully: ${customerEmailSent}`);
+            logger.info(`Customer confirmation email sent successfully: ${customerEmailSent}`);
           } catch (error: any) {
-            logger.error("Error sending enhanced customer confirmation email:", error as Error);
-            logger.error("Error stack:", error.stack);
+            logger.error("Error sending customer confirmation email:", error as Error);
             if (error?.response) {
               logger.error("SendGrid API error response for customer email:", error.response.body);
             }
-            // We don't want to fail the booking if notifications fail
           }
           
-          // Send separate admin notification email
+          // Send the same customer-facing confirmation email to the admin
           try {
-            logger.info("Attempting to send admin notification email...");
-            const { sendAdminNotification } = await import('./services/enhancedEmailService');
-            adminEmailSent = await sendAdminNotification(bookingWithId);
-            logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
+            logger.info("Sending unified confirmation email to admin...");
+            const adminBooking = { ...bookingWithId, email: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com' };
+            adminEmailSent = await sendEnhancedBookingConfirmation(adminBooking);
+            logger.info(`Admin confirmation email sent successfully: ${adminEmailSent}`);
           } catch (adminError: any) {
-            logger.error("Error sending admin notification email:", adminError as Error);
-            logger.error("Admin error stack:", adminError.stack);
+            logger.error("Error sending admin confirmation email:", adminError as Error);
             if (adminError?.response) {
               logger.error("SendGrid API error response for admin email:", adminError.response.body);
             }
-            // Don't fail booking if admin notification fails
           }
           
-          logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
+          logger.info(`Unified email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
         } else {
           logger.warn("SendGrid API key not found - emails not sent");
         }
