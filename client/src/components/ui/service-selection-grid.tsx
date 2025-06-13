@@ -11,13 +11,25 @@ import { motion } from "framer-motion";
 import { pricing } from "@/lib/pricing";
 import { ServiceCardSkeleton } from "./skeleton";
 
+interface TVDeinstallation {
+  id: string;
+  name: string;
+  description: string;
+  type: "deinstallation";
+  basePrice: number;
+  tvSize?: "small" | "large";
+  wallType?: "standard" | "brick" | "highrise";
+  cableCleanup?: boolean;
+}
+
 interface ServiceGridProps {
   onServiceSelect: (
-    type: "tv" | "smartHome",
-    service: TVInstallation | SmartHomeInstallation
+    type: "tv" | "smartHome" | "deinstallation",
+    service: TVInstallation | SmartHomeInstallation | TVDeinstallation
   ) => void;
   tvInstallations: TVInstallation[];
   smartHomeInstallations: SmartHomeInstallation[];
+  tvDeinstallations?: TVDeinstallation[];
   className?: string;
   isLoading?: boolean;
 }
@@ -26,10 +38,11 @@ export function ServiceSelectionGrid({
   onServiceSelect,
   tvInstallations,
   smartHomeInstallations,
+  tvDeinstallations = [],
   className,
   isLoading = false,
 }: ServiceGridProps) {
-  const [activeTab, setActiveTab] = useState<"tv" | "smartHome">("tv");
+  const [activeTab, setActiveTab] = useState<"tv" | "smartHome" | "deinstallation">("tv");
 
   // Animation variants
   const containerVariants = {
@@ -75,15 +88,19 @@ export function ServiceSelectionGrid({
         <Tabs
           defaultValue="tv"
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "tv" | "smartHome")}
+          onValueChange={(value) => setActiveTab(value as "tv" | "smartHome" | "deinstallation")}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="tv" className="text-base">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="tv" className="text-sm">
               <Icons.tv className="mr-2 h-4 w-4" />
-              TV Services
+              TV Install
             </TabsTrigger>
-            <TabsTrigger value="smartHome" className="text-base">
+            <TabsTrigger value="deinstallation" className="text-sm">
+              <Icons.tvUnmount className="mr-2 h-4 w-4" />
+              TV Removal
+            </TabsTrigger>
+            <TabsTrigger value="smartHome" className="text-sm">
               <Icons.smartHome className="mr-2 h-4 w-4" />
               Smart Home
             </TabsTrigger>
@@ -118,6 +135,57 @@ export function ServiceSelectionGrid({
                         />
                       </motion.div>
                     ))}
+                  </motion.div>
+                )}
+              </ScrollArea>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="deinstallation" className="mt-0 relative">
+            <div className="scroll-container">
+              <ScrollArea className="h-[280px] pr-2 scroll-container">
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <ServiceCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="service-selection-grid grid grid-cols-1 gap-4 mx-auto w-full"
+                  >
+                    <motion.div variants={itemVariants} className="w-full">
+                      <ServiceCard
+                        title="TV De-Installation"
+                        description="Safe removal of mounted TV and bracket, includes cable cleanup. Can be booked by itself or with a new install."
+                        icon={<Icons.tvUnmount className="h-6 w-6" />}
+                        price={50}
+                        onClick={() => onServiceSelect("deinstallation", {
+                          id: "tv-deinstall-service",
+                          name: "TV De-Installation",
+                          description: "Professional TV and bracket removal with cable cleanup",
+                          type: "deinstallation",
+                          basePrice: 50
+                        })}
+                      />
+                    </motion.div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-800 mb-2">What's Included:</h4>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Safe TV removal from wall mount</li>
+                        <li>• Complete bracket and hardware removal</li>
+                        <li>• Cable management and cleanup</li>
+                        <li>• Wall restoration (filling mounting holes)</li>
+                        <li>• Disposal of old mounting hardware</li>
+                      </ul>
+                      <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-600">
+                        <strong>Flat Rate:</strong> $50 per TV regardless of size or wall type
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </ScrollArea>
