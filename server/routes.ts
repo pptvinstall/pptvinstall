@@ -1111,32 +1111,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all bookings
+  // Get all bookings - Optimized with caching
   app.get("/api/bookings", async (req, res) => {
+    const startTime = performanceMonitor.startTimer();
+    const cacheKey = createCacheKey(req);
+    
     try {
-      const dbBookings = await db.select().from(bookings).orderBy(bookings.preferredDate);
+      // Check cache first
+      const cached = getCachedResponse(cacheKey);
+      if (cached) {
+        performanceMonitor.endTimer(startTime, 'bookings-cached');
+        return sendOptimizedResponse(res, { bookings: cached }, { 
+          cache: true, 
+          cacheKey,
+          cacheTtl: 30000 
+        });
+      }
 
-      // Format bookings to match expected structure
+      // Execute optimized query
+      const dbBookings = await optimizeQuery(
+        () => db.select().from(bookings).orderBy(bookings.preferredDate),
+        'all-bookings',
+        30000
+      );
+
+      // Format bookings efficiently
       const formattedBookings = dbBookings.map(booking => {
         let pricingBreakdown = null;
         if (booking.pricingBreakdown) {
           try {
-          booking.pricingBreakdown = JSON.parse(booking.pricingBreakdown as string);
-        } catch (error) {
-          logger.error('Error parsing pricingBreakdown JSON:', error as Error);
-          logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
-
-          // Try to fix common JSON issues
-          try {
-            const fixedJson = (booking.pricingBreakdown as string)
-              .replace(/'/g, '"')  // Replace single quotes with double quotes
-              .replace(/(\w+):/g, '"$1":');  // Add quotes around property names
-            booking.pricingBreakdown = JSON.parse(fixedJson);
-          } catch (secondError) {
-            logger.error('Could not fix JSON parsing error:', secondError as Error);
-            booking.pricingBreakdown = [];  // Default to empty array
+            pricingBreakdown = JSON.parse(booking.pricingBreakdown as string);
+          } catch (error) {
+            // Try to fix common JSON issues silently
+            try {
+              const fixedJson = (booking.pricingBreakdown as string)
+                .replace(/'/g, '"')
+                .replace(/(\w+):/g, '"$1":');
+              pricingBreakdown = JSON.parse(fixedJson);
+            } catch (secondError) {
+              pricingBreakdown = [];
+            }
           }
-        }
         }
 
         return {
@@ -1148,8 +1163,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json({ bookings: formattedBookings });
+      performanceMonitor.endTimer(startTime, 'bookings-query');
+      
+      sendOptimizedResponse(res, { bookings: formattedBookings }, { 
+        cache: true, 
+        cacheKey,
+        cacheTtl: 30000 
+      });
     } catch (error) {
+      performanceMonitor.endTimer(startTime, 'bookings-error');
       logger.error("Error fetching bookings:", error as Error);
       res.status(500).json({
         success: false,
@@ -2564,6 +2586,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: "Invalid password"
       });
+    }
+  });
+
+  // Optimized admin endpoints for booking management
+  app.put("/api/admin/bookings/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: "Invalid booking ID" });
+      }
+
+      const result = await db.update(bookings)
+        .set({ status })
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      // Clear cache when booking is updated
+      clearCache('bookings');
+
+      res.json({ success: true, booking: result[0] });
+    } catch (error) {
+      logger.error("Error updating booking:", error as Error);
+      res.status(500).json({ success: false, message: "Failed to update booking" });
+    }
+  });
+
+  app.delete("/api/admin/bookings/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: "Invalid booking ID" });
+      }
+
+      const result = await db.delete(bookings)
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      // Clear cache when booking is deleted
+      clearCache('bookings');
+
+      res.json({ success: true, message: "Booking deleted successfully" });
+    } catch (error) {
+      logger.error("Error deleting booking:", error as Error);
+      res.status(500).json({ success: false, message: "Failed to delete booking" });
+    }
+  });
+
+  // Performance monitoring endpoint
+  app.get("/api/admin/performance", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const metrics = performanceMonitor.getAllMetrics();
+      const memoryUsage = getMemoryUsage();
+
+      res.json({
+        success: true,
+        data: {
+          metrics,
+          memory: memoryUsage,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      logger.error("Error fetching performance data:", error as Error);
+      res.status(500).json({ success: false, message: "Failed to fetch performance data" });
     }
   });
 

@@ -84,6 +84,7 @@ const Contact = lazy(() => import('@/pages/contact'));
 const FAQ = lazy(() => import('@/pages/faq'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Admin = lazy(() => import('@/pages/admin'));
+const OptimizedAdmin = lazy(() => import('@/pages/optimized-admin'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const PricingEditor = lazy(() => import('@/pages/admin/pricing-editor')); // Added import
 const CustomerLogin = lazy(() => import('@/pages/customer-login'));
