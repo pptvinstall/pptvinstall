@@ -268,6 +268,13 @@ const ServiceSelectionStep = React.memo(
         basePrice: pricing.tvMounting.unmount.price, // $50
       },
       {
+        id: "tv-deinstall-1",
+        name: "TV De-Installation",
+        description: "Safe removal of mounted TV and bracket, includes cable cleanup. Can be booked by itself or with a new install.",
+        type: "deinstallation",
+        basePrice: 50, // $50
+      },
+      {
         id: "tv-mount-1",
         name: "Standard TV Installation (Small)",
         description: "Standard installation with mount provided by us",

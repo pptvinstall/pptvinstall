@@ -215,8 +215,11 @@
   }
 
   .skeleton-container::after {
-    @apply absolute top-0 left-0 w-full h-full skeleton-wave;
+    @apply absolute top-0 left-0 w-full h-full;
     content: '';
+    animation: skeleton-wave 1.6s linear infinite;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: translateX(-100%);
   }
 
   /* Enhanced trust badge styles */
@@ -244,7 +247,7 @@
 
   /* Enhanced service card */
   .service-card {
-    @apply group relative bg-white rounded-2xl border border-gray-200 shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1 overflow-hidden;
+    @apply relative bg-white rounded-2xl border border-gray-200 shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1 overflow-hidden;
   }
 
   .service-card::before {

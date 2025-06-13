@@ -9,6 +9,7 @@ import { ScrollArea } from "./scroll-area";
 import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { motion } from "framer-motion";
 import { pricing } from "@/lib/pricing";
+import { ServiceCardSkeleton } from "./skeleton";
 
 interface ServiceGridProps {
   onServiceSelect: (
@@ -18,6 +19,7 @@ interface ServiceGridProps {
   tvInstallations: TVInstallation[];
   smartHomeInstallations: SmartHomeInstallation[];
   className?: string;
+  isLoading?: boolean;
 }
 
 export function ServiceSelectionGrid({
@@ -25,6 +27,7 @@ export function ServiceSelectionGrid({
   tvInstallations,
   smartHomeInstallations,
   className,
+  isLoading = false,
 }: ServiceGridProps) {
   const [activeTab, setActiveTab] = useState<"tv" | "smartHome">("tv");
 
@@ -89,26 +92,34 @@ export function ServiceSelectionGrid({
           <TabsContent value="tv" className="mt-0 relative">
             <div className="scroll-container">
               <ScrollArea className="h-[280px] pr-2 scroll-container">
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
-                >
-                  {tvInstallations.map((service) => (
-                    <motion.div key={service.id} variants={itemVariants} className="w-full">
-                      <ServiceCard
-                        title={service.name}
-                        description={service.description}
-                        icon={<TVServiceIcon type={service.type} />}
-                        price={service.basePrice}
-                        isMostPopular={service.isMostPopular}
-                        isPromoted={service.isPromoted}
-                        onClick={() => onServiceSelect("tv", service)}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <ServiceCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
+                  >
+                    {tvInstallations.map((service) => (
+                      <motion.div key={service.id} variants={itemVariants} className="w-full">
+                        <ServiceCard
+                          title={service.name}
+                          description={service.description}
+                          icon={<TVServiceIcon type={service.type} />}
+                          price={service.basePrice}
+                          isMostPopular={service.isMostPopular}
+                          isPromoted={service.isPromoted}
+                          onClick={() => onServiceSelect("tv", service)}
+                        />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
               </ScrollArea>
             </div>
           </TabsContent>
@@ -116,36 +127,44 @@ export function ServiceSelectionGrid({
           <TabsContent value="smartHome" className="mt-0 relative">
             <div className="scroll-container">
               <ScrollArea className="h-[280px] pr-2 scroll-container">
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
-                >
-                  {smartHomeInstallations.map((service) => {
-                    // Get the correct price from pricing.ts file
-                    const correctPrice = getPriceForSmartHome(service.type);
-                    
-                    return (
-                      <motion.div key={service.id} variants={itemVariants} className="w-full">
-                        <ServiceCard
-                          title={service.name}
-                          description={service.description}
-                          icon={<SmartHomeServiceIcon type={service.type} />}
-                          price={correctPrice}
-                          onClick={() => {
-                            // Create an updated service with the correct price
-                            const updatedService = {
-                              ...service,
-                              basePrice: correctPrice
-                            };
-                            onServiceSelect("smartHome", updatedService);
-                          }}
-                        />
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <ServiceCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
+                  >
+                    {smartHomeInstallations.map((service) => {
+                      // Get the correct price from pricing.ts file
+                      const correctPrice = getPriceForSmartHome(service.type);
+                      
+                      return (
+                        <motion.div key={service.id} variants={itemVariants} className="w-full">
+                          <ServiceCard
+                            title={service.name}
+                            description={service.description}
+                            icon={<SmartHomeServiceIcon type={service.type} />}
+                            price={correctPrice}
+                            onClick={() => {
+                              // Create an updated service with the correct price
+                              const updatedService = {
+                                ...service,
+                                basePrice: correctPrice
+                              };
+                              onServiceSelect("smartHome", updatedService);
+                            }}
+                          />
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
               </ScrollArea>
             </div>
           </TabsContent>
@@ -160,6 +179,8 @@ function TVServiceIcon({ type }: { type: string }) {
     case "mount":
       return <Icons.tvMount className="h-6 w-6" />;
     case "unmount":
+      return <Icons.tvUnmount className="h-6 w-6" />;
+    case "deinstallation":
       return <Icons.tvUnmount className="h-6 w-6" />;
     case "remount":
       return <Icons.tvRemount className="h-6 w-6" />;

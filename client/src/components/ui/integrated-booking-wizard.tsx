@@ -49,6 +49,7 @@ import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
 import { BookingConfirmationModal } from "@/components/ui/booking-confirmation-modal";
 import { WhatToExpect } from "@/components/ui/what-to-expect";
+import { ServiceCardSkeleton, BookingFormSkeleton } from "@/components/ui/skeleton";
 
 import { createCalendarEvent, generateGoogleCalendarURL } from "@/lib/calendar-export";
 
