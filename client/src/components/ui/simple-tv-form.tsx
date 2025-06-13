@@ -19,14 +19,27 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
   const [outletNeeded, setOutletNeeded] = useState(false);
 
   const calculatePrice = () => {
-    let basePrice = 100; // Correct base price from master site config
-    if (tvSize === "large") basePrice += 50;
+    let basePrice = 100; // Base TV installation price
+    
+    // Mount type pricing (no TV size upcharge per new requirements)
+    if (mountType === "tilting") {
+      basePrice += tvSize === "large" ? 50 : 40;
+    } else if (mountType === "full_motion") {
+      basePrice += tvSize === "large" ? 80 : 60;
+    } else if (mountType === "fixed") {
+      basePrice += tvSize === "large" ? 40 : 30;
+    }
+    
+    // Location surcharge
     if (location === "fireplace") basePrice += 100;
-    if (mountType === "tilting") basePrice += 25;
-    if (mountType === "full_motion") basePrice += 50;
-    if (masonryWall) basePrice += 50; // Brick wall surcharge
-    if (highRise) basePrice += 50;
-    if (outletNeeded) basePrice += 100; // Outlet installation
+    
+    // Wall material surcharges
+    if (masonryWall) basePrice += 50; // Brick/stone surface
+    if (highRise) basePrice += 25; // High-rise/steel studs
+    
+    // Additional services
+    if (outletNeeded) basePrice += 100; // Wire concealment & outlet
+    
     return basePrice;
   };
 
@@ -51,19 +64,19 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">TV Size</Label>
         <RadioGroup value={tvSize} onValueChange={(value: "small" | "large") => setTvSize(value)}>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="small" id="small" />
-              <Label htmlFor="small" className="font-medium">32" - 55" TV</Label>
+              <Label htmlFor="small" className="font-medium cursor-pointer">32" - 55" TV</Label>
             </div>
-            <span className="text-green-600 font-semibold">+$0</span>
+            <span className="text-green-600 font-semibold">Included</span>
           </div>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="large" id="large" />
-              <Label htmlFor="large" className="font-medium">56" or larger</Label>
+              <Label htmlFor="large" className="font-medium cursor-pointer">56" or larger</Label>
             </div>
-            <span className="text-blue-600 font-semibold">+$50</span>
+            <span className="text-green-600 font-semibold">Included</span>
           </div>
         </RadioGroup>
       </div>
@@ -93,35 +106,41 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">Mount Type</Label>
         <RadioGroup value={mountType} onValueChange={(value: "fixed" | "tilting" | "full_motion") => setMountType(value)}>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="fixed" id="fixed" />
               <div>
-                <Label htmlFor="fixed" className="font-medium">Fixed Mount</Label>
+                <Label htmlFor="fixed" className="font-medium cursor-pointer">Fixed Mount</Label>
                 <p className="text-xs text-gray-500">Standard wall mounting</p>
               </div>
             </div>
-            <span className="text-green-600 font-semibold">+$0</span>
+            <span className="text-blue-600 font-semibold">
+              +${tvSize === "large" ? "40" : "30"}
+            </span>
           </div>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="tilting" id="tilting" />
               <div>
-                <Label htmlFor="tilting" className="font-medium">Tilting Mount</Label>
+                <Label htmlFor="tilting" className="font-medium cursor-pointer">Tilting Mount</Label>
                 <p className="text-xs text-gray-500">Up/down angle adjustment</p>
               </div>
             </div>
-            <span className="text-blue-600 font-semibold">+$25</span>
+            <span className="text-blue-600 font-semibold">
+              +${tvSize === "large" ? "50" : "40"}
+            </span>
           </div>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="full_motion" id="full_motion" />
               <div>
-                <Label htmlFor="full_motion" className="font-medium">Full Motion Mount</Label>
+                <Label htmlFor="full_motion" className="font-medium cursor-pointer">Full Motion Mount</Label>
                 <p className="text-xs text-gray-500">Swivel, tilt, and extend</p>
               </div>
             </div>
-            <span className="text-blue-600 font-semibold">+$50</span>
+            <span className="text-blue-600 font-semibold">
+              +${tvSize === "large" ? "80" : "60"}
+            </span>
           </div>
         </RadioGroup>
       </div>
@@ -130,7 +149,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">Additional Services</Label>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-3">
               <Checkbox 
                 id="masonry" 
@@ -138,13 +157,13 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
                 onCheckedChange={(checked) => setMasonryWall(checked === true)}
               />
               <div>
-                <Label htmlFor="masonry" className="font-medium">Brick/Masonry Wall</Label>
-                <p className="text-xs text-gray-500">Special mounting for brick/stone</p>
+                <Label htmlFor="masonry" className="font-medium cursor-pointer">Brick/Stone Surface</Label>
+                <p className="text-xs text-gray-500">Special mounting for brick or masonry walls</p>
               </div>
             </div>
             <span className="text-blue-600 font-semibold">+$50</span>
           </div>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-3">
               <Checkbox 
                 id="highrise" 
@@ -152,13 +171,13 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
                 onCheckedChange={(checked) => setHighRise(checked === true)}
               />
               <div>
-                <Label htmlFor="highrise" className="font-medium">High-Rise Installation</Label>
-                <p className="text-xs text-gray-500">Complex building access</p>
+                <Label htmlFor="highrise" className="font-medium cursor-pointer">High-Rise/Steel Studs</Label>
+                <p className="text-xs text-gray-500">Installation in high-rise buildings with steel studs</p>
               </div>
             </div>
-            <span className="text-blue-600 font-semibold">+$50</span>
+            <span className="text-blue-600 font-semibold">+$25</span>
           </div>
-          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-3">
               <Checkbox 
                 id="outlet" 
@@ -166,8 +185,8 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
                 onCheckedChange={(checked) => setOutletNeeded(checked === true)}
               />
               <div>
-                <Label htmlFor="outlet" className="font-medium">New Outlet Installation</Label>
-                <p className="text-xs text-gray-500">Professional electrical work</p>
+                <Label htmlFor="outlet" className="font-medium cursor-pointer">Wire Concealment & Outlet</Label>
+                <p className="text-xs text-gray-500">Professional wire concealment and outlet installation</p>
               </div>
             </div>
             <span className="text-blue-600 font-semibold">+$100</span>

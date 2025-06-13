@@ -237,16 +237,16 @@ export function ServiceSelectionGrid({
                   >
                     <motion.div variants={itemVariants}>
                       <ServiceCard
-                        title="Smart Doorbell"
-                        description="Professional doorbell installation with wiring and app setup"
+                        title="Video Doorbell"
+                        description="Smart doorbell installation with wiring and app setup"
                         icon={<Icons.doorbell className="h-6 w-6" />}
-                        price={149}
+                        price={85}
                         onClick={() => onServiceAdd("smartHome", {
                           id: `doorbell-${Date.now()}`,
                           type: "doorbell",
                           count: 1,
                           hasExistingWiring: false,
-                          basePrice: 149
+                          basePrice: 85
                         })}
                       />
                     </motion.div>
@@ -256,29 +256,29 @@ export function ServiceSelectionGrid({
                         title="Security Camera"
                         description="Professional camera installation with mounting and configuration"
                         icon={<Icons.camera className="h-6 w-6" />}
-                        price={199}
+                        price={75}
                         onClick={() => onServiceAdd("smartHome", {
                           id: `camera-${Date.now()}`,
                           type: "camera",
                           count: 1,
                           hasExistingWiring: false,
-                          basePrice: 199
+                          basePrice: 75
                         })}
                       />
                     </motion.div>
                     
                     <motion.div variants={itemVariants} className="sm:col-span-2">
                       <ServiceCard
-                        title="Smart Floodlight"
+                        title="Floodlight Camera"
                         description="Motion-activated floodlight with app control and scheduling"
                         icon={<Icons.lighting className="h-6 w-6" />}
-                        price={249}
+                        price={125}
                         onClick={() => onServiceAdd("smartHome", {
                           id: `floodlight-${Date.now()}`,
                           type: "floodlight",
                           count: 1,
                           hasExistingWiring: false,
-                          basePrice: 249
+                          basePrice: 125
                         })}
                       />
                     </motion.div>
