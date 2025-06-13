@@ -287,5 +287,61 @@
     ],
     "id": "132",
     "createdAt": "2025-06-13T15:45:30.042Z"
+  },
+  {
+    "name": "Final Polish Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045559000",
+    "streetAddress": "1200 Professional Email Street",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Final test with professional styling, SVG checkmark, and corrected timezone",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-25",
+    "appointmentTime": "2:30 PM",
+    "status": "active",
+    "pricingTotal": 300,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "highRise": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "133",
+    "createdAt": "2025-06-13T15:56:19.859Z"
+  },
+  {
+    "name": "Production Ready Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045551111",
+    "streetAddress": "1300 Final Test Avenue",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Production-ready Gmail system with professional styling and timezone fix",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-26",
+    "appointmentTime": "3:00 PM",
+    "status": "active",
+    "pricingTotal": 325,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "highRise": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "134",
+    "createdAt": "2025-06-13T15:57:11.222Z"
   }
 ]

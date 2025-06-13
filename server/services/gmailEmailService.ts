@@ -147,7 +147,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 16px; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">`
+  <div style="max-width: 600px; margin: 0 auto; padding: 16px; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
     
     <!-- Company Header -->
     <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #005cb9;">
