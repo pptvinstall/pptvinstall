@@ -580,5 +580,58 @@
     ],
     "id": "107",
     "createdAt": "2025-04-17T13:32:14.584Z"
+  },
+  {
+    "name": "System Test User",
+    "email": "test@example.com",
+    "phone": "4045550123",
+    "streetAddress": "123 Test Lane",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Live mode system test",
+    "serviceType": "TV Mounting",
+    "preferredDate": "2025-06-15",
+    "appointmentTime": "10:00 AM",
+    "status": "active",
+    "pricingTotal": "249.99",
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "standard",
+        "mountType": "full_motion"
+      }
+    ],
+    "tvSize": "65 inch",
+    "mountType": "Full-Motion Mount",
+    "id": "110",
+    "createdAt": "2025-06-13T00:01:28.131Z"
+  },
+  {
+    "name": "Test Mode User",
+    "email": "testmode@example.com",
+    "phone": "4045559999",
+    "streetAddress": "456 Demo Ave",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Test mode validation",
+    "serviceType": "Smart Home Installation",
+    "preferredDate": "2025-06-16",
+    "appointmentTime": "2:00 PM",
+    "status": "active",
+    "pricingTotal": "399.99",
+    "pricingBreakdown": [
+      {
+        "type": "camera",
+        "count": 2,
+        "mountHeight": 10
+      }
+    ],
+    "tvSize": "55 inch",
+    "mountType": "Fixed Mount",
+    "id": "111",
+    "createdAt": "2025-06-13T00:01:37.779Z"
   }
 ]
