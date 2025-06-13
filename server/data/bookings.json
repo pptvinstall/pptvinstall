@@ -75,5 +75,30 @@
     ],
     "id": "119",
     "createdAt": "2025-06-13T14:36:52.129Z"
+  },
+  {
+    "name": "Enhanced Email Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550123",
+    "streetAddress": "123 Enhanced Email St",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30308",
+    "notes": "Testing enhanced deliverability features",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-14",
+    "appointmentTime": "2:00 PM",
+    "status": "active",
+    "pricingTotal": 150,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "standard",
+        "mountType": "full_motion"
+      }
+    ],
+    "id": "120",
+    "createdAt": "2025-06-13T14:59:20.929Z"
   }
 ]

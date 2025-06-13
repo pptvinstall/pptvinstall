@@ -135,34 +135,7 @@ function createCalendarEvent(booking: Booking): Promise<string> {
   });
 }
 
-/**
- * Convert HTML email to plain text version
- */
-function createPlainTextVersion(html: string): string {
-  return html
-    .replace(/<div[^>]*>/gi, '')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<p[^>]*>/gi, '')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<h[1-6][^>]*>/gi, '')
-    .replace(/<\/h[1-6]>/gi, '\n\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, '\n')
-    .replace(/<strong[^>]*>|<\/strong>|<b[^>]*>|<\/b>/gi, '')
-    .replace(/<em[^>]*>|<\/em>|<i[^>]*>|<\/i>/gi, '')
-    .replace(/<a[^>]*href=['"]([^'"]+)['"][^>]*>([^<]+)<\/a>/gi, '$2 ($1)')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n\s*\n\s*\n/g, '\n\n')
-    .trim();
-}
+
 
 /**
  * Master email template with logo and common styling
@@ -805,7 +778,64 @@ function getRescheduleConfirmationContent(booking: Booking & { smartHomeItems?: 
   `;
 }
 
-// Note: Add other email generation functions here...
+/**
+ * Create a plain text version of the email content for better deliverability
+ */
+function createPlainTextVersion(htmlContent: string, booking?: Booking): string {
+  if (!booking) {
+    return htmlContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  const formattedDate = booking.preferredDate
+    ? format(parseISO(booking.preferredDate), 'EEEE, MMMM d, yyyy')
+    : 'Not specified';
+
+  const totalPrice = booking.pricingTotal ? `$${booking.pricingTotal.toFixed(2)}` : 'Contact for pricing';
+
+  return `
+PICTURE PERFECT TV INSTALL
+Your Installation Confirmation
+
+Booking Confirmed!
+Your appointment has been booked successfully.
+
+BOOKING REFERENCE ID: ${booking.id || "N/A"}
+
+CUSTOMER INFORMATION:
+Name: ${booking.name}
+Email: ${booking.email}
+Phone: ${booking.phone}
+
+SERVICE DETAILS:
+Service Type: ${booking.serviceType || 'TV Installation'}
+Date: ${formattedDate}
+Time: ${booking.appointmentTime || "Not specified"}
+
+INSTALLATION ADDRESS:
+${booking.streetAddress}
+${booking.addressLine2 ? `${booking.addressLine2}\n` : ''}${booking.city}, ${booking.state} ${booking.zipCode}
+
+APPOINTMENT SUMMARY:
+Total Price: ${totalPrice}
+Payment due after installation (Cash, Zelle, or Apple Pay accepted)
+
+${booking.notes ? `CUSTOMER NOTES:\n${booking.notes}\n` : ''}
+
+NEXT STEPS:
+Thank you for booking with Picture Perfect TV Install!
+We'll reach out to confirm any special requests before your appointment.
+If you need to make changes, call us at ${COMPANY_PHONE}.
+
+CONTACT US:
+Phone: ${COMPANY_PHONE}
+Website: ${COMPANY_WEBSITE}
+
+Didn't receive this email? Check your spam or junk folder.
+For immediate assistance, call us at ${COMPANY_PHONE}
+
+This email contains your full installation confirmation.
+  `.trim();
+}
 
 /**
  * Send an enhanced email for various notification types
@@ -1098,7 +1128,7 @@ export async function sendEnhancedEmail(
     const htmlContent = masterEmailTemplate(emailSubject, emailContent);
     
     // Create plain text version
-    const textContent = createPlainTextVersion(htmlContent);
+    const textContent = createPlainTextVersion(emailContent, booking);
 
     // Set up email
     const msg: any = {
