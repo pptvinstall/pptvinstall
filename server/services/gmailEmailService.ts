@@ -41,7 +41,7 @@ async function createCalendarEvent(booking: Booking): Promise<string | null> {
     const appointmentDate = parseISO(booking.preferredDate);
     const [time, meridiem] = booking.appointmentTime.split(' ');
     const [hours, minutes] = time.split(':').map(Number);
-    
+
     let adjustedHours = hours;
     if (meridiem?.toLowerCase() === 'pm' && hours !== 12) {
       adjustedHours += 12;
@@ -52,7 +52,7 @@ async function createCalendarEvent(booking: Booking): Promise<string | null> {
     // Create date in Eastern Time (Atlanta, GA timezone)
     const startDateTime = new Date(appointmentDate);
     startDateTime.setHours(adjustedHours, minutes || 0, 0, 0);
-    
+
     const endDateTime = new Date(startDateTime);
     endDateTime.setHours(startDateTime.getHours() + 2);
 
@@ -83,7 +83,7 @@ async function createCalendarEvent(booking: Booking): Promise<string | null> {
     };
 
     const { error, value } = ics.createEvent(event);
-    
+
     if (error) {
       console.error('Error creating calendar event:', error);
       return null;
@@ -107,7 +107,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
   // Process service breakdown
   const pricingBreakdown = booking.pricingBreakdown || [];
   const tvItems = pricingBreakdown.filter((item: any) => item.type === 'tv');
-  
+
   let servicesHtml = '';
   if (tvItems.length > 0) {
     servicesHtml = tvItems.map((tv: any, index: number) => `
@@ -148,7 +148,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 0 auto; padding: 16px; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    
+
     <!-- Company Header -->
     <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #005cb9;">
       <h1 style="color: #005cb9; margin: 0; font-size: 24px; font-weight: bold;">${COMPANY_NAME}</h1>
@@ -172,13 +172,13 @@ function generateBookingConfirmationEmail(booking: Booking): string {
       <h1 style="color: #333333; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Booking Confirmed!</h1>
       <p style="color: #666; margin: 8px 0 0 0; font-size: 16px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Your appointment has been booked successfully</p>
     </div>
-    
+
     <!-- Booking Reference ID -->
     <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #10b981;">
       <p style="color: #666; font-size: 14px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Booking Reference ID</p>
       <p style="font-size: 24px; font-weight: 700; margin: 0; color: #333;">${booking.id || "N/A"}</p>
     </div>
-    
+
     <!-- Customer Information -->
     <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #2563eb;">
       <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
@@ -199,7 +199,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         </div>
       </div>
     </div>
-    
+
     <!-- Service Details -->
     <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #28a745;">
       <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
@@ -220,7 +220,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         </div>
       </div>
     </div>
-    
+
     <!-- Installation Address -->
     <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #dc3545;">
       <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
@@ -232,7 +232,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         ${booking.city}, ${booking.state} ${booking.zipCode}
       </div>
     </div>
-    
+
     <!-- Booking Estimate -->
     <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-top: 3px solid #005cb9;">
       <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
@@ -240,11 +240,11 @@ function generateBookingConfirmationEmail(booking: Booking): string {
           📋 Booking Estimate
         </h2>
       </div>
-      
+
       <div style="border-top: 1px solid #eee;">
         ${servicesHtml}
       </div>
-      
+
       <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #e9ecef; background-color: #f8f9fa; padding: 16px; border-radius: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 16px; font-weight: 600; color: #333; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Estimate Total:</span>
@@ -255,7 +255,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         </p>
       </div>
     </div>
-    
+
     ${booking.notes ? `
     <!-- Customer Notes -->
     <div style="margin-bottom: 30px; padding: 20px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px;">
@@ -267,7 +267,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
       </div>
     </div>
     ` : ''}
-    
+
     <!-- Next Steps -->
     <div style="margin-bottom: 30px; padding: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px;">
       <h2 style="color: #155724; font-size: 18px; font-weight: 600; margin: 0 0 12px 0;">
@@ -279,7 +279,7 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         <p style="margin: 0;">If you need to make changes, call us at ${COMPANY_PHONE}.</p>
       </div>
     </div>
-    
+
     <!-- Action Buttons -->
     <div style="text-align: center; margin-bottom: 30px;">
       <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #28a745; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 0 8px 8px 8px; font-weight: 600; font-size: 16px;">
@@ -368,7 +368,7 @@ ${COMPANY_NAME} | ${COMPANY_PHONE} | ${COMPANY_WEBSITE}
  */
 export async function sendUnifiedBookingConfirmation(booking: Booking): Promise<{ customerSent: boolean; adminSent: boolean }> {
   const transporter = createTransporter();
-  
+
   if (!transporter) {
     console.error('Gmail transporter not available - check GMAIL_APP_PASSWORD');
     return { customerSent: false, adminSent: false };
@@ -383,7 +383,7 @@ export async function sendUnifiedBookingConfirmation(booking: Booking): Promise<
 
     const htmlContent = generateBookingConfirmationEmail(booking);
     const textContent = generatePlainTextEmail(booking);
-    
+
     // Create calendar attachment
     let calendarAttachment = null;
     try {

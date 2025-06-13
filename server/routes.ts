@@ -44,7 +44,7 @@ function verifyAdminPassword(password: string | undefined): boolean {
   // Use both the environment variable and hardcoded password as fallback
   const envPassword = process.env.ADMIN_PASSWORD;
   const hardcodedPassword = "PictureP3rfectTV2025";
-  
+
   // Debug log to see if environment variable is correctly loaded
   logger.debug('Admin password verification', {
     envVarSet: !!envPassword,
@@ -62,7 +62,7 @@ function verifyAdminPassword(password: string | undefined): boolean {
   const isValidEnv = envPassword && password === envPassword;
   const isValidHardcoded = password === hardcodedPassword;
   const isValid = isValidEnv || isValidHardcoded;
-  
+
   logger.auth('Admin authentication attempt', {
     success: isValid,
     passwordProvided: !!password,
@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health/detailed", async (req, res) => {
     try {
       const { password } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const health = await monitoring.getSystemHealth();
       const launchConfig = monitoring.getLaunchConfig();
-      
+
       res.json({
         success: true,
         health,
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/launch-mode", async (req, res) => {
     try {
       const { password, enable } = req.body;
-      
+
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const launchConfig = monitoring.getLaunchConfig();
-      
+
       res.json({
         success: true,
         message: enable ? "Launch mode enabled" : "Launch mode status retrieved",
@@ -152,12 +152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Public route for email preview page to check basic email settings
   app.get("/api/email/check-config", (req: Request, res: Response) => {
     try {
       logger.info('Email environment basic check requested');
-      
+
       // Only provide basic information that's needed for the email preview UI
       res.json({
         success: true,
@@ -173,19 +173,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Route to check email-related environment variables
   app.get("/api/admin/check-email-env", (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Unauthorized"
         });
       }
-      
+
       // Gather email configuration
       const emailConfig = {
         SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? `Set (length: ${process.env.SENDGRID_API_KEY.length})` : 'Not set',
@@ -194,9 +194,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         NODE_ENV: process.env.NODE_ENV,
         host: req.headers.host
       };
-      
+
       logger.info('Email environment variables checked');
-      
+
       res.json({
         success: true,
         emailConfig
@@ -214,25 +214,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/test-email", async (req, res) => {
     try {
       const { email, password, type } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid admin password"
         });
       }
-      
+
       if (!email) {
         return res.status(400).json({
           success: false,
           message: "Email address is required"
         });
       }
-      
+
       logger.info(`Testing email functionality to address: ${email}, type: ${type || 'both'}`);
-      
+
       const timestamp = new Date().toLocaleTimeString();
-      
+
       // Create a test booking object with distinctive information
       const testBooking = {
         id: `TEST-${Date.now()}`,
@@ -253,18 +253,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { type: "tv", size: "large", location: "standard", mountType: "fixed" }
         ]
       };
-      
+
       // Log SendGrid configuration
       logger.debug("SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
         fromEmail: process.env.EMAIL_FROM || 'pptvinstall@gmail.com',
         adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com'
       });
-      
+
       // Variable to track email results
       let customerEmailResult = false;
       let adminEmailResult = false;
-      
+
       // Send test customer email if requested type is 'customer' or not specified
       if (!type || type === 'customer') {
         try {
@@ -278,12 +278,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
+
       // Send test admin notification if requested type is 'admin' or not specified
       if (!type || type === 'admin') {
         try {
           logger.debug("Sending test admin notification email...");
-          
+
           // Create admin email with modified subject for easier identification in inbox
           const adminMsg = {
             to: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
@@ -292,13 +292,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             text: "Admin notification for test booking",
             html: emailTemplates.getAdminNotificationEmailTemplate(testBooking),
           };
-          
+
           logger.debug("Admin email payload:", JSON.stringify({
             to: adminMsg.to,
             from: adminMsg.from,
             subject: adminMsg.subject
           }));
-          
+
           // Send directly through SendGrid for custom subject
           import('@sendgrid/mail').then(sgModule => {
             const sgMail = sgModule.default;
@@ -314,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
+
       res.json({
         success: true,
         results: {
@@ -333,12 +333,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Test enhanced email sending functionality 
   app.post("/api/email/send-test-to-multiple", async (req: Request, res: Response) => {
     try {
       const { emailType = EmailType.BOOKING_CONFIRMATION } = req.body;
-      
+
       if (!Object.values(EmailType).includes(emailType)) {
         return res.status(400).json({ 
           success: false,
@@ -346,21 +346,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           validTypes: Object.values(EmailType)
         });
       }
-      
+
       logger.info(`Sending test emails to both user and JWoodceo@gmail.com, type: ${emailType}`);
-      
+
       // Import dynamically to avoid circular dependencies
       const { sendTestEmail } = await import('./services/enhancedEmailService');
-      
+
       // Get admin email from environment variables or use default
       const adminEmail = process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com';
-      
+
       // Send to JWoodceo@gmail.com
       const jwoodResult = await sendTestEmail(emailType, 'JWoodceo@gmail.com');
-      
+
       // Send to admin email
       const yourResult = await sendTestEmail(emailType, adminEmail);
-      
+
       return res.json({
         success: true,
         message: `Test ${emailType} emails sent to JWoodceo@gmail.com and ${adminEmail}`,
@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailType, 
         sendCalendar = true 
       } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({
           success: false,
@@ -395,9 +395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       logger.info(`Testing enhanced email functionality to address: ${email}, type: ${emailType || 'booking_confirmation'}`);
-      
+
       const timestamp = new Date().toLocaleTimeString();
-      
+
       // Create a comprehensive test booking object with all possible options
       const testBooking: Booking = {
         id: `TEST-${Date.now()}`,
@@ -462,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]
         // No longer including the customer property as it's not part of the Booking type
       };
-      
+
       // Log SendGrid configuration
       logger.debug("Enhanced Email Test - SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
@@ -470,9 +470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
         emailType: emailType || EmailType.BOOKING_CONFIRMATION
       });
-      
+
       let result = false;
-      
+
       // Send the appropriate email based on type
       switch (emailType) {
         case EmailType.BOOKING_CONFIRMATION:
@@ -516,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Default to booking confirmation
           result = await sendEnhancedBookingConfirmation(testBooking);
       }
-      
+
       res.json({
         success: true,
         result: result,
@@ -526,22 +526,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       logger.error("Error in enhanced email test endpoint:", error);
-      
+
       // Detailed error handling for better client feedback
       let errorMessage = "An error occurred while testing enhanced email functionality";
       let errorDetails = null;
-      
+
       // Check for SendGrid specific errors
       if (error?.response?.body) {
         logger.error("SendGrid API error response:", error.response.body);
         errorDetails = error.response.body;
-        
+
         // Extract specific SendGrid error if available
         if (error.response.body.errors && error.response.body.errors.length > 0) {
           errorMessage = `SendGrid error: ${error.response.body.errors[0].message}`;
         }
       }
-      
+
       res.status(500).json({
         success: false,
         message: errorMessage,
@@ -654,24 +654,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Format date string for consistency
       const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
-      
+
       // Parse the date parts to avoid timezone issues
       const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-      
+
       // Check if the selected time is in the past
       const now = new Date();
-      
+
       // Always check time availability regardless of date
       // Parse the timeSlot (e.g., "7:30 PM")
       const isPM = (timeSlot as string).includes('PM');
       const timeComponents = (timeSlot as string).replace(/ (AM|PM)$/, '').split(':');
       let hour = parseInt(timeComponents[0], 10);
       const minute = timeComponents.length > 1 ? parseInt(timeComponents[1], 10) : 0;
-      
+
       // Convert to 24-hour format
       if (isPM && hour < 12) hour += 12;
       if (!isPM && hour === 12) hour = 0;
-      
+
       // Create a date with the selected time for comparison using component parts to avoid timezone issues
       const selectedDateTime = new Date(
         year, 
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hour,
         minute
       );
-        
+
       // Get the configurable booking buffer hours
       let bufferHours = 2; // Default fallback value of 2 hours
       try {
@@ -691,10 +691,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (bufferError) {
         logger.error("Error fetching booking buffer setting, using default:", bufferError as Error);
       }
-      
+
       // Add the configured buffer time for bookings
       const bufferTime = new Date(now.getTime() + bufferHours * 60 * 60 * 1000);
-      
+
       // Check if the selected time is in the past or within the buffer period
       if (selectedDateTime <= bufferTime) {
         return res.json({
@@ -703,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "This time slot is no longer available for booking"
         });
       }
-      
+
       // Check if the selected date is in the past
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const selectedDate = new Date(dateStr);
@@ -846,7 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             // Use our internal availability service
             const success = availabilityService.blockTimeSlots(date, timeSlots, reason);
-            
+
             if (!success) {
               logger.error('Failed to block time slots', new Error('Failed to block time slots'), {
                 date,
@@ -919,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/booking", async (req, res) => {
     try {
       logger.debug("Booking submission received:", JSON.stringify(req.body, null, 2));
-      
+
       // First, check if we have a valid booking object before parsing
       if (!req.body || Object.keys(req.body).length === 0) {
         logger.error("Empty booking submission received");
@@ -928,15 +928,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "No booking data provided"
         });
       }
-      
+
       try {
         const booking = bookingSchema.parse(req.body);
         logger.info("Booking validated successfully");
-        
+
         // Check if this time slot is already booked
         const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
         logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
-        
+
         // Continue with booking logic
         const existingBookings = await db.select().from(bookings).where(
           and(
@@ -961,22 +961,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         logger.debug("Preparing to insert booking into database");
-        
+
         // Handle account creation if requested
         if (req.body.createAccount) {
           logger.info("User requested account creation during booking");
-          
+
           try {
             // Check if user already exists
             const existingCustomer = await db.select().from(customers).where(eq(customers.email, booking.email)).limit(1);
-            
+
             if (existingCustomer.length > 0) {
               logger.info("Customer already exists, not creating a new account");
             } else {
               // Create new customer account
               const hashedPassword = req.body.password ? await bcrypt.hash(req.body.password, 10) : null;
               logger.debug("Creating new customer account");
-              
+
               await db.insert(customers).values({
                 name: booking.name,
                 email: booking.email,
@@ -991,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 isVerified: true, // Auto-verify since they're creating during booking
                 loyaltyPoints: 0
               });
-              
+
               logger.info("Customer account created successfully");
             }
           } catch (accountError) {
@@ -999,7 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             logger.error("Error creating customer account:", accountError);
           }
         }
-        
+
         // Insert into database
         const insertedBookings = await db.insert(bookings).values({
           name: booking.name,
@@ -1012,7 +1012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           zipCode: booking.zipCode,
           notes: booking.notes,
           serviceType: booking.serviceType,
-          preferredDate: booking.preferredDate,
+          preferredDate: new Date(booking.preferredDate).toISOString(),
           appointmentTime: booking.appointmentTime,
           status: 'active',
           pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
@@ -1035,18 +1035,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Send unified confirmation email using Gmail SMTP
         let customerEmailSent = false;
         let adminEmailSent = false;
-        
+
         logger.info("Starting Gmail email sending process...");
-        
+
         try {
           const { sendUnifiedBookingConfirmation } = await import('./services/gmailEmailService');
-          
+
           logger.info("Sending unified confirmation emails via Gmail...");
           const emailResults = await sendUnifiedBookingConfirmation(bookingWithId);
-          
+
           customerEmailSent = emailResults.customerSent;
           adminEmailSent = emailResults.adminSent;
-          
+
           logger.info(`Gmail email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
         } catch (error: any) {
           logger.error("Error sending Gmail emails:", error as Error);
@@ -1058,7 +1058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Booking confirmed successfully",
           booking: bookingWithId
         });
-        
+
         // Exit the nested try/catch block
         return;
       } catch (parseError) {
@@ -1086,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const errorMessage = error instanceof Error ? error.message : String(error);
       const stackTrace = error instanceof Error ? error.stack : 'No stack trace available';
-      
+
       logger.error(`Booking submission error details: ${errorMessage}`, error instanceof Error ? error : new Error(errorMessage));
       logger.debug(`Stack trace: ${stackTrace}`);
 
@@ -1108,12 +1108,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (booking.pricingBreakdown) {
           try {
             // Try to parse the JSON
-            pricingBreakdown = JSON.parse(booking.pricingBreakdown);
+            pricingBreakdown = booking.pricingBreakdown ? 
+          (typeof booking.pricingBreakdown === 'string' ? 
+            JSON.parse(booking.pricingBreakdown) : 
+            booking.pricingBreakdown) : 
+          {};
           } catch (e) {
             logger.error('Error parsing pricingBreakdown JSON:', e as Error);
             // Log the problematic data for debugging
             logger.info('Attempting to fix problematic pricing data');
-            
+
             try {
               // Function to help with deeply nested JSON
               const fixNestedJson = (jsonStr: string) => {
@@ -1127,31 +1131,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     // Failed to parse as nested JSON
                   }
                 }
-                
+
                 // Replace single quotes with double quotes
                 let fixedJson = jsonStr.replace(/'/g, '"');
-                
+
                 // Add missing quotes around property names
                 fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-                
+
                 // Add missing quotes around property values that are not numbers or booleans
                 fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-                
+
                 return JSON.parse(fixedJson);
               };
-              
+
               // Replace double-escaped quotes
               let intermediateJson = booking.pricingBreakdown
                 .replace(/\\\\"/g, '\\"') // Replace \\" with \"
                 .replace(/\\"/g, '"')     // Replace \" with "
                 .replace(/"{/g, '{')      // Replace "{ with {
                 .replace(/}"/g, '}');     // Replace }" with }
-              
+
               // Handle the case where the string might be an array-like string with JSON objects
               if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
                 intermediateJson = intermediateJson.replace(/^"|"$/g, '');
               }
-              
+
               // Try to parse the fixed JSON
               pricingBreakdown = JSON.parse(intermediateJson);
               logger.info('Successfully fixed and parsed JSON with intermediate approach');
@@ -1167,7 +1171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       return null;
                     }
                   }).filter(Boolean);
-                  
+
                   logger.info('Extracted valid JSON objects from malformed string');
                 } else {
                   // If all attempts fail, create a basic empty object
@@ -1230,12 +1234,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (booking.pricingBreakdown) {
         try {
           // Try to parse the JSON
-          pricingBreakdown = JSON.parse(booking.pricingBreakdown);
+          pricingBreakdown = booking.pricingBreakdown ? 
+          (typeof booking.pricingBreakdown === 'string' ? 
+            JSON.parse(booking.pricingBreakdown) : 
+            booking.pricingBreakdown) : 
+          {};
         } catch (e) {
           logger.error('Error parsing pricingBreakdown JSON:', e as Error);
           // Log the problematic data for debugging
           logger.info('Attempting to fix problematic pricing data');
-            
+
           try {
             // Function to help with deeply nested JSON
             const fixNestedJson = (jsonStr: string) => {
@@ -1249,31 +1257,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Failed to parse as nested JSON
                 }
               }
-              
+
               // Replace single quotes with double quotes
               let fixedJson = jsonStr.replace(/'/g, '"');
-              
+
               // Add missing quotes around property names
               fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-              
+
               // Add missing quotes around property values that are not numbers or booleans
               fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-              
+
               return JSON.parse(fixedJson);
             };
-            
+
             // Replace double-escaped quotes
             let intermediateJson = booking.pricingBreakdown
               .replace(/\\\\"/g, '\\"') // Replace \\" with \"
               .replace(/\\"/g, '"')     // Replace \" with "
               .replace(/"{/g, '{')      // Replace "{ with {
               .replace(/}"/g, '}');     // Replace }" with }
-            
+
             // Handle the case where the string might be an array-like string with JSON objects
             if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
               intermediateJson = intermediateJson.replace(/^"|"$/g, '');
             }
-            
+
             // Try to parse the fixed JSON
             pricingBreakdown = JSON.parse(intermediateJson);
             logger.info('Successfully fixed and parsed JSON with intermediate approach');
@@ -1289,7 +1297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     return null;
                   }
                 }).filter(Boolean);
-                
+
                 logger.info('Extracted valid JSON objects from malformed string');
               } else {
                 // If all attempts fail, create a basic empty object
@@ -1411,11 +1419,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         if (process.env.SENDGRID_API_KEY) {
           const booking = result[0];
-          
+
           // Send customer confirmation email
           await sendEnhancedBookingConfirmation(booking);
           logger.info("Enhanced customer confirmation email sent successfully");
-          
+
           // Send separate admin notification
           try {
             // Import admin notification function from enhanced email service
@@ -1503,12 +1511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const updates = {...req.body};
       const sendUpdateEmail = updates.sendUpdateEmail === true;
-      
+
       // Remove the sendUpdateEmail flag from updates so it doesn't get stored
       if (updates.sendUpdateEmail !== undefined) {
         delete updates.sendUpdateEmail;
       }
-      
+
       // Make sure createdAt is a proper Date object if it exists
       if (updates.createdAt && typeof updates.createdAt === 'string') {
         // Don't send createdAt in update - it will be preserved
@@ -1535,7 +1543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Handle pricingBreakdown - if it's a string, parse it
       if (typeof updates.pricingBreakdown === 'string') {
         try {
@@ -1545,7 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           logger.error('Error parsing pricingBreakdown JSON in update:', e as Error);
           // Log the problematic data for debugging
           logger.info('Attempting to fix problematic pricing data in update');
-          
+
           try {
             // Function to help with deeply nested JSON
             const fixNestedJson = (jsonStr: string) => {
@@ -1559,31 +1567,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Failed to parse as nested JSON
                 }
               }
-              
+
               // Replace single quotes with double quotes
               let fixedJson = jsonStr.replace(/'/g, '"');
-              
+
               // Add missing quotes around property names
               fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-              
+
               // Add missing quotes around property values that are not numbers or booleans
               fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-              
+
               return JSON.parse(fixedJson);
             };
-            
+
             // Replace double-escaped quotes
             let intermediateJson = updates.pricingBreakdown
               .replace(/\\\\"/g, '\\"') // Replace \\" with \"
               .replace(/\\"/g, '"')     // Replace \" with "
               .replace(/"{/g, '{')      // Replace "{ with {
               .replace(/}"/g, '}');     // Replace }" with }
-            
+
             // Handle the case where the string might be an array-like string with JSON objects
             if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
               intermediateJson = intermediateJson.replace(/^"|"$/g, '');
             }
-            
+
             // Try to parse the fixed JSON
             updates.pricingBreakdown = JSON.parse(intermediateJson);
             logger.info('Successfully fixed and parsed JSON with intermediate approach in update');
@@ -1599,7 +1607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     return null;
                   }
                 }).filter(Boolean);
-                
+
                 logger.info('Extracted valid JSON objects from malformed string in update');
               } else {
                 // If all attempts fail, create a basic empty object
@@ -1644,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate what fields have changed
           const updatedBooking = result[0];
           const changes: Record<string, any> = {};
-          
+
           // Compare fields and add to changes if they're different
           for (const key in updates) {
             if (Object.prototype.hasOwnProperty.call(updates, key) && 
@@ -1652,7 +1660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               changes[key] = updates[key];
             }
           }
-          
+
           // Only send email if there were actual changes
           if (Object.keys(changes).length > 0) {
             emailSent = await sendServiceEditNotification(updatedBooking, changes);
@@ -1681,16 +1689,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer API Endpoints
-  
+
   // Register a new customer
   // Import email service
   const { sendBookingConfirmationEmails } = await import('./services/emailService');
-  
+
   // SMS Routes
   app.post("/api/sms/send", async (req: Request, res: Response) => {
     try {
       const { to, message, bookingId } = req.body;
-      
+
       // Validate required fields
       if (!to || !message) {
         return res.status(400).json({
@@ -1698,7 +1706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Phone number and message are required"
         });
       }
-      
+
       // Check if Twilio is configured
       if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
         logger.warn("Twilio not configured, SMS not sent");
@@ -1707,14 +1715,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "SMS service not configured"
         });
       }
-      
+
       // For now, just log the SMS (would integrate with Twilio in production)
       logger.info(`SMS would be sent to ${to}: ${message}`, {
         bookingId,
         phone: to,
         messageLength: message.length
       });
-      
+
       res.json({
         success: true,
         message: "SMS sent successfully",
@@ -1733,34 +1741,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customer-portal/:email/:token", async (req: Request, res: Response) => {
     try {
       const { email, token } = req.params;
-      
+
       // For now, use a simple token validation (in production, use JWT or similar)
       // Token format: base64(email + timestamp + secret)
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
-      
+
       if (token !== expectedToken) {
         return res.status(403).json({
           success: false,
           message: "Invalid or expired access token"
         });
       }
-      
+
       // Find booking by email (get the most recent active booking)
       const bookingResults = await db.select()
         .from(bookings)
         .where(eq(bookings.email, email))
         .orderBy(desc(bookings.createdAt))
         .limit(1);
-      
+
       if (bookingResults.length === 0) {
         return res.status(404).json({
           success: false,
           message: "No booking found for this email"
         });
       }
-      
+
       const booking = bookingResults[0];
-      
+
       res.json({
         success: true,
         booking: {
@@ -1794,7 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, token } = req.params;
       const { reason } = req.body;
-      
+
       // Validate token
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
       if (token !== expectedToken) {
@@ -1803,7 +1811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid access token"
         });
       }
-      
+
       // Update booking status to cancelled
       const result = await db.update(bookings)
         .set({
@@ -1812,14 +1820,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .where(eq(bookings.email, email))
         .returning();
-      
+
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-      
+
       res.json({
         success: true,
         message: "Booking cancelled successfully"
@@ -1837,7 +1845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, token } = req.params;
       const { newDate, newTime, reason } = req.body;
-      
+
       // Validate token
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
       if (token !== expectedToken) {
@@ -1846,29 +1854,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid access token"
         });
       }
-      
+
       // Update booking with new date and time
       const updateData: any = {
         preferredDate: newDate,
         appointmentTime: newTime
       };
-      
+
       if (reason) {
         updateData.notes = `Rescheduled by customer: ${reason}`;
       }
-      
+
       const result = await db.update(bookings)
         .set(updateData)
         .where(eq(bookings.email, email))
         .returning();
-      
+
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-      
+
       res.json({
         success: true,
         message: "Booking rescheduled successfully"
@@ -1885,7 +1893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/customers/register", async (req: Request, res: Response) => {
     try {
       const { name, email, phone, password, streetAddress, addressLine2, city, state, zipCode } = req.body;
-      
+
       // Validate input data
       try {
         insertCustomerSchema.parse({
@@ -1909,17 +1917,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         throw validationError;
       }
-      
+
       // Check if customer already exists
       const existingCustomer = await storage.getCustomerByEmail(email);
-      
+
       if (existingCustomer) {
         return res.status(400).json({
           success: false,
           message: "A customer with this email already exists"
         });
       }
-      
+
       // Create new customer
       const newCustomer = await storage.createCustomer({
         name,
@@ -1933,10 +1941,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         zipCode,
         loyaltyPoints: 0
       });
-      
+
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = newCustomer;
-      
+
       res.status(201).json({
         success: true,
         message: "Customer registered successfully",
@@ -1950,25 +1958,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Customer login
   app.post("/api/customers/login", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      
+
       // Validate credentials
       const customer = await storage.validateCustomerCredentials(email, password);
-      
+
       if (!customer) {
         return res.status(401).json({
           success: false,
           message: "Invalid credentials"
         });
       }
-      
+
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = customer;
-      
+
       res.json({
         success: true,
         message: "Login successful",
@@ -1982,31 +1990,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get customer profile
   app.get("/api/customers/profile/:id", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-      
+
       const customer = await storage.getCustomerById(customerId);
-      
+
       if (!customer) {
         return res.status(404).json({
           success: false,
           message: "Customer not found"
         });
       }
-      
+
       // Don't return the password
       const { password, ...customerWithoutPassword } = customer;
-      
+
       res.json({
         success: true,
         customer: customerWithoutPassword
@@ -2019,20 +2027,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update customer profile
   app.put("/api/customers/profile/:id", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
       const updates = req.body;
-      
+
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-      
+
       // Don't allow updating the email or loyalty points directly
       delete updates.email;
       delete updates.loyaltyPoints;
@@ -2042,12 +2050,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       delete updates.isVerified;
       delete updates.passwordResetToken;
       delete updates.passwordResetExpires;
-      
+
       const updatedCustomer = await storage.updateCustomer(customerId, updates);
-      
+
       // Don't return the password
       const { password, ...customerWithoutPassword } = updatedCustomer;
-      
+
       res.json({
         success: true,
         message: "Profile updated successfully",
@@ -2063,12 +2071,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Push Notification API Endpoints
-  
+
   // Get VAPID public key for web push subscription
   app.get("/api/push/vapid-public-key", (req: Request, res: Response) => {
     try {
       const publicKey = pushNotificationService.getPublicKey();
-      
+
       res.json({
         success: true,
         publicKey
@@ -2081,18 +2089,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Save push subscription for a customer
   app.post("/api/customers/:id/push-subscription", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const userId = parseInt(id);
       const { subscription } = req.body;
-      
+
       // Validate the subscription object
       try {
         const validatedSubscription = pushSubscriptionSchema.parse(subscription);
-        
+
         // Check if user exists
         const user = await storage.getCustomerById(userId);
         if (!user) {
@@ -2101,24 +2109,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "User not found"
           });
         }
-        
+
         // Save the subscription
         const success = await pushNotificationService.saveSubscription(userId, validatedSubscription);
-        
+
         if (!success) {
           return res.status(500).json({
             success: false,
             message: "Failed to save push subscription"
           });
         }
-        
+
         // Send a test notification to confirm subscription
         await pushNotificationService.sendNotification(
           userId,
           "Notifications Enabled",
           "You will now receive booking notifications from Picture Perfect TV Install."
         );
-        
+
         res.json({
           success: true,
           message: "Push subscription saved successfully"
@@ -2138,14 +2146,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update notification settings for a customer
   app.put("/api/customers/:id/notification-settings", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const userId = parseInt(id);
       const { settings, enabled } = req.body;
-      
+
       // Check if user exists
       const user = await storage.getCustomerById(userId);
       if (!user) {
@@ -2154,36 +2162,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "User not found"
         });
       }
-      
+
       // Update database record
       const updateData: any = {};
-      
+
       // Update notification enabled/disabled status if provided
       if (typeof enabled === 'boolean') {
         updateData.notificationsEnabled = enabled;
-        
+
         // If notifications are being disabled, we don't need to update settings
         if (!enabled) {
           await pushNotificationService.disableNotifications(userId);
-          
+
           return res.json({
             success: true,
             message: "Notifications disabled successfully"
           });
         }
       }
-      
+
       // Update notification settings if provided
       if (settings) {
         try {
           const validatedSettings = notificationSettingsSchema.parse(settings);
           updateData.notificationSettings = validatedSettings;
-          
+
           // Update the user's notification settings
           await db.update(customers)
             .set({ notificationSettings: validatedSettings as any })
             .where(eq(customers.id, userId));
-          
+
           res.json({
             success: true,
             message: "Notification settings updated successfully"
@@ -2209,21 +2217,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get customer bookings
   app.get("/api/customers/:id/bookings", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-      
+
       const bookings = await storage.getCustomerBookings(customerId);
-      
+
       res.json({
         success: true,
         bookings
@@ -2236,32 +2244,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Customer update their booking
   app.put("/api/customers/bookings/:id", async (req: Request, res: Response) => {
     try {
       const bookingId = parseInt(req.params.id);
       const { preferredDate, appointmentTime, notes, status } = req.body;
-      
+
       if (isNaN(bookingId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid booking ID"
         });
       }
-      
+
       // Load the existing booking
       const existingBookingResult = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-      
+
       if (existingBookingResult.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-      
+
       const existingBooking = existingBookingResult[0];
-      
+
       // Only allow editing of active bookings (except for cancellation)
       if (existingBooking.status !== 'active' && status !== 'cancelled') {
         return res.status(400).json({
@@ -2269,7 +2277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Only active bookings can be updated"
         });
       }
-      
+
       // If this is a cancellation, we don't need to check for time slot conflicts
       // Otherwise check if this time slot is already booked by someone else
       if (status !== 'cancelled' && preferredDate && appointmentTime) {
@@ -2281,7 +2289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sql`${bookings.id} != ${bookingId}`
           )
         );
-        
+
         if (existingBookings.length > 0) {
           return res.status(409).json({
             success: false,
@@ -2289,27 +2297,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Prepare updates
       const updates: any = {};
       if (preferredDate) updates.preferredDate = preferredDate;
       if (appointmentTime) updates.appointmentTime = appointmentTime;
       if (notes !== undefined) updates.notes = notes;
       if (status) updates.status = status;
-      
+
       // Update the booking
       const result = await db.update(bookings)
         .set(updates)
         .where(eq(bookings.id, bookingId))
         .returning();
-      
+
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Failed to update booking"
         });
       }
-      
+
       // Send appropriate enhanced notification email
       try {
         if (status === 'cancelled') {
@@ -2333,7 +2341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.error("Error sending enhanced customer booking email:", emailError as Error);
         // We don't want to fail the request if the email fails
       }
-      
+
       res.json({
         success: true,
         message: status === 'cancelled' ? "Booking cancelled successfully" : "Booking updated successfully",
@@ -2347,22 +2355,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Reset password request
   app.post("/api/customers/reset-password-request", async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      
+
       // Request password reset
       const resetToken = await storage.requestPasswordReset(email);
-      
+
       // Even if the email doesn't exist, still return success
       // This is to prevent email enumeration attacks
       res.json({
         success: true,
         message: "If your email exists in our system, you will receive a password reset link shortly"
       });
-      
+
       // If a token was generated, send an email with the reset link
       if (resetToken) {
         // TODO: Implement sending reset email here
@@ -2376,29 +2384,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Reset password
   app.post("/api/customers/reset-password", async (req: Request, res: Response) => {
     try {
       const { email, token, newPassword } = req.body;
-      
+
       if (!email || !token || !newPassword) {
         return res.status(400).json({
           success: false,
           message: "Missing required fields"
         });
       }
-      
+
       // Try to reset the password
       const success = await storage.resetPassword(email, token, newPassword);
-      
+
       if (!success) {
         return res.status(400).json({
           success: false,
           message: "Invalid or expired reset token"
         });
       }
-      
+
       res.json({
         success: true,
         message: "Password reset successful"
@@ -2411,21 +2419,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Verify customer email
   app.get("/api/customers/verify/:email/:token", async (req: Request, res: Response) => {
     try {
       const { email, token } = req.params;
-      
+
       const success = await storage.verifyCustomer(email, token);
-      
+
       if (!success) {
         return res.status(400).json({
           success: false,
           message: "Invalid verification token"
         });
       }
-      
+
       res.json({
         success: true,
         message: "Email verified successfully"
@@ -2438,21 +2446,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Admin customer management endpoints
-  
+
   // List all customers (admin)
   app.get("/api/admin/customers", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       // Get all customers from database
       const result = await db.select({
         id: customers.id,
@@ -2468,7 +2476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastLogin: customers.lastLogin,
         isVerified: customers.isVerified
       }).from(customers);
-      
+
       res.json({
         success: true,
         customers: result
@@ -2481,39 +2489,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get customer details (admin)
   app.get("/api/admin/customers/:id", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
       const customerId = parseInt(req.params.id);
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-      
+
       const customer = await storage.getCustomerById(customerId);
-      
+
       if (!customer) {
         return res.status(404).json({
           success: false,
           message: "Customer not found"
         });
       }
-      
+
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = customer;
-      
+
       res.json({
         success: true,
         customer: customerWithoutPassword
@@ -2526,32 +2534,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update customer (admin)
   app.put("/api/admin/customers/:id", async (req: Request, res: Response) => {
     try {
       const { password, ...updates } = req.body;
       const customerId = parseInt(req.params.id);
-      
+
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-      
+
       const updatedCustomer = await storage.updateCustomer(customerId, updates);
-      
+
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = updatedCustomer;
-      
+
       res.json({
         success: true,
         message: "Customer updated successfully",
@@ -2565,7 +2573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Admin endpoints
   // The adminPassword variable is no longer needed here because it's managed by verifyAdminPassword function.
 
@@ -2639,23 +2647,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Business Hours endpoints
-  
+
   // Get all business hours (Admin)
   app.get("/api/admin/business-hours", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       const businessHours = await storage.getBusinessHours();
-      
+
       res.json({
         success: true,
         businessHours
@@ -2668,16 +2676,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get all business hours (Public) - No authentication needed
   app.get("/api/business-hours", async (req: Request, res: Response) => {
     try {
       const businessHours = await storage.getBusinessHours();
-      
+
       logger.debug('Fetched business hours for client', { 
         businessHoursCount: businessHours.length
       });
-      
+
       res.json({
         success: true,
         businessHours
@@ -2690,20 +2698,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get business hours for specific day
   app.get("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
       const dayOfWeek = parseInt(req.params.dayOfWeek);
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       // Validate day of week
       if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
         return res.status(400).json({
@@ -2711,16 +2719,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
         });
       }
-      
+
       const hours = await storage.getBusinessHoursForDay(dayOfWeek);
-      
+
       if (!hours) {
         return res.status(404).json({
           success: false,
           message: "Business hours not found for the specified day"
         });
       }
-      
+
       res.json({
         success: true,
         businessHours: hours
@@ -2733,20 +2741,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update business hours for a specific day
   app.post("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
     try {
       const { password, startTime, endTime, isAvailable } = req.body;
       const dayOfWeek = parseInt(req.params.dayOfWeek);
-      
+
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       // Validate day of week
       if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
         return res.status(400).json({
@@ -2754,7 +2762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
         });
       }
-      
+
       // Validate input data
       try {
         businessHoursSchema.parse({
@@ -2773,14 +2781,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         throw validationError;
       }
-      
+
       // Update business hours in storage
       const updatedHours = await storage.updateBusinessHours(dayOfWeek, {
         startTime,
         endTime,
         isAvailable: isAvailable !== undefined ? isAvailable : true
       });
-      
+
       res.json({
         success: true,
         message: "Business hours updated successfully",
@@ -2794,7 +2802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // API endpoint to get booking archives
   app.get("/api/booking-archives", async (req: Request, res: Response) => {
     try {
@@ -2806,16 +2814,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unauthorized - Invalid admin password"
         });
       }
-      
+
       // Get archives from the database
       const archives = await storage.getBookingArchives();
-      
+
       // Sort by archivedAt date, most recent first
       archives.sort((a, b) => {
         if (!a.archivedAt || !b.archivedAt) return 0;
         return new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime();
       });
-      
+
       res.json({
         success: true,
         archives
@@ -2832,7 +2840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // System Settings API Routes
   // Analytics API - Get Meta Pixel event data
   app.get("/api/admin/analytics", handleGetAnalytics);
-  
+
   app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSystemSettings();
@@ -2848,19 +2856,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   app.get("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
     try {
       const name = req.params.name;
       const setting = await storage.getSystemSettingByName(name);
-      
+
       if (!setting) {
         return res.status(404).json({
           success: false,
           message: "System setting not found"
         });
       }
-      
+
       res.json({
         success: true,
         setting
@@ -2873,26 +2881,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   app.post("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
     try {
       const { password, value } = req.body;
       const name = req.params.name;
-      
+
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-      
+
       if (value === undefined) {
         return res.status(400).json({
           success: false,
           message: "Value is required"
         });
       }
-      
+
       const updatedSetting = await storage.updateSystemSetting(name, value);
       res.json({
         success: true,
@@ -2907,19 +2915,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Public API for system settings (only specific settings)
   app.get("/api/system-settings/booking-buffer", async (req: Request, res: Response) => {
     try {
       const setting = await storage.getSystemSettingByName('bookingBufferHours');
-      
+
       if (!setting) {
         return res.status(404).json({
           success: false,
           message: "Setting not found"
         });
       }
-      
+
       res.json({
         success: true,
         bookingBufferHours: setting.bookingBufferHours
@@ -2937,7 +2945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/bookings/:id", async (req, res) => {
     const { id } = req.params;
     const { reason, note, skipArchive, sendCancellationEmail } = req.query;
-    
+
     try {
       if (isNaN(parseInt(id))) {
         return res.status(400).json({
@@ -2945,28 +2953,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid booking ID"
         });
       }
-      
+
       // First, check if the booking exists in the database
       const bookingId = parseInt(id);
-      
+
       try {
         // Get the booking before deletion to use for email notification
         const booking = await storage.getBooking(bookingId);
-        
+
         if (!booking) {
           return res.status(404).json({
             success: false,
             message: "Booking not found"
           });
         }
-        
+
         // Use storage interface to handle deletion and archiving
         await storage.deleteBooking(bookingId, 
           skipArchive === 'true' ? undefined : (reason as string || 'admin-deleted'), 
           note as string
         );
-        
-        // Send cancellation email if requested
+
+        // Send cancellation email if requested```text
         if (sendCancellationEmail === 'true' && booking.email) {
           try {
             const emailResult = await sendBookingCancellationEmail(booking, reason as string);
@@ -2980,7 +2988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Continue with the deletion even if email fails
           }
         }
-        
+
         res.json({ 
           success: true, 
           message: skipArchive === 'true' 
@@ -3004,7 +3012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get all booking archives
   app.get("/api/admin/booking-archives", async (req, res) => {
     try {
@@ -3016,9 +3024,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unauthorized" 
         });
       }
-      
+
       const archives = await storage.getBookingArchives();
-      
+
       res.json({
         success: true,
         archives
@@ -3031,7 +3039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get a specific booking archive by ID
   app.get("/api/admin/booking-archives/:id", async (req, res) => {
     try {
@@ -3043,7 +3051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unauthorized" 
         });
       }
-      
+
       const { id } = req.params;
       if (isNaN(parseInt(id))) {
         return res.status(400).json({
@@ -3051,16 +3059,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid archive ID"
         });
       }
-      
+
       const archive = await storage.getBookingArchiveById(parseInt(id));
-      
+
       if (!archive) {
         return res.status(404).json({
           success: false,
           message: "Archive not found"
         });
       }
-      
+
       res.json({
         success: true,
         archive
@@ -3073,7 +3081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get booking archives by reason
   app.get("/api/admin/booking-archives/reason/:reason", async (req, res) => {
     try {
@@ -3085,10 +3093,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unauthorized" 
         });
       }
-      
+
       const { reason } = req.params;
       const archives = await storage.getBookingArchivesByReason(reason);
-      
+
       res.json({
         success: true,
         archives
@@ -3101,7 +3109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get booking archives by customer email
   app.get("/api/admin/booking-archives/email/:email", async (req, res) => {
     try {
@@ -3113,10 +3121,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Unauthorized" 
         });
       }
-      
+
       const { email } = req.params;
       const archives = await storage.getBookingArchivesByEmail(email);
-      
+
       res.json({
         success: true,
         archives
@@ -3145,36 +3153,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           promotions: []
         });
       }
-      
+
       // Check if we have valid dates for any time-limited promotions
       const now = new Date();
       const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
+
       // Filter promotions based on date ranges if they exist
       const activePromotions = dbPromotions.filter(promo => {
         // If no dates are specified, or isActive is explicitly false, use the isActive flag
         if (!promo.startDate && !promo.endDate) {
           return promo.isActive;
         }
-        
+
         // If we have a date range, check if today falls within it
         if (promo.startDate && promo.endDate) {
           return promo.isActive && promo.startDate <= today && promo.endDate >= today;
         }
-        
+
         // If only start date, check if today is after start date
         if (promo.startDate && !promo.endDate) {
           return promo.isActive && promo.startDate <= today;
         }
-        
+
         // If only end date, check if today is before end date
         if (!promo.startDate && promo.endDate) {
           return promo.isActive && promo.endDate >= today;
         }
-        
+
         return promo.isActive;
       });
-      
+
       // Map to expected format
       const formattedPromotions = activePromotions.map(p => ({
         id: p.id.toString(),
@@ -3189,10 +3197,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: p.priority,
         isActive: p.isActive
       }));
-      
+
       // Add cache headers to prevent too many requests (10 minutes)
       res.setHeader('Cache-Control', 'public, max-age=600');
-      
+
       res.json({
         success: true,
         promotions: formattedPromotions
@@ -3223,7 +3231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate promotion data
       try {
         const validPromotion = promotionSchema.parse(promotion);
-        
+
         // Insert promotion into database
         const result = await db.insert(promotions).values({
           title: validPromotion.title,
@@ -3245,7 +3253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (validationError) {
         logger.error("Promotion validation error:", validationError);
-        
+
         if (validationError instanceof ZodError) {
           return res.status(400).json({
             success: false,
@@ -3253,7 +3261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errors: validationError.errors
           });
         }
-        
+
         throw validationError;
       }
     } catch (error) {
@@ -3270,7 +3278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { password, promotion } = req.body;
-      
+
       // Verify admin password
       if (!verifyAdminPassword(password)) {
         logger.auth('Invalid password for updating promotion');
@@ -3279,7 +3287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid admin password"
         });
       }
-      
+
       // Parse the ID
       const promotionId = parseInt(id);
       if (isNaN(promotionId)) {
@@ -3288,11 +3296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid promotion ID"
         });
       }
-      
+
       // Validate promotion data
       try {
         const validPromotion = promotionSchema.parse(promotion);
-        
+
         // Update promotion in database
         const result = await db.update(promotions)
           .set({
@@ -3310,14 +3318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .where(eq(promotions.id, promotionId))
           .returning();
-          
+
         if (result.length === 0) {
           return res.status(404).json({
             success: false,
             message: "Promotion not found"
           });
         }
-        
+
         res.json({
           success: true,
           message: "Promotion updated successfully",
@@ -3325,7 +3333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (validationError) {
         logger.error("Promotion validation error:", validationError);
-        
+
         if (validationError instanceof ZodError) {
           return res.status(400).json({
             success: false,
@@ -3333,7 +3341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errors: validationError.errors
           });
         }
-        
+
         throw validationError;
       }
     } catch (error) {
@@ -3344,13 +3352,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Admin: Delete promotion
   app.delete("/api/admin/promotions/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { password } = req.query;
-      
+
       // Verify admin password
       if (!verifyAdminPassword(password as string)) {
         logger.auth('Invalid password for deleting promotion');
@@ -3359,7 +3367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid admin password"
         });
       }
-      
+
       // Parse the ID
       const promotionId = parseInt(id);
       if (isNaN(promotionId)) {
@@ -3368,19 +3376,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid promotion ID"
         });
       }
-      
+
       // Delete promotion from database
       const result = await db.delete(promotions)
         .where(eq(promotions.id, promotionId))
         .returning();
-        
+
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Promotion not found"
         });
       }
-      
+
       res.json({
         success: true,
         message: "Promotion deleted successfully"
