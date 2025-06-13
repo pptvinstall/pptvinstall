@@ -151,5 +151,60 @@
     ],
     "id": "127",
     "createdAt": "2025-06-13T15:41:44.490Z"
+  },
+  {
+    "name": "Final Gmail Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045559999",
+    "streetAddress": "123 Gmail Test Boulevard",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Final verification of Gmail SMTP system",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-20",
+    "appointmentTime": "2:30 PM",
+    "status": "active",
+    "pricingTotal": 200,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "128",
+    "createdAt": "2025-06-13T15:42:39.504Z"
+  },
+  {
+    "name": "Gmail Authentication Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045553642",
+    "streetAddress": "456 Live Email Test Ave",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Testing Gmail SMTP with correct App Password authentication",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-21",
+    "appointmentTime": "11:00 AM",
+    "status": "active",
+    "pricingTotal": 225,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "highRise": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "129",
+    "createdAt": "2025-06-13T15:43:27.601Z"
   }
 ]

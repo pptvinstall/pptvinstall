@@ -6,7 +6,7 @@ import type { EventAttributes } from 'ics';
 
 // Gmail SMTP configuration
 const GMAIL_USER = process.env.GMAIL_USER || 'pptvinstall@gmail.com';
-const GMAIL_APP_PASSWORD = process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD;
+const GMAIL_APP_PASSWORD = 'xsjlfjpqderocpyh'; // Updated Gmail App Password
 const ADMIN_EMAIL = 'pptvinstall@gmail.com';
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
