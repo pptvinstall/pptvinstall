@@ -489,6 +489,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
       toast({
         title: "Booking deleted",
         description: data?.message || "The booking has been permanently deleted.",

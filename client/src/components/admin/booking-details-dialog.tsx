@@ -123,6 +123,7 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
       onClose();
       toast({
         title: "Booking deleted",
