@@ -47,6 +47,12 @@ export function OptimizedAdminPanel({ isAuthenticated, onLogout }: OptimizedAdmi
   // Fetch bookings with optimized query
   const { data: bookings = [], isLoading, error } = useQuery({
     queryKey: ['/api/bookings'],
+    queryFn: async () => {
+      const response = await fetch('/api/bookings');
+      if (!response.ok) throw new Error('Failed to fetch bookings');
+      const data = await response.json();
+      return data.bookings || [];
+    },
     enabled: isAuthenticated,
     refetchInterval: 30000, // Refresh every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
