@@ -937,8 +937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.info("Booking validated successfully");
 
         // Check if this time slot is already booked
-        const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYY```python
-//-MM-DD
+        const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
         logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
 
         // Continue with booking logic

@@ -15,9 +15,9 @@ app.use(compression({
     return compression.filter(req, res);
   }
 }));
-// Increase JSON request size limit to handle image uploads (10MB limit)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+// Optimize JSON parsing for memory efficiency (2MB limit)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 
 // Add caching for static assets
 app.use((req, res, next) => {
