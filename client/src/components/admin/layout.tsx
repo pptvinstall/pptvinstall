@@ -192,8 +192,6 @@ export function AdminLayout({ children, onLogout }: AdminLayoutProps) {
               // Active if the URL has no tab and we're on dashboard, or if the URL tab matches this item
               const isActive = (!currentTab && item.tab === 'dashboard') || currentTab === item.tab;
               
-              console.log(`Nav item: ${item.name}, Tab: ${item.tab}, isActive: ${isActive}`);
-              
               return (
                 <button
                   key={item.name}

@@ -469,20 +469,25 @@ export default function AdminDashboard() {
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/bookings/${id}`);
       if (!response.ok) {
+        // If the booking is already deleted (404), treat it as success
+        if (response.status === 404) {
+          return { success: true, message: "Booking was already deleted" };
+        }
         throw new Error('Failed to delete booking');
       }
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
         title: "Booking deleted",
-        description: "The booking has been permanently deleted.",
+        description: data?.message || "The booking has been permanently deleted.",
       });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Deletion failed",
-        description: "Failed to delete the booking. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete the booking. Please try again.",
         variant: "destructive"
       });
     }

@@ -139,29 +139,42 @@ export default function BookingConfirmation() {
         if (data?.preferredDate) {
           try {
             // If we have rawBookingDate from session storage, prioritize using that
-            if (rawBookingDate) {
+            if (rawBookingDate && typeof rawBookingDate === 'string') {
               console.log("Using raw booking date from session storage:", rawBookingDate);
               // Format it directly without any timezone conversion
               const dateParts = rawBookingDate.split('T')[0].split('-');
-              if (dateParts.length === 3) {
+              if (dateParts.length === 3 && dateParts.every(part => !isNaN(parseInt(part)))) {
                 const year = parseInt(dateParts[0]);
                 const month = parseInt(dateParts[1]) - 1; // Months are 0-indexed in JS Date
                 const day = parseInt(dateParts[2]);
 
-                // Create the date with the exact components to avoid timezone issues
-                const date = new Date(year, month, day);
-                formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
+                // Validate date components
+                if (year > 1900 && year < 3000 && month >= 0 && month < 12 && day > 0 && day <= 31) {
+                  const date = new Date(year, month, day);
+                  // Additional validation to ensure the date is valid
+                  if (!isNaN(date.getTime())) {
+                    formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
+                  } else {
+                    formattedDateValue = rawBookingDate;
+                  }
+                } else {
+                  formattedDateValue = rawBookingDate;
+                }
               } else {
                 formattedDateValue = rawBookingDate;
               }
-            } else {
+            } else if (data?.preferredDate && typeof data.preferredDate === 'string') {
               // Make sure we use the rawPreferredDate if available to avoid timezone issues
-              // Use parseISO which is more reliable with timezone handling
               const date = parseISO(data.preferredDate);
-              formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
+              if (!isNaN(date.getTime())) {
+                formattedDateValue = format(date, "EEEE, MMMM d, yyyy");
+              } else {
+                formattedDateValue = data.preferredDate;
+              }
+            } else {
+              formattedDateValue = "Date not available";
             }
           } catch (e) {
-            console.error("Error formatting date:", e);
             formattedDateValue = "Date not available";
           }
         }
