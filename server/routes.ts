@@ -1026,7 +1026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bookingWithId = {
           ...booking,
           id: newBooking.id.toString(),
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         };
 
         fileBookings.push(bookingWithId);

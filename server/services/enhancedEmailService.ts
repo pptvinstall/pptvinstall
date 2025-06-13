@@ -11,7 +11,7 @@ if (SENDGRID_API_KEY) {
 }
 
 // Email configuration
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com';
 const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVInstall@gmail.com>';
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
