@@ -727,10 +727,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (existingBookings.length > 0) {
+          logger.info('WARNING: Time slot already booked, returning conflict error');
           return res.json({
             success: true,
             isAvailable: false,
-            message: "This time slot is already booked"
+			message: 'This time slot is already booked. Please choose a different time.',
+			error: 'TIME_SLOT_CONFLICT',
+            suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
       } catch (dbError) {
@@ -934,7 +937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.info("Booking validated successfully");
 
         // Check if this time slot is already booked
-        const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
+        const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYY```python
+//-MM-DD
         logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
 
         // Continue with booking logic
@@ -947,10 +951,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (existingBookings.length > 0) {
-          logger.warn("Time slot already booked, returning conflict error");
+          logger.info('WARNING: Time slot already booked, returning conflict error');
           return res.status(409).json({
             success: false,
-            message: "This time slot is already booked. Please select another time."
+            message: 'This time slot is already booked. Please choose a different time.',
+			error: 'TIME_SLOT_CONFLICT',
+            suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
 
@@ -1107,84 +1113,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let pricingBreakdown = null;
         if (booking.pricingBreakdown) {
           try {
-            // Try to parse the JSON
-            pricingBreakdown = booking.pricingBreakdown ? 
-          (typeof booking.pricingBreakdown === 'string' ? 
-            JSON.parse(booking.pricingBreakdown) : 
-            booking.pricingBreakdown) : 
-          {};
-          } catch (e) {
-            logger.error('Error parsing pricingBreakdown JSON:', e as Error);
-            // Log the problematic data for debugging
-            logger.info('Attempting to fix problematic pricing data');
+          booking.pricingBreakdown = JSON.parse(booking.pricingBreakdown as string);
+        } catch (error) {
+          logger.error('Error parsing pricingBreakdown JSON:', error as Error);
+          logger.error('Problematic pricing data:', { data: booking.pricingBreakdown });
 
-            try {
-              // Function to help with deeply nested JSON
-              const fixNestedJson = (jsonStr: string) => {
-                // First, handle the case of over-escaped JSON (common in the DB)
-                if (jsonStr.includes('\\"')) {
-                  try {
-                    // Try to parse it as a JSON string that contains escaped JSON
-                    const unescaped = JSON.parse(`"${jsonStr.replace(/^"|"$/g, '').replace(/\\"/g, '"')}"`);
-                    return JSON.parse(unescaped);
-                  } catch (error) {
-                    // Failed to parse as nested JSON
-                  }
-                }
-
-                // Replace single quotes with double quotes
-                let fixedJson = jsonStr.replace(/'/g, '"');
-
-                // Add missing quotes around property names
-                fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-
-                // Add missing quotes around property values that are not numbers or booleans
-                fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-
-                return JSON.parse(fixedJson);
-              };
-
-              // Replace double-escaped quotes
-              let intermediateJson = booking.pricingBreakdown
-                .replace(/\\\\"/g, '\\"') // Replace \\" with \"
-                .replace(/\\"/g, '"')     // Replace \" with "
-                .replace(/"{/g, '{')      // Replace "{ with {
-                .replace(/}"/g, '}');     // Replace }" with }
-
-              // Handle the case where the string might be an array-like string with JSON objects
-              if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
-                intermediateJson = intermediateJson.replace(/^"|"$/g, '');
-              }
-
-              // Try to parse the fixed JSON
-              pricingBreakdown = JSON.parse(intermediateJson);
-              logger.info('Successfully fixed and parsed JSON with intermediate approach');
-            } catch (intermediateError) {
-              try {
-                // As a last resort, try to extract valid JSON substrings
-                const jsonMatches = booking.pricingBreakdown.match(/\{[^{}]*\}/g);
-                if (jsonMatches && jsonMatches.length > 0) {
-                  pricingBreakdown = jsonMatches.map(jsonStr => {
-                    try {
-                      return JSON.parse(jsonStr.replace(/\\"/g, '"'));
-                    } catch (err) {
-                      return null;
-                    }
-                  }).filter(Boolean);
-
-                  logger.info('Extracted valid JSON objects from malformed string');
-                } else {
-                  // If all attempts fail, create a basic empty object
-                  logger.error('Could not extract valid JSON objects');
-                  pricingBreakdown = {};
-                }
-              } catch (finalError) {
-                // If all attempts fail, create a basic empty object
-                logger.error('All JSON parsing attempts failed:', finalError as Error);
-                pricingBreakdown = {};
-              }
-            }
+          // Try to fix common JSON issues
+          try {
+            const fixedJson = (booking.pricingBreakdown as string)
+              .replace(/'/g, '"')  // Replace single quotes with double quotes
+              .replace(/(\w+):/g, '"$1":');  // Add quotes around property names
+            booking.pricingBreakdown = JSON.parse(fixedJson);
+          } catch (secondError) {
+            logger.error('Could not fix JSON parsing error:', secondError as Error);
+            booking.pricingBreakdown = [];  // Default to empty array
           }
+        }
         }
 
         return {
@@ -1624,6 +1568,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the booking in the database
+	  // Check if there's actually data to update
+      if (Object.keys(updates).length === 0) {
+        logger.warn('No valid update data provided', { bookingId: id });
+        return res.status(400).json({
+          success: false,
+          message: 'No valid update data provided'
+        });
+      }
+
       const result = await db.update(bookings)
         .set(updates)
         .where(eq(bookings.id, id))
@@ -2291,9 +2244,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (existingBookings.length > 0) {
+          logger.info('WARNING: Time slot already booked, returning conflict error');
           return res.status(409).json({
             success: false,
-            message: "This time slot is already booked. Please select another time."
+            message: 'This time slot is already booked. Please choose a different time.',
+			error: 'TIME_SLOT_CONFLICT',
+            suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
       }
@@ -2306,6 +2262,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) updates.status = status;
 
       // Update the booking
+	  // Check if there's actually data to update
+      if (Object.keys(updates).length === 0) {
+        logger.warn('No valid update data provided', { bookingId: bookingId });
+        return res.status(400).json({
+          success: false,
+          message: 'No valid update data provided'
+        });
+      }
       const result = await db.update(bookings)
         .set(updates)
         .where(eq(bookings.id, bookingId))
@@ -3014,7 +2978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all booking archives
-  app.get("/api/admin/booking-archives", async (req, res) => {
+  app.get("/api/admin/booking-archives",```python
+  async (req, res) => {
     try {
       // Verify admin password
       const { password } = req.query;

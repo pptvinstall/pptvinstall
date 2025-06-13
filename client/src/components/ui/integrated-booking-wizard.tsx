@@ -187,7 +187,7 @@ export function IntegratedBookingWizard({
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
-  
+
   // Accessibility and guidance features
   const [guidanceMode, setGuidanceMode] = useState<'full' | 'minimal' | 'hidden'>('minimal');
   const [showAccessibilityOptions, setShowAccessibilityOptions] = useState(false);
@@ -195,7 +195,7 @@ export function IntegratedBookingWizard({
   const [highContrastMode, setHighContrastMode] = useState(false);
   const { isFirstTime, markAsReturningUser } = useFirstTimeUser();
   const [showTutorial, setShowTutorial] = useState(isFirstTime);
-  
+
   // Function to handle assistant visibility
   const toggleAssistant = () => {
     if (guidanceMode === 'hidden') {
@@ -204,50 +204,50 @@ export function IntegratedBookingWizard({
       setGuidanceMode('hidden');
     }
   };
-  
+
   // Use business hours to generate time slots and check availability
   const { getTimeSlotsForDate, getBusinessHoursForDay, businessHours } = useBusinessHours();
-  
+
   // Generate time slots based on the selected date and business hours
   const timeSlots = useMemo(() => {
     if (!selectedDate) return [];
-    
+
     console.log(`Generating time slots for date: ${format(selectedDate, 'yyyy-MM-dd')}`);
     // Get time slots based on business hours - 60 minute intervals
     const slots = getTimeSlotsForDate(selectedDate, 60);
     console.log(`Generated ${slots.length} time slots:`, slots);
     return slots;
   }, [selectedDate, getTimeSlotsForDate]);
-  
+
   // Simple function to check if a time slot is in the past or too soon 
   // (extracted to avoid circular dependencies)
   const isTimePastOrTooSoon = useCallback((dateStr: string, timeStr: string): boolean => {
     // Parse the time string
     const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
     if (!timeMatch) return true; // Invalid format means unavailable
-    
+
     let hours = parseInt(timeMatch[1], 10);
     const minutes = parseInt(timeMatch[2], 10);
     const period = timeMatch[3].toUpperCase();
-    
+
     // Convert to 24-hour format
     if (period === 'PM' && hours < 12) {
       hours += 12;
     } else if (period === 'AM' && hours === 12) {
       hours = 0;
     }
-    
+
     // Parse the date correctly to avoid timezone issues
     const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-    
+
     // Create a date object using individual components (avoids timezone shifts)
     // Note: month is 0-indexed in JavaScript Date
     const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-    
+
     // Get current time plus buffer
     const now = new Date();
     const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000); // Use configurable buffer
-    
+
     // Check if slot is in the past or too soon
     return slotDate <= bufferTime;
   }, [bookingBufferHours]);
@@ -258,7 +258,7 @@ export function IntegratedBookingWizard({
     if (selectedDate) {
       // Check each time slot for the selected date
       const dateStr = safeFormatDate(selectedDate, "yyyy-MM-dd", "");
-      
+
       // We only want to update the UI, not create an infinite loop
       // So we handle this in a non-render-triggering way
       const timer1 = setTimeout(() => {
@@ -266,42 +266,42 @@ export function IntegratedBookingWizard({
         timeSlots.forEach(timeSlot => {
           const key = `${dateStr}|${timeSlot}`;
           const isPastOrTooSoon = isTimePastOrTooSoon(dateStr, timeSlot);
-          
+
           if (isPastOrTooSoon) {
             setTimeSlotAvailability(prev => ({ ...prev, [key]: false }));
           }
         });
-        
+
         console.log('Initial availability check for', dateStr, 'at', new Date().toLocaleTimeString());
       }, 0);
-      
+
       // Set up an interval to refresh time slot availability every minute
       const refreshInterval = setInterval(() => {
         if (selectedDate) {
           const dateStr = safeFormatDate(selectedDate, "yyyy-MM-dd", "");
-          
+
           // For each time slot, check if it's just become unavailable
           timeSlots.forEach(timeSlot => {
             const key = `${dateStr}|${timeSlot}`;
             const isPastOrTooSoon = isTimePastOrTooSoon(dateStr, timeSlot);
-            
+
             if (isPastOrTooSoon && timeSlotAvailability[key] !== false) {
               setTimeSlotAvailability(prev => ({ ...prev, [key]: false }));
               console.log(`Auto-refresh: Time slot ${timeSlot} on ${dateStr} is now unavailable`);
             }
           });
-          
+
           console.log('Real-time refresh: Checked time slot availability at', new Date().toLocaleTimeString());
         }
       }, 60000); // Refresh every minute
-      
+
       return () => {
         clearTimeout(timer1);
         clearInterval(refreshInterval);
       };
     }
   }, [selectedDate, timeSlots, isTimePastOrTooSoon]);
-  
+
   const [formData, setFormData] = useState<BookingFormData>({
     name: "",
     email: "",
@@ -319,7 +319,7 @@ export function IntegratedBookingWizard({
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
-  
+
   // TVs
   const [newTvSize, setNewTvSize] = useState<'small' | 'large'>('small');
   const [newTvLocation, setNewTvLocation] = useState<'standard' | 'fireplace'>('standard');
@@ -328,17 +328,17 @@ export function IntegratedBookingWizard({
   const [newTvHighRise, setNewTvHighRise] = useState(false);
   const [newTvOutletNeeded, setNewTvOutletNeeded] = useState(false);
   const [newTvOutletImage, setNewTvOutletImage] = useState<string | undefined>();
-  
+
   // Smart Home
   const [newDeviceType, setNewDeviceType] = useState<'doorbell' | 'camera' | 'floodlight'>('camera');
   const [newDeviceCount, setNewDeviceCount] = useState(1);
   const [hasExistingWiring, setHasExistingWiring] = useState(true);
-  
+
   // Scroll to top when changing steps
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
-  
+
   // Fetch booking buffer setting from the API
   useEffect(() => {
     async function fetchBookingBuffer() {
@@ -355,7 +355,7 @@ export function IntegratedBookingWizard({
         console.error('Error fetching booking buffer setting:', error);
       }
     }
-    
+
     fetchBookingBuffer();
   }, []);
 
@@ -363,50 +363,50 @@ export function IntegratedBookingWizard({
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
       const key = `${date}|${time}`;
-      
+
       // Check if we already have a cached result to avoid unnecessary state updates
       if (timeSlotAvailability[key] !== undefined) {
         return timeSlotAvailability[key];
       }
-      
+
       // Always recalculate time-based availability to ensure real-time checks
       // (don't use cached result for time-based checks)
-      
+
       // Get current time for comparison
       const now = new Date();
-      
+
       // Parse the time string to get hours and minutes
       const timeMatch = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (!timeMatch) {
         console.error(`Invalid time format: ${time}`);
         return false;
       }
-      
+
       let hours = parseInt(timeMatch[1], 10);
       const minutes = parseInt(timeMatch[2], 10);
       const period = timeMatch[3].toUpperCase();
-      
+
       // Convert to 24-hour format
       if (period === 'PM' && hours < 12) {
         hours += 12;
       } else if (period === 'AM' && hours === 12) {
         hours = 0;
       }
-      
+
       // Parse the date components to ensure consistent handling across timezones
       const [year, month, day] = date.split('-').map(num => parseInt(num, 10));
-      
+
       // Create a date object using individual components to avoid timezone issues
       // Note: month is 0-indexed in JavaScript Date
       const selectedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-      
+
       // Add configurable buffer for bookings (using system setting)
       const bufferTime = new Date(now.getTime() + bookingBufferHours * 60 * 60 * 1000);
-      
+
       // Check if the selected time is in the past (with buffer)
       if (selectedDate <= bufferTime) {
         console.log(`Time slot ${time} on ${date} is unavailable due to being in the past or too soon`);
-        
+
         // Use setTimeout to prevent state updates during render
         setTimeout(() => {
           setTimeSlotAvailability((prev) => {
@@ -417,7 +417,7 @@ export function IntegratedBookingWizard({
             return prev;
           });
         }, 0);
-        
+
         return false;
       }
 
@@ -426,25 +426,25 @@ export function IntegratedBookingWizard({
         try {
           // Use the date string directly to avoid timezone conversion issues
           const dateStr = date; // date is already in 'yyyy-MM-dd' format
-          
+
           // Filter bookings for the selected date
           const bookingsOnDate = existingBookings.filter(
             (booking) => booking.preferredDate === dateStr
           );
-          
+
           console.log(`Checking conflicts for ${dateStr} at ${time}. Found ${bookingsOnDate.length} bookings on this date.`);
-          
+
           // Check if any booking has the same time slot
           const conflictingBooking = bookingsOnDate.find(
             (booking) => booking.appointmentTime === time
           );
-          
+
           const isSlotTaken = !!conflictingBooking;
-          
+
           if (isSlotTaken) {
             console.log(`Time slot ${time} on ${dateStr} is already booked (Conflict ID: ${conflictingBooking.id})`);
           }
-          
+
           // Cache the result for faster lookup later
           setTimeout(() => {
             setTimeSlotAvailability((prev) => {
@@ -455,14 +455,14 @@ export function IntegratedBookingWizard({
               return prev;
             });
           }, 0);
-          
+
           return !isSlotTaken;
         } catch (error) {
           console.error("Error checking time slot availability:", error);
           return false; // Changed to false for safety - don't assume available on error
         }
       }
-      
+
       // If we get here, there are no existing bookings, so the slot is available
       // Still cache the result for consistency
       setTimeout(() => {
@@ -473,12 +473,12 @@ export function IntegratedBookingWizard({
           return prev;
         });
       }, 0);
-      
+
       return true;
     },
     [existingBookings, timeSlotAvailability, bookingBufferHours] // Include all dependencies
   );
-  
+
   // Function to find the next available time slot with enhanced reliability
   const findNextAvailableTimeSlot = useCallback(() => {
     // Get today's date
@@ -489,54 +489,54 @@ export function IntegratedBookingWizard({
     const maxDaysToCheck = 14;
     let availableDate: Date | undefined = undefined;
     let availableTime: string | undefined = undefined;
-    
+
     // Clear any previously cached availability data to ensure fresh checks
     setTimeSlotAvailability({});
-    
+
     console.log("Searching for next available time slot...");
     console.log(`Existing bookings: ${existingBookings ? existingBookings.length : 0}`);
-    
+
     // For each date, starting from today
     for (let dayOffset = 0; dayOffset < maxDaysToCheck; dayOffset++) {
       const checkDate = new Date(today);
       checkDate.setDate(today.getDate() + dayOffset);
-      
+
       // Check if this day has business hours
       const dayOfWeek = checkDate.getDay();
       const hoursForDay = getBusinessHoursForDay(dayOfWeek);
-      
+
       // Skip days with no business hours or marked unavailable
       if (!hoursForDay || !hoursForDay.isAvailable) {
         console.log(`Day ${dayOfWeek} (${safeFormatDate(checkDate, "yyyy-MM-dd", "")}) has no business hours or is marked unavailable`);
         continue;
       }
-      
+
       // Get time slots for this date
       const slots = getTimeSlotsForDate(checkDate, 60);
       const dateString = safeFormatDate(checkDate, "yyyy-MM-dd", "");
-      
+
       console.log(`Checking ${slots.length} time slots for ${dateString}`);
-      
+
       // Find the first available time slot with double-checking
       for (const time of slots) {
         // First check - standard availability check
         const isAvailable = isTimeSlotAvailable(dateString, time);
-        
+
         if (isAvailable) {
           // Double-check for conflicts with existing bookings
           let hasConflict = false;
-          
+
           if (existingBookings && existingBookings.length > 0) {
             const conflictingBooking = existingBookings.find(
               (booking) => booking.preferredDate === dateString && booking.appointmentTime === time
             );
             hasConflict = !!conflictingBooking;
-            
+
             if (hasConflict) {
               console.log(`Found conflict for ${dateString} at ${time}`);
             }
           }
-          
+
           if (!hasConflict) {
             console.log(`Found available slot: ${dateString} at ${time}`);
             availableDate = checkDate;
@@ -547,13 +547,13 @@ export function IntegratedBookingWizard({
           console.log(`Slot ${time} on ${dateString} is not available`);
         }
       }
-      
+
       // If we found an available slot, break the loop
       if (availableDate && availableTime) {
         break;
       }
     }
-    
+
     // If we found an available date/time, select it
     if (availableDate && availableTime) {
       setSelectedDate(availableDate);
@@ -574,7 +574,7 @@ export function IntegratedBookingWizard({
   // Add TV installation option
   const addTvService = () => {
     // No longer checking for image upload as we're asking users to email/text images separately
-    
+
     const newTv: TVServiceOption = {
       id: `tv-${Date.now()}`,
       size: newTvSize,
@@ -585,9 +585,9 @@ export function IntegratedBookingWizard({
       outletNeeded: newTvOutletNeeded,
       outletImage: newTvOutletImage
     };
-    
+
     setTvServices([...tvServices, newTv]);
-    
+
     // Reset form for next TV
     setNewTvSize('small');
     setNewTvLocation('standard');
@@ -596,10 +596,10 @@ export function IntegratedBookingWizard({
     setNewTvHighRise(false);
     setNewTvOutletNeeded(false);
     setNewTvOutletImage(undefined);
-    
+
     calculatePricingTotal([...tvServices, newTv], smartHomeServices);
   };
-  
+
   // Add smart home service option
   const addSmartHomeService = () => {
     const newDevice: SmartHomeDeviceOption = {
@@ -608,17 +608,17 @@ export function IntegratedBookingWizard({
       count: newDeviceCount,
       hasExistingWiring: hasExistingWiring
     };
-    
+
     setSmartHomeServices([...smartHomeServices, newDevice]);
-    
+
     // Reset form for next device
     setNewDeviceType('camera');
     setNewDeviceCount(1);
     setHasExistingWiring(true);
-    
+
     calculatePricingTotal(tvServices, [...smartHomeServices, newDevice]);
   };
-  
+
   // Remove a service
   const removeService = (type: 'tv' | 'smartHome', id: string) => {
     if (type === 'tv') {
@@ -631,41 +631,41 @@ export function IntegratedBookingWizard({
       calculatePricingTotal(tvServices, updatedSmartHomeServices);
     }
   };
-  
+
   // Calculate total price
   const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[]) => {
     let total = 0;
-    
+
     // Calculate TV installations
     tvs.forEach(tv => {
       let price = tv.location === 'standard' ? pricing.tvMounting.standard.price : pricing.tvMounting.fireplace.price;
-      
+
       if (tv.masonryWall) {
         price += pricing.tvMounting.nonDrywall.price;
       }
-      
+
       if (tv.highRise) {
         price += pricing.tvMounting.highRise.price;
       }
-      
+
       if (tv.outletNeeded) {
         price += pricing.wireConcealment.standard.price;
       }
-      
+
       if (['fixed', 'tilting', 'full_motion'].includes(tv.mountType)) {
         const size = tv.size === 'small' ? 'Small' : 'Big';
         const mountType = tv.mountType === 'full_motion' ? 'fullMotion' : tv.mountType;
         const mountKey = `${mountType}${size}` as keyof typeof pricing.tvMounts;
         price += pricing.tvMounts[mountKey]?.price || 0;
       }
-      
+
       total += price;
     });
-    
+
     // Calculate smart home devices
     devices.forEach(device => {
       let price = 0;
-      
+
       if (device.type === 'camera') {
         price = pricing.smartHome.securityCamera.price * device.count;
       } else if (device.type === 'doorbell') {
@@ -673,20 +673,20 @@ export function IntegratedBookingWizard({
       } else if (device.type === 'floodlight') {
         price = pricing.smartHome.floodlight.price * device.count;
       }
-      
+
       total += price;
     });
-    
+
     setPricingTotal(total);
     return total;
   };
-  
+
   // Form input handlers
   // Format phone number as (XXX)-XXX-XXXX while typing
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digits from the input
     const phoneDigits = value.replace(/\D/g, '');
-    
+
     // Format the phone number
     if (phoneDigits.length <= 3) {
       return phoneDigits;
@@ -699,7 +699,7 @@ export function IntegratedBookingWizard({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     // Apply special formatting for phone numbers
     if (name === 'phone') {
       setFormData({ ...formData, [name]: formatPhoneNumber(value) });
@@ -711,7 +711,7 @@ export function IntegratedBookingWizard({
   const handleCheckboxChange = (checked: boolean, name: string) => {
     setFormData({ ...formData, [name]: checked });
   };
-  
+
   // Handle autofill from customer profile
   const handleAutofill = (customerData: any) => {
     setFormData({
@@ -764,7 +764,7 @@ export function IntegratedBookingWizard({
         isValid = false;
         errorCount++;
       }
-      
+
       if (!selectedTime) {
         errors.time = ["Please select a time"];
         errorFieldIds.push('time-selection');
@@ -779,7 +779,7 @@ export function IntegratedBookingWizard({
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.email) {
         errors.email = ["Email is required"];
         errorFieldIds.push('customer-email');
@@ -791,7 +791,7 @@ export function IntegratedBookingWizard({
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.phone) {
         errors.phone = ["Phone number is required"];
         errorFieldIds.push('customer-phone');
@@ -807,28 +807,28 @@ export function IntegratedBookingWizard({
           errorCount++;
         }
       }
-      
+
       if (!formData.streetAddress) {
         errors.streetAddress = ["Street address is required"];
         errorFieldIds.push('customer-street-address');
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.city) {
         errors.city = ["City is required"];
         errorFieldIds.push('customer-city');
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.state) {
         errors.state = ["State is required"];
         errorFieldIds.push('customer-state');
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.zipCode) {
         errors.zipCode = ["ZIP code is required"];
         errorFieldIds.push('customer-zipcode');
@@ -840,14 +840,14 @@ export function IntegratedBookingWizard({
         isValid = false;
         errorCount++;
       }
-      
+
       if (!formData.consentToContact) {
         errors.consentToContact = ["Please consent to being contacted"];
         errorFieldIds.push('consent-to-contact');
         isValid = false;
         errorCount++;
       }
-      
+
       // Password validation when creating an account
       if (formData.createAccount) {
         if (!formData.password) {
@@ -861,7 +861,7 @@ export function IntegratedBookingWizard({
           isValid = false;
           errorCount++;
         }
-        
+
         if (!formData.confirmPassword) {
           errors.confirmPassword = ["Please confirm your password"];
           errorFieldIds.push('confirmPassword');
@@ -886,7 +886,7 @@ export function IntegratedBookingWizard({
         description: "Required information is missing or invalid",
         variant: "destructive",
       });
-      
+
       // Scroll to the first error field after a small delay to ensure the DOM is updated
       setTimeout(() => {
         scrollToFirstError(errorFieldIds);
@@ -899,7 +899,7 @@ export function IntegratedBookingWizard({
   // Next/Prev step handlers
   const handleNextClick = () => {
     if (!validateCurrentStep()) return;
-    
+
     // If this is the last step, check if there are any services selected before proceeding
     if (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0) {
       toast({
@@ -909,7 +909,7 @@ export function IntegratedBookingWizard({
       });
       return;
     }
-    
+
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -922,7 +922,7 @@ export function IntegratedBookingWizard({
   const goToEditServices = () => {
     // Go to the first step where services are selected
     setCurrentStep(0);
-    
+
     // Capture current state data to preserve settings
     // This data will be automatically used when the user returns to the review step
     toast({
@@ -963,7 +963,7 @@ export function IntegratedBookingWizard({
     // Prepare booking data - directly include all fields in the top-level object
     // Normalize email to lowercase for consistency
     const normalizedEmail = formData.email ? formData.email.toLowerCase().trim() : '';
-    
+
     const bookingData = {
       name: formData.name,
       email: normalizedEmail, // Use normalized email
@@ -1009,9 +1009,9 @@ export function IntegratedBookingWizard({
     try {
       // Submit the booking directly using the onSubmit prop
       const result = await onSubmit(bookingData);
-      
+
       console.log('Booking submission result:', result);
-      
+
       // Generate and download calendar file after successful booking
       if (result && selectedDate && selectedTime) {
         const calendarEvent = createCalendarEvent({
@@ -1026,13 +1026,13 @@ export function IntegratedBookingWizard({
         title: "Booking successful!",
         description: "You will receive a confirmation email shortly.",
       });
-      
+
     } catch (error) {
       console.error('Error submitting booking:', error);
-      
+
       // Show error message to user
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while submitting your booking.';
-      
+
       toast({
         title: "Booking failed",
         description: errorMessage,
@@ -1070,7 +1070,7 @@ export function IntegratedBookingWizard({
           />
         </div>
       )}
-      
+
 
 
       {/* Accessibility tools */}
@@ -1094,7 +1094,7 @@ export function IntegratedBookingWizard({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1114,7 +1114,7 @@ export function IntegratedBookingWizard({
           </Tooltip>
         </TooltipProvider>
       </div>
-      
+
       {/* Accessibility options panel */}
       {showAccessibilityOptions && (
         <Card className="mb-4">
@@ -1146,7 +1146,7 @@ export function IntegratedBookingWizard({
                   </Button>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-medium mb-2">Display</h3>
                 <div className="flex space-x-2">
@@ -1159,7 +1159,7 @@ export function IntegratedBookingWizard({
                   </Button>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-medium mb-2">Guidance Level</h3>
                 <div className="flex space-x-2">
@@ -1190,13 +1190,13 @@ export function IntegratedBookingWizard({
           </CardContent>
         </Card>
       )}
-      
+
       <div className="space-y-6 relative">
         {/* Mobile-optimized step indicator with reduced padding on small screens */}
         <div className="px-2 sm:px-0">
           <StepIndicator currentStep={currentStep} totalSteps={4} />
         </div>
-        
+
         {/* Booking Assistant - Shows conditionally based on guidanceMode */}
         {guidanceMode === 'full' && (
           <BookingAssistant
@@ -1204,7 +1204,7 @@ export function IntegratedBookingWizard({
             onClose={() => setGuidanceMode('minimal')}
           />
         )}
-        
+
         {guidanceMode === 'minimal' && (
           <div className="mb-4">
             <BookingAssistantButton
@@ -1212,7 +1212,7 @@ export function IntegratedBookingWizard({
             />
           </div>
         )}
-        
+
         {/* Step-specific guidance that's always visible */}
         {guidanceMode !== 'hidden' && (
           <BookingStepGuide currentStep={currentStep} />
@@ -1239,13 +1239,13 @@ export function IntegratedBookingWizard({
                         Choose the services you need
                       </p>
                     </div>
-                    
+
                     <Tabs defaultValue="tv" className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="tv">TV Installation</TabsTrigger>
                         <TabsTrigger value="smarthome">Smart Home</TabsTrigger>
                       </TabsList>
-                      
+
                       {/* TV Installation */}
                       <TabsContent value="tv" className="space-y-4 mt-4">
                         {/* Base Price Notification */}
@@ -1258,7 +1258,7 @@ export function IntegratedBookingWizard({
                             Additional charges apply based on your selections below.
                           </p>
                         </div>
-                        
+
                         {/* Current TVs */}
                         {tvServices.length > 0 && (
                           <div className="space-y-3 mb-6">
@@ -1298,11 +1298,11 @@ export function IntegratedBookingWizard({
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Add New TV */}
                         <div className="space-y-4 bg-muted/30 p-4 rounded-md">
                           <h4 className="text-sm font-medium">Add New TV Installation</h4>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <label className="text-sm font-medium">TV Size</label>
@@ -1321,7 +1321,7 @@ export function IntegratedBookingWizard({
                                 </div>
                               </RadioGroup>
                             </div>
-                            
+
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Installation Location</label>
                               <RadioGroup
@@ -1340,7 +1340,7 @@ export function IntegratedBookingWizard({
                               </RadioGroup>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Mount Type</label>
                             <RadioGroup
@@ -1396,7 +1396,7 @@ export function IntegratedBookingWizard({
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Wall Material</label>
                             <div className="space-y-3">
@@ -1408,7 +1408,7 @@ export function IntegratedBookingWizard({
                                 />
                                 <Label htmlFor="masonryWall">Brick/Stone Surface (+$50)</Label>
                               </div>
-                              
+
                               <div className="flex items-center space-x-2">
                                 <Checkbox 
                                   id="highRise" 
@@ -1419,7 +1419,7 @@ export function IntegratedBookingWizard({
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Additional Services</label>
                             <div className="space-y-3">
@@ -1431,7 +1431,7 @@ export function IntegratedBookingWizard({
                                 />
                                 <Label htmlFor="outletNeeded">Wire Concealment & Outlet (+$100)</Label>
                               </div>
-                              
+
                               {/* Information message for outlet locations */}
                               {newTvLocation === 'fireplace' && newTvOutletNeeded && (
                                 <div className="mt-3 bg-blue-50 border-l-4 border-blue-400 p-3 rounded-md">
@@ -1457,7 +1457,7 @@ export function IntegratedBookingWizard({
                               )}
                             </div>
                           </div>
-                          
+
                           <Button 
                             onClick={addTvService}
                             className="w-full"
@@ -1466,7 +1466,7 @@ export function IntegratedBookingWizard({
                           </Button>
                         </div>
                       </TabsContent>
-                      
+
                       {/* Smart Home */}
                       <TabsContent value="smarthome" className="space-y-4 mt-4">
                         {/* Current Smart Home Devices */}
@@ -1504,11 +1504,11 @@ export function IntegratedBookingWizard({
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Add New Smart Home Device */}
                         <div className="space-y-4 bg-muted/30 p-4 rounded-md">
                           <h4 className="text-sm font-medium">Add Smart Home Device</h4>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Device Type</label>
@@ -1531,7 +1531,7 @@ export function IntegratedBookingWizard({
                                 </div>
                               </RadioGroup>
                             </div>
-                            
+
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Quantity</label>
                               <div className="flex items-center space-x-2">
@@ -1556,7 +1556,7 @@ export function IntegratedBookingWizard({
                               </div>
                             </div>
                           </div>
-                          
+
                           {newDeviceType === 'floodlight' && (
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Wiring</label>
@@ -1576,7 +1576,7 @@ export function IntegratedBookingWizard({
                               </RadioGroup>
                             </div>
                           )}
-                          
+
                           <Button 
                             onClick={addSmartHomeService}
                             className="w-full"
@@ -1586,7 +1586,7 @@ export function IntegratedBookingWizard({
                         </div>
                       </TabsContent>
                     </Tabs>
-                    
+
                     {/* Service Selection Summary */}
                     <div className="mt-6 space-y-3">
                       <Separator />
@@ -1604,7 +1604,7 @@ export function IntegratedBookingWizard({
                     </div>
                   </div>
                 )}
-                
+
                 {/* Step 2: Date & Time Selection */}
                 {currentStep === 1 && (
                   <div className="space-y-6 relative">
@@ -1614,7 +1614,7 @@ export function IntegratedBookingWizard({
                         Choose a date and time for your service appointment
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 gap-6">
                       {/* Date Selection */}
                       <div className="relative">
@@ -1649,19 +1649,19 @@ export function IntegratedBookingWizard({
                               // Disable dates in the past
                               const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0));
                               if (isPastDate) return true;
-                              
+
                               if (!date) return true;
-                              
+
                               // Check if business hours exist for this day by using the function from our hook
                               const dayOfWeek = date.getDay();
                               // We're using the proper imported function here
                               const hoursForDay = getBusinessHoursForDay(dayOfWeek);
-                              
+
                               // If no business hours set for this day or marked as unavailable
                               if (!hoursForDay || !hoursForDay.isAvailable) {
                                 return true;
                               }
-                              
+
                               return false;
                             }}
                             className="rounded-md border mx-auto w-full"
@@ -1744,7 +1744,7 @@ export function IntegratedBookingWizard({
                     )}
                   </div>
                 )}
-                
+
                 {/* Step 3: Customer Details */}
                 {currentStep === 2 && (
                   <div className="space-y-5 px-1">
@@ -1754,7 +1754,7 @@ export function IntegratedBookingWizard({
                         Please provide your contact and address details
                       </p>
                     </div>
-                    
+
                     <div className="space-y-5">
                       {/* Personal Information */}
                       <div className="space-y-3">
@@ -1765,7 +1765,7 @@ export function IntegratedBookingWizard({
                           </h3>
                           <BookingAutofill onAutofill={handleAutofill} />
                         </div>
-                        
+
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
                             <label htmlFor="customer-name" className="text-sm font-medium">
@@ -1844,7 +1844,7 @@ export function IntegratedBookingWizard({
                           <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                           Service Address
                         </h3>
-                        
+
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
                             <label htmlFor="customer-street-address" className="text-sm font-medium">
@@ -1946,7 +1946,7 @@ export function IntegratedBookingWizard({
                           <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                           Additional Information
                         </h3>
-                        
+
                         <div className="space-y-2">
                           <label htmlFor="notes" className="text-sm font-medium">
                             Special Instructions or Notes (optional)
@@ -1990,7 +1990,7 @@ export function IntegratedBookingWizard({
                     </div>
                   </div>
                 )}
-                
+
                 {/* Step 4: Review Booking */}
                 {currentStep === 3 && (
                   <ReviewBookingStep
@@ -2007,7 +2007,7 @@ export function IntegratedBookingWizard({
                       // Create updated service arrays
                       let updatedTvServices = [...tvServices];
                       let updatedSmartHomeServices = [...smartHomeServices];
-                      
+
                       if (type === 'tv') {
                         updatedTvServices = tvServices.filter(tv => tv.id !== id);
                         setTvServices(updatedTvServices);
@@ -2015,13 +2015,13 @@ export function IntegratedBookingWizard({
                         updatedSmartHomeServices = smartHomeServices.filter(device => device.id !== id);
                         setSmartHomeServices(updatedSmartHomeServices);
                       }
-                      
+
                       // Recalculate pricing based on the updated service arrays
                       calculatePricingTotal(
                         type === 'tv' ? updatedTvServices : tvServices, 
                         type === 'smartHome' ? updatedSmartHomeServices : smartHomeServices
                       );
-                      
+
                       // Toast to confirm removal
                       toast({
                         title: "Service removed",
@@ -2031,7 +2031,7 @@ export function IntegratedBookingWizard({
                     }}
                   />
                 )}
-                
+
                 {/* Old review step - Remove after verifying the new component works */}
                 {false && currentStep === 3 && (
                   <div className="space-y-5 relative px-1">
@@ -2041,7 +2041,7 @@ export function IntegratedBookingWizard({
                         Please review your booking details before confirming
                       </p>
                     </div>
-                    
+
                     {/* Services Summary */}
                     <div className="relative">
                       <h4 className="text-sm font-medium mb-2">Services</h4>
@@ -2075,7 +2075,7 @@ export function IntegratedBookingWizard({
                             </ul>
                           </div>
                         )}
-                        
+
                         {/* Smart Home Devices */}
                         {smartHomeServices.length > 0 && (
                           <div className="space-y-2">
@@ -2093,9 +2093,9 @@ export function IntegratedBookingWizard({
                         )}
                       </div>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     {/* Appointment Details */}
                     <div className="relative">
                       <h4 className="text-sm font-medium mb-2">Appointment</h4>
@@ -2112,9 +2112,9 @@ export function IntegratedBookingWizard({
                         </div>
                       </div>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     {/* Customer Details */}
                     <div className="relative">
                       <h4 className="text-sm font-medium mb-2">Customer Information</h4>
@@ -2124,7 +2124,7 @@ export function IntegratedBookingWizard({
                         </p>
                         <p className="break-words">
                           <span className="font-medium">Contact:</span> {formData.email}
-                          <br className="sm:hidden" /><span className="hidden sm:inline">, </span>
+                          <br className="sm:hidden" /><span className="hidden sm:inline">, </span> 
                           {formData.phone}
                         </p>
                         <div>
@@ -2144,9 +2144,9 @@ export function IntegratedBookingWizard({
                         )}
                       </div>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     {/* Pricing */}
                     <div className="relative">
                       <h4 className="text-sm font-medium mb-2">Pricing</h4>
@@ -2281,9 +2281,9 @@ export function IntegratedBookingWizard({
 
             // Submit the booking
             const result = await onSubmit(bookingData);
-            
+
             console.log('Booking submission result:', result);
-            
+
             // Generate and download calendar file after successful booking
             if (result && selectedDate && selectedTime) {
               const calendarEvent = createCalendarEvent({
@@ -2293,7 +2293,7 @@ export function IntegratedBookingWizard({
               });
               downloadICSFile(calendarEvent, `TV_Installation_${bookingData.name.replace(/\s+/g, '_')}`);
             }
-            
+
             // Don't close the modal here - let the BookingConfirmationModal handle state transitions
           } catch (error) {
             console.error('Error submitting booking:', error);
@@ -2306,4 +2306,15 @@ export function IntegratedBookingWizard({
     </div>
     </div>
   );
+}
+
+async function downloadICSFile(calendarEvent: string, filename: string) {
+  const blob = new Blob([calendarEvent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
