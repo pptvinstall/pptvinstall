@@ -127,24 +127,10 @@ export default function HomePage() {
       {/* PWA Install Banner - only visible on mobile */}
       <PWAInstallBanner />
 
-      {/* Hero Section with position: relative for useScroll */}
-      
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Enhanced background with modern gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-50 via-white to-brand-blue-100/30" />
-        <div className="absolute inset-0 bg-hero-pattern opacity-60" />
-        <div className="absolute inset-0 bg-[url('/assets/pattern-bg.svg')] opacity-5" />
-
-        {/* Optimized floating elements - reduced blur for performance */}
-        <div className="absolute top-20 left-10 w-24 h-24 bg-brand-blue-500/8 rounded-full animate-bounce-soft opacity-60"></div>
-        <div className="absolute bottom-32 right-16 w-32 h-32 bg-brand-red-500/8 rounded-full animate-pulse-soft opacity-60"></div>
-        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-brand-blue-400/10 rounded-full animate-bounce-soft opacity-60" style={{animationDelay: '1s'}}></div>
-
-        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto animate-fade-in-up"></div>
-      </section>
+      {/* Hero Section - Removed empty content causing blank space */}
 
       {/* Featured Service Section - Enhanced spacing and responsiveness */}
-      <section className="section-padding-sm bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
+      <section className="py-12 md:py-16 bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
         <div className="container-narrow">
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-medium mb-4">Most Popular Service</span>

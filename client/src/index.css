@@ -95,7 +95,12 @@
   }
 
   .btn-primary-enhanced {
-    @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white font-semibold px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5;
+    @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white font-bold px-10 py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105;
+  }
+
+  /* Enhanced CTA button styles */
+  .btn-cta-large {
+    @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white font-bold px-12 py-5 text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105;
   }
 
   .btn-glow-effect {
@@ -145,17 +150,17 @@
     @apply bg-gray-200 text-gray-500;
   }
 
-  /* Enhanced card styles with better spacing */
+  /* Enhanced card styles with better spacing and interactions */
   .modern-card {
-    @apply bg-white rounded-2xl shadow-medium border border-gray-100 transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 p-6 sm:p-8;
+    @apply bg-white rounded-2xl shadow-medium border border-gray-100 transition-all duration-300 hover:shadow-xl hover:border-brand-blue-200 hover:-translate-y-1 p-6 sm:p-8;
   }
 
   .service-card {
-    @apply bg-white rounded-xl shadow-soft border border-gray-100 p-6 sm:p-8 transition-all duration-300 hover:shadow-medium hover:-translate-y-1 hover:border-brand-blue-200;
+    @apply bg-white rounded-xl shadow-soft border border-gray-100 p-6 sm:p-8 transition-all duration-300 hover:shadow-large hover:-translate-y-2 hover:border-brand-blue-200 hover:scale-105 cursor-pointer;
   }
 
   .testimonial-card {
-    @apply bg-white rounded-xl shadow-soft border border-gray-100 p-6 transition-all duration-300 hover:shadow-medium;
+    @apply bg-white rounded-xl shadow-soft border border-gray-100 p-6 transition-all duration-300 hover:shadow-large hover:-translate-y-1 hover:border-brand-blue-100;
   }
 
   /* Shimmer loading effect */
@@ -358,18 +363,43 @@
     }
   }
 
-  /* Enhanced container utilities */
+  /* Enhanced container utilities for responsive design */
   .container-fluid {
     @apply w-full max-w-none px-4 sm:px-6 lg:px-8;
   }
 
   .grid-responsive {
-    @apply grid gap-6 sm:gap-8 lg:gap-10;
+    @apply grid gap-4 sm:gap-6 lg:gap-8;
   }
 
   .grid-auto-fit {
-    @apply grid gap-6;
+    @apply grid gap-4 sm:gap-6;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  /* Responsive text utilities with clamp() for fluid scaling */
+  .text-fluid-sm {
+    font-size: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  }
+
+  .text-fluid-base {
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  }
+
+  .text-fluid-lg {
+    font-size: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  }
+
+  .text-fluid-xl {
+    font-size: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  }
+
+  .text-fluid-2xl {
+    font-size: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+  }
+
+  .text-fluid-3xl {
+    font-size: clamp(1.875rem, 1.5rem + 1.875vw, 3rem);
   }
 }
 
