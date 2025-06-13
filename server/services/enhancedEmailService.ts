@@ -395,72 +395,126 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   const totalPrice = booking.pricingTotal ? formatPrice(booking.pricingTotal) : 'Contact for pricing';
 
   return `
-    <div style="margin-bottom: 15px; text-align: center;">
-      <div style="display: inline-block; background-color: #f0f9f0; padding: 12px; border-radius: 50%;">
-        <span style="font-size: 48px; color: #10b981;">✓</span>
+    <!-- Header Section with Success Message -->
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="display: inline-block; background-color: #10b981; padding: 12px; border-radius: 50%; margin-bottom: 16px;">
+        <span style="font-size: 32px; color: white;">✅</span>
       </div>
+      <h1 style="color: #333333; margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed!</h1>
+      <p style="color: #666; margin: 8px 0 0 0; font-size: 16px;">Your appointment has been booked successfully</p>
     </div>
-    
-    <h1 style="color: #333333; margin-top: 0; font-size: 24px; text-align: center; margin-bottom: 8px;">Booking Confirmed!</h1>
-    <p style="text-align: center; color: #666; margin-top: 0; margin-bottom: 24px;">Your appointment has been booked successfully</p>
     
     <!-- Booking Reference ID -->
-    <div style="text-align: center; padding: 16px; background-color: #f5f5f5; border-radius: 8px; margin-bottom: 24px;">
-      <p style="color: #666; font-size: 14px; margin-top: 0; margin-bottom: 4px;">Booking Reference ID</p>
-      <p style="font-size: 18px; font-weight: 600; margin: 0;">${booking.id || "N/A"}</p>
+    <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #10b981;">
+      <p style="color: #666; font-size: 14px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Booking Reference ID</p>
+      <p style="font-size: 24px; font-weight: 700; margin: 0; color: #333;">${booking.id || "N/A"}</p>
     </div>
     
-    <!-- Appointment Details -->
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 18px; font-weight: 600; margin-top: 0; margin-bottom: 16px;">Appointment Details</h2>
-      
-      <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-        <div style="flex: 1; padding: 16px; background-color: #f5f5f5; border-radius: 8px;">
-          <p style="color: #666; font-size: 14px; margin-top: 0; margin-bottom: 4px;">Date</p>
-          <p style="font-weight: 500; margin: 0;">${formattedDate}</p>
+    <!-- Customer Information Section -->
+    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
+      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center;">
+        👤 Customer Information
+      </h2>
+      <div style="display: grid; gap: 12px;">
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Full Name</span>
+          <span style="color: #333; font-weight: 500;">${booking.name}</span>
         </div>
-        
-        <div style="flex: 1; padding: 16px; background-color: #f5f5f5; border-radius: 8px;">
-          <p style="color: #666; font-size: 14px; margin-top: 0; margin-bottom: 4px;">Time</p>
-          <p style="font-weight: 500; margin: 0;">${booking.appointmentTime || "Not specified"}</p>
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Email Address</span>
+          <span style="color: #333; font-weight: 500;">${booking.email}</span>
         </div>
-      </div>
-      
-      <div style="padding: 16px; background-color: #f5f5f5; border-radius: 8px;">
-        <p style="color: #666; font-size: 14px; margin-top: 0; margin-bottom: 4px;">Address</p>
-        <p style="font-weight: 500; margin: 0;">${booking.streetAddress}${booking.addressLine2 ? `, ${booking.addressLine2}` : ''}</p>
-        <p style="font-weight: 500; margin: 0;">${booking.city}, ${booking.state} ${booking.zipCode}</p>
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Phone Number</span>
+          <span style="color: #333; font-weight: 500;">${booking.phone}</span>
+        </div>
       </div>
     </div>
     
-    <!-- Services -->
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 18px; font-weight: 600; margin-top: 0; margin-bottom: 16px;">Services</h2>
+    <!-- Service Details Section -->
+    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
+      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center;">
+        🛠️ Service Details
+      </h2>
+      <div style="display: grid; gap: 12px;">
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Service Type</span>
+          <span style="color: #333; font-weight: 500;">${booking.serviceType || 'TV Installation'}</span>
+        </div>
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Preferred Date</span>
+          <span style="color: #333; font-weight: 500;">${formattedDate}</span>
+        </div>
+        <div>
+          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Preferred Time</span>
+          <span style="color: #333; font-weight: 500;">${booking.appointmentTime || "Not specified"}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Installation Address Section -->
+    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
+      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center;">
+        📍 Installation Address
+      </h2>
+      <div style="color: #333; font-weight: 500; line-height: 1.6;">
+        ${booking.streetAddress}<br>
+        ${booking.addressLine2 ? `${booking.addressLine2}<br>` : ''}
+        ${booking.city}, ${booking.state} ${booking.zipCode}
+      </div>
+    </div>
+    
+    <!-- Service Items and Pricing -->
+    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
+      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center;">
+        📋 Service Summary
+      </h2>
       
       <div style="border-top: 1px solid #eee;">
         ${servicesHtml}
       </div>
       
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee;">
-        <span style="font-weight: 600;">Total Price:</span>
-        <span style="font-size: 20px; font-weight: 700;">${totalPrice}</span>
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e9ecef;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 18px; font-weight: 600; color: #333;">💵 Total Price:</span>
+          <span style="font-size: 24px; font-weight: 700; color: #10b981;">${totalPrice}</span>
+        </div>
+        <p style="color: #666; font-size: 14px; margin: 8px 0 0 0; font-style: italic;">
+          Payment due after installation (Cash, Zelle, or Apple Pay accepted)
+        </p>
       </div>
     </div>
     
-    <!-- Next Steps -->
-    <div style="padding: 16px; background-color: #f5f5f5; border-radius: 8px; margin-bottom: 24px;">
-      <h2 style="font-size: 18px; font-weight: 600; margin-top: 0; margin-bottom: 8px;">Next Steps</h2>
-      <p style="margin: 0; line-height: 1.5;">
-        Thank you for booking with Picture Perfect TV Install! Our team will reach out to confirm any 
-        special requirements before your appointment.
-      </p>
+    ${booking.notes ? `
+    <!-- Customer Notes Section -->
+    <div style="margin-bottom: 30px; padding: 20px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px;">
+      <h2 style="color: #856404; font-size: 18px; font-weight: 600; margin: 0 0 12px 0; display: flex; align-items: center;">
+        📝 Customer Notes
+      </h2>
+      <div style="color: #856404; line-height: 1.5;">
+        ${booking.notes}
+      </div>
+    </div>
+    ` : ''}
+    
+    <!-- Next Steps Section -->
+    <div style="margin-bottom: 30px; padding: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px;">
+      <h2 style="color: #155724; font-size: 18px; font-weight: 600; margin: 0 0 12px 0; display: flex; align-items: center;">
+        🎯 Next Steps
+      </h2>
+      <div style="color: #155724; line-height: 1.6;">
+        <p style="margin: 0 0 12px 0;">Thank you for booking with Picture Perfect TV Install!</p>
+        <p style="margin: 0 0 12px 0;">We'll reach out to confirm any special requests before your appointment.</p>
+        <p style="margin: 0;">If you need to make changes, call us at ${COMPANY_PHONE}.</p>
+      </div>
     </div>
     
-    <div style="text-align: center;">
-      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #000000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; font-weight: 500;">
+    <!-- Action Buttons -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #28a745; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 0 8px 8px 8px; font-weight: 600; font-size: 16px;">
         📞 Call Us
       </a>
-      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #ff0000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: 500;">
+      <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #007bff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 0 8px 8px 8px; font-weight: 600; font-size: 16px;">
         🌐 Visit Website
       </a>
     </div>
