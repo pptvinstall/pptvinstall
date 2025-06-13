@@ -44,9 +44,9 @@ export function OptimizedAdminPanel({ isAuthenticated, onLogout }: OptimizedAdmi
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch bookings with optimized query
+  // Fetch bookings with optimized query and caching
   const { data: bookings = [], isLoading, error } = useQuery({
-    queryKey: ['/api/bookings'],
+    queryKey: ['/api/admin/bookings'],
     queryFn: async () => {
       const response = await fetch('/api/bookings');
       if (!response.ok) throw new Error('Failed to fetch bookings');

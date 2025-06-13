@@ -211,18 +211,18 @@ export default function HomePage() {
 
 
 
-      {/* Recent Installations Gallery */}
+      {/* Recent Installations Gallery - Enhanced layout and spacing */}
       <section
-        className="py-10 bg-gradient-to-b from-white to-blue-50"
+        className="section-padding bg-gradient-to-b from-white to-blue-50"
         style={{ position: 'relative' }}
       >
-        <div className="container relative mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-6">
-            <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-3">
+        <div className="container-custom">
+          <div className="text-center max-w-4xl mx-auto mb-12 lg:mb-16">
+            <span className="inline-block px-4 py-2 rounded-full bg-blue-100 text-blue-600 text-sm font-medium mb-6">
               Our Work
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Recent TV Installations</h2>
-            <p className="text-lg text-blue-600 mb-5">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">Recent TV Installations</h2>
+            <p className="text-lg sm:text-xl text-blue-600 max-w-3xl mx-auto leading-relaxed">
               Browse our gallery of recent TV mounting and installation projects in Metro Atlanta
             </p>
           </div>
@@ -235,11 +235,11 @@ export default function HomePage() {
             <Link href="/booking">
               <Button 
                 size="lg" 
-                className="bg-blue-600 hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                className="btn-primary-enhanced bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold px-10 py-4 text-xl rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 onClick={() => trackLead({ source: 'gallery_section' })}
               >
                 Book Your Professional Installation
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-3 h-5 w-5" />
               </Button>
             </Link>
           </div>
