@@ -38,6 +38,7 @@ import { BookingAssistant, BookingAssistantButton } from "./booking-assistant";
 import { BookingTutorial } from "./booking-tutorial";
 import { useFirstTimeUser, BookingStepGuide } from "./booking-step-guide";
 import { BookingAutofill } from "./booking-autofill";
+import { TestModeToggle } from "./test-mode-toggle";
 import { 
   Tooltip,
   TooltipContent,
@@ -166,7 +167,15 @@ const formatPrice = (price: number) => {
 
 // Safe date formatter (handles undefined)
 const safeFormatDate = (date: Date | undefined, formatStr: string, fallback: string = 'Not selected') => {
-  return date ? format(date, formatStr) : fallback;
+  try {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return fallback;
+    }
+    return format(date, formatStr);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return fallback;
+  }
 };
 
 // Main wizard component

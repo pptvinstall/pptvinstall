@@ -29,6 +29,15 @@ import {
   sendServiceEditNotification
 } from "./services/enhancedEmailService";
 import { pushNotificationService } from "./services/pushNotificationService";
+import { 
+  optimizeQuery, 
+  sendOptimizedResponse, 
+  createCacheKey, 
+  getCachedResponse,
+  clearCache,
+  performanceMonitor,
+  getMemoryUsage
+} from "./performance-optimizer";
 
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
