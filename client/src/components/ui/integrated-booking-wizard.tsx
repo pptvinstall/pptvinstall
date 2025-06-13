@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Label } from "./label";
@@ -1350,8 +1350,571 @@ export function IntegratedBookingWizard({
                       isLoading={false}
                     />
 
-                        {/* Current TVs */}
-                        {tvServices.length > 0 && (
+                    {/* Service Selection Summary */}
+                    <div className="mt-6 space-y-3">
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-sm font-medium">Total Selected:</h4>
+                        <div>
+                          <Badge variant="outline" className="mr-2">{tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline" className="mr-2">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline">{deinstallationServices.length} Removal{deinstallationServices.length !== 1 ? 's' : ''}</Badge>
+                        </div>
+                      </div>
+                      <div className="bg-muted p-3 rounded-md flex justify-between items-center">
+                        <span className="font-medium">Estimated Total:</span>
+                        <span className="text-xl font-bold">{formatPrice(pricingTotal)}</span>
+                      </div>
+                      {deinstallationServices.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Includes {deinstallationServices.length} TV de-installation{deinstallationServices.length > 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Date & Time Selection */}
+                {currentStep === 1 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Select Date & Time</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your preferred appointment date and time
+                      </p>
+                    </div>
+
+                    {/* Date Selection */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium">Select Date</h4>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Time Selection */}
+                    {selectedDate && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium">Select Time</h4>
+                        {timeSlots.length > 0 ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {timeSlots.map((slot) => (
+                              <Button
+                                key={slot}
+                                variant={selectedTime === slot ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedTime(slot)}
+                                className="text-xs"
+                              >
+                                <Clock className="h-3 w-3 mr-1" />
+                                {slot}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No available time slots for this date</p>
+                            <p className="text-sm">Please select a different date</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3: Customer Information */}
+                {currentStep === 2 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Customer Information</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Please provide your contact and address details
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Personal Information */}
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="name">Full Name *</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="John Doe"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="email">Email Address *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="john@example.com"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="phone">Phone Number *</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            placeholder="(555) 123-4567"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Address Information */}
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="streetAddress">Street Address *</Label>
+                          <Input
+                            id="streetAddress"
+                            value={formData.streetAddress}
+                            onChange={(e) => setFormData(prev => ({ ...prev, streetAddress: e.target.value }))}
+                            placeholder="123 Main St"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="addressLine2">Apartment/Unit (Optional)</Label>
+                          <Input
+                            id="addressLine2"
+                            value={formData.addressLine2}
+                            onChange={(e) => setFormData(prev => ({ ...prev, addressLine2: e.target.value }))}
+                            placeholder="Apt 4B"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="city">City *</Label>
+                            <Input
+                              id="city"
+                              value={formData.city}
+                              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                              placeholder="Atlanta"
+                              className="mt-1"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="state">State *</Label>
+                            <Select
+                              value={formData.state}
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="GA" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="GA">Georgia</SelectItem>
+                                  <SelectItem value="AL">Alabama</SelectItem>
+                                  <SelectItem value="FL">Florida</SelectItem>
+                                  <SelectItem value="SC">South Carolina</SelectItem>
+                                  <SelectItem value="NC">North Carolina</SelectItem>
+                                  <SelectItem value="TN">Tennessee</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="zipCode">ZIP Code *</Label>
+                          <Input
+                            id="zipCode"
+                            value={formData.zipCode}
+                            onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
+                            placeholder="30309"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Notes */}
+                    <div>
+                      <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Any special instructions or requirements..."
+                        className="mt-1"
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Consent */}
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="consent"
+                          checked={formData.consentToContact}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, consentToContact: checked === true }))}
+                        />
+                        <Label htmlFor="consent" className="text-sm">
+                          I consent to be contacted about this service request
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="createAccount"
+                          checked={formData.createAccount}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, createAccount: checked === true }))}
+                        />
+                        <Label htmlFor="createAccount" className="text-sm">
+                          Create customer account for faster future bookings
+                        </Label>
+                      </div>
+
+                      {formData.createAccount && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                          <div>
+                            <Label htmlFor="password">Password *</Label>
+                            <Input
+                              id="password"
+                              type="password"
+                              value={formData.password}
+                              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                              placeholder="Choose a secure password"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                            <Input
+                              id="confirmPassword"
+                              type="password"
+                              value={formData.confirmPassword}
+                              onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              placeholder="Confirm your password"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Review & Submit */}
+                {currentStep === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Review Your Booking</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Please review all details before submitting
+                      </p>
+                    </div>
+
+                    <ReviewBookingStep
+                      formData={formData}
+                      selectedDate={selectedDate}
+                      selectedTime={selectedTime}
+                      tvInstallations={tvServices}
+                      smartHomeInstallations={smartHomeServices}
+                      pricingTotal={pricingTotal}
+                      onEdit={(step: number) => setCurrentStep(step)}
+                    />
+                  </div>
+                )}
+
+                {/* Navigation Buttons */}
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    {currentStep > 0 && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setCurrentStep(currentStep - 1)}
+                        className="w-full sm:w-auto order-2 sm:order-1"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Previous
+                      </Button>
+                    )}
+
+                    {currentStep < 3 ? (
+                      <Button 
+                        onClick={() => setCurrentStep(currentStep + 1)}
+                        disabled={
+                          (currentStep === 0 && tvServices.length === 0 && smartHomeServices.length === 0 && deinstallationServices.length === 0) ||
+                          (currentStep === 1 && (!selectedDate || !selectedTime)) ||
+                          (currentStep === 2 && (!formData.name || !formData.email || !formData.phone || !formData.streetAddress || !formData.city || !formData.state || !formData.zipCode || !formData.consentToContact))
+                        }
+                        className="w-full sm:flex-1 order-1 sm:order-2"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => setShowConfirmationModal(true)}
+                        disabled={isSubmitting}
+                        className="w-full sm:flex-1 order-1 sm:order-2"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <LoadingSpinner className="mr-2" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Submit Booking'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Booking Confirmation Modal */}
+      {showConfirmationModal && (
+        <BookingConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          bookingData={{
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            streetAddress: formData.streetAddress,
+            addressLine2: formData.addressLine2,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+            appointmentTime: selectedTime || "",
+            pricingTotal: pricingTotal,
+            tvInstallations: tvServices.map(tv => ({
+              size: tv.size,
+              location: tv.location,
+              mountType: tv.mountType,
+              masonryWall: tv.masonryWall,
+              highRise: tv.highRise,
+              outletRelocation: tv.outletNeeded,
+              outletImage: tv.outletImage
+            })),
+            smartHomeInstallations: smartHomeServices.map(device => ({
+              deviceType: device.type,
+              location: 'TBD'
+            })),
+            createAccount: formData.createAccount,
+            password: formData.createAccount ? formData.password : undefined
+          }}
+          onConfirm={async () => {
+            // Create the booking data object
+            const bookingData = {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              streetAddress: formData.streetAddress,
+              addressLine2: formData.addressLine2,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+              appointmentTime: selectedTime || "",
+              serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
+              status: "active",
+              tvServices: tvServices,
+              pricingTotal: pricingTotal,
+              createAccount: formData.createAccount,
+              password: formData.createAccount ? formData.password : undefined,
+              tvInstallations: tvServices.map(tv => ({
+                size: tv.size,
+                location: tv.location,
+                mountType: tv.mountType,
+                masonryWall: tv.masonryWall,
+                highRise: tv.highRise,
+                outletRelocation: tv.outletNeeded,
+                outletImage: tv.outletImage
+              })),
+              smartHomeInstallations: smartHomeServices.map(device => ({
+                type: device.type,
+                count: device.count,
+                hasExistingWiring: device.hasExistingWiring
+              }))
+            };
+
+            // Submit the booking
+            const result = await onSubmit(bookingData);
+
+            // Generate and download calendar file after successful booking
+            if (result && selectedDate && selectedTime) {
+              const calendarEvent = createCalendarEvent(bookingData);
+              console.log('Calendar event created:', calendarEvent);
+            }
+
+            setShowConfirmationModal(false);
+          }}
+          isSubmitting={isSubmitting}
+        />
+      )}
+    </div>
+  );
+}
+
+// Helper function to create calendar event
+function createCalendarEvent(bookingData: any) {
+  if (!bookingData.preferredDate || !bookingData.appointmentTime) {
+    return null;
+  }
+
+  const startDate = new Date(`${bookingData.preferredDate}T${bookingData.appointmentTime}`);
+  const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+
+  return {
+    title: 'TV Installation Appointment',
+    description: `TV Installation service with Picture Perfect TV Install.\n\nCustomer: ${bookingData.name}\nServices: ${bookingData.tvInstallations?.length || 0} TV installations, ${bookingData.smartHomeInstallations?.length || 0} smart home devices`,
+    start: startDate,
+    end: endDate,
+    location: `${bookingData.streetAddress}, ${bookingData.city}, ${bookingData.state} ${bookingData.zipCode}`
+  };
+}
+
+      {/* Booking Confirmation Modal */}
+      {showConfirmationModal && (
+        <BookingConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          bookingData={{
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            streetAddress: formData.streetAddress,
+            addressLine2: formData.addressLine2,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+            appointmentTime: selectedTime || "",
+            pricingTotal: pricingTotal,
+            tvInstallations: tvServices.map(tv => ({
+              size: tv.size,
+              location: tv.location,
+              mountType: tv.mountType,
+              masonryWall: tv.masonryWall,
+              highRise: tv.highRise,
+              outletRelocation: tv.outletNeeded,
+              outletImage: tv.outletImage
+            })),
+            smartHomeInstallations: smartHomeServices.map(device => ({
+              type: device.type,
+              count: device.count,
+              hasExistingWiring: device.hasExistingWiring
+            })),
+            createAccount: formData.createAccount,
+            password: formData.createAccount ? formData.password : undefined
+          }}
+          onConfirm={async () => {
+            // Create the booking data object
+            const bookingData = {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              streetAddress: formData.streetAddress,
+              addressLine2: formData.addressLine2,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+              appointmentTime: selectedTime || "",
+              serviceType: formData.serviceType,
+              status: formData.status,
+              tvServices: tvServices,
+              pricingTotal: pricingTotal,
+              createAccount: formData.createAccount,
+              password: formData.createAccount ? formData.password : undefined,
+              tvInstallations: tvServices.map(tv => ({
+                size: tv.size,
+                location: tv.location,
+                mountType: tv.mountType,
+                masonryWall: tv.masonryWall,
+                highRise: tv.highRise,
+                outletRelocation: tv.outletNeeded,
+                outletImage: tv.outletImage
+              })),
+              smartHomeInstallations: smartHomeServices.map(device => ({
+                type: device.type,
+                count: device.count,
+                hasExistingWiring: device.hasExistingWiring
+              }))
+            };
+
+            // Submit the booking
+            const result = await onSubmit(bookingData);
+
+            // Generate and download calendar file after successful booking
+            if (result && selectedDate && selectedTime) {
+              const calendarEvent = createCalendarEvent(bookingData);
+              await downloadICSFile(calendarEvent, `TV_Installation_${formData.name.replace(/\s+/g, '_')}`);
+            }
+
+            setShowConfirmationModal(false);
+          }}
+          isSubmitting={isSubmitting}
+        />
+      )}
+    </div>
+  );
+}
+
+// Helper function to create calendar event
+function createCalendarEvent(bookingData: any) {
+  const startDate = new Date(`${bookingData.preferredDate}T${bookingData.appointmentTime}`);
+  const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+
+  return {
+    title: 'TV Installation Appointment',
+    description: `TV Installation service with Picture Perfect TV Install.\n\nCustomer: ${bookingData.name}\nServices: ${bookingData.tvInstallations?.length || 0} TV installations, ${bookingData.smartHomeInstallations?.length || 0} smart home devices`,
+    start: startDate,
+    end: endDate,
+    location: `${bookingData.streetAddress}, ${bookingData.city}, ${bookingData.state} ${bookingData.zipCode}`
+  };
+}
+
+// Helper function to download ICS file
+async function downloadICSFile(calendarEvent: any, filename: string) {
+  // Implementation would go here - converting calendar event to ICS format and triggering download
+  console.log('Downloading ICS file:', filename, calendarEvent);
+}
                           <div className="space-y-3 mb-6">
                             <h4 className="text-sm font-medium">Your TV Installations</h4>
                             <div className="space-y-2">
