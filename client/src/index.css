@@ -172,9 +172,51 @@
     @apply bg-white rounded-xl shadow-soft border border-gray-100 p-6 transition-all duration-300 hover:shadow-large hover:-translate-y-1 hover:border-brand-blue-100;
   }
 
-  /* Shimmer loading effect */
+  /* Enhanced shimmer loading effect with better performance */
   .shimmer {
     @apply bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer;
+  }
+
+  /* Advanced skeleton animations */
+  .skeleton-pulse {
+    animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .skeleton-wave {
+    animation: skeleton-wave 1.6s linear infinite;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: translateX(-100%);
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes skeleton-wave {
+    0% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Skeleton container styles */
+  .skeleton-container {
+    @apply relative overflow-hidden bg-gray-200 rounded;
+  }
+
+  .skeleton-container::after {
+    @apply absolute top-0 left-0 w-full h-full skeleton-wave;
+    content: '';
   }
 
   /* Enhanced trust badge styles */
