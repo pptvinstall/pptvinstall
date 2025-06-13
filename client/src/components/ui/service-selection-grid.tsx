@@ -22,23 +22,27 @@ interface TVDeinstallation {
   cableCleanup?: boolean;
 }
 
+interface Service {
+  type: "tv" | "smartHome" | "deinstallation";
+  title: string;
+  description: string;
+  basePrice: number;
+  isMostPopular?: boolean;
+}
+
 interface ServiceGridProps {
-  onServiceSelect: (
+  onServiceAdd: (
     type: "tv" | "smartHome" | "deinstallation",
-    service: TVInstallation | SmartHomeInstallation | TVDeinstallation
+    service: any
   ) => void;
-  tvInstallations: TVInstallation[];
-  smartHomeInstallations: SmartHomeInstallation[];
-  tvDeinstallations?: TVDeinstallation[];
+  services: Service[];
   className?: string;
   isLoading?: boolean;
 }
 
 export function ServiceSelectionGrid({
-  onServiceSelect,
-  tvInstallations,
-  smartHomeInstallations,
-  tvDeinstallations = [],
+  onServiceAdd,
+  services,
   className,
   isLoading = false,
 }: ServiceGridProps) {
@@ -122,19 +126,25 @@ export function ServiceSelectionGrid({
                     animate="visible"
                     className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
                   >
-                    {tvInstallations.map((service) => (
-                      <motion.div key={service.id} variants={itemVariants} className="w-full">
-                        <ServiceCard
-                          title={service.name}
-                          description={service.description}
-                          icon={<TVServiceIcon type={service.type} />}
-                          price={service.basePrice}
+                    <motion.div variants={itemVariants} className="w-full">
+                      <ServiceCard
+                        title="TV Installation"
+                        description="Professional TV mounting and setup with wire concealment"
+                        icon={<Icons.tv className="h-6 w-6" />}
+                        price={199}
                           isMostPopular={service.isMostPopular}
                           isPromoted={service.isPromoted}
-                          onClick={() => onServiceSelect("tv", service)}
+                          onClick={() => onServiceAdd("tv", {
+                            type: "tv",
+                            size: "small",
+                            location: "standard",
+                            mountType: "fixed",
+                            masonryWall: false,
+                            highRise: false,
+                            outletNeeded: false
+                          })}
                         />
-                      </motion.div>
-                    ))}
+                    </motion.div>
                   </motion.div>
                 )}
               </ScrollArea>
@@ -163,7 +173,7 @@ export function ServiceSelectionGrid({
                         description="Safe removal of mounted TV and bracket, includes cable cleanup. Can be booked by itself or with a new install."
                         icon={<Icons.tvUnmount className="h-6 w-6" />}
                         price={50}
-                        onClick={() => onServiceSelect("deinstallation", {
+                        onClick={() => onServiceAdd("deinstallation", {
                           id: "tv-deinstall-service",
                           name: "TV De-Installation",
                           description: "Professional TV and bracket removal with cable cleanup",
@@ -208,16 +218,11 @@ export function ServiceSelectionGrid({
                     animate="visible"
                     className="service-selection-grid grid grid-cols-1 sm:grid-cols-2 gap-3 mx-auto w-full"
                   >
-                    {smartHomeInstallations.map((service) => {
-                      // Get the correct price from pricing.ts file
-                      const correctPrice = getPriceForSmartHome(service.type);
-                      
-                      return (
-                        <motion.div key={service.id} variants={itemVariants} className="w-full">
-                          <ServiceCard
-                            title={service.name}
-                            description={service.description}
-                            icon={<SmartHomeServiceIcon type={service.type} />}
+                    <motion.div variants={itemVariants} className="w-full">
+                      <ServiceCard
+                        title="Smart Doorbell"
+                        description="Professional installation of smart doorbell with wiring setup"
+                        icon={<Icons.doorbell className="h-6 w-6" />}
                             price={correctPrice}
                             onClick={() => {
                               // Create an updated service with the correct price
@@ -227,10 +232,36 @@ export function ServiceSelectionGrid({
                               };
                               onServiceSelect("smartHome", updatedService);
                             }}
-                          />
-                        </motion.div>
-                      );
-                    })}
+                      />
+                    </motion.div>
+                    
+                    <motion.div variants={itemVariants} className="w-full">
+                      <ServiceCard
+                        title="Security Camera"
+                        description="Professional security camera installation and setup"
+                        icon={<Icons.camera className="h-6 w-6" />}
+                        price={199}
+                        onClick={() => onServiceAdd("smartHome", {
+                          type: "camera",
+                          count: 1,
+                          hasExistingWiring: false
+                        })}
+                      />
+                    </motion.div>
+                    
+                    <motion.div variants={itemVariants} className="w-full">
+                      <ServiceCard
+                        title="Smart Floodlight"
+                        description="Smart floodlight installation with motion detection"
+                        icon={<Icons.lightbulb className="h-6 w-6" />}
+                        price={249}
+                        onClick={() => onServiceAdd("smartHome", {
+                          type: "floodlight",
+                          count: 1,
+                          hasExistingWiring: false
+                        })}
+                      />
+                    </motion.div>
                   </motion.div>
                 )}
               </ScrollArea>
