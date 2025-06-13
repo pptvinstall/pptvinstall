@@ -731,8 +731,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({
             success: true,
             isAvailable: false,
-			message: 'This time slot is already booked. Please choose a different time.',
-			error: 'TIME_SLOT_CONFLICT',
+                        message: 'This time slot is already booked. Please choose a different time.',
+                        error: 'TIME_SLOT_CONFLICT',
             suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
@@ -955,7 +955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(409).json({
             success: false,
             message: 'This time slot is already booked. Please choose a different time.',
-			error: 'TIME_SLOT_CONFLICT',
+                        error: 'TIME_SLOT_CONFLICT',
             suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
@@ -1568,7 +1568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the booking in the database
-	  // Check if there's actually data to update
+          // Check if there's actually data to update
       if (Object.keys(updates).length === 0) {
         logger.warn('No valid update data provided', { bookingId: id });
         return res.status(400).json({
@@ -2248,7 +2248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(409).json({
             success: false,
             message: 'This time slot is already booked. Please choose a different time.',
-			error: 'TIME_SLOT_CONFLICT',
+                        error: 'TIME_SLOT_CONFLICT',
             suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
@@ -2262,7 +2262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) updates.status = status;
 
       // Update the booking
-	  // Check if there's actually data to update
+          // Check if there's actually data to update
       if (Object.keys(updates).length === 0) {
         logger.warn('No valid update data provided', { bookingId: bookingId });
         return res.status(400).json({
@@ -2978,8 +2978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all booking archives
-  app.get("/api/admin/booking-archives",```python
-  async (req, res) => {
+  app.get("/api/admin/booking-archives", async (req, res) => {
     try {
       // Verify admin password
       const { password } = req.query;
