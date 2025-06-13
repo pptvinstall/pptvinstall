@@ -86,7 +86,7 @@
   }
 
   .shadow-button {
-    @apply shadow-button transition-all duration-200 hover:shadow-button-hover hover:-translate-y-0.5;
+    @apply shadow-md transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
   }
 
   /* Enhanced button hover effects */
@@ -201,15 +201,23 @@
 
   /* Enhanced card styles */
   .feature-card {
-    @apply p-8 rounded-2xl border border-gray-200 bg-white shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1 group;
+    @apply p-8 rounded-2xl border border-gray-200 bg-white shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1;
   }
 
   .feature-card-icon {
-    @apply w-12 h-12 rounded-xl bg-gradient-to-br from-brand-blue-500 to-brand-blue-600 text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300;
+    @apply w-12 h-12 rounded-xl bg-gradient-to-br from-brand-blue-500 to-brand-blue-600 text-white flex items-center justify-center mb-4 transition-transform duration-300;
+  }
+
+  .group:hover .feature-card-icon {
+    @apply scale-110;
   }
 
   .feature-card-title {
-    @apply text-xl font-semibold text-gray-900 mb-3 group-hover:text-brand-blue-600 transition-colors duration-300;
+    @apply text-xl font-semibold text-gray-900 mb-3 transition-colors duration-300;
+  }
+
+  .group:hover .feature-card-title {
+    @apply text-brand-blue-600;
   }
 
   .feature-card-description {
