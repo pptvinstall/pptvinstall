@@ -72,6 +72,14 @@ interface SmartHomeDeviceOption {
   hasExistingWiring?: boolean;
 }
 
+interface TVDeinstallationOption {
+  id: string;
+  tvSize: 'small' | 'large';
+  wallType: 'standard' | 'brick' | 'highrise';
+  cableCleanup: boolean;
+  basePrice: number;
+}
+
 interface BookingFormData {
   name: string;
   email: string;

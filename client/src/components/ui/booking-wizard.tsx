@@ -350,6 +350,7 @@ const ServiceSelectionStep = React.memo(
           onServiceSelect={onServiceSelect}
           tvInstallations={tvInstallations}
           smartHomeInstallations={smartHomeInstallations}
+          tvDeinstallations={[]}
         />
       </div>
     );
