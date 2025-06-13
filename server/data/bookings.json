@@ -206,5 +206,86 @@
     ],
     "id": "129",
     "createdAt": "2025-06-13T15:43:27.601Z"
+  },
+  {
+    "name": "Complete System Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045557890",
+    "streetAddress": "789 Complete Test Drive",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Complete system test with verified Gmail authentication",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-22",
+    "appointmentTime": "3:00 PM",
+    "status": "active",
+    "pricingTotal": 175,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "standard",
+        "mountType": "full_motion"
+      }
+    ],
+    "id": "130",
+    "createdAt": "2025-06-13T15:44:13.477Z"
+  },
+  {
+    "name": "Production Gmail Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045551234",
+    "streetAddress": "999 Production Ready Street",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Final production test of Gmail SMTP system with unified email templates",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-23",
+    "appointmentTime": "4:00 PM",
+    "status": "active",
+    "pricingTotal": 250,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "highRise": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "131",
+    "createdAt": "2025-06-13T15:45:03.800Z"
+  },
+  {
+    "name": "Final Email System Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045556789",
+    "streetAddress": "1000 Gmail Success Boulevard",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Complete Gmail SMTP test with personalized subject and unified templates",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-24",
+    "appointmentTime": "1:30 PM",
+    "status": "active",
+    "pricingTotal": 275,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true,
+        "highRise": true,
+        "outletRelocation": true
+      }
+    ],
+    "id": "132",
+    "createdAt": "2025-06-13T15:45:30.042Z"
   }
 ]

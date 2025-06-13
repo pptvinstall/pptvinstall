@@ -1037,24 +1037,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let adminEmailSent = false;
         
         logger.info("Starting Gmail email sending process...");
-        logger.debug("Gmail App Password available:", !!process.env.GMAIL_APP_PASSWORD);
         
-        if (process.env.GMAIL_APP_PASSWORD) {
-          try {
-            const { sendUnifiedBookingConfirmation } = await import('./services/gmailEmailService');
-            
-            logger.info("Sending unified confirmation emails via Gmail...");
-            const emailResults = await sendUnifiedBookingConfirmation(bookingWithId);
-            
-            customerEmailSent = emailResults.customerSent;
-            adminEmailSent = emailResults.adminSent;
-            
-            logger.info(`Gmail email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
-          } catch (error: any) {
-            logger.error("Error sending Gmail emails:", error as Error);
-          }
-        } else {
-          logger.warn("Gmail App Password not found - emails not sent");
+        try {
+          const { sendUnifiedBookingConfirmation } = await import('./services/gmailEmailService');
+          
+          logger.info("Sending unified confirmation emails via Gmail...");
+          const emailResults = await sendUnifiedBookingConfirmation(bookingWithId);
+          
+          customerEmailSent = emailResults.customerSent;
+          adminEmailSent = emailResults.adminSent;
+          
+          logger.info(`Gmail email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
+        } catch (error: any) {
+          logger.error("Error sending Gmail emails:", error as Error);
         }
 
         // Return success response
