@@ -12,7 +12,7 @@ if (SENDGRID_API_KEY) {
 
 // Email configuration
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com';
-const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVInstall@gmail.com>';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <noreply@pptvinstall.com>';
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
 const COMPANY_WEBSITE = 'https://PPTVInstall.com';
@@ -395,6 +395,13 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   const totalPrice = booking.pricingTotal ? formatPrice(booking.pricingTotal) : 'Contact for pricing';
 
   return `
+    <!-- Info Banner -->
+    <div style="background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 16px; margin-bottom: 30px; text-align: center;">
+      <p style="color: #1976d2; margin: 0; font-size: 16px; font-weight: 500;">
+        📧 This email contains your full installation confirmation
+      </p>
+    </div>
+
     <!-- Header Section with Success Message -->
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="display: inline-block; background-color: #10b981; padding: 12px; border-radius: 50%; margin-bottom: 16px;">
@@ -464,10 +471,10 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
       </div>
     </div>
     
-    <!-- Service Items and Pricing -->
+    <!-- Appointment Summary -->
     <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
       <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; display: flex; align-items: center;">
-        📋 Service Summary
+        📋 Appointment Summary
       </h2>
       
       <div style="border-top: 1px solid #eee;">
@@ -510,13 +517,21 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     </div>
     
     <!-- Action Buttons -->
-    <div style="text-align: center; margin-bottom: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
       <a href="tel:${COMPANY_PHONE}" style="display: inline-block; background-color: #28a745; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 0 8px 8px 8px; font-weight: 600; font-size: 16px;">
         📞 Call Us
       </a>
       <a href="${COMPANY_WEBSITE}" style="display: inline-block; background-color: #007bff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 0 8px 8px 8px; font-weight: 600; font-size: 16px;">
         🌐 Visit Website
       </a>
+    </div>
+
+    <!-- Deliverability Notice -->
+    <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: center;">
+      <p style="color: #6c757d; margin: 0; font-size: 14px; line-height: 1.5;">
+        📧 <strong>Didn't receive this email?</strong> Check your spam or junk folder.<br>
+        For immediate assistance, call us at ${COMPANY_PHONE}
+      </p>
     </div>
   `;
 }
@@ -825,7 +840,11 @@ export async function sendEnhancedEmail(
           return false;
         }
         emailContent = getBookingConfirmationContent(booking);
-        emailSubject = `Your TV Installation Booking Confirmation - ${COMPANY_NAME}`;
+        const bookingDate = booking.preferredDate ? format(parseISO(booking.preferredDate), 'MMM d') : '';
+        const bookingTime = booking.appointmentTime || '';
+        emailSubject = bookingDate && bookingTime 
+          ? `Your Booking is Confirmed – ${bookingDate} @ ${bookingTime}`
+          : `Your TV Installation is Confirmed – ${booking.name}`;
         try {
           if (options?.sendCalendar !== false) {
             calendarEvent = await createCalendarEvent(booking);
@@ -861,7 +880,11 @@ export async function sendEnhancedEmail(
           return false;
         }
         emailContent = getAdminNotificationContent(booking);
-        emailSubject = `New Booking Alert: ${booking.name} - ${format(new Date(booking.preferredDate), 'MM/dd/yyyy')} at ${booking.appointmentTime}`;
+        const adminDate = booking.preferredDate ? format(parseISO(booking.preferredDate), 'MMM d') : '';
+        const adminTime = booking.appointmentTime || '';
+        emailSubject = adminDate && adminTime 
+          ? `New Booking: ${booking.name} – ${adminDate} @ ${adminTime}`
+          : `New Booking Alert: ${booking.name}`;
         break;
         
       case EmailType.SERVICE_EDIT:
