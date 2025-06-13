@@ -41,16 +41,18 @@ export default function HomePage() {
   const servicesInView = useInView(servicesRef, { once: true, amount: 0.2 });
   const testimonialsInView = useInView(testimonialsRef, { once: true, amount: 0.2 });
 
-  // Using a ref with a container that has position: relative
+  // Using a ref with a container that has position: relative - with layoutEffect fix
   const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
-    offset: ["start start", "end start"]
+    offset: ["start start", "end start"],
+    layoutEffect: false
   });
 
   // Add a scroll progress tracker for the showcase section
   const { scrollYProgress: showcaseScrollProgress } = useScroll({
     target: showcaseRef,
-    offset: ["start start", "end start"]
+    offset: ["start start", "end start"],
+    layoutEffect: false
   });
 
   const showcaseOpacity = useTransform(heroScrollProgress, [0, 0.5], [1, 0.7]);
@@ -133,10 +135,10 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-hero-pattern opacity-60" />
         <div className="absolute inset-0 bg-[url('/assets/pattern-bg.svg')] opacity-5" />
 
-        {/* Floating elements */}
-        <div className="absolute top-20 left-10 w-24 h-24 bg-brand-blue-500/10 rounded-full blur-xl animate-bounce-soft"></div>
-        <div className="absolute bottom-32 right-16 w-32 h-32 bg-brand-red-500/10 rounded-full blur-xl animate-pulse-soft"></div>
-        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-brand-blue-400/20 rounded-full blur-lg animate-bounce-soft" style={{animationDelay: '1s'}}></div>
+        {/* Optimized floating elements - reduced blur for performance */}
+        <div className="absolute top-20 left-10 w-24 h-24 bg-brand-blue-500/8 rounded-full animate-bounce-soft opacity-60"></div>
+        <div className="absolute bottom-32 right-16 w-32 h-32 bg-brand-red-500/8 rounded-full animate-pulse-soft opacity-60"></div>
+        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-brand-blue-400/10 rounded-full animate-bounce-soft opacity-60" style={{animationDelay: '1s'}}></div>
 
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto animate-fade-in-up"></div>
       </section>
