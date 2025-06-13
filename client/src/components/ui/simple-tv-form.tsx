@@ -104,7 +104,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
             <Checkbox 
               id="masonry" 
               checked={masonryWall} 
-              onCheckedChange={setMasonryWall}
+              onCheckedChange={(checked) => setMasonryWall(checked === true)}
             />
             <Label htmlFor="masonry">Masonry/Brick Wall (+$75)</Label>
           </div>
@@ -112,7 +112,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
             <Checkbox 
               id="highrise" 
               checked={highRise} 
-              onCheckedChange={setHighRise}
+              onCheckedChange={(checked) => setHighRise(checked === true)}
             />
             <Label htmlFor="highrise">High-Rise Installation (+$50)</Label>
           </div>
@@ -120,7 +120,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
             <Checkbox 
               id="outlet" 
               checked={outletNeeded} 
-              onCheckedChange={setOutletNeeded}
+              onCheckedChange={(checked) => setOutletNeeded(checked === true)}
             />
             <Label htmlFor="outlet">New Outlet Installation (+$125)</Label>
           </div>

@@ -267,7 +267,7 @@ export function ServiceSelectionGrid({
                       <ServiceCard
                         title="Smart Floodlight"
                         description="Smart floodlight installation with motion detection"
-                        icon={<Icons.lightbulb className="h-6 w-6" />}
+                        icon={<Icons.lighting className="h-6 w-6" />}
                         price={249}
                         onClick={() => onServiceAdd("smartHome", {
                           type: "floodlight",

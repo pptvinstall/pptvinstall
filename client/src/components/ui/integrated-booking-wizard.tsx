@@ -32,10 +32,7 @@ import { Checkbox } from "./checkbox";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
-import { ReviewBookingStep } from "./review-booking-step";
-import { TVWizard } from "./tv-wizard";
-import { SmartHomeWizard } from "./smart-home-wizard";
-import { TVDeinstallationWizard } from "./tv-deinstallation-wizard";
+// Import removed - using ServiceSelectionGrid instead
 
 // Type definitions
 interface TVServiceOption {
