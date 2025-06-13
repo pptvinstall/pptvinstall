@@ -185,6 +185,24 @@ export function IntegratedBookingWizard({
   const [pricingTotal, setPricingTotal] = useState(0);
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
+  
+  // Cleanup availability cache periodically to prevent memory leaks
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      setTimeSlotAvailability(prev => {
+        const keys = Object.keys(prev);
+        if (keys.length > 50) { // Keep only recent 50 entries
+          const recent = keys.slice(-25);
+          const cleaned: Record<string, boolean> = {};
+          recent.forEach(key => cleaned[key] = prev[key]);
+          return cleaned;
+        }
+        return prev;
+      });
+    }, 60000); // Cleanup every minute
+    
+    return () => clearInterval(cleanup);
+  }, []);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
 
@@ -407,16 +425,15 @@ export function IntegratedBookingWizard({
       if (selectedDate <= bufferTime) {
         console.log(`Time slot ${time} on ${date} is unavailable due to being in the past or too soon`);
 
-        // Use setTimeout to prevent state updates during render
-        setTimeout(() => {
-          setTimeSlotAvailability((prev) => {
-            // Only update if not already set
-            if (prev[key] !== false) {
-              return { ...prev, [key]: false };
-            }
-            return prev;
-          });
-        }, 0);
+        // Only cache if not already cached to prevent memory leaks
+        if (timeSlotAvailability[key] === undefined) {
+          setTimeout(() => {
+            setTimeSlotAvailability((prev) => ({
+              ...prev,
+              [key]: false
+            }));
+          }, 0);
+        }
 
         return false;
       }
@@ -445,16 +462,15 @@ export function IntegratedBookingWizard({
             console.log(`Time slot ${time} on ${dateStr} is already booked (Conflict ID: ${conflictingBooking.id})`);
           }
 
-          // Cache the result for faster lookup later
-          setTimeout(() => {
-            setTimeSlotAvailability((prev) => {
-              // Only update if value changed
-              if (prev[key] !== !isSlotTaken) {
-                return { ...prev, [key]: !isSlotTaken };
-              }
-              return prev;
-            });
-          }, 0);
+          // Only cache if not already cached to prevent memory leaks
+          if (timeSlotAvailability[key] === undefined) {
+            setTimeout(() => {
+              setTimeSlotAvailability((prev) => ({
+                ...prev,
+                [key]: !isSlotTaken
+              }));
+            }, 0);
+          }
 
           return !isSlotTaken;
         } catch (error) {
@@ -464,15 +480,15 @@ export function IntegratedBookingWizard({
       }
 
       // If we get here, there are no existing bookings, so the slot is available
-      // Still cache the result for consistency
-      setTimeout(() => {
-        setTimeSlotAvailability((prev) => {
-          if (prev[key] !== true) {
-            return { ...prev, [key]: true };
-          }
-          return prev;
-        });
-      }, 0);
+      // Only cache if not already cached to prevent memory leaks
+      if (timeSlotAvailability[key] === undefined) {
+        setTimeout(() => {
+          setTimeSlotAvailability((prev) => ({
+            ...prev,
+            [key]: true
+          }));
+        }, 0);
+      }
 
       return true;
     },
@@ -489,9 +505,6 @@ export function IntegratedBookingWizard({
     const maxDaysToCheck = 14;
     let availableDate: Date | undefined = undefined;
     let availableTime: string | undefined = undefined;
-
-    // Clear any previously cached availability data to ensure fresh checks
-    setTimeSlotAvailability({});
 
     console.log("Searching for next available time slot...");
     console.log(`Existing bookings: ${existingBookings ? existingBookings.length : 0}`);
