@@ -740,7 +740,7 @@ export default function BookingConfirmation() {
           <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
             <h3 className="text-lg font-semibold">Next Steps</h3>
             <p className="text-muted-foreground text-sm">
-              You'll receive a confirmation email shortly with your booking details. 
+              You'll receive a confirmation email shortly with your booking details and a calendar attachment. 
               Our team will contact you before your appointment to confirm all details.
             </p>
             {bookingData.notes && (

@@ -306,7 +306,7 @@ export function BookingConfirmationModal({
               </motion.div>
               <h3 className="text-2xl font-bold text-green-600 mb-4">Booking Confirmed!</h3>
               <p className="text-muted-foreground mb-6">
-                We've sent a confirmation email to {bookingData.email}
+                We've sent a confirmation email with calendar attachment to {bookingData.email}
               </p>
               <p className="text-sm text-muted-foreground mb-6">
                 Our team will contact you within 24 hours to confirm your appointment details.

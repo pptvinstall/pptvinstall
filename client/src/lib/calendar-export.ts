@@ -58,21 +58,7 @@ export const generateICSContent = (event: CalendarEvent): string => {
   return icsContent;
 };
 
-// Create downloadable ICS file
-export const downloadICSFile = (event: CalendarEvent, filename?: string): void => {
-  const icsContent = generateICSContent(event);
-  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename || `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  URL.revokeObjectURL(url);
-};
+// Note: ICS file download removed - calendar events are only sent via email attachment
 
 // Generate Google Calendar URL
 export const generateGoogleCalendarURL = (event: CalendarEvent): string => {

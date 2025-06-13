@@ -48,7 +48,7 @@ import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
 import { BookingConfirmationModal } from "@/components/ui/booking-confirmation-modal";
 
-import { createCalendarEvent, downloadICSFile, generateGoogleCalendarURL } from "@/lib/calendar-export";
+import { createCalendarEvent, generateGoogleCalendarURL } from "@/lib/calendar-export";
 
 // Service-related interfaces 
 interface TVServiceOption {
