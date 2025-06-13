@@ -2255,5 +2255,6 @@ export function IntegratedBookingWizard({
         isSubmitting={isSubmitting}
       />
     </div>
+    </div>
   );
 }
