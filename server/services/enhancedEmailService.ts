@@ -59,14 +59,36 @@ function createCalendarEvent(booking: Booking): Promise<string> {
       eventDate = new Date(booking.preferredDate);
     }
     
-    // Parse the appointment time (e.g., "3:00 PM")
-    let startTime: Date;
+    // Parse the appointment time (e.g., "7:30 PM")
+    // Initialize with fallback time first
+    const startTime = new Date(eventDate);
+    startTime.setHours(12, 0, 0, 0); // Default to noon
+    
     try {
-      startTime = parse(booking.appointmentTime, 'h:mm a', eventDate);
+      // Try different time formats
+      const timeFormats = ['h:mm a', 'h:mm aa', 'hh:mm a', 'hh:mm aa'];
+      let parsed = false;
+      
+      for (const format of timeFormats) {
+        try {
+          const parsedTime = parse(booking.appointmentTime, format, eventDate);
+          // Check if the parsed time is valid
+          if (!isNaN(parsedTime.getTime())) {
+            startTime.setHours(parsedTime.getHours(), parsedTime.getMinutes(), 0, 0);
+            parsed = true;
+            break;
+          }
+        } catch (formatError) {
+          continue;
+        }
+      }
+      
+      if (!parsed) {
+        console.warn('Unable to parse appointment time:', booking.appointmentTime, 'using default noon');
+      }
     } catch (e) {
-      // Fallback: just use the date with noon as default time
-      startTime = new Date(eventDate);
-      startTime.setHours(12, 0, 0, 0);
+      console.error('Time parsing failed for:', booking.appointmentTime, e);
+      // Already set to noon as fallback
     }
     
     // Event duration (default to 1.5 hours)
@@ -375,7 +397,7 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
   return `
     <div style="margin-bottom: 15px; text-align: center;">
       <div style="display: inline-block; background-color: #f0f9f0; padding: 12px; border-radius: 50%;">
-        <img src="https://i.ibb.co/4dygmQP/check-circle.png" alt="Success" width="48" height="48" style="display: block;">
+        <span style="font-size: 48px; color: #10b981;">✓</span>
       </div>
     </div>
     
@@ -429,8 +451,8 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
     <div style="padding: 16px; background-color: #f5f5f5; border-radius: 8px; margin-bottom: 24px;">
       <h2 style="font-size: 18px; font-weight: 600; margin-top: 0; margin-bottom: 8px;">Next Steps</h2>
       <p style="margin: 0; line-height: 1.5;">
-        You'll receive a confirmation email shortly with your booking details. Our team will contact you 
-        before your appointment to confirm all details.
+        Thank you for booking with Picture Perfect TV Install! Our team will reach out to confirm any 
+        special requirements before your appointment.
       </p>
     </div>
     
@@ -515,7 +537,7 @@ function getAdminNotificationContent(booking: Booking & { smartHomeItems?: any[]
   
   return `
     <div style="margin-bottom: 15px; text-align: center;">
-      <img src="https://i.ibb.co/DKDc3mZ/notification-bell.png" alt="Admin Alert" width="64" height="64" style="display: inline-block;">
+      <span style="font-size: 64px;">🔔</span>
     </div>
     
     <h1 style="color: #005cb9; margin-top: 0; font-size: 24px; text-align: center;">New Booking Alert!</h1>
