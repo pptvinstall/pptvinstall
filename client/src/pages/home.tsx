@@ -143,13 +143,13 @@ export default function HomePage() {
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto animate-fade-in-up"></div>
       </section>
 
-      {/* Featured Service Section */}
-      <section className="py-8 bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-6">
-            <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">Most Popular Service</span>
-            <h2 className="text-3xl font-bold mt-2 mb-2">Basic TV Mounting</h2>
-            <p className="text-gray-600">Professional mounting with your own TV mount</p>
+      {/* Featured Service Section - Enhanced spacing and responsiveness */}
+      <section className="section-padding-sm bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
+        <div className="container-narrow">
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-medium mb-4">Most Popular Service</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-2 mb-4">Basic TV Mounting</h2>
+            <p className="text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto">Professional mounting with your own TV mount</p>
           </div>
 
           <div className="max-w-4xl mx-auto">
@@ -160,9 +160,9 @@ export default function HomePage() {
                   <Monitor className="h-16 w-16 text-white mx-auto mb-3" />
                   <div className="text-3xl font-bold text-white">$100</div>
                   <div className="text-blue-100 mt-1">Flat Rate</div>
-                  <Link href="/booking" className="mt-4 block">
+                  <Link href="/booking" className="mt-6 block">
                     <Button 
-                      className="bg-white text-blue-600 hover:bg-blue-50" 
+                      className="btn-primary-enhanced bg-white text-blue-600 hover:bg-blue-50 font-bold px-8 py-3 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300" 
                       onClick={() => trackLead({ source: 'featured_service' })}
                     >
                       Book Now
