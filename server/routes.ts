@@ -246,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceType: "TV Installation",
         preferredDate: new Date().toISOString(),
         appointmentTime: "7:00 PM",
+        status: "active" as const,
         notes: `This is a test booking sent at ${timestamp} to verify email functionality`,
         pricingTotal: "199.99",
         pricingBreakdown: [

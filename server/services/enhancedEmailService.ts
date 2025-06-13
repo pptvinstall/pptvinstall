@@ -442,7 +442,7 @@ function getBookingConfirmationContent(booking: Booking & { smartHomeItems?: any
       </div>
       
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee;">
-        <span style="font-weight: 600;">Total Price</span>
+        <span style="font-weight: 600;">Total Price:</span>
         <span style="font-size: 20px; font-weight: 700;">${totalPrice}</span>
       </div>
     </div>
