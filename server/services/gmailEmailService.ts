@@ -29,7 +29,7 @@ const createTransporter = () => {
 };
 
 /**
- * Create calendar event for booking
+ * Create calendar event for booking with Eastern Time timezone
  */
 async function createCalendarEvent(booking: Booking): Promise<string | null> {
   try {
@@ -49,6 +49,7 @@ async function createCalendarEvent(booking: Booking): Promise<string | null> {
       adjustedHours = 0;
     }
 
+    // Create date in Eastern Time (Atlanta, GA timezone)
     const startDateTime = new Date(appointmentDate);
     startDateTime.setHours(adjustedHours, minutes || 0, 0, 0);
     
@@ -70,6 +71,8 @@ async function createCalendarEvent(booking: Booking): Promise<string | null> {
         endDateTime.getHours(),
         endDateTime.getMinutes()
       ],
+      startInputType: 'local',
+      startOutputType: 'local',
       title: `TV Installation Service - ${COMPANY_NAME}`,
       description: `TV Installation appointment for ${booking.name}\n\nService: ${booking.serviceType}\nLocation: ${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}\n\nContact: ${COMPANY_PHONE}`,
       location: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
@@ -141,9 +144,10 @@ function generateBookingConfirmationEmail(booking: Booking): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Booking Confirmation - ${COMPANY_NAME}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+<body style="margin: 0; padding: 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 16px; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">`
     
     <!-- Company Header -->
     <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #005cb9;">
@@ -160,11 +164,13 @@ function generateBookingConfirmationEmail(booking: Booking): string {
 
     <!-- Success Message -->
     <div style="text-align: center; margin-bottom: 30px;">
-      <div style="display: inline-block; background-color: #10b981; padding: 12px; border-radius: 50%; margin-bottom: 16px;">
-        <span style="font-size: 32px; color: white;">✅</span>
+      <div style="display: inline-block; background-color: #10b981; padding: 16px; border-radius: 50%; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M26.6667 8L12 22.6667L5.33334 16" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </div>
-      <h1 style="color: #333333; margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed!</h1>
-      <p style="color: #666; margin: 8px 0 0 0; font-size: 16px;">Your appointment has been booked successfully</p>
+      <h1 style="color: #333333; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Booking Confirmed!</h1>
+      <p style="color: #666; margin: 8px 0 0 0; font-size: 16px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Your appointment has been booked successfully</p>
     </div>
     
     <!-- Booking Reference ID -->
@@ -174,76 +180,78 @@ function generateBookingConfirmationEmail(booking: Booking): string {
     </div>
     
     <!-- Customer Information -->
-    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
-      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">
+    <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #2563eb;">
+      <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
         👤 Customer Information
       </h2>
-      <div style="display: grid; gap: 12px;">
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Full Name</span>
-          <span style="color: #333; font-weight: 500;">${booking.name}</span>
+      <div style="display: grid; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Full Name</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${booking.name}</span>
         </div>
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Email Address</span>
-          <span style="color: #333; font-weight: 500;">${booking.email}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Email Address</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${booking.email}</span>
         </div>
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Phone Number</span>
-          <span style="color: #333; font-weight: 500;">${booking.phone}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Phone Number</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${booking.phone}</span>
         </div>
       </div>
     </div>
     
     <!-- Service Details -->
-    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
-      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">
+    <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #28a745;">
+      <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
         🛠️ Service Details
       </h2>
-      <div style="display: grid; gap: 12px;">
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Service Type</span>
-          <span style="color: #333; font-weight: 500;">${booking.serviceType || 'TV Installation'}</span>
+      <div style="display: grid; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Service Type</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${booking.serviceType || 'TV Installation'}</span>
         </div>
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Preferred Date</span>
-          <span style="color: #333; font-weight: 500;">${formattedDate}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Preferred Date</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${formattedDate}</span>
         </div>
-        <div>
-          <span style="color: #666; font-size: 14px; display: block; margin-bottom: 4px;">Preferred Time</span>
-          <span style="color: #333; font-weight: 500;">${booking.appointmentTime || "Not specified"}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #666; font-size: 14px; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Preferred Time</span>
+          <span style="color: #333; font-weight: 500; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${booking.appointmentTime || "Not specified"}</span>
         </div>
       </div>
     </div>
     
     <!-- Installation Address -->
-    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
-      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">
+    <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-left: 4px solid #dc3545;">
+      <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0 0 16px 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
         📍 Installation Address
       </h2>
-      <div style="color: #333; font-weight: 500; line-height: 1.6;">
+      <div style="color: #333; font-weight: 500; line-height: 1.6; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa; padding: 12px; border-radius: 6px;">
         ${booking.streetAddress}<br>
         ${booking.addressLine2 ? `${booking.addressLine2}<br>` : ''}
         ${booking.city}, ${booking.state} ${booking.zipCode}
       </div>
     </div>
     
-    <!-- Appointment Summary -->
-    <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px;">
-      <h2 style="color: #2563eb; font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">
-        📋 Appointment Summary
-      </h2>
+    <!-- Booking Estimate -->
+    <div style="margin-bottom: 30px; padding: 18px; border: 1px solid #e9ecef; border-radius: 8px; border-top: 3px solid #005cb9;">
+      <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+        <h2 style="color: #2563eb; font-size: 16px; font-weight: 600; margin: 0; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+          📋 Booking Estimate
+        </h2>
+      </div>
       
       <div style="border-top: 1px solid #eee;">
         ${servicesHtml}
       </div>
       
-      <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e9ecef;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 18px; font-weight: 600; color: #333;">💵 Total Price:</span>
-          <span style="font-size: 24px; font-weight: 700; color: #10b981;">${totalPrice}</span>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #e9ecef; background-color: #f8f9fa; padding: 16px; border-radius: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 16px; font-weight: 600; color: #333; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">Estimate Total:</span>
+          <span style="font-size: 22px; font-weight: 700; color: #10b981; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">${totalPrice} USD</span>
         </div>
-        <p style="color: #666; font-size: 14px; margin: 8px 0 0 0; font-style: italic;">
-          Payment due after installation (Cash, Zelle, or Apple Pay accepted)
+        <p style="color: #666; font-size: 13px; margin: 0; font-style: italic; text-align: right; font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;">
+          Due After Installation (Cash, Zelle, or Apple Pay)
         </p>
       </div>
     </div>
