@@ -10,6 +10,7 @@ import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
+import { monitoring } from "./monitoring";
 import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { 
@@ -77,9 +78,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(logger.logRequest.bind(logger));
 
   // API routes
-  app.get("/api/health", (req, res) => {
-    logger.debug('Health check requested');
-    res.json({ status: "ok" });
+  app.get("/api/health", async (req, res) => {
+    try {
+      const health = await monitoring.getSystemHealth();
+      res.json(health);
+    } catch (error) {
+      res.status(500).json({ 
+        status: "unhealthy", 
+        error: "Health check failed",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Enhanced health endpoint for monitoring services
+  app.get("/api/health/detailed", async (req, res) => {
+    try {
+      const { password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+
+      const health = await monitoring.getSystemHealth();
+      const launchConfig = monitoring.getLaunchConfig();
+      
+      res.json({
+        success: true,
+        health,
+        launchConfig,
+        environment: process.env.NODE_ENV,
+        version: "1.0.0"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to get detailed health information"
+      });
+    }
+  });
+
+  // Launch Mode toggle endpoint
+  app.post("/api/admin/launch-mode", async (req, res) => {
+    try {
+      const { password, enable } = req.body;
+      
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+
+      if (enable) {
+        await monitoring.enableLaunchMode();
+        logger.info('🚀 LAUNCH MODE ENABLED by admin');
+      }
+
+      const launchConfig = monitoring.getLaunchConfig();
+      
+      res.json({
+        success: true,
+        message: enable ? "Launch mode enabled" : "Launch mode status retrieved",
+        launchConfig
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to toggle launch mode"
+      });
+    }
   });
   
   // Public route for email preview page to check basic email settings
