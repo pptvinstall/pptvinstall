@@ -7,7 +7,7 @@
 
 @layer base {
   :root {
-    --background: 210 33% 98%;
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -16,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 217 91% 60%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -33,9 +33,9 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.875rem;
+    --radius: 0.75rem;
 
     --brand-blue-50: 213 100% 98%;
     --brand-blue-100: 214 95% 93%;
@@ -69,52 +69,128 @@
 @layer utilities {
   /* Text gradients */
   .text-gradient-primary {
-    @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-800 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-blue-600 via-brand-blue-500 to-brand-blue-700 bg-clip-text text-transparent;
   }
 
   .text-gradient-accent {
-    @apply bg-gradient-to-r from-brand-blue-400 to-brand-blue-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-blue-400 via-brand-blue-500 to-brand-blue-600 bg-clip-text text-transparent;
   }
 
-  /* Shadows with hover effects */
+  .text-gradient-hero {
+    @apply bg-gradient-to-r from-brand-blue-600 via-brand-blue-500 to-brand-blue-800 bg-clip-text text-transparent;
+  }
+
+  /* Enhanced shadows with hover effects */
   .shadow-card {
-    @apply shadow-md transition-all duration-300 hover:shadow-lg;
+    @apply shadow-soft transition-all duration-300 hover:shadow-large hover:-translate-y-1;
   }
 
-  /* Button hover effects */
+  .shadow-button {
+    @apply shadow-button transition-all duration-200 hover:shadow-button-hover hover:-translate-y-0.5;
+  }
+
+  /* Enhanced button hover effects */
   .btn-hover-effect {
-    @apply transform transition-transform duration-300 hover:scale-105 active:scale-95;
+    @apply transform transition-all duration-200 hover:scale-105 hover:shadow-colored active:scale-95;
   }
 
-  /* Trust badge styles - enhanced */
+  .btn-glow-effect {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+
+  .btn-glow-effect::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] transition-transform duration-700;
+  }
+
+  .btn-glow-effect:hover::before {
+    @apply translate-x-[100%];
+  }
+
+  /* Glass morphism effects */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/20;
+  }
+
+  /* Modern card styles */
+  .modern-card {
+    @apply bg-white rounded-2xl shadow-medium border border-gray-100 transition-all duration-300 hover:shadow-large hover:border-brand-blue-200;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    @apply bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-shimmer;
+  }
+
+  /* Enhanced trust badge styles */
   .trust-badge {
-    @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shadow-sm transition-all duration-200 hover:bg-blue-100;
+    @apply inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full bg-gradient-to-r from-brand-blue-50 to-brand-blue-100 text-brand-blue-800 border border-brand-blue-200 shadow-soft transition-all duration-300 hover:shadow-medium hover:scale-105 hover:from-brand-blue-100 hover:to-brand-blue-200;
   }
 
   .trust-badge-icon {
-    @apply text-blue-600;
+    @apply text-brand-blue-600 w-4 h-4;
+  }
+
+  /* Enhanced pricing card */
+  .pricing-card {
+    @apply relative bg-white rounded-3xl border-2 border-gray-200 shadow-medium transition-all duration-300 hover:shadow-large hover:border-brand-blue-300 hover:-translate-y-2 overflow-hidden;
+  }
+
+  .pricing-card-popular {
+    @apply border-brand-blue-500 ring-4 ring-brand-blue-100 transform scale-105;
+  }
+
+  .pricing-card-popular::before {
+    content: 'Most Popular';
+    @apply absolute top-0 left-0 right-0 bg-gradient-to-r from-brand-blue-500 to-brand-blue-600 text-white text-center py-2 text-sm font-semibold;
+  }
+
+  /* Enhanced service card */
+  .service-card {
+    @apply group relative bg-white rounded-2xl border border-gray-200 shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1 overflow-hidden;
+  }
+
+  .service-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-brand-blue-500/5 to-brand-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300;
   }
 
   /* Enhanced section styles */
   .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .section-padding-sm {
     @apply py-12 md:py-16 lg:py-20;
   }
   
   /* Dialog customizations */
   .dialog-overlay {
-    @apply fixed inset-0 bg-black/50 z-40 backdrop-blur-sm;
+    @apply fixed inset-0 bg-black/60 z-40 backdrop-blur-md;
   }
   
   .dialog-content {
-    @apply z-50 bg-background rounded-t-xl sm:rounded-xl shadow-xl focus:outline-none;
+    @apply z-50 bg-background rounded-2xl shadow-2xl focus:outline-none border border-gray-200/50;
   }
 
   .section-title {
-    @apply text-3xl md:text-4xl font-bold mb-4 leading-tight;
+    @apply text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight tracking-tight;
   }
 
   .section-subtitle {
-    @apply text-lg text-blue-600 mb-8;
+    @apply text-lg md:text-xl text-brand-blue-600 mb-8 font-medium;
+  }
+
+  .hero-title {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight;
+  }
+
+  .hero-subtitle {
+    @apply text-xl md:text-2xl text-gray-600 font-medium;
   }
 
   /* Scroll container positioning */
@@ -123,9 +199,30 @@
     position: relative !important;
   }
 
-  /* Card styles */
+  /* Enhanced card styles */
   .feature-card {
-    @apply p-6 rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg hover:border-blue-200;
+    @apply p-8 rounded-2xl border border-gray-200 bg-white shadow-soft transition-all duration-300 hover:shadow-large hover:border-brand-blue-200 hover:-translate-y-1 group;
+  }
+
+  .feature-card-icon {
+    @apply w-12 h-12 rounded-xl bg-gradient-to-br from-brand-blue-500 to-brand-blue-600 text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300;
+  }
+
+  .feature-card-title {
+    @apply text-xl font-semibold text-gray-900 mb-3 group-hover:text-brand-blue-600 transition-colors duration-300;
+  }
+
+  .feature-card-description {
+    @apply text-gray-600 leading-relaxed;
+  }
+
+  /* Interactive elements */
+  .interactive-element {
+    @apply transition-all duration-200 hover:scale-105 cursor-pointer;
+  }
+
+  .interactive-element:active {
+    @apply scale-95;
   }
 
   /* Animation utilities */
@@ -145,6 +242,34 @@
   @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Staggered animations */
+  .animate-stagger-1 { animation-delay: 0.1s; }
+  .animate-stagger-2 { animation-delay: 0.2s; }
+  .animate-stagger-3 { animation-delay: 0.3s; }
+  .animate-stagger-4 { animation-delay: 0.4s; }
+
+  /* Modern loading states */
+  .loading-skeleton {
+    @apply animate-pulse bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded;
+  }
+
+  /* Enhanced focus states */
+  .focus-ring {
+    @apply focus-visible:ring-2 focus-visible:ring-brand-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none;
+  }
+
+  /* Smooth transitions for interactive elements */
+  .smooth-transition {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  /* Modern border gradients */
+  .border-gradient {
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, hsl(217, 91%, 60%), hsl(213, 94%, 59%)) border-box;
+    border: 2px solid transparent;
   }
 }
 

@@ -32,7 +32,7 @@ export default function HomePage() {
   const showcaseRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const testimonialsRef = useRef<HTMLDivElement>(null);
-  
+
   // Track page view with Meta Pixel ViewContent event
   useEffect(() => {
     trackViewContent({ content_name: 'Home Page', content_category: 'page_view' });
@@ -124,74 +124,23 @@ export default function HomePage() {
     <div className="scroll-container overflow-x-hidden relative" style={{ position: 'relative' }}>
       {/* PWA Install Banner - only visible on mobile */}
       <PWAInstallBanner />
-      
+
       {/* Hero Section with position: relative for useScroll */}
-      <section
-        ref={heroRef}
-        className="min-h-screen flex items-center bg-white pt-16 pb-8"
-        style={{ position: 'relative' }}
-      >
-        <div className="absolute inset-0 z-0 opacity-5">
-          <div className="h-full w-full bg-[url('/assets/pattern-bg.svg')] bg-repeat opacity-20" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col items-center text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-            >
-              <div className="inline-flex items-center justify-center gap-1 px-4 py-1.5 mb-6 rounded-full bg-white border border-blue-100">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-sm text-blue-600">Available Now in Metro Atlanta</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-blue-600">
-                Professional TV<br />Mounting & Smart<br />Home Installation
-              </h1>
-
-              <p className="text-lg text-blue-600 mb-8">
-                Expert installation services with flawless<br />results in Metro Atlanta
-              </p>
-
-              <div className="flex flex-col gap-4 items-center">
-                <Link href="/booking" className="w-full max-w-xs">
-                  <Button
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 w-full h-12 flex items-center justify-center gap-2"
-                    onClick={() => trackLead({ source: 'home_hero' })}
-                  >
-                    <span>Book Now</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/services" className="w-full max-w-xs">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full bg-white hover:bg-gray-50 border-blue-200 text-blue-600 h-12"
-                  >
-                    Our Services
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-3 mt-8">
-                <div className="flex items-center px-4 py-2 bg-white rounded-full shadow-sm">
-                  <Clock className="h-4 w-4 text-blue-500 mr-2" />
-                  <span className="text-sm">Same-Day Available</span>
-                </div>
-                <div className="flex items-center px-4 py-2 bg-white rounded-full shadow-sm">
-                  <Shield className="h-4 w-4 text-blue-500 mr-2" />
-                  <span className="text-sm">License & Insured</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
       
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Enhanced background with modern gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-50 via-white to-brand-blue-100/30" />
+        <div className="absolute inset-0 bg-hero-pattern opacity-60" />
+        <div className="absolute inset-0 bg-[url('/assets/pattern-bg.svg')] opacity-5" />
+
+        {/* Floating elements */}
+        <div className="absolute top-20 left-10 w-24 h-24 bg-brand-blue-500/10 rounded-full blur-xl animate-bounce-soft"></div>
+        <div className="absolute bottom-32 right-16 w-32 h-32 bg-brand-red-500/10 rounded-full blur-xl animate-pulse-soft"></div>
+        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-brand-blue-400/20 rounded-full blur-lg animate-bounce-soft" style={{animationDelay: '1s'}}></div>
+
+        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto animate-fade-in-up"></div>
+      </section>
+
       {/* Featured Service Section */}
       <section className="py-8 bg-gradient-to-b from-white to-blue-50" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4">
@@ -200,7 +149,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mt-2 mb-2">Basic TV Mounting</h2>
             <p className="text-gray-600">Professional mounting with your own TV mount</p>
           </div>
-          
+
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-5 bg-white overflow-hidden rounded-xl shadow-md border border-blue-100">
               <div className="md:col-span-2 relative bg-blue-600 p-6 flex items-center justify-center">
@@ -275,12 +224,12 @@ export default function HomePage() {
               Browse our gallery of recent TV mounting and installation projects in Metro Atlanta
             </p>
           </div>
-          
+
           <InstallationSlideshow />
-          
+
           <div className="mt-8 text-center">
             <p className="text-sm text-blue-500 mb-4">Swipe or use arrows to view more installations</p>
-            
+
             <Link href="/booking">
               <Button 
                 size="lg" 
@@ -294,7 +243,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      
+
       {/* Showcase section */}
       <section
         ref={showcaseRef}
