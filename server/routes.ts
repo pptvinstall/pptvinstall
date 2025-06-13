@@ -1033,7 +1033,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send customer confirmation email using enhanced email templates
         let customerEmailSent = false;
-        let adminEmailSent = false;
         
         if (process.env.SENDGRID_API_KEY) {
           // Send customer confirmation email
@@ -1048,11 +1047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // We don't want to fail the booking if notifications fail
           }
           
-          // Send separate admin notification email (independent of customer email)
+          // Send separate admin notification email
           try {
-            // Import admin notification function from enhanced email service
             const { sendAdminNotification } = await import('./services/enhancedEmailService');
-            adminEmailSent = await sendAdminNotification(bookingWithId);
+            const adminEmailSent = await sendAdminNotification(bookingWithId);
             logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
           } catch (adminError: any) {
             logger.error("Error sending admin notification email:", adminError as Error);
@@ -1062,7 +1060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Don't fail booking if admin notification fails
           }
           
-          logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
+          logger.info(`Email sending summary - Customer: ${customerEmailSent}`);
         }
 
         // Return success response

@@ -16,8 +16,8 @@ const FROM_EMAIL = process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVIn
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
 const COMPANY_WEBSITE = 'https://PPTVInstall.com';
-// Use a direct logo image URL that will be accessible in emails
-const LOGO_URL = 'https://s3.amazonaws.com/images.bestbusinesstv.com/pptv-logo.png';
+// Use the logo from our public assets directory
+const LOGO_URL = 'https://d11f8565-cd09-4efd-be2c-0981b311e35a-00-1smf2f5e8thhk.worf.replit.dev/images/pptv-logo.png';
 
 /**
  * Email notification types
@@ -1159,7 +1159,7 @@ export async function sendTestEmail(emailType: EmailType, recipientEmail: string
 
 /**
  * Send admin notification email for new bookings
- * This sends a notification to both the business owner and the company email
+ * This sends a notification only to the business admin email
  */
 export async function sendAdminNotification(booking: Booking): Promise<boolean> {
   if (!ADMIN_EMAIL) {
@@ -1168,23 +1168,14 @@ export async function sendAdminNotification(booking: Booking): Promise<boolean> 
   }
   
   try {
-    // Send to ADMIN_EMAIL (PPTVInstall@gmail.com)
+    // Send to ADMIN_EMAIL (PPTVInstall@gmail.com) only
     const adminResult = await sendEnhancedEmail(
       EmailType.ADMIN_NOTIFICATION,
       ADMIN_EMAIL,
       booking
     );
     
-    // Also send to the business owner's email
-    const ownerEmail = 'JWoodceo@gmail.com';
-    const ownerResult = await sendEnhancedEmail(
-      EmailType.ADMIN_NOTIFICATION,
-      ownerEmail,
-      booking
-    );
-    
-    // Consider it successful if at least one email was sent
-    return adminResult || ownerResult;
+    return adminResult;
   } catch (error) {
     console.error('Error sending admin notification email:', error);
     // Don't rethrow error for admin emails to prevent booking failures
