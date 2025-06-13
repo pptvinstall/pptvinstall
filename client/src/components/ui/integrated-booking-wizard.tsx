@@ -180,24 +180,35 @@ export function IntegratedBookingWizard({
 
   // Generate time slots based on selected date
   useEffect(() => {
-    if (selectedDate) {
+    if (selectedDate && businessHours.length > 0) {
       const dayOfWeek = selectedDate.getDay();
       const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
       
-      if (businessHour && !businessHour.isClosed) {
+      if (businessHour && businessHour.isAvailable) {
         const slots = [];
-        let currentTime = businessHour.openTime;
+        const startTime = businessHour.startTime || "09:00";
+        const endTime = businessHour.endTime || "17:00";
         
-        while (currentTime <= businessHour.closeTime) {
-          slots.push(currentTime);
-          // Add 2 hours (2 * 60 = 120 minutes)
-          const [hours, minutes] = currentTime.split(':').map(Number);
-          const totalMinutes = hours * 60 + minutes + 120;
-          const newHours = Math.floor(totalMinutes / 60) % 24;
-          const newMinutes = totalMinutes % 60;
-          currentTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+        // Generate time slots every 2 hours
+        const [startHour, startMin] = startTime.split(':').map(Number);
+        const [endHour, endMin] = endTime.split(':').map(Number);
+        
+        let currentHour = startHour;
+        let currentMin = startMin;
+        
+        while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin - 120)) {
+          const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+          slots.push(timeString);
           
-          if (currentTime > businessHour.closeTime) break;
+          // Add 2 hours
+          currentMin += 120;
+          if (currentMin >= 60) {
+            currentHour += Math.floor(currentMin / 60);
+            currentMin = currentMin % 60;
+          }
+          
+          // Stop if we exceed business hours
+          if (currentHour > endHour || (currentHour === endHour && currentMin > endMin)) break;
         }
         
         setTimeSlots(slots);

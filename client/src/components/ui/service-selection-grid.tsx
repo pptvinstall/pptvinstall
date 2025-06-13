@@ -238,13 +238,15 @@ export function ServiceSelectionGrid({
                     <motion.div variants={itemVariants}>
                       <ServiceCard
                         title="Smart Doorbell"
-                        description="Professional installation of smart doorbell with wiring setup"
+                        description="Professional doorbell installation with wiring and app setup"
                         icon={<Icons.doorbell className="h-6 w-6" />}
                         price={149}
                         onClick={() => onServiceAdd("smartHome", {
+                          id: `doorbell-${Date.now()}`,
                           type: "doorbell",
                           count: 1,
-                          hasExistingWiring: false
+                          hasExistingWiring: false,
+                          basePrice: 149
                         })}
                       />
                     </motion.div>
@@ -252,13 +254,15 @@ export function ServiceSelectionGrid({
                     <motion.div variants={itemVariants}>
                       <ServiceCard
                         title="Security Camera"
-                        description="Professional security camera installation and setup"
+                        description="Professional camera installation with mounting and configuration"
                         icon={<Icons.camera className="h-6 w-6" />}
                         price={199}
                         onClick={() => onServiceAdd("smartHome", {
+                          id: `camera-${Date.now()}`,
                           type: "camera",
                           count: 1,
-                          hasExistingWiring: false
+                          hasExistingWiring: false,
+                          basePrice: 199
                         })}
                       />
                     </motion.div>
@@ -266,13 +270,15 @@ export function ServiceSelectionGrid({
                     <motion.div variants={itemVariants} className="sm:col-span-2">
                       <ServiceCard
                         title="Smart Floodlight"
-                        description="Smart floodlight installation with motion detection"
+                        description="Motion-activated floodlight with app control and scheduling"
                         icon={<Icons.lighting className="h-6 w-6" />}
                         price={249}
                         onClick={() => onServiceAdd("smartHome", {
+                          id: `floodlight-${Date.now()}`,
                           type: "floodlight",
                           count: 1,
-                          hasExistingWiring: false
+                          hasExistingWiring: false,
+                          basePrice: 249
                         })}
                       />
                     </motion.div>
