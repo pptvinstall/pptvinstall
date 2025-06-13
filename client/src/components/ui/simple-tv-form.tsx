@@ -19,14 +19,14 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
   const [outletNeeded, setOutletNeeded] = useState(false);
 
   const calculatePrice = () => {
-    let basePrice = 199;
+    let basePrice = 100; // Correct base price from master site config
     if (tvSize === "large") basePrice += 50;
     if (location === "fireplace") basePrice += 100;
     if (mountType === "tilting") basePrice += 25;
     if (mountType === "full_motion") basePrice += 50;
-    if (masonryWall) basePrice += 75;
+    if (masonryWall) basePrice += 50; // Brick wall surcharge
     if (highRise) basePrice += 50;
-    if (outletNeeded) basePrice += 125;
+    if (outletNeeded) basePrice += 100; // Outlet installation
     return basePrice;
   };
 
@@ -51,13 +51,19 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">TV Size</Label>
         <RadioGroup value={tvSize} onValueChange={(value: "small" | "large") => setTvSize(value)}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="small" id="small" />
-            <Label htmlFor="small">32" - 55" TV (+$0)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="small" id="small" />
+              <Label htmlFor="small" className="font-medium">32" - 55" TV</Label>
+            </div>
+            <span className="text-green-600 font-semibold">+$0</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="large" id="large" />
-            <Label htmlFor="large">56" or larger (+$50)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="large" id="large" />
+              <Label htmlFor="large" className="font-medium">56" or larger</Label>
+            </div>
+            <span className="text-blue-600 font-semibold">+$50</span>
           </div>
         </RadioGroup>
       </div>
@@ -66,13 +72,19 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">Installation Location</Label>
         <RadioGroup value={location} onValueChange={(value: "standard" | "fireplace") => setLocation(value)}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="standard" id="standard" />
-            <Label htmlFor="standard">Standard Wall (+$0)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="standard" id="standard" />
+              <Label htmlFor="standard" className="font-medium">Standard Wall</Label>
+            </div>
+            <span className="text-green-600 font-semibold">+$0</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="fireplace" id="fireplace" />
-            <Label htmlFor="fireplace">Over Fireplace (+$100)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="fireplace" id="fireplace" />
+              <Label htmlFor="fireplace" className="font-medium">Over Fireplace</Label>
+            </div>
+            <span className="text-blue-600 font-semibold">+$100</span>
           </div>
         </RadioGroup>
       </div>
@@ -81,17 +93,35 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">Mount Type</Label>
         <RadioGroup value={mountType} onValueChange={(value: "fixed" | "tilting" | "full_motion") => setMountType(value)}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="fixed" id="fixed" />
-            <Label htmlFor="fixed">Fixed Mount (+$0)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="fixed" id="fixed" />
+              <div>
+                <Label htmlFor="fixed" className="font-medium">Fixed Mount</Label>
+                <p className="text-xs text-gray-500">Standard wall mounting</p>
+              </div>
+            </div>
+            <span className="text-green-600 font-semibold">+$0</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="tilting" id="tilting" />
-            <Label htmlFor="tilting">Tilting Mount (+$25)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="tilting" id="tilting" />
+              <div>
+                <Label htmlFor="tilting" className="font-medium">Tilting Mount</Label>
+                <p className="text-xs text-gray-500">Up/down angle adjustment</p>
+              </div>
+            </div>
+            <span className="text-blue-600 font-semibold">+$25</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="full_motion" id="full_motion" />
-            <Label htmlFor="full_motion">Full Motion Mount (+$50)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="full_motion" id="full_motion" />
+              <div>
+                <Label htmlFor="full_motion" className="font-medium">Full Motion Mount</Label>
+                <p className="text-xs text-gray-500">Swivel, tilt, and extend</p>
+              </div>
+            </div>
+            <span className="text-blue-600 font-semibold">+$50</span>
           </div>
         </RadioGroup>
       </div>
@@ -99,30 +129,48 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
       {/* Add-ons */}
       <div className="space-y-3">
         <Label className="text-base font-medium">Additional Services</Label>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="masonry" 
-              checked={masonryWall} 
-              onCheckedChange={(checked) => setMasonryWall(checked === true)}
-            />
-            <Label htmlFor="masonry">Masonry/Brick Wall (+$75)</Label>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="masonry" 
+                checked={masonryWall} 
+                onCheckedChange={(checked) => setMasonryWall(checked === true)}
+              />
+              <div>
+                <Label htmlFor="masonry" className="font-medium">Brick/Masonry Wall</Label>
+                <p className="text-xs text-gray-500">Special mounting for brick/stone</p>
+              </div>
+            </div>
+            <span className="text-blue-600 font-semibold">+$50</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="highrise" 
-              checked={highRise} 
-              onCheckedChange={(checked) => setHighRise(checked === true)}
-            />
-            <Label htmlFor="highrise">High-Rise Installation (+$50)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="highrise" 
+                checked={highRise} 
+                onCheckedChange={(checked) => setHighRise(checked === true)}
+              />
+              <div>
+                <Label htmlFor="highrise" className="font-medium">High-Rise Installation</Label>
+                <p className="text-xs text-gray-500">Complex building access</p>
+              </div>
+            </div>
+            <span className="text-blue-600 font-semibold">+$50</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="outlet" 
-              checked={outletNeeded} 
-              onCheckedChange={(checked) => setOutletNeeded(checked === true)}
-            />
-            <Label htmlFor="outlet">New Outlet Installation (+$125)</Label>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="outlet" 
+                checked={outletNeeded} 
+                onCheckedChange={(checked) => setOutletNeeded(checked === true)}
+              />
+              <div>
+                <Label htmlFor="outlet" className="font-medium">New Outlet Installation</Label>
+                <p className="text-xs text-gray-500">Professional electrical work</p>
+              </div>
+            </div>
+            <span className="text-blue-600 font-semibold">+$100</span>
           </div>
         </div>
       </div>

@@ -145,7 +145,7 @@ export function ServiceSelectionGrid({
                 <div className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="font-semibold text-blue-800 mb-2">TV Installation Service</h4>
-                    <p className="text-sm text-blue-700">Professional TV mounting with complete setup and wire concealment</p>
+                    <p className="text-sm text-blue-700 line-clamp-2">Professional TV mounting with complete setup, wire concealment, and 1-year warranty</p>
                   </div>
                   
                   <SimpleTVForm onServiceAdd={(service) => onServiceAdd("tv", service)} />
@@ -226,7 +226,7 @@ export function ServiceSelectionGrid({
                 <div className="space-y-6">
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <h4 className="font-semibold text-purple-800 mb-2">Smart Home Installation</h4>
-                    <p className="text-sm text-purple-700">Professional installation of smart home devices with setup and configuration</p>
+                    <p className="text-sm text-purple-700 line-clamp-2">Professional installation of smart home devices with complete setup, configuration, and app integration</p>
                   </div>
                   
                   <motion.div
