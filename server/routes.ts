@@ -1034,14 +1034,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send customer confirmation email using enhanced email templates
         let customerEmailSent = false;
+        let adminEmailSent = false;
+        
+        logger.info("Starting email sending process...");
+        logger.debug("SendGrid API Key available:", !!process.env.SENDGRID_API_KEY);
         
         if (process.env.SENDGRID_API_KEY) {
           // Send customer confirmation email
           try {
+            logger.info("Attempting to send customer confirmation email...");
             customerEmailSent = await sendEnhancedBookingConfirmation(bookingWithId);
             logger.info(`Enhanced customer confirmation email sent successfully: ${customerEmailSent}`);
           } catch (error: any) {
             logger.error("Error sending enhanced customer confirmation email:", error as Error);
+            logger.error("Error stack:", error.stack);
             if (error?.response) {
               logger.error("SendGrid API error response for customer email:", error.response.body);
             }
@@ -1050,18 +1056,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Send separate admin notification email
           try {
+            logger.info("Attempting to send admin notification email...");
             const { sendAdminNotification } = await import('./services/enhancedEmailService');
-            const adminEmailSent = await sendAdminNotification(bookingWithId);
+            adminEmailSent = await sendAdminNotification(bookingWithId);
             logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
           } catch (adminError: any) {
             logger.error("Error sending admin notification email:", adminError as Error);
+            logger.error("Admin error stack:", adminError.stack);
             if (adminError?.response) {
               logger.error("SendGrid API error response for admin email:", adminError.response.body);
             }
             // Don't fail booking if admin notification fails
           }
           
-          logger.info(`Email sending summary - Customer: ${customerEmailSent}`);
+          logger.info(`Email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
+        } else {
+          logger.warn("SendGrid API key not found - emails not sent");
         }
 
         // Return success response
