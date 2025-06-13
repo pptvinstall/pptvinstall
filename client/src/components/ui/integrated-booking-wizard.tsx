@@ -2206,13 +2206,13 @@ export function IntegratedBookingWizard({
             outletNeeded: tv.outletNeeded
           })),
           smartHomeInstallations: smartHomeServices.map(device => ({
-            deviceType: device.deviceType,
-            location: device.location
+            deviceType: device.type,
+            location: device.location || 'Indoor'
           }))
         }}
         onConfirm={async () => {
           try {
-            // Create the booking data for submission
+            // Create the booking data for submission - match the server's expected schema
             const bookingData = {
               name: formData.name,
               email: formData.email,
@@ -2224,17 +2224,40 @@ export function IntegratedBookingWizard({
               zipCode: formData.zipCode,
               preferredDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
               appointmentTime: selectedTime,
-              notes: formData.notes,
+              notes: formData.notes || '',
               consentToContact: formData.consentToContact,
-              serviceType: 'Mixed Services',
-              pricingTotal: pricingTotal,
-              tvInstallations: tvServices,
-              smartHomeInstallations: smartHomeServices,
+              serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
+              pricingTotal: pricingTotal.toString(),
+              // Convert to the format expected by the server
+              pricingBreakdown: [
+                ...tvServices.map(tv => ({
+                  type: 'tv',
+                  size: tv.size,
+                  location: tv.location,
+                  mountType: tv.mountType,
+                  masonryWall: tv.masonryWall,
+                  highRise: tv.highRise,
+                  outletRelocation: tv.outletNeeded,
+                  outletImage: tv.outletImage
+                })),
+                ...smartHomeServices.map(device => ({
+                  type: device.type,
+                  count: device.count,
+                  hasExistingWiring: device.hasExistingWiring
+                }))
+              ],
+              // Account creation data
+              createAccount: formData.createAccount || false,
+              password: formData.createAccount ? formData.password : undefined,
               isTestMode: isTestMode
             };
 
+            console.log('Submitting booking data:', bookingData);
+
             // Submit the booking
             const result = await onSubmit(bookingData);
+            
+            console.log('Booking submission result:', result);
             
             // Generate and download calendar file after successful booking
             if (result && selectedDate && selectedTime) {
@@ -2246,10 +2269,11 @@ export function IntegratedBookingWizard({
               downloadICSFile(calendarEvent, `TV_Installation_${bookingData.name.replace(/\s+/g, '_')}`);
             }
             
-            setShowConfirmationModal(false);
+            // Don't close the modal here - let the BookingConfirmationModal handle state transitions
           } catch (error) {
             console.error('Error submitting booking:', error);
-            setShowConfirmationModal(false);
+            // Don't close the modal on error - let the user try again
+            throw error; // Re-throw to let the modal handle the error state
           }
         }}
         isSubmitting={isSubmitting}

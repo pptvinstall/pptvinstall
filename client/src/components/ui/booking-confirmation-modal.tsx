@@ -47,15 +47,20 @@ export function BookingConfirmationModal({
   onConfirm,
   isSubmitting = false
 }: BookingConfirmationModalProps) {
-  const [step, setStep] = useState<'review' | 'submitting' | 'success'>('review');
+  const [step, setStep] = useState<'review' | 'submitting' | 'success' | 'error'>('review');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleConfirm = async () => {
     setStep('submitting');
+    setErrorMessage('');
     try {
       await onConfirm();
       setStep('success');
     } catch (error) {
-      setStep('review');
+      console.error('Booking submission failed:', error);
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred while submitting your booking.';
+      setErrorMessage(message);
+      setStep('error');
     }
   };
 
