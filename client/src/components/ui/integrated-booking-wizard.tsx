@@ -191,6 +191,7 @@ export function IntegratedBookingWizard({
   const [currentStep, setCurrentStep] = useState(0);
   const [tvServices, setTvServices] = useState<TVServiceOption[]>([]);
   const [smartHomeServices, setSmartHomeServices] = useState<SmartHomeDeviceOption[]>([]);
+  const [deinstallationServices, setDeinstallationServices] = useState<TVDeinstallationOption[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
@@ -2215,7 +2216,7 @@ export function IntegratedBookingWizard({
 
                   <Button
                     onClick={handleNextClick}
-                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0)}
+                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0 && deinstallationServices.length === 0)}
                     className="w-full sm:w-auto"
                   >
                     {isSubmitting
