@@ -162,8 +162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         apiKeySet: !!process.env.SENDGRID_API_KEY,
-        fromEmail: process.env.EMAIL_FROM || 'Picture Perfect TV Install <PPTVInstall@gmail.com>',
-        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com'
+        fromEmail: process.env.EMAIL_FROM || 'Picture Perfect TV Install <pptvinstall@gmail.com>',
+        adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com'
       });
     } catch (error: any) {
       logger.error("Error checking basic email environment:", error);
@@ -189,8 +189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Gather email configuration
       const emailConfig = {
         SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? `Set (length: ${process.env.SENDGRID_API_KEY.length})` : 'Not set',
-        ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'Not set (using default PPTVInstall@gmail.com)',
-        EMAIL_FROM: process.env.EMAIL_FROM || 'Not set (using default PPTVInstall@gmail.com)',
+        ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'Not set (using default pptvinstall@gmail.com)',
+        EMAIL_FROM: process.env.EMAIL_FROM || 'Not set (using default pptvinstall@gmail.com)',
         NODE_ENV: process.env.NODE_ENV,
         host: req.headers.host
       };
@@ -257,8 +257,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log SendGrid configuration
       logger.debug("SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
-        fromEmail: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
-        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com'
+        fromEmail: process.env.EMAIL_FROM || 'pptvinstall@gmail.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com'
       });
       
       // Variable to track email results
@@ -286,8 +286,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Create admin email with modified subject for easier identification in inbox
           const adminMsg = {
-            to: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
-            from: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
+            to: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
+            from: process.env.EMAIL_FROM || 'pptvinstall@gmail.com',
             subject: `🔔 URGENT TEST: New Booking Alert (${timestamp})`,
             text: "Admin notification for test booking",
             html: emailTemplates.getAdminNotificationEmailTemplate(testBooking),
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           adminEmail: type === 'customer' ? 'not requested' : adminEmailResult
         },
         message: "Email test completed. Check server logs for details.",
-        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
         timestamp: timestamp
       });
     } catch (error: any) {
@@ -353,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sendTestEmail } = await import('./services/enhancedEmailService');
       
       // Get admin email from environment variables or use default
-      const adminEmail = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
+      const adminEmail = process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com';
       
       // Send to JWoodceo@gmail.com
       const jwoodResult = await sendTestEmail(emailType, 'JWoodceo@gmail.com');
@@ -367,7 +367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jwoodResult,
         yourResult,
         apiKey: process.env.SENDGRID_API_KEY ? 'Configured' : 'Not configured',
-        adminEmail: process.env.ADMIN_EMAIL || 'Using default: PPTVInstall@gmail.com'
+        adminEmail: process.env.ADMIN_EMAIL || 'Using default: pptvinstall@gmail.com'
       });
     } catch (error) {
       console.error('Error sending test emails:', error);
@@ -466,8 +466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log SendGrid configuration
       logger.debug("Enhanced Email Test - SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
-        fromEmail: process.env.EMAIL_FROM || 'PPTVInstall@gmail.com',
-        adminEmail: process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com',
+        fromEmail: process.env.EMAIL_FROM || 'pptvinstall@gmail.com',
+        adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
         emailType: emailType || EmailType.BOOKING_CONFIRMATION
       });
       
