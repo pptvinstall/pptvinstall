@@ -138,17 +138,17 @@ export default function HomePage() {
             <p className="text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto">Professional mounting with your own TV mount</p>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-5 bg-white overflow-hidden rounded-xl shadow-md border border-blue-100">
-              <div className="md:col-span-2 relative bg-blue-600 p-6 flex items-center justify-center">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-5 bg-white overflow-hidden rounded-2xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <div className="md:col-span-2 relative bg-gradient-to-br from-blue-600 to-blue-700 p-8 flex items-center justify-center">
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('/assets/pattern-bg.svg')] bg-repeat"></div>
                 <div className="text-center relative z-10">
-                  <Monitor className="h-16 w-16 text-white mx-auto mb-3" />
-                  <div className="text-3xl font-bold text-white">$100</div>
-                  <div className="text-blue-100 mt-1">Flat Rate</div>
-                  <Link href="/booking" className="mt-6 block">
+                  <Monitor className="h-20 w-20 text-white mx-auto mb-4" />
+                  <div className="text-4xl font-bold text-white mb-2">$100</div>
+                  <div className="text-blue-100 text-lg mb-6">Flat Rate</div>
+                  <Link href="/booking" className="block">
                     <Button 
-                      className="btn-primary-enhanced bg-white text-blue-600 hover:bg-blue-50 font-bold px-8 py-3 text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300" 
+                      className="btn-cta-large bg-white text-blue-600 hover:bg-blue-50 shadow-xl hover:shadow-2xl" 
                       onClick={() => trackLead({ source: 'featured_service' })}
                     >
                       Book Now
