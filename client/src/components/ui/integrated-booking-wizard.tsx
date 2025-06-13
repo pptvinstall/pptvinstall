@@ -286,29 +286,7 @@ export function IntegratedBookingWizard({
 
                     <ServiceSelectionGrid
                       onServiceAdd={handleServiceSelection}
-                      services={[
-                        {
-                          type: "tv",
-                          title: "TV Installation",
-                          description: "Professional TV mounting and setup",
-                          basePrice: 199,
-                          isMostPopular: true
-                        },
-                        {
-                          type: "smartHome",
-                          title: "Smart Home Devices",
-                          description: "Doorbell, camera, and lighting installation",
-                          basePrice: 149,
-                          isMostPopular: false
-                        },
-                        {
-                          type: "deinstallation",
-                          title: "TV De-Installation",
-                          description: "Safe TV removal and wall cleanup",
-                          basePrice: 50,
-                          isMostPopular: false
-                        }
-                      ]}
+                      services={[]}
                       isLoading={false}
                     />
 

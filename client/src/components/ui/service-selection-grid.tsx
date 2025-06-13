@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "./scroll-area";
 import { motion } from "framer-motion";
 import { ServiceCardSkeleton } from "./skeleton";
+import { SimpleTVForm } from "./simple-tv-form";
 
 interface Service {
   type: "tv" | "smartHome" | "deinstallation";
@@ -135,47 +136,31 @@ export function ServiceSelectionGrid({
 
           {/* TV Installation Tab */}
           <TabsContent value="tv" className="mt-4">
-            <ScrollArea className="h-[300px] pr-2">
+            <ScrollArea className="h-[400px] pr-2">
               {isLoading ? (
                 <div className="grid grid-cols-1 gap-4">
                   <ServiceCardSkeleton />
                 </div>
               ) : (
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-4"
-                >
-                  <motion.div variants={itemVariants}>
-                    <ServiceCard
-                      title="TV Installation"
-                      description="Professional TV mounting and setup with wire concealment"
-                      icon={<Icons.tv className="h-6 w-6" />}
-                      price={199}
-                      isMostPopular={true}
-                      onClick={() => onServiceAdd("tv", {
-                        type: "tv",
-                        size: "small",
-                        location: "standard",
-                        mountType: "fixed",
-                        masonryWall: false,
-                        highRise: false,
-                        outletNeeded: false
-                      })}
-                    />
-                  </motion.div>
-                  
+                <div className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-800 mb-2">What's Included:</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                    <h4 className="font-semibold text-blue-800 mb-2">TV Installation Service</h4>
+                    <p className="text-sm text-blue-700">Professional TV mounting with complete setup and wire concealment</p>
+                  </div>
+                  
+                  <SimpleTVForm onServiceAdd={(service) => onServiceAdd("tv", service)} />
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-800 mb-2">What's Included:</h4>
+                    <ul className="text-sm text-green-700 space-y-1">
                       <li>• Professional wall mounting</li>
                       <li>• Wire concealment and cable management</li>
                       <li>• TV setup and testing</li>
                       <li>• Bracket and hardware included</li>
+                      <li>• 1-year mounting warranty</li>
                     </ul>
                   </div>
-                </motion.div>
+                </div>
               )}
             </ScrollArea>
           </TabsContent>
@@ -230,7 +215,7 @@ export function ServiceSelectionGrid({
 
           {/* Smart Home Tab */}
           <TabsContent value="smartHome" className="mt-4">
-            <ScrollArea className="h-[300px] pr-2">
+            <ScrollArea className="h-[400px] pr-2">
               {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -238,54 +223,61 @@ export function ServiceSelectionGrid({
                   ))}
                 </div>
               ) : (
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                >
-                  <motion.div variants={itemVariants}>
-                    <ServiceCard
-                      title="Smart Doorbell"
-                      description="Professional installation of smart doorbell with wiring setup"
-                      icon={<Icons.doorbell className="h-6 w-6" />}
-                      price={149}
-                      onClick={() => onServiceAdd("smartHome", {
-                        type: "doorbell",
-                        count: 1,
-                        hasExistingWiring: false
-                      })}
-                    />
-                  </motion.div>
+                <div className="space-y-6">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-purple-800 mb-2">Smart Home Installation</h4>
+                    <p className="text-sm text-purple-700">Professional installation of smart home devices with setup and configuration</p>
+                  </div>
                   
-                  <motion.div variants={itemVariants}>
-                    <ServiceCard
-                      title="Security Camera"
-                      description="Professional security camera installation and setup"
-                      icon={<Icons.camera className="h-6 w-6" />}
-                      price={199}
-                      onClick={() => onServiceAdd("smartHome", {
-                        type: "camera",
-                        count: 1,
-                        hasExistingWiring: false
-                      })}
-                    />
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  >
+                    <motion.div variants={itemVariants}>
+                      <ServiceCard
+                        title="Smart Doorbell"
+                        description="Professional installation of smart doorbell with wiring setup"
+                        icon={<Icons.doorbell className="h-6 w-6" />}
+                        price={149}
+                        onClick={() => onServiceAdd("smartHome", {
+                          type: "doorbell",
+                          count: 1,
+                          hasExistingWiring: false
+                        })}
+                      />
+                    </motion.div>
+                    
+                    <motion.div variants={itemVariants}>
+                      <ServiceCard
+                        title="Security Camera"
+                        description="Professional security camera installation and setup"
+                        icon={<Icons.camera className="h-6 w-6" />}
+                        price={199}
+                        onClick={() => onServiceAdd("smartHome", {
+                          type: "camera",
+                          count: 1,
+                          hasExistingWiring: false
+                        })}
+                      />
+                    </motion.div>
+                    
+                    <motion.div variants={itemVariants} className="sm:col-span-2">
+                      <ServiceCard
+                        title="Smart Floodlight"
+                        description="Smart floodlight installation with motion detection"
+                        icon={<Icons.lightbulb className="h-6 w-6" />}
+                        price={249}
+                        onClick={() => onServiceAdd("smartHome", {
+                          type: "floodlight",
+                          count: 1,
+                          hasExistingWiring: false
+                        })}
+                      />
+                    </motion.div>
                   </motion.div>
-                  
-                  <motion.div variants={itemVariants} className="sm:col-span-2">
-                    <ServiceCard
-                      title="Smart Floodlight"
-                      description="Smart floodlight installation with motion detection"
-                      icon={<Icons.lightBulb className="h-6 w-6" />}
-                      price={249}
-                      onClick={() => onServiceAdd("smartHome", {
-                        type: "floodlight",
-                        count: 1,
-                        hasExistingWiring: false
-                      })}
-                    />
-                  </motion.div>
-                </motion.div>
+                </div>
               )}
             </ScrollArea>
           </TabsContent>
