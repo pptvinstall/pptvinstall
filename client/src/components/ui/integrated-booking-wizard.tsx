@@ -424,7 +424,8 @@ export function IntegratedBookingWizard({
       // Check if time slot conflicts with existing bookings - enhanced with better debugging
       if (existingBookings && existingBookings.length > 0) {
         try {
-          const dateStr = safeFormatDate(new Date(date), "yyyy-MM-dd", date);
+          // Use the date string directly to avoid timezone conversion issues
+          const dateStr = date; // date is already in 'yyyy-MM-dd' format
           
           // Filter bookings for the selected date
           const bookingsOnDate = existingBookings.filter(
@@ -937,7 +938,7 @@ export function IntegratedBookingWizard({
   };
 
   // Booking submission
-  const submitBooking = () => {
+  const submitBooking = async () => {
     if (!validateCurrentStep()) return;
 
     // Convert TV services to the correct format for submission
@@ -1003,9 +1004,41 @@ export function IntegratedBookingWizard({
       ]
     };
 
-    // Submit booking directly without nesting
-    // Show confirmation modal instead of submitting directly
-    setShowConfirmationModal(true);
+    console.log('Submitting booking data:', bookingData);
+
+    try {
+      // Submit the booking directly using the onSubmit prop
+      const result = await onSubmit(bookingData);
+      
+      console.log('Booking submission result:', result);
+      
+      // Generate and download calendar file after successful booking
+      if (result && selectedDate && selectedTime) {
+        const calendarEvent = createCalendarEvent({
+          ...bookingData,
+          customerName: bookingData.name,
+          customerEmail: bookingData.email
+        });
+        downloadICSFile(calendarEvent, `TV_Installation_${bookingData.name.replace(/\s+/g, '_')}`);
+      }
+
+      toast({
+        title: "Booking successful!",
+        description: "You will receive a confirmation email shortly.",
+      });
+      
+    } catch (error) {
+      console.error('Error submitting booking:', error);
+      
+      // Show error message to user
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while submitting your booking.';
+      
+      toast({
+        title: "Booking failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   // Animation variants

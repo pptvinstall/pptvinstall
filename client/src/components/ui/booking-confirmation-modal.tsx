@@ -93,6 +93,7 @@ export function BookingConfirmationModal({
               </>
             )}
           </DialogTitle>
+
         </DialogHeader>
 
         <AnimatePresence mode="wait">
