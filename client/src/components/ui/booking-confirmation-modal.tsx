@@ -261,6 +261,32 @@ export function BookingConfirmationModal({
             </motion.div>
           )}
 
+          {step === 'error' && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center py-8">
+                <div className="mb-4 text-6xl">⚠️</div>
+                <h3 className="text-xl font-semibold mb-4 text-red-600">Booking Submission Failed</h3>
+                <p className="text-muted-foreground mb-6">
+                  {errorMessage || 'There was an error processing your booking. Please try again.'}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => setStep('review')} className="bg-blue-600 hover:bg-blue-700">
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {step === 'success' && (
             <motion.div
               key="success"

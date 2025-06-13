@@ -2207,8 +2207,8 @@ export function IntegratedBookingWizard({
           })),
           smartHomeInstallations: smartHomeServices.map(device => ({
             deviceType: device.type,
-            location: device.location || 'Indoor'
-          }))
+            location: 'Indoor'
+          })) as { deviceType: string; location: string; }[]
         }}
         onConfirm={async () => {
           try {
