@@ -23,5 +23,30 @@
     ],
     "id": "117",
     "createdAt": "2025-06-13T14:27:43.593Z"
+  },
+  {
+    "name": "Final Test Customer",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550200",
+    "streetAddress": "456 Final Test Ave",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Final email system verification test",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-14",
+    "appointmentTime": "4:30 PM",
+    "status": "active",
+    "pricingTotal": 175,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "small",
+        "location": "standard",
+        "mountType": "fixed"
+      }
+    ],
+    "id": "118",
+    "createdAt": "2025-06-13T14:30:24.789Z"
   }
 ]
