@@ -75,5 +75,81 @@
     ],
     "id": "124",
     "createdAt": "2025-06-13T15:33:29.293Z"
+  },
+  {
+    "name": "Gmail Live Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550300",
+    "streetAddress": "789 Email Test Drive",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Testing live Gmail SMTP with App Password",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-17",
+    "appointmentTime": "2:00 PM",
+    "status": "active",
+    "pricingTotal": 125,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "small",
+        "location": "standard",
+        "mountType": "tilting"
+      }
+    ],
+    "id": "125",
+    "createdAt": "2025-06-13T15:40:26.728Z"
+  },
+  {
+    "name": "Gmail Test Final",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550400",
+    "streetAddress": "890 Final Test Lane",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Final test of Gmail SMTP system",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-18",
+    "appointmentTime": "10:00 AM",
+    "status": "active",
+    "pricingTotal": 150,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "standard",
+        "mountType": "full_motion"
+      }
+    ],
+    "id": "126",
+    "createdAt": "2025-06-13T15:41:00.813Z"
+  },
+  {
+    "name": "Live Gmail Test",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550500",
+    "streetAddress": "100 Email Success Street",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Testing Gmail SMTP with corrected environment variables",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-19",
+    "appointmentTime": "1:00 PM",
+    "status": "active",
+    "pricingTotal": 175,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "over_fireplace",
+        "mountType": "full_motion",
+        "masonryWall": true
+      }
+    ],
+    "id": "127",
+    "createdAt": "2025-06-13T15:41:44.490Z"
   }
 ]
