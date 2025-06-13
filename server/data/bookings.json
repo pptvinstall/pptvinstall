@@ -23,5 +23,57 @@
     ],
     "id": "122",
     "createdAt": "2025-06-13T15:17:16.941Z"
+  },
+  {
+    "name": "jwood",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4534663463",
+    "streetAddress": "3523 main st.",
+    "city": "atlanta",
+    "state": "ga",
+    "zipCode": "30034",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-13",
+    "appointmentTime": "6:30 PM",
+    "status": "active",
+    "pricingTotal": 100,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "small",
+        "location": "standard",
+        "mountType": "customer",
+        "masonryWall": false,
+        "highRise": false,
+        "outletRelocation": false
+      }
+    ],
+    "id": "123",
+    "createdAt": "2025-06-13T15:19:00.801Z"
+  },
+  {
+    "name": "Gmail Test Booking",
+    "email": "jwoodceo@gmail.com",
+    "phone": "4045550200",
+    "streetAddress": "456 Gmail Test St",
+    "city": "Atlanta",
+    "state": "GA",
+    "zipCode": "30309",
+    "notes": "Testing Gmail SMTP email system",
+    "serviceType": "TV Installation",
+    "preferredDate": "2025-06-16",
+    "appointmentTime": "3:30 PM",
+    "status": "active",
+    "pricingTotal": 175,
+    "pricingBreakdown": [
+      {
+        "type": "tv",
+        "size": "large",
+        "location": "standard",
+        "mountType": "full_motion"
+      }
+    ],
+    "id": "124",
+    "createdAt": "2025-06-13T15:33:29.293Z"
   }
 ]

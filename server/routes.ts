@@ -1032,44 +1032,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileBookings.push(bookingWithId);
         saveBookings(fileBookings);
 
-        // Send unified confirmation email to both customer and admin
+        // Send unified confirmation email using Gmail SMTP
         let customerEmailSent = false;
         let adminEmailSent = false;
         
-        logger.info("Starting unified email sending process...");
-        logger.debug("SendGrid API Key available:", !!process.env.SENDGRID_API_KEY);
+        logger.info("Starting Gmail email sending process...");
+        logger.debug("Gmail App Password available:", !!process.env.GMAIL_APP_PASSWORD);
         
-        if (process.env.SENDGRID_API_KEY) {
-          const { sendEnhancedBookingConfirmation } = await import('./services/enhancedEmailService');
-          
-          // Send the same customer-facing confirmation email to the customer
+        if (process.env.GMAIL_APP_PASSWORD) {
           try {
-            logger.info("Sending unified confirmation email to customer...");
-            customerEmailSent = await sendEnhancedBookingConfirmation(bookingWithId);
-            logger.info(`Customer confirmation email sent successfully: ${customerEmailSent}`);
+            const { sendUnifiedBookingConfirmation } = await import('./services/gmailEmailService');
+            
+            logger.info("Sending unified confirmation emails via Gmail...");
+            const emailResults = await sendUnifiedBookingConfirmation(bookingWithId);
+            
+            customerEmailSent = emailResults.customerSent;
+            adminEmailSent = emailResults.adminSent;
+            
+            logger.info(`Gmail email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
           } catch (error: any) {
-            logger.error("Error sending customer confirmation email:", error as Error);
-            if (error?.response) {
-              logger.error("SendGrid API error response for customer email:", error.response.body);
-            }
+            logger.error("Error sending Gmail emails:", error as Error);
           }
-          
-          // Send the same customer-facing confirmation email to the admin
-          try {
-            logger.info("Sending unified confirmation email to admin...");
-            const adminBooking = { ...bookingWithId, email: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com' };
-            adminEmailSent = await sendEnhancedBookingConfirmation(adminBooking);
-            logger.info(`Admin confirmation email sent successfully: ${adminEmailSent}`);
-          } catch (adminError: any) {
-            logger.error("Error sending admin confirmation email:", adminError as Error);
-            if (adminError?.response) {
-              logger.error("SendGrid API error response for admin email:", adminError.response.body);
-            }
-          }
-          
-          logger.info(`Unified email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
         } else {
-          logger.warn("SendGrid API key not found - emails not sent");
+          logger.warn("Gmail App Password not found - emails not sent");
         }
 
         // Return success response
