@@ -197,10 +197,21 @@ export default function AdminDashboard() {
 
       const matchesDate = !dateFilter || (() => {
         try {
+          // Validate dateFilter is a valid Date object
+          if (!dateFilter || !(dateFilter instanceof Date) || isNaN(dateFilter.getTime())) {
+            return true; // No valid filter means include all
+          }
+
           // Parse booking date parts
-          const [bookingYear, bookingMonth, bookingDay] = booking.preferredDate.split('-').map(Number);
-          // Create booking date object with components to avoid timezone issues
-          const bookingDate = new Date(bookingYear, bookingMonth - 1, bookingDay);
+          const dateParts = booking.preferredDate.split('-');
+          if (dateParts.length !== 3) return false;
+          
+          const [bookingYear, bookingMonth, bookingDay] = dateParts.map(Number);
+          
+          // Validate parsed numbers
+          if (isNaN(bookingYear) || isNaN(bookingMonth) || isNaN(bookingDay)) {
+            return false;
+          }
           
           // Create filter date string using components
           const filterYear = dateFilter.getFullYear();
@@ -212,8 +223,7 @@ export default function AdminDashboard() {
                  bookingMonth === filterMonth && 
                  bookingDay === filterDay;
         } catch (e) {
-          console.error('Error comparing dates:', e);
-          return false;
+          return false; // Silently fail for invalid dates
         }
       })();
 
