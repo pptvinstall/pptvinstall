@@ -153,6 +153,9 @@ createRoot(document.getElementById('root')!).render(
                     {() => <PageWrapper><Dashboard /></PageWrapper>}
                   </Route>
                   <Route path="/admin">
+                    {() => <PageWrapper><OptimizedAdmin /></PageWrapper>}
+                  </Route>
+                  <Route path="/admin/legacy">
                     {() => <PageWrapper><Admin /></PageWrapper>}
                   </Route>
                   <Route path="/admin/pricing">

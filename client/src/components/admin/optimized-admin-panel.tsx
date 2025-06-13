@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { PerformanceMonitor } from './performance-monitor';
 import type { Booking } from '@shared/schema';
 
 interface AdminStats {
@@ -522,33 +523,64 @@ export function OptimizedAdminPanel({ isAuthenticated, onLogout }: OptimizedAdmi
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Auto-refresh bookings</p>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically refresh booking data every 30 seconds
-                      </p>
+            <Tabs defaultValue="system" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="system">System</TabsTrigger>
+                <TabsTrigger value="performance">Performance</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="system" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Auto-refresh bookings</p>
+                          <p className="text-sm text-muted-foreground">
+                            Automatically refresh booking data every 30 seconds
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Enabled</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Email notifications</p>
+                          <p className="text-sm text-muted-foreground">
+                            Send admin notifications for new bookings
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Enabled</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Performance caching</p>
+                          <p className="text-sm text-muted-foreground">
+                            Cache API responses for improved performance
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Enabled</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Request monitoring</p>
+                          <p className="text-sm text-muted-foreground">
+                            Track API response times and system metrics
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Active</Badge>
+                      </div>
                     </div>
-                    <Badge variant="secondary">Enabled</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Send admin notifications for new bookings
-                      </p>
-                    </div>
-                    <Badge variant="secondary">Enabled</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="performance" className="space-y-4">
+                <PerformanceMonitor />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>
