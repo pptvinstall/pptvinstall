@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { bookingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { errorLogger } from "@/lib/errorLogger";
-import { IntegratedBookingWizard } from "@/components/ui/integrated-booking-wizard";
+import { SmartBookingWizard } from "@/components/ui/smart-booking-wizard";
 
 export default function BookingPage() {
   const { toast } = useToast();
@@ -182,14 +182,7 @@ export default function BookingPage() {
             </p>
           </div>
 
-          <IntegratedBookingWizard
-            onSubmit={async (data) => {
-              return mutation.mutateAsync(data);
-            }}
-            isSubmitting={mutation.isPending}
-            existingBookings={existingBookings}
-            isLoadingBookings={isLoadingBookings}
-          />
+          <SmartBookingWizard />
         </div>
       </div>
     </div>
