@@ -154,7 +154,6 @@ export default function BookingConfirmation() {
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Our technician will call 15-30 minutes before arrival</li>
                 <li>• Payment accepted: Cash, Zelle, or Apple Pay</li>
-                <li>• All equipment and mounting hardware included</li>
                 <li>• If providing your own mount/equipment, just let us know</li>
               </ul>
               <div className="mt-3 pt-3 border-t border-gray-200">

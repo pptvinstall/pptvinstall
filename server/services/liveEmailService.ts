@@ -179,7 +179,6 @@ class LiveEmailService {
         <ul style="color: #6b7280; margin: 0; padding-left: 20px; line-height: 1.6;">
           <li>Our technician will arrive during your scheduled time window</li>
           <li>We'll call 15-30 minutes before arrival</li>
-          <li>All equipment and mounting hardware is included</li>
           <li>Payment is due upon completion of service</li>
         </ul>
       </div>
