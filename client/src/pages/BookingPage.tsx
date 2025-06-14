@@ -98,21 +98,21 @@ export default function BookingPage() {
 
   // Pricing calculations
   const calculateTVInstallPrice = useCallback((options: TVInstallOptions): number => {
-    let basePrice = options.tvSize === '32-55' ? 199 : 249;
+    let basePrice = 100; // Standard TV mounting (customer mount)
     
     if (options.mountType === 'tilting') basePrice += 25;
     if (options.mountType === 'full-motion') basePrice += 50;
-    if (options.wallType === 'over-fireplace') basePrice += 75;
+    if (options.wallType === 'over-fireplace') basePrice = 200; // Fireplace mounting is flat $200
     if (options.wallMaterial === 'brick-stone') basePrice += 50;
-    if (options.wallMaterial === 'high-rise-steel') basePrice += 100;
-    if (options.addOutlet) basePrice += 150;
+    if (options.wallMaterial === 'high-rise-steel') basePrice += 25;
+    if (options.addOutlet) basePrice += 100; // Wire concealment with new outlet
     
     return basePrice;
   }, []);
 
   const calculateSmartHomePrice = useCallback((options: SmartHomeOptions): number => {
-    const basePrice = options.deviceType === 'security-camera' ? 299 : 
-                     options.deviceType === 'video-doorbell' ? 199 : 349;
+    const basePrice = options.deviceType === 'security-camera' ? 75 : 
+                     options.deviceType === 'video-doorbell' ? 85 : 125;
     return basePrice * options.quantity;
   }, []);
 
@@ -124,12 +124,15 @@ export default function BookingPage() {
     if (serviceType === 'tv-installation') {
       price = calculateTVInstallPrice(configuration);
       displayName = `${configuration.tvSize}" TV Wall Mount - ${configuration.mountType}`;
+    } else if (serviceType === 'fireplace-tv') {
+      price = 200; // Flat rate for fireplace mounting
+      displayName = `Fireplace TV Installation`;
+    } else if (serviceType === 'wire-concealment') {
+      price = 100; // Flat rate for wire concealment with outlet
+      displayName = `Wire Concealment & New Outlet`;
     } else if (serviceType === 'smart-home') {
       price = calculateSmartHomePrice(configuration);
-      displayName = `${configuration.deviceType} (${configuration.quantity}x)`;
-    } else if (serviceType === 'tv-removal') {
-      price = 49 * configuration.quantity;
-      displayName = `TV Removal Service (${configuration.quantity}x)`;
+      displayName = `${configuration.deviceType.replace('-', ' ')} (${configuration.quantity}x)`;
     }
 
     const newItem: CartItem = {
@@ -346,15 +349,15 @@ export default function BookingPage() {
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
                 <div className="flex items-center space-x-2">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">H</span>
+                    <span className="text-white font-bold text-lg">P</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-900">HomeSync Pro</span>
+                  <span className="text-xl font-bold text-gray-900">Picture Perfect TV Install</span>
                 </div>
               </div>
             </Link>
             
             <div className="text-sm text-gray-600">
-              Need help? <span className="font-semibold">(404) 555-HOME</span>
+              Need help? <span className="font-semibold">(404) 702-4748</span>
             </div>
           </div>
         </div>
@@ -393,31 +396,32 @@ export default function BookingPage() {
                   <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer"
                        onClick={() => setSelectedService('tv-installation')}>
                     <h3 className="text-xl font-bold text-gray-900 mb-3">TV Wall Mounting</h3>
-                    <p className="text-gray-600 mb-4">Professional TV mounting with cable management</p>
-                    <p className="text-2xl font-bold text-blue-600">Starting at $199</p>
+                    <p className="text-gray-600 mb-4">Professional TV mounting on all wall types</p>
+                    <p className="text-2xl font-bold text-blue-600">Starting at $100</p>
+                  </div>
+
+                  {/* Fireplace TV */}
+                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer"
+                       onClick={() => setSelectedService('fireplace-tv')}>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Fireplace TV Installation</h3>
+                    <p className="text-gray-600 mb-4">Over fireplace mounting with heat management</p>
+                    <p className="text-2xl font-bold text-blue-600">Starting at $200</p>
+                  </div>
+
+                  {/* Wire Concealment */}
+                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer"
+                       onClick={() => setSelectedService('wire-concealment')}>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Wire Concealment & Outlets</h3>
+                    <p className="text-gray-600 mb-4">New outlet installation behind TV</p>
+                    <p className="text-2xl font-bold text-blue-600">Starting at $100</p>
                   </div>
 
                   {/* Smart Home */}
                   <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer"
                        onClick={() => setSelectedService('smart-home')}>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Home Setup</h3>
-                    <p className="text-gray-600 mb-4">Complete smart device installation and configuration</p>
-                    <p className="text-2xl font-bold text-blue-600">Starting at $299</p>
-                  </div>
-
-                  {/* TV Removal */}
-                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer"
-                       onClick={() => setSelectedService('tv-removal')}>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">TV Removal</h3>
-                    <p className="text-gray-600 mb-4">Safe removal of existing TV and mount</p>
-                    <p className="text-2xl font-bold text-blue-600">$49 per TV</p>
-                  </div>
-
-                  {/* Handyman */}
-                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">Handyman Services</h3>
-                    <p className="text-gray-600 mb-4">General repairs and home improvement tasks</p>
-                    <p className="text-2xl font-bold text-blue-600">Starting at $149</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Home Installation</h3>
+                    <p className="text-gray-600 mb-4">Security cameras, doorbells, and smart devices</p>
+                    <p className="text-2xl font-bold text-blue-600">Starting at $75</p>
                   </div>
                 </div>
 
@@ -484,6 +488,60 @@ export default function BookingPage() {
                   </div>
                 )}
 
+                {selectedService === 'fireplace-tv' && (
+                  <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4">Fireplace TV Installation</h4>
+                    <p className="text-gray-600 mb-6">Professional TV mounting above fireplace with heat management and proper viewing angle.</p>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        Total: $200
+                      </div>
+                      <div className="space-x-3">
+                        <button 
+                          onClick={() => setSelectedService(null)}
+                          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={() => addToCart('fireplace-tv', {})}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Add to Cart
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedService === 'wire-concealment' && (
+                  <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4">Wire Concealment & New Outlet</h4>
+                    <p className="text-gray-600 mb-6">Install new outlet behind TV and conceal all wires for a clean, professional look.</p>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        Total: $100
+                      </div>
+                      <div className="space-x-3">
+                        <button 
+                          onClick={() => setSelectedService(null)}
+                          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={() => addToCart('wire-concealment', {})}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Add to Cart
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {selectedService === 'smart-home' && (
                   <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
                     <h4 className="text-lg font-bold text-gray-900 mb-4">Configure Smart Home Service</h4>
@@ -495,9 +553,9 @@ export default function BookingPage() {
                           onChange={(e) => setSmartHomeOptions(prev => ({ ...prev, deviceType: e.target.value as any }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="security-camera">Security Camera ($299)</option>
-                          <option value="video-doorbell">Video Doorbell ($199)</option>
-                          <option value="floodlight-camera">Floodlight Camera ($349)</option>
+                          <option value="security-camera">Security Camera ($75)</option>
+                          <option value="video-doorbell">Smart Doorbell ($85)</option>
+                          <option value="floodlight-camera">Smart Floodlight ($125)</option>
                         </select>
                       </div>
                       
