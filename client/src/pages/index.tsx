@@ -275,15 +275,21 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-md mx-auto bg-white min-h-screen">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PPTVInstall</h1>
-          <p className="text-gray-600">Choose Your Service</p>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+          <h1 className="text-2xl font-bold">TV & Smart Home Services</h1>
+          <p className="text-blue-100 mt-1">Professional installation in Metro Atlanta</p>
+          {cart.items.length > 0 && (
+            <div className="mt-3 bg-blue-500 bg-opacity-30 rounded-lg p-3">
+              <p className="text-sm font-medium">{cart.items.length} service{cart.items.length > 1 ? 's' : ''} in cart - ${cart.total}</p>
+            </div>
+          )}
         </div>
 
-        {/* Service Buttons */}
+        <div className="p-6">
+          {/* Service Buttons */}
         <div className="space-y-4 mb-8">
           {/* TV Installation Button */}
           <button 
@@ -659,35 +665,42 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Estimated Total */}
-        {selectedService && (
+        {/* Current Service Price Display */}
+        {selectedService && currentServicePrice > 0 && (
           <div className={`mt-6 rounded-lg p-4 border ${
             selectedService === 'tv-installation' ? 'bg-blue-50 border-blue-200' :
             selectedService === 'tv-removal' ? 'bg-orange-50 border-orange-200' :
             'bg-green-50 border-green-200'
           }`}>
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900">Estimated Total:</span>
+              <span className="text-lg font-semibold text-gray-900">Service Price:</span>
               <span className={`text-2xl font-bold ${
                 selectedService === 'tv-installation' ? 'text-blue-600' :
                 selectedService === 'tv-removal' ? 'text-orange-600' :
                 'text-green-600'
               }`}>
-                ${estimatedTotal}
+                ${currentServicePrice}
               </span>
             </div>
-            <p className="text-xs text-gray-600 mt-1">Final price confirmed after consultation</p>
-            
-            {/* Show selected date/time if both are selected */}
-            {booking.selectedDate && booking.selectedTime && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-sm text-gray-700">
-                  <strong>Scheduled:</strong> {availableDates.find(d => d.date === booking.selectedDate)?.full} at {booking.selectedTime}
-                </p>
-              </div>
-            )}
+            <p className="text-xs text-gray-600 mt-1">Add to cart to continue</p>
           </div>
         )}
+
+        {/* Final Booking Summary (only show if scheduling is active) */}
+        {showScheduling && booking.selectedDate && booking.selectedTime && (
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 className="font-semibold text-green-900 mb-2">Booking Summary</h4>
+            <div className="space-y-1 text-sm text-green-800">
+              <p><strong>Total Services:</strong> {cart.items.length}</p>
+              <p><strong>Total Cost:</strong> ${cart.total}</p>
+              <p><strong>Scheduled:</strong> {availableDates.find(d => d.date === booking.selectedDate)?.full} at {booking.selectedTime}</p>
+            </div>
+            <button className="w-full mt-4 py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200">
+              Complete Booking
+            </button>
+          </div>
+        )}
+        </div>
       </div>
     </div>
   );
