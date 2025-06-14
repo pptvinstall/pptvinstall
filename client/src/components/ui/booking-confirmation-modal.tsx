@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from './button';
 import { Card, CardContent } from './card';
 import { Separator } from './separator';
-import { CheckCircle, Calendar, Clock, MapPin, Mail, Phone, User } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, MapPin, Mail, Phone, User, Settings2 } from 'lucide-react';
 
 interface BookingConfirmationModalProps {
   isOpen: boolean;

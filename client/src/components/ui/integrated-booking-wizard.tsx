@@ -32,7 +32,7 @@ import { Checkbox } from "./checkbox";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
-// Import removed - using ServiceSelectionGrid instead
+import { StickyBookingSummary } from "./sticky-summary-bar";
 
 // Type definitions
 interface TVServiceOption {
@@ -115,7 +115,7 @@ export function IntegratedBookingWizard({
     streetAddress: "",
     addressLine2: "",
     city: "",
-    state: "",
+    state: "Georgia",
     zipCode: "",
     notes: "",
     consentToContact: false,
@@ -124,20 +124,33 @@ export function IntegratedBookingWizard({
     confirmPassword: ""
   });
 
-  // Pricing calculation
-  const pricingTotal = useMemo(() => {
+  // Calculate total price
+  const calculateTotalPrice = useCallback(() => {
     let total = 0;
 
-    // TV installation pricing
+    // TV installation pricing - simple calculation
     tvServices.forEach(tv => {
-      total += pricing.calculateTVInstallation({
-        size: tv.size,
-        location: tv.location,
-        mountType: tv.mountType,
-        masonryWall: tv.masonryWall,
-        highRise: tv.highRise,
-        outletRelocation: tv.outletNeeded
-      });
+      let price = 100; // Base price
+      
+      // Mount type pricing
+      if (tv.mountType === "tilting") {
+        price += tv.size === "large" ? 50 : 40;
+      } else if (tv.mountType === "full_motion") {
+        price += tv.size === "large" ? 80 : 60;
+      } else if (tv.mountType === "fixed") {
+        price += tv.size === "large" ? 40 : 30;
+      }
+      // customer_provided adds $0
+      
+      // Location surcharge
+      if (tv.location === "fireplace") price += 100;
+      
+      // Add-ons
+      if (tv.masonryWall) price += 50;
+      if (tv.highRise) price += 25;
+      if (tv.outletNeeded) price += 100;
+      
+      total += price;
     });
 
     // Smart home pricing
@@ -182,7 +195,7 @@ export function IntegratedBookingWizard({
   useEffect(() => {
     if (selectedDate && businessHours.length > 0) {
       const dayOfWeek = selectedDate.getDay();
-      const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+      const businessHour = businessHours.find((bh: any) => bh.dayOfWeek === dayOfWeek);
       
       if (businessHour && businessHour.isAvailable) {
         const slots = [];
@@ -242,6 +255,9 @@ export function IntegratedBookingWizard({
   const formatPrice = (price: number) => {
     return `$${price.toFixed(0)}`;
   };
+
+  // Get pricing total
+  const pricingTotal = useMemo(() => calculateTotalPrice(), [calculateTotalPrice]);
 
   // Navigation handlers
   const canProceedToNext = () => {
@@ -762,22 +778,10 @@ export function IntegratedBookingWizard({
 
                 <Button 
                   onClick={handleNext}
-                  disabled={!canProceedToNext() || isSubmitting}
-                  className="w-full sm:flex-1"
+                  disabled={currentStep === 3 ? (!formData.name || !formData.email || !formData.phone || !formData.streetAddress) : !canProceedToNext()}
+                  className="flex-1 ml-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-semibold"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <LoadingSpinner className="mr-2" />
-                      Submitting...
-                    </>
-                  ) : currentStep === 3 ? (
-                    'Submit Booking'
-                  ) : (
-                    <>
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
+                  {currentStep === 3 ? "Review Booking" : "Continue"}
                 </Button>
               </CardFooter>
             </Card>
