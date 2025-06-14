@@ -1015,7 +1015,7 @@ date, timeSlots, reason);
 
         // Check if this time slot is already booked
         const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
-        logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
+        logger.debug('Checking for existing bookings on date: ' + dateStr + ' and time: ' + booking.appointmentTime);
 
         // Continue with booking logic
         const existingBookings = await db.select().from(bookings).where(

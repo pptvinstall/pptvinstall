@@ -1,7 +1,7 @@
 import { type Express } from "express";
 import { type Server } from "http";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Health check endpoint only
   app.get("/api/health", (req, res) => {
     res.json({ 
@@ -15,6 +15,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/*", (req, res) => {
     res.status(404).json({ error: "Endpoint not found - clean build in progress" });
   });
-
-  return app.listen(5000, "0.0.0.0");
 }
