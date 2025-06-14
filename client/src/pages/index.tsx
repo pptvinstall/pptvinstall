@@ -68,6 +68,8 @@ export default function HomePage() {
   });
 
   const [showScheduling, setShowScheduling] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [tvRemovalQuantity, setTvRemovalQuantity] = useState(1);
 
   const handleServiceSelect = (service: string) => {
     setSelectedService(service);
@@ -170,7 +172,41 @@ export default function HomePage() {
     
     // Reset current service selection to allow adding more
     setSelectedService(null);
+    setEditingItemId(null);
   }, [calculateCartTotals]);
+
+  const editCartItem = useCallback((itemId: string, serviceType: 'tv-installation' | 'tv-removal' | 'smart-home', displayName: string, price: number, configuration: any) => {
+    setCart(prevCart => {
+      const newItems = prevCart.items.map(item => 
+        item.id === itemId 
+          ? { ...item, displayName, price, configuration }
+          : item
+      );
+      const totals = calculateCartTotals(newItems);
+      return {
+        items: newItems,
+        ...totals
+      };
+    });
+    
+    // Reset editing state
+    setSelectedService(null);
+    setEditingItemId(null);
+  }, [calculateCartTotals]);
+
+  const startEditItem = useCallback((item: CartItem) => {
+    setEditingItemId(item.id);
+    setSelectedService(item.serviceType);
+    
+    // Pre-fill the configuration based on service type
+    if (item.serviceType === 'tv-installation') {
+      setTvOptions(item.configuration);
+    } else if (item.serviceType === 'smart-home') {
+      setSmartHomeOptions(item.configuration);
+    } else if (item.serviceType === 'tv-removal') {
+      setTvRemovalQuantity(item.configuration.quantity || 1);
+    }
+  }, []);
 
   const removeFromCart = useCallback((itemId: string) => {
     setCart(prevCart => {
@@ -222,7 +258,7 @@ export default function HomePage() {
     }
 
     if (selectedService === 'tv-removal') {
-      total = 50;
+      total = 50 * tvRemovalQuantity;
     }
 
     if (selectedService === 'smart-home') {
@@ -248,7 +284,8 @@ export default function HomePage() {
                       options.wallMaterial === 'high-rise-steel' ? ', High-Rise' : '';
       return `TV Install - ${mountType}, ${wallType}${material}`;
     } else if (serviceType === 'tv-removal') {
-      return 'TV De-Installation';
+      const quantity = options.quantity || 1;
+      return quantity > 1 ? `${quantity}x TV De-Installation` : 'TV De-Installation';
     } else if (serviceType === 'smart-home') {
       const deviceName = options.deviceType === 'security-camera' ? 'Security Camera' :
                          options.deviceType === 'video-doorbell' ? 'Video Doorbell' : 'Floodlight Camera';
@@ -463,11 +500,37 @@ export default function HomePage() {
 
         {/* TV De-Installation Options */}
         {selectedService === 'tv-removal' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">TV De-Installation Service</h3>
+            
+            {/* Quantity Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Number of TVs to Remove</label>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setTvRemovalQuantity(prev => Math.max(1, prev - 1))}
+                  className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                >
+                  -
+                </button>
+                <span className="text-lg font-semibold text-gray-900 min-w-[2rem] text-center">
+                  {tvRemovalQuantity}
+                </span>
+                <button
+                  onClick={() => setTvRemovalQuantity(prev => prev + 1)}
+                  className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                >
+                  +
+                </button>
+                <span className="text-sm text-gray-600 ml-3">
+                  $50 per TV × {tvRemovalQuantity} = ${50 * tvRemovalQuantity}
+                </span>
+              </div>
+            </div>
+
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
               <p className="text-sm text-gray-700 mb-2">
-                <strong>Service includes:</strong>
+                <strong>Service includes (per TV):</strong>
               </p>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Remove mounted TV safely</li>
@@ -543,14 +606,16 @@ export default function HomePage() {
           <div className="mt-6">
             <button
               onClick={() => {
-                const displayName = generateDisplayName(selectedService, 
-                  selectedService === 'tv-installation' ? tvOptions :
-                  selectedService === 'smart-home' ? smartHomeOptions : {}
-                );
-                addToCart(selectedService as any, displayName, currentServicePrice, 
-                  selectedService === 'tv-installation' ? tvOptions :
-                  selectedService === 'smart-home' ? smartHomeOptions : {}
-                );
+                const config = selectedService === 'tv-installation' ? tvOptions :
+                              selectedService === 'smart-home' ? smartHomeOptions : 
+                              { quantity: tvRemovalQuantity };
+                const displayName = generateDisplayName(selectedService, config);
+                
+                if (editingItemId) {
+                  editCartItem(editingItemId, selectedService as any, displayName, currentServicePrice, config);
+                } else {
+                  addToCart(selectedService as any, displayName, currentServicePrice, config);
+                }
               }}
               className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${
                 selectedService === 'tv-installation' ? 'bg-blue-600 hover:bg-blue-700' :
@@ -558,7 +623,7 @@ export default function HomePage() {
                 'bg-green-600 hover:bg-green-700'
               } shadow-lg hover:shadow-xl`}
             >
-              Add to Cart - ${currentServicePrice}
+              {editingItemId ? `Update Item - $${currentServicePrice}` : `Add to Cart - $${currentServicePrice}`}
             </button>
           </div>
         )}
@@ -570,17 +635,27 @@ export default function HomePage() {
             
             <div className="space-y-3">
               {cart.items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{item.displayName}</p>
-                    <p className="text-sm text-gray-600">${item.price}</p>
+                <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{item.displayName}</p>
+                      <p className="text-sm text-gray-600">${item.price}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startEditItem(item)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-red-600 hover:text-red-800 font-medium text-sm"
-                  >
-                    Remove
-                  </button>
                 </div>
               ))}
             </div>
