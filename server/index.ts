@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes-minimal";
 import { setupVite, serveStatic, log } from "./vite";
 import compression from 'compression';
+import { createServer } from 'http';
 
 const app = express();
 // Optimize compression for better performance
@@ -140,7 +141,7 @@ const gracefulShutdown = (signal: string) => {
 (async () => {
   try {
     await registerRoutes(app);
-    const server = require('http').createServer(app);
+    const server = createServer(app);
     serverInstance = server;
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
