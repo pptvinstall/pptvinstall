@@ -15,6 +15,12 @@ interface SmartHomeOptions {
   quantity: number;
 }
 
+// Booking Options
+interface BookingOptions {
+  selectedDate: string | null;
+  selectedTime: string | null;
+}
+
 export default function HomePage() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [tvOptions, setTvOptions] = useState<TVInstallOptions>({
@@ -30,9 +36,57 @@ export default function HomePage() {
     quantity: 1
   });
 
+  const [booking, setBooking] = useState<BookingOptions>({
+    selectedDate: null,
+    selectedTime: null
+  });
+
   const handleServiceSelect = (service: string) => {
     setSelectedService(service);
   };
+
+  // Date and time helper functions
+  const getAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    
+    // Start from tomorrow to avoid same-day booking issues
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      // Skip Sundays (0 = Sunday)
+      if (date.getDay() !== 0) {
+        dates.push({
+          date: date.toISOString().split('T')[0],
+          display: date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+          full: date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            month: 'long', 
+            day: 'numeric' 
+          })
+        });
+      }
+    }
+    return dates;
+  };
+
+  const getAvailableTimeSlots = () => {
+    return [
+      '9:00 AM',
+      '11:00 AM', 
+      '1:00 PM',
+      '3:00 PM',
+      '5:00 PM'
+    ];
+  };
+
+  const availableDates = getAvailableDates();
+  const availableTimeSlots = getAvailableTimeSlots();
 
   // Pricing calculation for all services
   const estimatedTotal = useMemo(() => {
@@ -363,6 +417,60 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Date & Time Selection */}
+        {selectedService && estimatedTotal > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Schedule Your Service</h3>
+            
+            {/* Date Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Select Date</label>
+              <div className="grid grid-cols-2 gap-2">
+                {availableDates.slice(0, 8).map((dateObj) => (
+                  <button
+                    key={dateObj.date}
+                    onClick={() => setBooking(prev => ({ ...prev, selectedDate: dateObj.date, selectedTime: null }))}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                      booking.selectedDate === dateObj.date
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="font-semibold">{dateObj.display.split(',')[0]}</div>
+                      <div className="text-xs opacity-75">{dateObj.display.split(',')[1]?.trim()}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Selection */}
+            {booking.selectedDate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select Time for {availableDates.find(d => d.date === booking.selectedDate)?.full}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableTimeSlots.map((time) => (
+                    <button
+                      key={time}
+                      onClick={() => setBooking(prev => ({ ...prev, selectedTime: time }))}
+                      className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                        booking.selectedTime === time
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Estimated Total */}
         {selectedService && (
           <div className={`mt-6 rounded-lg p-4 border ${
@@ -381,6 +489,15 @@ export default function HomePage() {
               </span>
             </div>
             <p className="text-xs text-gray-600 mt-1">Final price confirmed after consultation</p>
+            
+            {/* Show selected date/time if both are selected */}
+            {booking.selectedDate && booking.selectedTime && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Scheduled:</strong> {availableDates.find(d => d.date === booking.selectedDate)?.full} at {booking.selectedTime}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
