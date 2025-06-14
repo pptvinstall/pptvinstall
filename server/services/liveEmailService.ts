@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { logger } from './loggingService';
+import { createEvent } from 'ics';
 
 interface BookingData {
   id: string;
@@ -40,6 +41,52 @@ class LiveEmailService {
 
   private formatCurrency(amount: number): string {
     return `$${amount.toFixed(2)}`;
+  }
+
+  private async createCalendarAttachment(booking: BookingData): Promise<Buffer | null> {
+    try {
+      const [month, day, year] = booking.selectedDate.split('-').map(Number);
+      const [timeRange] = booking.selectedTime.split(' - ');
+      const [time, period] = timeRange.split(' ');
+      const [hours, minutes] = time.split(':').map(Number);
+      
+      let hour24 = hours;
+      if (period === 'PM' && hours !== 12) hour24 += 12;
+      if (period === 'AM' && hours === 12) hour24 = 0;
+
+      const startDate = new Date(year, month - 1, day, hour24, minutes || 0);
+      const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000)); // 2 hours later
+
+      const servicesDescription = booking.services.map(service => 
+        `• ${service.displayName} - ${this.formatCurrency(service.price)}`
+      ).join('\n');
+
+      const event = {
+        title: `PPTVInstall - ${booking.fullName}`,
+        description: `PPTVInstall Service Appointment\n\nConfirmation: ${booking.confirmationNumber}\nCustomer: ${booking.fullName}\nPhone: ${booking.phone}\nEmail: ${booking.email}\n\nServices:\n${servicesDescription}\n\nTotal: ${this.formatCurrency(booking.totalAmount)}\n\nNotes: ${booking.notes || 'None'}\n\nBusiness: Picture Perfect TV Install\nPhone: (404) 702-4748`,
+        location: `${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.zipCode}`,
+        start: [year, month, day, hour24, minutes || 0] as [number, number, number, number, number],
+        end: [year, month, day, endDate.getHours(), endDate.getMinutes()] as [number, number, number, number, number],
+        organizer: { name: 'PPTVInstall', email: process.env.GMAIL_USER || 'pptvinstall@gmail.com' },
+        attendees: [
+          { name: booking.fullName, email: booking.email, rsvp: true }
+        ]
+      };
+
+      return new Promise((resolve) => {
+        createEvent(event, (error: any, value: string) => {
+          if (error) {
+            logger.error('Failed to create calendar event', { error });
+            resolve(null);
+          } else {
+            resolve(Buffer.from(value, 'utf8'));
+          }
+        });
+      });
+    } catch (error) {
+      logger.error('Error creating calendar attachment', { error });
+      return null;
+    }
   }
 
   private generateCustomerEmailHTML(booking: BookingData): string {
@@ -137,11 +184,21 @@ class LiveEmailService {
         </ul>
       </div>
 
+      <!-- Add to Calendar Button -->
+      <div style="text-align: center; margin: 25px 0; padding: 20px; background-color: #f0f9ff; border-radius: 8px;">
+        <h3 style="color: #1d4ed8; margin: 0 0 15px 0; font-size: 18px;">📅 Add to Your Calendar</h3>
+        <p style="color: #6b7280; margin: 0 0 15px 0;">A calendar file is attached to this email. Click to add this appointment to your calendar.</p>
+        <p style="color: #1d4ed8; font-size: 14px; margin: 0;">Please allow a 15-minute buffer at the end of your appointment</p>
+      </div>
+
       <!-- Contact -->
       <div style="text-align: center; margin: 30px 0;">
         <p style="color: #6b7280; margin: 0 0 10px 0;">Questions? Need to reschedule?</p>
-        <p style="color: #3b82f6; font-weight: bold; font-size: 18px; margin: 0;">📞 (404) 555-PPTV</p>
+        <p style="color: #3b82f6; font-weight: bold; font-size: 18px; margin: 0;">📞 (404) 702-4748</p>
         <p style="color: #6b7280; margin: 5px 0 0 0; font-size: 14px;">pptvinstall@gmail.com</p>
+        <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 12px; font-style: italic;">
+          If you're providing your own mount or equipment, just let us know.
+        </p>
       </div>
 
     </div>
@@ -149,7 +206,8 @@ class LiveEmailService {
     <!-- Footer -->
     <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
       <p style="color: #9ca3af; margin: 0; font-size: 12px;">
-        © 2025 PPTVInstall - Professional TV & Smart Home Installation Services<br>
+        © 2025 Picture Perfect TV Install - Professional TV & Smart Home Installation Services<br>
+        Hours: Mon–Fri 5:30 PM–10:30 PM, Sat–Sun 12 PM–8 PM<br>
         Serving Metro Atlanta with Excellence
       </p>
     </div>
@@ -248,14 +306,26 @@ class LiveEmailService {
 
   async sendBookingConfirmation(booking: BookingData): Promise<{ success: boolean; error?: string }> {
     try {
+      // Create calendar attachment
+      const calendarAttachment = await this.createCalendarAttachment(booking);
+
       // Email to customer
-      const customerEmailOptions = {
-        from: `"PPTVInstall" <${process.env.GMAIL_USER || 'pptvinstall@gmail.com'}>`,
+      const customerEmailOptions: any = {
+        from: `"Picture Perfect TV Install" <${process.env.GMAIL_USER || 'pptvinstall@gmail.com'}>`,
+        replyTo: process.env.GMAIL_USER || 'pptvinstall@gmail.com',
         to: booking.email,
         subject: `Booking Confirmed: ${booking.confirmationNumber} - PPTVInstall`,
         html: this.generateCustomerEmailHTML(booking),
-        text: `Hi ${booking.fullName}!\n\nYour PPTVInstall appointment has been confirmed.\n\nConfirmation Number: ${booking.confirmationNumber}\nDate & Time: ${booking.selectedDate} • ${booking.selectedTime}\nLocation: ${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.zipCode}\n\nTotal: ${this.formatCurrency(booking.totalAmount)}\n\nWe'll call 15-30 minutes before arrival. Questions? Call (404) 555-PPTV\n\nThank you for choosing PPTVInstall!`
+        text: `Hi ${booking.fullName}!\n\nYour PPTVInstall appointment has been confirmed.\n\nConfirmation Number: ${booking.confirmationNumber}\nDate & Time: ${booking.selectedDate} • ${booking.selectedTime}\nLocation: ${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.zipCode}\n\nTotal: ${this.formatCurrency(booking.totalAmount)}\n\nA calendar file is attached - click to add to your calendar.\nAccepted payment: Cash, Zelle, or Apple Pay\nYou can reply to this email if anything changes.\n\nBusiness Hours: Mon–Fri 5:30 PM–10:30 PM, Sat–Sun 12 PM–8 PM\nQuestions? Call (404) 702-4748\n\nThank you for choosing Picture Perfect TV Install!`
       };
+
+      if (calendarAttachment) {
+        customerEmailOptions.attachments = [{
+          filename: `PPTVInstall-${booking.confirmationNumber}.ics`,
+          content: calendarAttachment,
+          contentType: 'text/calendar'
+        }];
+      }
 
       // Email to business owner
       const businessEmailOptions = {
