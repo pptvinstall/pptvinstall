@@ -666,14 +666,21 @@ export default function HomePage() {
                 <span>${cart.subtotal}</span>
               </div>
               {cart.discount > 0 && (
-                <div className="flex justify-between items-center text-sm text-green-600">
-                  <span>{cart.discountLabel}:</span>
-                  <span>-${cart.discount}</span>
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="flex justify-between items-center text-sm text-green-700">
+                    <span>💰 {cart.discountLabel}:</span>
+                    <span className="font-semibold">-${cart.discount}</span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    {cart.discountLabel.includes('Bundle') ? 'Smart Home + TV Install combo savings' :
+                     cart.discountLabel.includes('10%') ? 'Volume discount for 3+ services' :
+                     'Multi-service discount applied'}
+                  </p>
                 </div>
               )}
-              <div className="flex justify-between items-center text-lg font-semibold text-gray-900 mt-2">
+              <div className="flex justify-between items-center text-lg font-semibold text-gray-900 mt-3">
                 <span>Total:</span>
-                <span>${cart.total}</span>
+                <span className="text-xl">${cart.total}</span>
               </div>
             </div>
 
