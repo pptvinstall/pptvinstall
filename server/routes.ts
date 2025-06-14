@@ -3554,25 +3554,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Parse selected date and time
-      const [startTimeStr, endTimeStr] = bookingData.selectedTime.split(' - ');
-      const bookingDate = new Date(bookingData.selectedDate);
+      // Parse selected date and time with better error handling
+      let startTime: Date;
+      let endTime: Date;
       
-      // Parse start time
-      const startTime = new Date(bookingDate);
-      const [startHour, startMinute] = startTimeStr.replace(/[APap][Mm]/, '').trim().split(':');
-      let hour = parseInt(startHour);
-      if (startTimeStr.toLowerCase().includes('pm') && hour !== 12) hour += 12;
-      if (startTimeStr.toLowerCase().includes('am') && hour === 12) hour = 0;
-      startTime.setHours(hour, parseInt(startMinute || '0'), 0, 0);
+      try {
+        const [startTimeStr, endTimeStr] = bookingData.selectedTime.split(' - ');
+        if (!startTimeStr || !endTimeStr) {
+          throw new Error('Invalid time format');
+        }
+        
+        const bookingDate = new Date(bookingData.selectedDate);
+        if (isNaN(bookingDate.getTime())) {
+          throw new Error('Invalid date format');
+        }
+        
+        // Parse start time
+        startTime = new Date(bookingDate);
+        const startMatch = startTimeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!startMatch) {
+          throw new Error('Invalid start time format');
+        }
+        
+        let hour = parseInt(startMatch[1]);
+        const minute = parseInt(startMatch[2]);
+        const period = startMatch[3].toUpperCase();
+        
+        if (period === 'PM' && hour !== 12) hour += 12;
+        if (period === 'AM' && hour === 12) hour = 0;
+        
+        startTime.setHours(hour, minute, 0, 0);
 
-      // Parse end time
-      const endTime = new Date(bookingDate);
-      const [endHour, endMinute] = endTimeStr.replace(/[APap][Mm]/, '').trim().split(':');
-      let endHourNum = parseInt(endHour);
-      if (endTimeStr.toLowerCase().includes('pm') && endHourNum !== 12) endHourNum += 12;
-      if (endTimeStr.toLowerCase().includes('am') && endHourNum === 12) endHourNum = 0;
-      endTime.setHours(endHourNum, parseInt(endMinute || '0'), 0, 0);
+        // Parse end time
+        endTime = new Date(bookingDate);
+        const endMatch = endTimeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!endMatch) {
+          throw new Error('Invalid end time format');
+        }
+        
+        let endHour = parseInt(endMatch[1]);
+        const endMinute = parseInt(endMatch[2]);
+        const endPeriod = endMatch[3].toUpperCase();
+        
+        if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
+        if (endPeriod === 'AM' && endHour === 12) endHour = 0;
+        
+        endTime.setHours(endHour, endMinute, 0, 0);
+        
+        // Validate time range
+        if (startTime >= endTime) {
+          throw new Error('End time must be after start time');
+        }
+      } catch (timeError) {
+        logger.error('Time parsing error:', timeError as Error);
+        return res.status(400).json({
+          success: false,
+          message: `Invalid time format: ${(timeError as Error).message}`
+        });
+      }
 
       // Check if time slot is still available
       const isAvailable = await googleCalendarService.isTimeSlotAvailable(startTime, endTime);

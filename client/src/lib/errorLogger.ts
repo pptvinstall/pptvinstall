@@ -101,6 +101,15 @@ class ErrorLogger {
 
 export const errorLogger = new ErrorLogger();
 
+// Helper function for component errors
+export function logComponentError(error: Error, errorInfo: any, component: string) {
+  errorLogger.error(error, {
+    component,
+    componentStack: errorInfo?.componentStack,
+    timestamp: new Date().toISOString()
+  });
+}
+
 // Helper function for API call error handling
 export function handleApiError(error: unknown, context: ErrorContext): never {
   const errorMessage = error instanceof Error ? error.message : 'Unknown API error';

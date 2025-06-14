@@ -125,9 +125,12 @@ export default function HomePage() {
       errors.push('Please enter a valid email address');
     }
     
-    // Phone validation (basic)
-    if (bookingInfo.phone && !/^[\d\s\-\(\)\+]{10,}$/.test(bookingInfo.phone.replace(/\D/g, ''))) {
-      errors.push('Please enter a valid phone number');
+    // Phone validation - more robust
+    if (bookingInfo.phone) {
+      const cleanPhone = bookingInfo.phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+        errors.push('Please enter a valid phone number (10-15 digits)');
+      }
     }
     
     return errors;
@@ -211,8 +214,8 @@ export default function HomePage() {
 
   // Complete booking with Google Calendar integration
   const completeBooking = async () => {
-    if (!selectedDate || !selectedTime) {
-      alert('Please select a date and time for your appointment.');
+    if (!selectedDate || !selectedTime || cart.items.length === 0) {
+      alert('Please ensure you have selected services, date, and time for your appointment.');
       return;
     }
 
@@ -220,14 +223,22 @@ export default function HomePage() {
     
     try {
       const bookingData = {
-        fullName: bookingInfo.fullName,
-        email: bookingInfo.email,
-        phone: bookingInfo.phone,
-        address: bookingInfo.address,
-        notes: bookingInfo.notes,
+        fullName: bookingInfo.fullName.trim(),
+        email: bookingInfo.email.trim().toLowerCase(),
+        phone: bookingInfo.phone.replace(/\D/g, ''), // Clean phone number
+        address: {
+          street: bookingInfo.address.street.trim(),
+          city: bookingInfo.address.city.trim(),
+          state: bookingInfo.address.state,
+          zipCode: bookingInfo.address.zipCode.trim()
+        },
+        notes: bookingInfo.notes.trim(),
         selectedDate,
         selectedTime,
-        services: cart.items,
+        services: cart.items.map(item => ({
+          ...item,
+          displayName: item.displayName.trim()
+        })),
         totalAmount: cart.total
       };
 
@@ -238,6 +249,10 @@ export default function HomePage() {
         },
         body: JSON.stringify(bookingData)
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const result = await response.json();
 
@@ -260,14 +275,15 @@ export default function HomePage() {
         
         localStorage.setItem(`booking-${result.booking.confirmationNumber}`, JSON.stringify(bookingDetails));
         
-        // Redirect to confirmation page
+        // Use wouter navigation instead of window.location
         window.location.href = `/confirmation?confirmation=${result.booking.confirmationNumber}`;
       } else {
-        alert(`Booking failed: ${result.message}`);
+        alert(`Booking failed: ${result.message || 'Unknown error occurred'}`);
       }
     } catch (error) {
       console.error('Error completing booking:', error);
-      alert('An error occurred while completing your booking. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      alert(`Booking failed: ${errorMessage}. Please try again.`);
     } finally {
       setCompletingBooking(false);
     }
