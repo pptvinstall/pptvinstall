@@ -115,6 +115,29 @@ export default function AdminCalendar() {
     }
   };
 
+  const deleteBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${password}`
+        }
+      });
+
+      if (response.ok) {
+        fetchBookings(); // Refresh the list
+      } else {
+        setError('Failed to delete booking');
+      }
+    } catch (err) {
+      setError('Failed to delete booking');
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -273,6 +296,14 @@ export default function AdminCalendar() {
                               Cancel
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteBooking(booking.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </Button>
                         </div>
                       </div>
                     ))}
