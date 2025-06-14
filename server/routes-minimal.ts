@@ -150,6 +150,65 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Customer booking submission endpoint
+  app.post("/api/bookings/complete", (req, res) => {
+    try {
+      const {
+        fullName,
+        email,
+        phone,
+        address,
+        notes,
+        selectedDate,
+        selectedTime,
+        services,
+        totalAmount
+      } = req.body;
+
+      // Generate a new booking ID
+      const newBookingId = (bookingStorage.length + 1).toString();
+      const confirmationNumber = `CONF-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+      // Create new booking object
+      const newBooking = {
+        id: newBookingId,
+        customerName: fullName,
+        email: email,
+        phone: phone,
+        selectedDate: selectedDate,
+        selectedTime: selectedTime,
+        services: services,
+        totalPrice: totalAmount,
+        status: "pending",
+        address: `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`,
+        notes: notes || "",
+        confirmationNumber: confirmationNumber,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add to booking storage
+      bookingStorage.push(newBooking);
+
+      // Return success response
+      res.json({
+        success: true,
+        message: "Booking created successfully",
+        booking: {
+          id: newBookingId,
+          confirmationNumber: confirmationNumber,
+          status: "pending"
+        }
+      });
+
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to create booking"
+      });
+    }
+  });
+
   // 404 for other API routes
   app.use("/api/*", (req, res) => {
     res.status(404).json({ error: "Endpoint not found" });
