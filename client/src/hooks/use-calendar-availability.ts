@@ -65,6 +65,16 @@ export function useCalendarAvailability() {
     }
   }, []);
 
+  const formatTimeSlot = (hour: number, minute: number = 0): string => {
+    const time = new Date();
+    time.setHours(hour, minute, 0, 0);
+    return time.toLocaleTimeString([], { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
   return {
     isTimeSlotAvailable,
     isLoading,

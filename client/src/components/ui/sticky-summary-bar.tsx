@@ -66,3 +66,65 @@ export function StickyBookingSummary({
     </div>
   );
 }
+import React from 'react';
+import { Button } from './button';
+import { Card } from './card';
+import { cn } from '../../lib/utils';
+
+interface StickyBookingSummaryProps {
+  totalPrice: number;
+  selectedServices: any[];
+  onContinue: () => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function StickyBookingSummary({ 
+  totalPrice, 
+  selectedServices, 
+  onContinue, 
+  disabled = false,
+  className 
+}: StickyBookingSummaryProps) {
+  const formatPrice = (price: number) => {
+    if (isNaN(price) || price === null || price === undefined) {
+      return '$0';
+    }
+    return `$${price.toFixed(0)}`;
+  };
+
+  const serviceCount = selectedServices?.length || 0;
+
+  return (
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg",
+      "transform transition-transform duration-300 ease-in-out",
+      className
+    )}>
+      <div className="container mx-auto px-4 py-3">
+        <Card className="border-0 shadow-none bg-transparent">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <div className="text-sm text-gray-600">
+                {serviceCount} service{serviceCount !== 1 ? 's' : ''} selected
+              </div>
+              <div className="text-lg font-bold text-gray-900">
+                Estimated Total: {formatPrice(totalPrice)}
+              </div>
+            </div>
+            <Button 
+              onClick={onContinue}
+              disabled={disabled || serviceCount === 0}
+              className="min-w-[120px]"
+              size="lg"
+            >
+              Continue
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default StickyBookingSummary;

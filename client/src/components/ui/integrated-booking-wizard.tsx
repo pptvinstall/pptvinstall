@@ -34,6 +34,42 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
 import { StickySummaryBar } from './sticky-summary-bar';
 import { calculateTotalPrice } from '../../lib/pricing';
+import { StickyBookingSummary } from './sticky-summary-bar';
+
+// Utility functions
+const calculateTotalPrice = (tvs: any[], devices: any[], removals: any[]) => {
+  let total = 0;
+
+  // TV installations
+  tvs.forEach(tv => {
+    total += 150; // Base TV mount price
+    if (tv.masonryWall) total += 50;
+    if (tv.highRise) total += 25;
+    if (tv.outletNeeded) total += 75;
+  });
+
+  // Device setups
+  devices.forEach(device => {
+    total += 50; // Base device setup price
+  });
+
+  // Removals
+  removals.forEach(removal => {
+    total += 25; // Base removal price
+  });
+
+  return total;
+};
+
+const pricingTotal = (selectedServices: any) => {
+  if (!selectedServices) return 0;
+
+  const tvs = selectedServices.tvs || [];
+  const devices = selectedServices.devices || [];
+  const removals = selectedServices.removals || [];
+
+  return calculateTotalPrice(tvs, devices, removals);
+};
 
 // Type definitions
 interface TVServiceOption {
@@ -862,8 +898,7 @@ export function IntegratedBookingWizard({
                     size: tv.size,
                     location: tv.location,
                     mountType: tv.mountType,
-                    masonry```text
-Wall: tv.masonryWall,
+                    masonryWall: tv.masonryWall,
                     highRise: tv.highRise,
                     outletRelocation: tv.outletNeeded,
                     outletImage: tv.outletImage
