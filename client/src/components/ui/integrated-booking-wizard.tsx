@@ -837,8 +837,8 @@ export function IntegratedBookingWizard({
 
       {/* Sticky Summary Bar */}
       <StickySummaryBar
-        services={[...tvServices, ...smartHomeServices, ...deinstallationServices]}
-        totalPrice={calculateTotalPrice(selectedServices, selectedAddons || [])}
+        selectedServices={[...tvServices, ...smartHomeServices, ...deinstallationServices]}
+        totalPrice={pricingTotal(selectedServices)}
         onProceed={() => setCurrentStep(1)}
         isVisible={currentStep === 0 && (tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0)}
       />
@@ -859,7 +859,27 @@ export function IntegratedBookingWizard({
             zipCode: formData.zipCode,
             preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
             appointmentTime: selectedTime || "",
-            pricingTotal: calculateTotalPrice(selectedServices, selectedAddons || []),
+            pricingTotal: pricingTotal(selectedServices),
+            services: [
+              ...tvServices.map(tv => ({
+                id: tv.id,
+                name: `TV Installation - ${tv.size} (${tv.location})`,
+                price: 150 + (tv.masonryWall ? 50 : 0) + (tv.highRise ? 25 : 0) + (tv.outletNeeded ? 75 : 0),
+                type: 'TV Installation'
+              })),
+              ...smartHomeServices.map(device => ({
+                id: device.id,
+                name: `Smart Home Device - ${device.type}`,
+                price: 50,
+                type: 'Smart Home'
+              })),
+              ...deinstallationServices.map(removal => ({
+                id: removal.id,
+                name: `TV Removal Service`,
+                price: 25,
+                type: 'Removal'
+              }))
+            ],
             tvInstallations: tvServices.map(tv => ({
               size: tv.size,
               location: tv.location,
@@ -888,7 +908,7 @@ export function IntegratedBookingWizard({
                 preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
                 appointmentTime: selectedTime || "",
                 serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
-                pricingTotal: calculateTotalPrice(selectedServices, selectedAddons || []).toString(),
+                pricingTotal: pricingTotal(selectedServices).toString(),
                 notes: formData.notes,
                 consentToContact: formData.consentToContact,
                 pricingBreakdown: [
