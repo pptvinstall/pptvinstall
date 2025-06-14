@@ -108,6 +108,28 @@ export async function registerRoutes(app: Express): Promise<void> {
     });
   });
 
+  // Delete booking endpoint
+  app.delete("/api/admin/bookings/:id", (req, res) => {
+    const { password } = req.query;
+    const authHeader = req.headers.authorization;
+    const tokenPassword = authHeader?.replace('Bearer ', '');
+    
+    if (!verifyAdminPassword(password as string) && !verifyAdminPassword(tokenPassword)) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    const { id } = req.params;
+
+    // In a real app, this would delete from the database
+    res.json({
+      success: true,
+      message: `Booking ${id} deleted successfully`
+    });
+  });
+
   // 404 for other API routes
   app.use("/api/*", (req, res) => {
     res.status(404).json({ error: "Endpoint not found" });
