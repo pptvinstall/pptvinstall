@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { 
-  CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, 
-  Info, Minus, PlusCircle, AlertTriangle, HelpCircle, ChevronRight,
-  ChevronLeft, CheckCircle, Settings2 
+  CalendarIcon, Clock, MinusCircle, User, Home, Mail, Phone, 
+  ChevronRight, ChevronLeft, CheckCircle, Settings2 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,12 +10,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { pricing } from "@/lib/pricing";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
 import { useBusinessHours } from "@/hooks/use-business-hours";
-import { ScrollArea } from "./scroll-area";
-import { ServiceSelectionGrid } from "./service-selection-grid";
 import {
   Select,
   SelectContent,
@@ -29,7 +24,6 @@ import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Label } from "./label";
 import { Checkbox } from "./checkbox";
-import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
 import { StickyBookingSummary } from './sticky-summary-bar';
@@ -60,7 +54,7 @@ interface TVDeinstallationOption {
   notes: string;
 }
 
-// Pricing calculation functions
+// Fixed pricing calculation - consistent across all screens
 const calculateServicePrice = (service: TVServiceOption | SmartHomeDeviceOption | TVDeinstallationOption): number => {
   if ('size' in service) {
     // TV Installation
@@ -73,7 +67,7 @@ const calculateServicePrice = (service: TVServiceOption | SmartHomeDeviceOption 
     // Smart Home Device
     return 50 * (service.count || 1);
   } else if ('count' in service) {
-    // TV Removal - Updated to $50 flat rate
+    // TV Removal - FIXED at $50 flat rate consistently
     return 50 * service.count;
   }
   return 0;
@@ -97,7 +91,7 @@ const calculateTotalPrice = (tvServices: TVServiceOption[], smartHomeServices: S
   return total;
 };
 
-// Time formatting function for 12-hour format
+// Time formatting function for consistent 12-hour format (Atlanta timezone)
 const formatTime12Hour = (timeString: string): string => {
   try {
     const [hours, minutes] = timeString.split(':');
@@ -128,7 +122,7 @@ const generateTimeSlots = (startTime: string, endTime: string): string[] => {
 
 export function IntegratedBookingWizard() {
   const { toast } = useToast();
-  const { data: businessHours = [], isLoading: businessHoursLoading } = useBusinessHours();
+  const { businessHours = [], isLoading: businessHoursLoading } = useBusinessHours();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
@@ -151,7 +145,7 @@ export function IntegratedBookingWizard() {
     streetAddress: "",
     addressLine2: "",
     city: "",
-    state: "",
+    state: "GA",
     zipCode: "",
     notes: "",
     consentToContact: false,
@@ -161,22 +155,12 @@ export function IntegratedBookingWizard() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Calculate total price
+  // Calculate total price - consistent pricing across all screens
   const totalPrice = useMemo(() => {
     return calculateTotalPrice(tvServices, smartHomeServices, deinstallationServices);
   }, [tvServices, smartHomeServices, deinstallationServices]);
 
   // Service handlers
-  const handleServiceSelection = (type: "tv" | "smartHome" | "deinstallation", service: any) => {
-    if (type === "tv") {
-      setTvServices(prev => [...prev, { ...service, id: `tv-${Date.now()}` }]);
-    } else if (type === "smartHome") {
-      setSmartHomeServices(prev => [...prev, { ...service, id: `smart-${Date.now()}` }]);
-    } else if (type === "deinstallation") {
-      setDeinstallationServices(prev => [...prev, { ...service, id: `deinstall-${Date.now()}`, count: 1 }]);
-    }
-  };
-
   const handleServiceRemoval = (type: "tv" | "smartHome" | "deinstallation", id: string) => {
     if (type === "tv") {
       setTvServices(prev => prev.filter(service => service.id !== id));
@@ -290,7 +274,7 @@ export function IntegratedBookingWizard() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <Card className="shadow-xl border-0 overflow-hidden">
+              <Card className="shadow-xl border-0 overflow-visible">
                 <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-6">
                   <CardTitle className="text-2xl font-bold">
                     Book Your Service
@@ -308,19 +292,18 @@ export function IntegratedBookingWizard() {
                   </div>
                 </CardHeader>
 
-              <CardContent className="p-6">
-                {/* Step 1: Service Selection */}
-                {currentStep === 0 && (
-                  <ScrollArea className="max-h-[600px] pr-4">
+                <CardContent className="p-6">
+                  {/* Step 1: Service Selection - NO SCROLL BOXES */}
+                  {currentStep === 0 && (
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium">Select Your Services</h3>
                         <p className="text-sm text-muted-foreground">
-                          Choose the services you need
+                          Choose the services you need - prices shown are final
                         </p>
                       </div>
 
-                      {/* Quick Service Selection */}
+                      {/* Quick Service Selection - Full Height, No Scroll */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={addTVInstallService}>
                           <CardContent className="p-4 text-center">
@@ -334,7 +317,7 @@ export function IntegratedBookingWizard() {
                           <CardContent className="p-4 text-center">
                             <Home className="h-8 w-8 mx-auto mb-2 text-green-600" />
                             <h4 className="font-medium">Smart Home Setup</h4>
-                            <p className="text-sm text-muted-foreground">Starting at $50</p>
+                            <p className="text-sm text-muted-foreground">$50 per device</p>
                           </CardContent>
                         </Card>
 
@@ -347,14 +330,14 @@ export function IntegratedBookingWizard() {
                         </Card>
                       </div>
 
-                      {/* Selected Services Display */}
+                      {/* Selected Services Display - Full Page Height */}
                       {(tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0) && (
                         <div className="space-y-4">
                           <Separator />
                           <h4 className="text-sm font-medium">Selected Services:</h4>
 
                           {/* TV Installations */}
-                          {tvServices.map((tv, index) => (
+                          {tvServices.map((tv) => (
                             <div key={tv.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                               <div>
                                 <div className="font-medium">TV Installation - {tv.size} ({tv.location})</div>
@@ -379,7 +362,7 @@ export function IntegratedBookingWizard() {
                           ))}
 
                           {/* Smart Home Devices */}
-                          {smartHomeServices.map((device, index) => (
+                          {smartHomeServices.map((device) => (
                             <div key={device.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                               <div>
                                 <div className="font-medium">Smart Home - {device.type}</div>
@@ -399,7 +382,7 @@ export function IntegratedBookingWizard() {
                           ))}
 
                           {/* TV Removals */}
-                          {deinstallationServices.map((removal, index) => (
+                          {deinstallationServices.map((removal) => (
                             <div key={removal.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                               <div>
                                 <div className="font-medium">TV Removal Service</div>
@@ -420,25 +403,23 @@ export function IntegratedBookingWizard() {
 
                           <Separator />
 
-                          {/* Total */}
+                          {/* Total - Consistent Pricing */}
                           <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                             <span className="font-medium">Total:</span>
-                            <span className="text-xl font-bold">{formatPrice(totalPrice)}</span>
+                            <span className="text-xl font-bold text-blue-600">{formatPrice(totalPrice)}</span>
                           </div>
                         </div>
                       )}
                     </div>
-                  </ScrollArea>
-                )}
+                  )}
 
-                {/* Step 2: Date & Time Selection */}
-                {currentStep === 1 && (
-                  <ScrollArea className="max-h-[600px] pr-4">
+                  {/* Step 2: Date & Time Selection - NO SCROLL BOXES */}
+                  {currentStep === 1 && (
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium">Select Date & Time</h3>
                         <p className="text-sm text-muted-foreground">
-                          Choose your preferred appointment date and time
+                          Choose your preferred appointment date and time (Atlanta timezone)
                         </p>
                       </div>
 
@@ -471,9 +452,9 @@ export function IntegratedBookingWizard() {
                           </Popover>
                         </div>
 
-                        {/* Time Selection */}
+                        {/* Time Selection - 12-hour format */}
                         <div>
-                          <Label>Preferred Time</Label>
+                          <Label>Preferred Time (Atlanta time)</Label>
                           <Select value={selectedTime} onValueChange={setSelectedTime}>
                             <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Select a time" />
@@ -503,12 +484,10 @@ export function IntegratedBookingWizard() {
                         </div>
                       )}
                     </div>
-                  </ScrollArea>
-                )}
+                  )}
 
-                {/* Step 3: Contact Information */}
-                {currentStep === 2 && (
-                  <ScrollArea className="max-h-[600px] pr-4">
+                  {/* Step 3: Contact Information - NO SCROLL BOXES */}
+                  {currentStep === 2 && (
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium">Contact Information</h3>
@@ -653,12 +632,10 @@ export function IntegratedBookingWizard() {
                         </Label>
                       </div>
                     </div>
-                  </ScrollArea>
-                )}
+                  )}
 
-                {/* Step 4: Review & Confirm */}
-                {currentStep === 3 && (
-                  <ScrollArea className="max-h-[600px] pr-4">
+                  {/* Step 4: Review & Confirm - NO SCROLL BOXES */}
+                  {currentStep === 3 && (
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium">Review Your Booking</h3>
@@ -675,7 +652,7 @@ export function IntegratedBookingWizard() {
                             Selected Services
                           </h4>
                           <div className="space-y-2">
-                            {tvServices.map((service, index) => (
+                            {tvServices.map((service) => (
                               <div key={service.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                                 <div>
                                   <div className="font-medium">TV Installation - {service.size} ({service.location})</div>
@@ -690,7 +667,7 @@ export function IntegratedBookingWizard() {
                               </div>
                             ))}
 
-                            {smartHomeServices.map((service, index) => (
+                            {smartHomeServices.map((service) => (
                               <div key={service.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                                 <div>
                                   <div className="font-medium">Smart Home - {service.type}</div>
@@ -700,7 +677,7 @@ export function IntegratedBookingWizard() {
                               </div>
                             ))}
 
-                            {deinstallationServices.map((service, index) => (
+                            {deinstallationServices.map((service) => (
                               <div key={service.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                                 <div>
                                   <div className="font-medium">TV Removal Service</div>
@@ -733,7 +710,7 @@ export function IntegratedBookingWizard() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-gray-500" />
-                              <span>{selectedTime || "No time selected"}</span>
+                              <span>{selectedTime || "No time selected"} (Atlanta time)</span>
                             </div>
                             <div className="flex items-start gap-2">
                               <Home className="h-4 w-4 text-gray-500 mt-0.5" />
@@ -772,37 +749,37 @@ export function IntegratedBookingWizard() {
                         </CardContent>
                       </Card>
                     </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
+                  )}
+                </CardContent>
 
-              {/* Navigation */}
-              <CardFooter className="flex justify-between p-6 bg-gray-50">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                  className="flex items-center gap-2"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
+                {/* Navigation */}
+                <CardFooter className="flex justify-between p-6 bg-gray-50">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentStep === 0}
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Step {currentStep + 1} of 4
-                  </span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Step {currentStep + 1} of 4
+                    </span>
+                  </div>
 
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceedToNext()}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  {currentStep === 3 ? "Review Booking" : "Next"}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </CardFooter>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!canProceedToNext()}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    {currentStep === 3 ? "Review Booking" : "Next"}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
             </motion.div>
           </AnimatePresence>
         </div>
