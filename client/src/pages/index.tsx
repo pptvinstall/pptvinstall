@@ -30,6 +30,20 @@ interface BookingOptions {
   selectedTime: string | null;
 }
 
+// Booking Info Form
+interface BookingInfo {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  notes: string;
+}
+
 // Cart state
 interface CartState {
   items: CartItem[];
@@ -68,11 +82,61 @@ export default function HomePage() {
   });
 
   const [showScheduling, setShowScheduling] = useState(false);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingFormErrors, setBookingFormErrors] = useState<string[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [tvRemovalQuantity, setTvRemovalQuantity] = useState(1);
+  
+  const [bookingInfo, setBookingInfo] = useState<BookingInfo>({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: {
+      street: '',
+      city: '',
+      state: 'Georgia',
+      zipCode: ''
+    },
+    notes: ''
+  });
 
   const handleServiceSelect = (service: string) => {
     setSelectedService(service);
+  };
+
+  // Booking form validation
+  const validateBookingForm = (): string[] => {
+    const errors: string[] = [];
+    
+    if (!bookingInfo.fullName.trim()) errors.push('Full name is required');
+    if (!bookingInfo.email.trim()) errors.push('Email address is required');
+    if (!bookingInfo.phone.trim()) errors.push('Phone number is required');
+    if (!bookingInfo.address.street.trim()) errors.push('Street address is required');
+    if (!bookingInfo.address.city.trim()) errors.push('City is required');
+    if (!bookingInfo.address.zipCode.trim()) errors.push('Zip code is required');
+    
+    // Email validation
+    if (bookingInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bookingInfo.email)) {
+      errors.push('Please enter a valid email address');
+    }
+    
+    // Phone validation (basic)
+    if (bookingInfo.phone && !/^[\d\s\-\(\)\+]{10,}$/.test(bookingInfo.phone.replace(/\D/g, ''))) {
+      errors.push('Please enter a valid phone number');
+    }
+    
+    return errors;
+  };
+
+  const handleBookingFormSubmit = () => {
+    const errors = validateBookingForm();
+    setBookingFormErrors(errors);
+    
+    if (errors.length === 0) {
+      // Form is valid, proceed to preview
+      setShowBookingForm(false);
+      // TODO: Show booking preview/confirmation
+    }
   };
 
   // Date and time helper functions
@@ -685,10 +749,10 @@ export default function HomePage() {
             </div>
 
             <button
-              onClick={() => setShowScheduling(true)}
+              onClick={() => setShowBookingForm(true)}
               className="w-full mt-4 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200"
             >
-              Continue to Scheduling
+              Continue to Booking
             </button>
           </div>
         )}
