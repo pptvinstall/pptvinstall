@@ -33,11 +33,10 @@ import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
 import { StickySummaryBar } from './sticky-summary-bar';
-import { calculateTotalPrice } from '../../lib/pricing';
 import { StickyBookingSummary } from './sticky-summary-bar';
 
 // Utility functions
-const calculateTotalPrice = (tvs: any[], devices: any[], removals: any[]) => {
+const calculateLocalTotalPrice = (tvs: any[], devices: any[], removals: any[]) => {
   let total = 0;
 
   // TV installations
@@ -68,7 +67,7 @@ const pricingTotal = (selectedServices: any) => {
   const devices = selectedServices.devices || [];
   const removals = selectedServices.removals || [];
 
-  return calculateTotalPrice(tvs, devices, removals);
+  return calculateLocalTotalPrice(tvs, devices, removals);
 };
 
 // Type definitions
@@ -395,7 +394,7 @@ export function IntegratedBookingWizard({
                       </div>
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                         <span className="font-medium">Estimated Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(calculateTotalPrice(selectedServices, selectedAddons || []))}</span>
+                        <span className="text-xl font-bold">{formatPrice(pricingTotal(selectedServices))}</span>
                       </div>
                       {deinstallationServices.length > 0 && (
                         <div className="text-xs text-muted-foreground">
@@ -803,7 +802,7 @@ export function IntegratedBookingWizard({
                       {/* Total */}
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                         <span className="font-medium">Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(calculateTotalPrice(selectedServices, selectedAddons || []))}</span>
+                        <span className="text-xl font-bold">{formatPrice(pricingTotal(selectedServices))}</span>
                       </div>
                     </div>
                   </div>
