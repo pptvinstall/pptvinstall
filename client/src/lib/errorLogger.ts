@@ -105,23 +105,15 @@ export const errorLogger = new ErrorLogger();
 export function logComponentError(error: Error, errorInfo: any, component: string) {
   errorLogger.error(error, {
     component,
-    componentStack: errorInfo?.componentStack,
+    errorDetails: JSON.stringify(errorInfo),
     timestamp: new Date().toISOString()
   });
 }
 
 // Helper function for API call error handling
-export function handleApiError(error: unknown, context: ErrorContext): never {
+export function handleApiError(error: unknown, context: any): never {
   const errorMessage = error instanceof Error ? error.message : 'Unknown API error';
   errorLogger.error(errorMessage, { ...context, type: 'api_error' });
   throw error;
 }
 
-// Helper function for component error boundaries
-export function logComponentError(error: Error, errorInfo: any, componentName: string) {
-  errorLogger.error(error, {
-    component: componentName,
-    errorInfo: JSON.stringify(errorInfo),
-    type: 'component_error'
-  });
-}
