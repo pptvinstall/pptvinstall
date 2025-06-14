@@ -1043,7 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           serviceType: booking.serviceType,
           preferredDate: new Date(booking.preferredDate).toISOString(),
           appointmentTime: booking.appointmentTime,
-          status: 'active',
+          status: 'confirmed',
           pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
           pricingBreakdown: pricingBreakdownStr
         }).returning();
@@ -3524,18 +3524,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const availableSlots = await googleCalendarService.getAvailableSlots(date);
+      // Get already booked time slots from database
+      const bookedSlots = await db.select().from(bookings).where(
+        and(
+          eq(bookings.preferredDate, dateParam),
+          eq(bookings.status, 'confirmed')
+        )
+      );
+      
+      const bookedTimes = bookedSlots.map(booking => booking.appointmentTime);
+      
+      // Get available slots from Google Calendar and filter out booked ones
+      const allSlots = await googleCalendarService.getAvailableSlots(date);
+      const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
       
       res.json({
         success: true,
         date: dateParam,
-        availableSlots
+        availableSlots,
+        bookedSlots: bookedTimes
       });
     } catch (error) {
       logger.error("Error checking calendar availability:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to check calendar availability"
+      });
+    }
+  });
+
+  // Admin Calendar - Get all upcoming bookings
+  app.get("/api/admin/calendar", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+
+      // Get all confirmed bookings from today onwards
+      const today = new Date().toISOString().split('T')[0];
+      const upcomingBookings = await db.select().from(bookings).where(
+        and(
+          sql`${bookings.preferredDate} >= ${today}`,
+          eq(bookings.status, 'confirmed')
+        )
+      ).orderBy(bookings.preferredDate, bookings.appointmentTime);
+
+      // Format bookings for calendar display
+      const calendarBookings = upcomingBookings.map(booking => ({
+        id: booking.id,
+        title: `${booking.name} - ${booking.serviceType}`,
+        customerName: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        address: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
+        serviceType: booking.serviceType,
+        date: booking.preferredDate,
+        time: booking.appointmentTime,
+        notes: booking.notes,
+        pricingTotal: booking.pricingTotal,
+        createdAt: booking.createdAt
+      }));
+
+      res.json({
+        success: true,
+        bookings: calendarBookings,
+        totalBookings: calendarBookings.length
+      });
+    } catch (error) {
+      logger.error("Error fetching admin calendar:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch calendar data"
+      });
+    }
+  });
+
+  // Admin Calendar - Get bookings for specific date
+  app.get("/api/admin/calendar/:date", async (req: Request, res: Response) => {
+    try {
+      const { password } = req.query;
+      const { date } = req.params;
+      
+      if (!verifyAdminPassword(password as string)) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+
+      const dayBookings = await db.select().from(bookings).where(
+        and(
+          eq(bookings.preferredDate, date),
+          eq(bookings.status, 'confirmed')
+        )
+      ).orderBy(bookings.appointmentTime);
+
+      const formattedBookings = dayBookings.map(booking => ({
+        id: booking.id,
+        customerName: booking.name,
+        email: booking.email,
+        phone: booking.phone,
+        address: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
+        serviceType: booking.serviceType,
+        time: booking.appointmentTime,
+        notes: booking.notes,
+        pricingTotal: booking.pricingTotal
+      }));
+
+      res.json({
+        success: true,
+        date,
+        bookings: formattedBookings,
+        totalBookings: formattedBookings.length
+      });
+    } catch (error) {
+      logger.error("Error fetching daily bookings:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch daily bookings"
       });
     }
   });
@@ -3613,7 +3724,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if time slot is still available
+      // CRITICAL: Check for existing bookings at this exact time slot to prevent double bookings
+      const existingBooking = await db.select().from(bookings).where(
+        and(
+          eq(bookings.preferredDate, bookingData.selectedDate),
+          eq(bookings.appointmentTime, bookingData.selectedTime),
+          eq(bookings.status, 'confirmed')
+        )
+      );
+
+      if (existingBooking.length > 0) {
+        logger.warn(`Double booking attempt blocked for ${bookingData.selectedDate} at ${bookingData.selectedTime}`, {
+          attemptedCustomer: bookingData.email,
+          existingBooking: existingBooking[0].id
+        });
+        return res.status(409).json({
+          success: false,
+          message: "That time slot is no longer available. Please select a different time."
+        });
+      }
+
+      // Check if time slot is still available in Google Calendar
       const isAvailable = await googleCalendarService.isTimeSlotAvailable(startTime, endTime);
       if (!isAvailable) {
         return res.status(409).json({
