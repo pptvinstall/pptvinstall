@@ -171,7 +171,7 @@ export default function BookingConfirmation() {
         <Card className="mb-6">
           <CardContent className="p-4 text-center">
             <p className="text-sm text-gray-600">
-              <span className="font-semibold">Business Hours:</span> Mon–Fri 5:30 PM–10:30 PM, Sat–Sun 12 PM–8 PM
+              <span className="font-semibold">Business Hours:</span> Mon–Fri 5:30 PM–10:30 PM, Sat–Sun 12:00 PM–8:00 PM
             </p>
           </CardContent>
         </Card>
