@@ -32,43 +32,7 @@ import { Checkbox } from "./checkbox";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
-import { StickySummaryBar } from './sticky-summary-bar';
 import { StickyBookingSummary } from './sticky-summary-bar';
-
-// Utility functions
-const calculateLocalTotalPrice = (tvs: any[], devices: any[], removals: any[]) => {
-  let total = 0;
-
-  // TV installations
-  tvs.forEach(tv => {
-    total += 150; // Base TV mount price
-    if (tv.masonryWall) total += 50;
-    if (tv.highRise) total += 25;
-    if (tv.outletNeeded) total += 75;
-  });
-
-  // Device setups
-  devices.forEach(device => {
-    total += 50; // Base device setup price
-  });
-
-  // Removals
-  removals.forEach(removal => {
-    total += 25; // Base removal price
-  });
-
-  return total;
-};
-
-const pricingTotal = (selectedServices: any) => {
-  if (!selectedServices) return 0;
-
-  const tvs = selectedServices.tvs || [];
-  const devices = selectedServices.devices || [];
-  const removals = selectedServices.removals || [];
-
-  return calculateLocalTotalPrice(tvs, devices, removals);
-};
 
 // Type definitions
 interface TVServiceOption {
@@ -84,136 +48,123 @@ interface TVServiceOption {
 
 interface SmartHomeDeviceOption {
   id: string;
-  type: 'doorbell' | 'camera' | 'floodlight';
+  type: 'camera' | 'doorbell' | 'floodlight' | 'other';
   count: number;
   hasExistingWiring?: boolean;
 }
 
 interface TVDeinstallationOption {
   id: string;
-  tvSize: 'small' | 'large';
-  wallType: 'standard' | 'brick' | 'highrise';
-  cableCleanup: boolean;
-  basePrice: number;
-}
-
-interface BookingFormData {
-  name: string;
-  email: string;
-  phone: string;
-  streetAddress: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  zipCode: string;
+  count: number;
+  includesRemount: boolean;
   notes: string;
-  consentToContact: boolean;
-  createAccount: boolean;
-  password: string;
-  confirmPassword: string;
 }
 
-type IntegratedBookingWizardProps = {
-  onSubmit: (data: any) => Promise<any>;
-  isSubmitting: boolean;
-  existingBookings?: any[];
-  isLoadingBookings?: boolean;
+// Pricing calculation functions
+const calculateServicePrice = (service: TVServiceOption | SmartHomeDeviceOption | TVDeinstallationOption): number => {
+  if ('size' in service) {
+    // TV Installation
+    let basePrice = 150;
+    if (service.masonryWall) basePrice += 50;
+    if (service.highRise) basePrice += 25;
+    if (service.outletNeeded) basePrice += 75;
+    return basePrice;
+  } else if ('type' in service && service.type) {
+    // Smart Home Device
+    return 50 * (service.count || 1);
+  } else if ('count' in service) {
+    // TV Removal - Updated to $50 flat rate
+    return 50 * service.count;
+  }
+  return 0;
 };
 
-export function IntegratedBookingWizard({
-  onSubmit,
-  isSubmitting,
-  existingBookings = [],
-  isLoadingBookings = false
-}: IntegratedBookingWizardProps) {
-  const { toast } = useToast();
-  const { businessHours } = useBusinessHours();
+const calculateTotalPrice = (tvServices: TVServiceOption[], smartHomeServices: SmartHomeDeviceOption[], deinstallationServices: TVDeinstallationOption[]): number => {
+  let total = 0;
+  
+  tvServices.forEach(service => {
+    total += calculateServicePrice(service);
+  });
+  
+  smartHomeServices.forEach(service => {
+    total += calculateServicePrice(service);
+  });
+  
+  deinstallationServices.forEach(service => {
+    total += calculateServicePrice(service);
+  });
+  
+  return total;
+};
 
+// Time formatting function for 12-hour format
+const formatTime12Hour = (timeString: string): string => {
+  try {
+    const [hours, minutes] = timeString.split(':');
+    const hour24 = parseInt(hours);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minutes} ${ampm}`;
+  } catch {
+    return timeString;
+  }
+};
+
+// Generate time slots in 12-hour format
+const generateTimeSlots = (startTime: string, endTime: string): string[] => {
+  const slots = [];
+  const start = new Date(`2000-01-01T${startTime}:00`);
+  const end = new Date(`2000-01-01T${endTime}:00`);
+  
+  const current = new Date(start);
+  while (current <= end) {
+    const timeStr = current.toTimeString().slice(0, 5);
+    slots.push(formatTime12Hour(timeStr));
+    current.setMinutes(current.getMinutes() + 30);
+  }
+  
+  return slots;
+};
+
+export function IntegratedBookingWizard() {
+  const { toast } = useToast();
+  const { data: businessHours = [], isLoading: businessHoursLoading } = useBusinessHours();
+  
   // Step management
   const [currentStep, setCurrentStep] = useState(0);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-
+  
   // Service selections
   const [tvServices, setTvServices] = useState<TVServiceOption[]>([]);
   const [smartHomeServices, setSmartHomeServices] = useState<SmartHomeDeviceOption[]>([]);
   const [deinstallationServices, setDeinstallationServices] = useState<TVDeinstallationOption[]>([]);
-
-  // Date and time
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  
+  // Date and time selection
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
-
+  
   // Form data
-  const [formData, setFormData] = useState<BookingFormData>({
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     streetAddress: "",
     addressLine2: "",
     city: "",
-    state: "Georgia",
+    state: "",
     zipCode: "",
     notes: "",
     consentToContact: false,
-    createAccount: false,
-    password: "",
-    confirmPassword: ""
   });
-
-  const selectedServices = useMemo(() => {
-    return [...tvServices, ...smartHomeServices, ...deinstallationServices];
-  }, [tvServices, smartHomeServices, deinstallationServices]);
-
-  const selectedAddons = useMemo(() => {
-    // This should ideally derive addons based on selected services
-    return [];
-  }, []);
+  
+  // Modal states
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculate total price
-  // const calculateTotalPrice = useCallback(() => {
-  //   let total = 0;
-
-  //   // TV installation pricing - simple calculation
-  //   tvServices.forEach(tv => {
-  //     let price = 100; // Base price
-
-  //     // Mount type pricing
-  //     if (tv.mountType === "tilting") {
-  //       price += tv.size === "large" ? 50 : 40;
-  //     } else if (tv.mountType === "full_motion") {
-  //       price += tv.size === "large" ? 80 : 60;
-  //     } else if (tv.mountType === "fixed") {
-  //       price += tv.size === "large" ? 40 : 30;
-  //     }
-  //     // customer_provided adds $0
-
-  //     // Location surcharge
-  //     if (tv.location === "fireplace") price += 100;
-
-  //     // Add-ons
-  //     if (tv.masonryWall) price += 50;
-  //     if (tv.highRise) price += 25;
-  //     if (tv.outletNeeded) price += 100;
-
-  //     total += price;
-  //   });
-
-  //   // Smart home pricing
-  //   smartHomeServices.forEach(device => {
-  //     total += pricing.calculateSmartHomeInstallation({
-  //       type: device.type,
-  //       count: device.count,
-  //       hasExistingWiring: device.hasExistingWiring
-  //     });
-  //   });
-
-  //   // Deinstallation pricing
-  //   deinstallationServices.forEach(service => {
-  //     total += service.basePrice;
-  //   });
-
-  //   return total;
-  // }, [tvServices, smartHomeServices, deinstallationServices]);
+  const totalPrice = useMemo(() => {
+    return calculateTotalPrice(tvServices, smartHomeServices, deinstallationServices);
+  }, [tvServices, smartHomeServices, deinstallationServices]);
 
   // Service handlers
   const handleServiceSelection = (type: "tv" | "smartHome" | "deinstallation", service: any) => {
@@ -222,7 +173,7 @@ export function IntegratedBookingWizard({
     } else if (type === "smartHome") {
       setSmartHomeServices(prev => [...prev, { ...service, id: `smart-${Date.now()}` }]);
     } else if (type === "deinstallation") {
-      setDeinstallationServices(prev => [...prev, { ...service, id: `deinstall-${Date.now()}` }]);
+      setDeinstallationServices(prev => [...prev, { ...service, id: `deinstall-${Date.now()}`, count: 1 }]);
     }
   };
 
@@ -243,48 +194,10 @@ export function IntegratedBookingWizard({
       const businessHour = businessHours.find((bh: any) => bh.dayOfWeek === dayOfWeek);
 
       if (businessHour && businessHour.isAvailable) {
-        const slots = [];
-        const startTime = businessHour.startTime || "09:00";
-        const endTime = businessHour.endTime || "17:00";
-
-        // Generate common time slots
-        const commonTimes = ["10:00", "12:30", "15:00", "17:30"];
-
-        // Filter times that fall within business hours
-        commonTimes.forEach(time => {
-          const [hour] = time.split(':').map(Number);
-          const [startHour] = startTime.split(':').map(Number);
-          const [endHour] = endTime.split(':').map(Number);
-
-          if (hour >= startHour && hour <= endHour - 2) { // -2 for 2-hour service window
-            slots.push(time);
-          }
-        });
-
-        // If no common times fit, generate 2-hour intervals within business hours
-        if (slots.length === 0) {
-          const [startHour, startMin] = startTime.split(':').map(Number);
-          const [endHour, endMin] = endTime.split(':').map(Number);
-
-          let currentHour = startHour;
-          let currentMin = startMin;
-
-          while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin - 120)) {
-            const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
-            slots.push(timeString);
-
-            // Add 2 hours
-            currentMin += 120;
-            if (currentMin >= 60) {
-              currentHour += Math.floor(currentMin / 60);
-              currentMin = currentMin % 60;
-            }
-
-            // Stop if we exceed business hours
-            if (currentHour > endHour || (currentHour === endHour && currentMin > endMin)) break;
-          }
-        }
-
+        const slots = generateTimeSlots(
+          businessHour.startTime || "09:00",
+          businessHour.endTime || "17:00"
+        );
         setTimeSlots(slots);
 
         // Auto-select first available time if none selected
@@ -300,9 +213,6 @@ export function IntegratedBookingWizard({
   const formatPrice = (price: number) => {
     return `$${price.toFixed(0)}`;
   };
-
-  // Get pricing total
-  //const pricingTotal = useMemo(() => calculateTotalPrice(), [calculateTotalPrice]);
 
   // Navigation handlers
   const canProceedToNext = () => {
@@ -332,6 +242,40 @@ export function IntegratedBookingWizard({
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  // Quick service selection handlers
+  const addTVRemovalService = () => {
+    const newService: TVDeinstallationOption = {
+      id: `removal-${Date.now()}`,
+      count: 1,
+      includesRemount: false,
+      notes: "TV Removal Service"
+    };
+    setDeinstallationServices(prev => [...prev, newService]);
+  };
+
+  const addTVInstallService = () => {
+    const newService: TVServiceOption = {
+      id: `tv-${Date.now()}`,
+      size: 'small',
+      location: 'standard',
+      mountType: 'fixed',
+      masonryWall: false,
+      highRise: false,
+      outletNeeded: false
+    };
+    setTvServices(prev => [...prev, newService]);
+  };
+
+  const addSmartHomeService = () => {
+    const newService: SmartHomeDeviceOption = {
+      id: `smart-${Date.now()}`,
+      type: 'camera',
+      count: 1,
+      hasExistingWiring: true
+    };
+    setSmartHomeServices(prev => [...prev, newService]);
   };
 
   return (
@@ -364,204 +308,240 @@ export function IntegratedBookingWizard({
                   </div>
                 </CardHeader>
 
-              <CardContent className="space-y-6">
+              <CardContent className="p-6">
                 {/* Step 1: Service Selection */}
                 {currentStep === 0 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium">Select Your Services</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Choose the services you need
-                      </p>
-                    </div>
-
-                    <ServiceSelectionGrid
-                      onServiceAdd={handleServiceSelection}
-                      services={[]}
-                      isLoading={false}
-                    />
-
-                    {/* Service Selection Summary */}
-                    <div className="mt-6 space-y-3">
-                      <Separator />
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-sm font-medium">Total Selected:</h4>
-                        <div>
-                          <Badge variant="outline" className="mr-2">{tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}</Badge>
-                          <Badge variant="outline" className="mr-2">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
-                          <Badge variant="outline">{deinstallationServices.length} Removal{deinstallationServices.length !== 1 ? 's' : ''}</Badge>
-                        </div>
+                  <ScrollArea className="max-h-[600px] pr-4">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium">Select Your Services</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Choose the services you need
+                        </p>
                       </div>
-                      <div className="bg-muted p-3 rounded-md flex justify-between items-center">
-                        <span className="font-medium">Estimated Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(pricingTotal(selectedServices))}</span>
+
+                      {/* Quick Service Selection */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={addTVInstallService}>
+                          <CardContent className="p-4 text-center">
+                            <Settings2 className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                            <h4 className="font-medium">TV Installation</h4>
+                            <p className="text-sm text-muted-foreground">Starting at $150</p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={addSmartHomeService}>
+                          <CardContent className="p-4 text-center">
+                            <Home className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                            <h4 className="font-medium">Smart Home Setup</h4>
+                            <p className="text-sm text-muted-foreground">Starting at $50</p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={addTVRemovalService}>
+                          <CardContent className="p-4 text-center">
+                            <MinusCircle className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                            <h4 className="font-medium">TV Removal</h4>
+                            <p className="text-sm text-muted-foreground">$50 flat rate</p>
+                          </CardContent>
+                        </Card>
                       </div>
-                      {deinstallationServices.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Includes {deinstallationServices.length} TV de-installation{deinstallationServices.length > 1 ? 's' : ''}
+
+                      {/* Selected Services Display */}
+                      {(tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0) && (
+                        <div className="space-y-4">
+                          <Separator />
+                          <h4 className="text-sm font-medium">Selected Services:</h4>
+
+                          {/* TV Installations */}
+                          {tvServices.map((tv, index) => (
+                            <div key={tv.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                              <div>
+                                <div className="font-medium">TV Installation - {tv.size} ({tv.location})</div>
+                                <div className="text-sm text-gray-600">
+                                  {tv.masonryWall && "Masonry wall, "}
+                                  {tv.highRise && "High-rise, "}
+                                  {tv.outletNeeded && "Outlet needed, "}
+                                  Mount: {tv.mountType}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-blue-600">{formatPrice(calculateServicePrice(tv))}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleServiceRemoval("tv", tv.id)}
+                                >
+                                  <MinusCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Smart Home Devices */}
+                          {smartHomeServices.map((device, index) => (
+                            <div key={device.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                              <div>
+                                <div className="font-medium">Smart Home - {device.type}</div>
+                                <div className="text-sm text-gray-600">Quantity: {device.count}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-green-600">{formatPrice(calculateServicePrice(device))}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleServiceRemoval("smartHome", device.id)}
+                                >
+                                  <MinusCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* TV Removals */}
+                          {deinstallationServices.map((removal, index) => (
+                            <div key={removal.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                              <div>
+                                <div className="font-medium">TV Removal Service</div>
+                                <div className="text-sm text-gray-600">Quantity: {removal.count}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-orange-600">{formatPrice(calculateServicePrice(removal))}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleServiceRemoval("deinstallation", removal.id)}
+                                >
+                                  <MinusCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+
+                          <Separator />
+
+                          {/* Total */}
+                          <div className="bg-muted p-3 rounded-md flex justify-between items-center">
+                            <span className="font-medium">Total:</span>
+                            <span className="text-xl font-bold">{formatPrice(totalPrice)}</span>
+                          </div>
                         </div>
                       )}
                     </div>
-
-                    {/* Selected Services List */}
-                    {(tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0) && (
-                      <div className="space-y-4">
-                        <Separator />
-                        <h4 className="text-sm font-medium">Selected Services:</h4>
-
-                        {/* TV Services */}
-                        {tvServices.map((service, index) => (
-                          <div key={service.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                            <div>
-                              <p className="font-medium">TV Installation {index + 1}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {service.size === 'large' ? '56" or larger' : '32"-55"'} • {service.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleServiceRemoval("tv", service.id)}
-                            >
-                              <MinusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-
-                        {/* Smart Home Services */}
-                        {smartHomeServices.map((service, index) => (
-                          <div key={service.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                            <div>
-                              <p className="font-medium">Smart {service.type.charAt(0).toUpperCase() + service.type.slice(1)}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Quantity: {service.count}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleServiceRemoval("smartHome", service.id)}
-                            >
-                              <MinusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-
-                        {/* Deinstallation Services */}
-                        {deinstallationServices.map((service, index) => (
-                          <div key={service.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                            <div>
-                              <p className="font-medium">TV De-installation</p>
-                              <p className="text-sm text-muted-foreground">
-                                {service.tvSize === 'large' ? '56" or larger' : '32"-55"'} • ${service.basePrice}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleServiceRemoval("deinstallation", service.id)}
-                            >
-                              <MinusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  </ScrollArea>
                 )}
 
                 {/* Step 2: Date & Time Selection */}
                 {currentStep === 1 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium">Select Date & Time</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Choose your preferred appointment date and time
-                      </p>
-                    </div>
-
-                    {/* Date Selection */}
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium">Select Date</h4>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date < today;
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Time Selection */}
-                    {selectedDate && (
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium">Select Time</h4>
-                        {timeSlots.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {timeSlots.map((slot) => (
-                              <Button
-                                key={slot}
-                                variant={selectedTime === slot ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setSelectedTime(slot)}
-                                className="text-xs"
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                {slot}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No available time slots for this date</p>
-                            <p className="text-sm">Please select a different date</p>
-                          </div>
-                        )}
+                  <ScrollArea className="max-h-[600px] pr-4">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium">Select Date & Time</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Choose your preferred appointment date and time
+                        </p>
                       </div>
-                    )}
-                  </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Date Selection */}
+                        <div>
+                          <Label>Preferred Date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal mt-1",
+                                  !selectedDate && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {/* Time Selection */}
+                        <div>
+                          <Label>Preferred Time</Label>
+                          <Select value={selectedTime} onValueChange={setSelectedTime}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select a time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {timeSlots.map((time) => (
+                                  <SelectItem key={time} value={time}>
+                                    {time}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {selectedDate && selectedTime && (
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">Appointment Scheduled</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {format(selectedDate, "EEEE, MMMM do, yyyy")} at {selectedTime}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 )}
 
-                {/* Step 3: Customer Information */}
+                {/* Step 3: Contact Information */}
                 {currentStep === 2 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium">Customer Information</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Please provide your contact and address details
-                      </p>
-                    </div>
+                  <ScrollArea className="max-h-[600px] pr-4">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium">Contact Information</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Please provide your contact details
+                        </p>
+                      </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Personal Information */}
                       <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="name">Full Name *</Label>
-                          <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="John Doe"
-                            className="mt-1"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name">Full Name *</Label>
+                            <Input
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="John Doe"
+                              className="mt-1"
+                            />
+                          </div>
+
+                          <div>
+                            <Label htmlFor="phone">Phone Number *</Label>
+                            <Input
+                              id="phone"
+                              type="tel"
+                              value={formData.phone}
+                              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="(555) 123-4567"
+                              className="mt-1"
+                            />
+                          </div>
                         </div>
 
                         <div>
@@ -573,30 +553,6 @@ export function IntegratedBookingWizard({
                             onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                             placeholder="john@example.com"
                             className="mt-1"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="phone">Phone Number *</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => {
-                              // Auto-format phone number
-                              let value = e.target.value.replace(/\D/g, '');
-                              if (value.length >= 6) {
-                                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
-                              } else if (value.length >= 3) {
-                                value = value.replace(/(\d{3})(\d{3})/, '($1) $2');
-                              } else if (value.length > 0) {
-                                value = value.replace(/(\d{3})/, '($1)');
-                              }
-                              setFormData(prev => ({ ...prev, phone: value }));
-                            }}
-                            placeholder="(555) 123-4567"
-                            className="mt-1"
-                            maxLength={14}
                           />
                         </div>
                       </div>
@@ -671,174 +627,210 @@ export function IntegratedBookingWizard({
                           />
                         </div>
                       </div>
-                    </div>
 
-                    {/* Additional Notes */}
-                    <div>
-                      <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Any special instructions or requirements..."
-                        className="mt-1"
-                        rows={3}
-                      />
-                    </div>
+                      {/* Additional Notes */}
+                      <div>
+                        <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          value={formData.notes}
+                          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                          placeholder="Any special instructions or details..."
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
 
-                    {/* Consent */}
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
+                      {/* Consent */}
+                      <div className="flex items-start space-x-2">
                         <Checkbox
                           id="consent"
                           checked={formData.consentToContact}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, consentToContact: checked === true }))}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, consentToContact: !!checked }))}
                         />
-                        <Label htmlFor="consent" className="text-sm">
-                          I consent to be contacted about this service request
+                        <Label htmlFor="consent" className="text-sm leading-relaxed">
+                          I consent to be contacted about this service request and agree to the terms of service. *
                         </Label>
                       </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="createAccount"
-                          checked={formData.createAccount}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, createAccount: checked === true }))}
-                        />
-                        <Label htmlFor="createAccount" className="text-sm">
-                          Create customer account for faster future bookings
-                        </Label>
-                      </div>
-
-                      {formData.createAccount && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
-                          <div>
-                            <Label htmlFor="password">Password *</Label>
-                            <Input
-                              id="password"
-                              type="password"
-                              value={formData.password}
-                              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                              placeholder="Choose a secure password"
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                            <Input
-                              id="confirmPassword"
-                              type="password"
-                              value={formData.confirmPassword}
-                              onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                              placeholder="Confirm your password"
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  </ScrollArea>
                 )}
 
-                {/* Step 4: Review & Submit */}
+                {/* Step 4: Review & Confirm */}
                 {currentStep === 3 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium">Review Your Booking</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Please review all details before submitting
-                      </p>
-                    </div>
+                  <ScrollArea className="max-h-[600px] pr-4">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium">Review Your Booking</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Please review all details before confirming
+                        </p>
+                      </div>
 
-                    <div className="space-y-4">
                       {/* Services Summary */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium">Selected Services</h4>
-                        {tvServices.map((service, index) => (
-                          <div key={service.id} className="p-3 bg-muted rounded-md">
-                            <p className="font-medium">TV Installation {index + 1}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {service.size === 'large' ? '56" or larger' : '32"-55"'} • {service.location === 'fireplace' ? 'Over Fireplace' : 'Standard Wall'}
-                            </p>
+                      <Card>
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <Settings2 className="h-4 w-4" />
+                            Selected Services
+                          </h4>
+                          <div className="space-y-2">
+                            {tvServices.map((service, index) => (
+                              <div key={service.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                                <div>
+                                  <div className="font-medium">TV Installation - {service.size} ({service.location})</div>
+                                  <div className="text-sm text-gray-600">
+                                    {service.masonryWall && "Masonry wall, "}
+                                    {service.highRise && "High-rise, "}
+                                    {service.outletNeeded && "Outlet needed, "}
+                                    Mount: {service.mountType}
+                                  </div>
+                                </div>
+                                <span className="font-semibold text-blue-600">{formatPrice(calculateServicePrice(service))}</span>
+                              </div>
+                            ))}
+
+                            {smartHomeServices.map((service, index) => (
+                              <div key={service.id} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                <div>
+                                  <div className="font-medium">Smart Home - {service.type}</div>
+                                  <div className="text-sm text-gray-600">Quantity: {service.count}</div>
+                                </div>
+                                <span className="font-semibold text-green-600">{formatPrice(calculateServicePrice(service))}</span>
+                              </div>
+                            ))}
+
+                            {deinstallationServices.map((service, index) => (
+                              <div key={service.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                                <div>
+                                  <div className="font-medium">TV Removal Service</div>
+                                  <div className="text-sm text-gray-600">Quantity: {service.count}</div>
+                                </div>
+                                <span className="font-semibold text-orange-600">{formatPrice(calculateServicePrice(service))}</span>
+                              </div>
+                            ))}
+
+                            <Separator />
+                            <div className="flex justify-between items-center font-bold text-lg bg-blue-50 p-3 rounded-lg">
+                              <span>Total:</span>
+                              <span className="text-blue-600">{formatPrice(totalPrice)}</span>
+                            </div>
                           </div>
-                        ))}
-                        {smartHomeServices.map((service, index) => (
-                          <div key={service.id} className="p-3 bg-muted rounded-md">
-                            <p className="font-medium">Smart {service.type.charAt(0).toUpperCase() + service.type.slice(1)}</p>
-                            <p className="text-sm text-muted-foreground">Quantity: {service.count}</p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Appointment Details */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4" />
+                            Appointment Details
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <CalendarIcon className="h-4 w-4 text-gray-500" />
+                              <span>{selectedDate ? format(selectedDate, "EEEE, MMMM do, yyyy") : "No date selected"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-500" />
+                              <span>{selectedTime || "No time selected"}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Home className="h-4 w-4 text-gray-500 mt-0.5" />
+                              <span>
+                                {formData.streetAddress}
+                                {formData.addressLine2 && `, ${formData.addressLine2}`}
+                                <br />
+                                {formData.city}, {formData.state} {formData.zipCode}
+                              </span>
+                            </div>
                           </div>
-                        ))}
-                        {deinstallationServices.map((service, index) => (
-                          <div key={service.id} className="p-3 bg-muted rounded-md">
-                            <p className="font-medium">TV De-installation</p>
-                            <p className="text-sm text-muted-foreground">${service.basePrice}</p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Customer Information */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Customer Information
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{formData.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-gray-500" />
+                              <span>{formData.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-gray-500" />
+                              <span>{formData.phone}</span>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-
-                      <Separator />
-
-                      {/* Date and Time */}
-                      <div>
-                        <h4 className="text-sm font-medium">Appointment</h4>
-                        <p className="text-sm">{selectedDate && format(selectedDate, "PPP")} at {selectedTime}</p>
-                      </div>
-
-                      <Separator />
-
-                      {/* Customer Info */}
-                      <div>
-                        <h4 className="text-sm font-medium">Customer Information</h4>
-                        <div className="text-sm space-y-1">
-                          <p>{formData.name}</p>
-                          <p>{formData.email} • {formData.phone}</p>
-                          <p>{formData.streetAddress}{formData.addressLine2 ? `, ${formData.addressLine2}` : ''}</p>
-                          <p>{formData.city}, {formData.state} {formData.zipCode}</p>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Total */}
-                      <div className="bg-muted p-3 rounded-md flex justify-between items-center">
-                        <span className="font-medium">Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(pricingTotal(selectedServices))}</span>
-                      </div>
+                        </CardContent>
+                      </Card>
                     </div>
-                  </div>
+                  </ScrollArea>
                 )}
               </CardContent>
 
-              <CardFooter className="flex flex-col sm:flex-row gap-3">
-                {currentStep > 0 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handlePrevious}
-                    className="w-full sm:w-auto"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                )}
-
-                <Button 
-                  onClick={handleNext}
-                  disabled={currentStep === 3 ? (!formData.name || !formData.email || !formData.phone || !formData.streetAddress) : !canProceedToNext()}
-                  className="flex-1 ml-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-semibold"
+              {/* Navigation */}
+              <CardFooter className="flex justify-between p-6 bg-gray-50">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 0}
+                  className="flex items-center gap-2"
                 >
-                  {currentStep === 3 ? "Review Booking" : "Continue"}
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Step {currentStep + 1} of 4
+                  </span>
+                </div>
+
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceedToNext()}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {currentStep === 3 ? "Review Booking" : "Next"}
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </CardFooter>
-            </Card>
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
       {/* Sticky Summary Bar */}
-      <StickySummaryBar
-        selectedServices={[...tvServices, ...smartHomeServices, ...deinstallationServices]}
-        totalPrice={pricingTotal(selectedServices)}
+      <StickyBookingSummary
+        selectedServices={[
+          ...tvServices.map(tv => ({
+            id: tv.id,
+            name: `TV Installation - ${tv.size} (${tv.location})`,
+            price: calculateServicePrice(tv),
+            type: 'TV Installation'
+          })),
+          ...smartHomeServices.map(device => ({
+            id: device.id,
+            name: `Smart Home Device - ${device.type}`,
+            price: calculateServicePrice(device),
+            type: 'Smart Home'
+          })),
+          ...deinstallationServices.map(removal => ({
+            id: removal.id,
+            name: `TV Removal Service`,
+            price: calculateServicePrice(removal),
+            type: 'Removal'
+          }))
+        ]}
+        totalPrice={totalPrice}
         onProceed={() => setCurrentStep(1)}
         isVisible={currentStep === 0 && (tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0)}
       />
@@ -859,24 +851,24 @@ export function IntegratedBookingWizard({
             zipCode: formData.zipCode,
             preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
             appointmentTime: selectedTime || "",
-            pricingTotal: pricingTotal(selectedServices),
+            pricingTotal: totalPrice,
             services: [
               ...tvServices.map(tv => ({
                 id: tv.id,
                 name: `TV Installation - ${tv.size} (${tv.location})`,
-                price: 150 + (tv.masonryWall ? 50 : 0) + (tv.highRise ? 25 : 0) + (tv.outletNeeded ? 75 : 0),
+                price: calculateServicePrice(tv),
                 type: 'TV Installation'
               })),
               ...smartHomeServices.map(device => ({
                 id: device.id,
                 name: `Smart Home Device - ${device.type}`,
-                price: 50,
+                price: calculateServicePrice(device),
                 type: 'Smart Home'
               })),
               ...deinstallationServices.map(removal => ({
                 id: removal.id,
                 name: `TV Removal Service`,
-                price: 25,
+                price: calculateServicePrice(removal),
                 type: 'Removal'
               }))
             ],
@@ -908,42 +900,54 @@ export function IntegratedBookingWizard({
                 preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
                 appointmentTime: selectedTime || "",
                 serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
-                pricingTotal: pricingTotal(selectedServices).toString(),
+                pricingTotal: totalPrice.toString(),
                 notes: formData.notes,
                 consentToContact: formData.consentToContact,
                 pricingBreakdown: [
                   ...tvServices.map(tv => ({
-                    type: 'tv',
-                    size: tv.size,
-                    location: tv.location,
-                    mountType: tv.mountType,
-                    masonryWall: tv.masonryWall,
-                    highRise: tv.highRise,
-                    outletRelocation: tv.outletNeeded,
-                    outletImage: tv.outletImage
+                    service: `TV Installation - ${tv.size} (${tv.location})`,
+                    price: calculateServicePrice(tv)
                   })),
                   ...smartHomeServices.map(device => ({
-                    type: device.type,
-                    count: device.count,
-                    hasExistingWiring: device.hasExistingWiring
+                    service: `Smart Home Device - ${device.type}`,
+                    price: calculateServicePrice(device)
                   })),
-                  ...deinstallationServices.map(service => ({
-                    type: 'deinstallation',
-                    tvSize: service.tvSize,
-                    wallType: service.wallType,
-                    cableCleanup: service.cableCleanup,
-                    basePrice: service.basePrice
+                  ...deinstallationServices.map(removal => ({
+                    service: `TV Removal Service`,
+                    price: calculateServicePrice(removal)
                   }))
-                ],
-                createAccount: formData.createAccount,
-                password: formData.createAccount ? formData.password : undefined
+                ]
               };
 
-              await onSubmit(bookingData);
-              setShowConfirmationModal(false);
+              setIsSubmitting(true);
+              
+              const response = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(bookingData),
+              });
+
+              if (response.ok) {
+                toast({
+                  title: "Booking Confirmed!",
+                  description: "We'll contact you within 24 hours to confirm your appointment.",
+                });
+                setShowConfirmationModal(false);
+                // Reset form or redirect
+              } else {
+                throw new Error('Failed to create booking');
+              }
             } catch (error) {
-              console.error('Error submitting booking:', error);
-              throw error;
+              console.error('Booking error:', error);
+              toast({
+                title: "Booking Error",
+                description: "There was an issue creating your booking. Please try again.",
+                variant: "destructive",
+              });
+            } finally {
+              setIsSubmitting(false);
             }
           }}
           isSubmitting={isSubmitting}
