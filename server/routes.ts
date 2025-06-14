@@ -1020,7 +1020,7 @@ date, timeSlots, reason);
         // Continue with booking logic
         const existingBookings = await db.select().from(bookings).where(
           and(
-            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+            eq(sql`DATE(${bookings.preferredDate})`, dateStr),
             eq(bookings.appointmentTime, booking.appointmentTime),
             eq(bookings.status, 'active')
           )
