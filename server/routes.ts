@@ -38,6 +38,7 @@ import {
   performanceMonitor,
   getMemoryUsage
 } from "./performance-optimizer";
+import { googleCalendarService } from './google-calendar';
 
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
@@ -3472,6 +3473,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: "Failed to delete promotion"
+      });
+    }
+  });
+
+  // Google Calendar Integration Endpoints
+  
+  // Initialize Google Calendar service
+  app.post("/api/calendar/initialize", async (req: Request, res: Response) => {
+    try {
+      const initialized = await googleCalendarService.initialize();
+      
+      res.json({
+        success: initialized,
+        message: initialized ? "Google Calendar service initialized" : "Failed to initialize Google Calendar service"
+      });
+    } catch (error) {
+      logger.error("Error initializing Google Calendar:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to initialize Google Calendar service"
+      });
+    }
+  });
+
+  // Check availability for a specific date
+  app.get("/api/calendar/availability/:date", async (req: Request, res: Response) => {
+    try {
+      const dateParam = req.params.date;
+      const date = new Date(dateParam);
+      
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid date format"
+        });
+      }
+      
+      const availableSlots = await googleCalendarService.getAvailableSlots(date);
+      
+      res.json({
+        success: true,
+        date: dateParam,
+        availableSlots
+      });
+    } catch (error) {
+      logger.error("Error checking calendar availability:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to check calendar availability"
+      });
+    }
+  });
+
+  // Complete booking with calendar event creation
+  app.post("/api/bookings/complete", async (req: Request, res: Response) => {
+    try {
+      const bookingData = req.body;
+      
+      // Validate required fields
+      if (!bookingData.fullName || !bookingData.email || !bookingData.phone || 
+          !bookingData.selectedDate || !bookingData.selectedTime || !bookingData.services) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required booking information"
+        });
+      }
+
+      // Parse selected date and time
+      const [startTimeStr, endTimeStr] = bookingData.selectedTime.split(' - ');
+      const bookingDate = new Date(bookingData.selectedDate);
+      
+      // Parse start time
+      const startTime = new Date(bookingDate);
+      const [startHour, startMinute] = startTimeStr.replace(/[APap][Mm]/, '').trim().split(':');
+      let hour = parseInt(startHour);
+      if (startTimeStr.toLowerCase().includes('pm') && hour !== 12) hour += 12;
+      if (startTimeStr.toLowerCase().includes('am') && hour === 12) hour = 0;
+      startTime.setHours(hour, parseInt(startMinute || '0'), 0, 0);
+
+      // Parse end time
+      const endTime = new Date(bookingDate);
+      const [endHour, endMinute] = endTimeStr.replace(/[APap][Mm]/, '').trim().split(':');
+      let endHourNum = parseInt(endHour);
+      if (endTimeStr.toLowerCase().includes('pm') && endHourNum !== 12) endHourNum += 12;
+      if (endTimeStr.toLowerCase().includes('am') && endHourNum === 12) endHourNum = 0;
+      endTime.setHours(endHourNum, parseInt(endMinute || '0'), 0, 0);
+
+      // Check if time slot is still available
+      const isAvailable = await googleCalendarService.isTimeSlotAvailable(startTime, endTime);
+      if (!isAvailable) {
+        return res.status(409).json({
+          success: false,
+          message: "Selected time slot is no longer available"
+        });
+      }
+
+      // Create booking in database first
+      const booking = await storage.createBooking({
+        name: bookingData.fullName,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        streetAddress: bookingData.address.street,
+        city: bookingData.address.city,
+        state: bookingData.address.state,
+        zipCode: bookingData.address.zipCode,
+        preferredDate: bookingData.selectedDate,
+        appointmentTime: bookingData.selectedTime,
+        serviceType: bookingData.services.map((s: any) => s.displayName).join(', '),
+        status: 'confirmed',
+        pricingTotal: bookingData.totalAmount,
+        notes: bookingData.notes || ''
+      });
+
+      // Generate primary service for calendar title
+      const primaryService = bookingData.services[0]?.displayName || 'Service';
+      
+      // Create calendar event
+      const eventData = {
+        title: `PPTVInstall – ${bookingData.fullName} – ${primaryService}`,
+        description: googleCalendarService.generateBookingDescription({
+          fullName: bookingData.fullName,
+          address: bookingData.address,
+          email: bookingData.email,
+          phone: bookingData.phone,
+          services: bookingData.services,
+          totalAmount: bookingData.totalAmount,
+          notes: bookingData.notes
+        }),
+        startTime,
+        endTime,
+        location: `${bookingData.address.street}, ${bookingData.address.city}, ${bookingData.address.state} ${bookingData.address.zipCode}`,
+        attendeeEmail: bookingData.email
+      };
+
+      const calendarEventId = await googleCalendarService.createBookingEvent(eventData);
+      
+      if (calendarEventId) {
+        logger.info(`Calendar event created for booking ${booking.id}: ${calendarEventId}`);
+      } else {
+        logger.warn(`Failed to create calendar event for booking ${booking.id}`);
+      }
+
+      // Send confirmation emails
+      try {
+        await sendEnhancedBookingConfirmation(booking, bookingData.services);
+        logger.info(`Confirmation email sent for booking ${booking.id}`);
+      } catch (emailError) {
+        logger.error(`Failed to send confirmation email for booking ${booking.id}:`, emailError as Error);
+      }
+
+      // Log booking completion
+      await monitoring.logBookingEvent(booking, 'created');
+
+      res.json({
+        success: true,
+        message: "Booking completed successfully",
+        booking: {
+          id: booking.id,
+          confirmationNumber: `PPT-${booking.id.toString().padStart(4, '0')}`,
+          calendarEventId
+        }
+      });
+
+    } catch (error) {
+      logger.error("Error completing booking:", error as Error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to complete booking"
       });
     }
   });
