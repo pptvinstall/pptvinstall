@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 
 // TV Installation Options
 interface TVInstallOptions {
+  tvSize: '32-55' | '56-plus';
   mountType: 'fixed' | 'tilting' | 'full-motion' | 'customer-provided';
   wallType: 'standard' | 'over-fireplace';
   addOutlet: boolean;
@@ -10,6 +11,7 @@ interface TVInstallOptions {
 export default function HomePage() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [tvOptions, setTvOptions] = useState<TVInstallOptions>({
+    tvSize: '32-55',
     mountType: 'fixed',
     wallType: 'standard',
     addOutlet: false
@@ -19,17 +21,27 @@ export default function HomePage() {
     setSelectedService(service);
   };
 
-  // Pricing calculation
+  // Pricing calculation with dynamic mount prices based on TV size
   const estimatedTotal = useMemo(() => {
     if (selectedService !== 'tv-installation') return 0;
 
     const basePrice = 100;
-    const mountPrices = {
-      'fixed': 30,
-      'tilting': 40,
-      'full-motion': 60,
-      'customer-provided': 0
-    };
+    
+    // Mount prices based on TV size
+    const mountPrices = tvOptions.tvSize === '32-55' 
+      ? {
+          'fixed': 30,
+          'tilting': 40,
+          'full-motion': 60,
+          'customer-provided': 0
+        }
+      : {
+          'fixed': 40,
+          'tilting': 50,
+          'full-motion': 80,
+          'customer-provided': 0
+        };
+    
     const wallPrices = {
       'standard': 0,
       'over-fireplace': 100
@@ -38,6 +50,23 @@ export default function HomePage() {
 
     return basePrice + mountPrices[tvOptions.mountType] + wallPrices[tvOptions.wallType] + outletPrice;
   }, [selectedService, tvOptions]);
+
+  // Get current mount prices for display
+  const getCurrentMountPrices = () => {
+    return tvOptions.tvSize === '32-55' 
+      ? [
+          { value: 'fixed', label: 'Fixed', price: 30 },
+          { value: 'tilting', label: 'Tilting', price: 40 },
+          { value: 'full-motion', label: 'Full Motion', price: 60 },
+          { value: 'customer-provided', label: 'Customer-Provided', price: 0 }
+        ]
+      : [
+          { value: 'fixed', label: 'Fixed', price: 40 },
+          { value: 'tilting', label: 'Tilting', price: 50 },
+          { value: 'full-motion', label: 'Full Motion', price: 80 },
+          { value: 'customer-provided', label: 'Customer-Provided', price: 0 }
+        ];
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -92,16 +121,39 @@ export default function HomePage() {
           <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Configure Your Installation</h3>
             
+            {/* TV Size */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">TV Size</label>
+              <div className="space-y-2">
+                {[
+                  { value: '32-55', label: '32" - 55"', description: 'Standard pricing' },
+                  { value: '56-plus', label: '56" and larger', description: 'Premium pricing' }
+                ].map((size) => (
+                  <label key={size.value} className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="tvSize"
+                        value={size.value}
+                        checked={tvOptions.tvSize === size.value}
+                        onChange={(e) => setTvOptions(prev => ({ ...prev, tvSize: e.target.value as any }))}
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="ml-3">
+                        <span className="text-sm font-medium text-gray-700">{size.label}</span>
+                        <p className="text-xs text-gray-500">{size.description}</p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Mount Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Mount Type</label>
               <div className="space-y-2">
-                {[
-                  { value: 'fixed', label: 'Fixed', price: 30 },
-                  { value: 'tilting', label: 'Tilting', price: 40 },
-                  { value: 'full-motion', label: 'Full Motion', price: 60 },
-                  { value: 'customer-provided', label: 'Customer-Provided', price: 0 }
-                ].map((mount) => (
+                {getCurrentMountPrices().map((mount) => (
                   <label key={mount.value} className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <div className="flex items-center">
                       <input
