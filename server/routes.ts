@@ -1018,11 +1018,11 @@ date, timeSlots, reason);
         logger.debug('Checking for existing bookings on date: ' + dateStr + ' and time: ' + booking.appointmentTime);
 
         // Continue with booking logic
-        const existingBookings = await db.select().from(bookings).where(
+        const existingBookings = await db.select().from(bookingsTable).where(
           and(
-            eq(sql`DATE(${bookings.preferredDate})`, dateStr),
-            eq(bookings.appointmentTime, booking.appointmentTime),
-            eq(bookings.status, 'active')
+            sql`DATE(${bookingsTable.preferredDate}) = ${dateStr}`,
+            eq(bookingsTable.appointmentTime, booking.appointmentTime),
+            eq(bookingsTable.status, 'active')
           )
         );
 
