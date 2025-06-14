@@ -242,21 +242,26 @@ export default function HomePage() {
       const result = await response.json();
 
       if (result.success) {
-        alert(`Booking confirmed! Your confirmation number is: ${result.booking.confirmationNumber}`);
+        // Store booking details for confirmation page
+        const bookingDetails = {
+          confirmationNumber: result.booking.confirmationNumber,
+          customerName: bookingInfo.fullName,
+          email: bookingInfo.email,
+          phone: bookingInfo.phone,
+          address: `${bookingInfo.address.street}, ${bookingInfo.address.city}, ${bookingInfo.address.state} ${bookingInfo.address.zipCode}`,
+          selectedDate,
+          selectedTime,
+          services: cart.items.map(item => ({
+            displayName: item.displayName,
+            price: item.price
+          })),
+          totalAmount: cart.total
+        };
         
-        // Reset form and cart
-        setCart({ items: [], subtotal: 0, discount: 0, discountLabel: '', total: 0 });
-        setBookingInfo({
-          fullName: '',
-          email: '',
-          phone: '',
-          address: { street: '', city: '', state: 'Georgia', zipCode: '' },
-          notes: ''
-        });
-        setSelectedDate('');
-        setSelectedTime('');
-        setShowScheduling(false);
-        setSelectedService(null);
+        localStorage.setItem(`booking-${result.booking.confirmationNumber}`, JSON.stringify(bookingDetails));
+        
+        // Redirect to confirmation page
+        window.location.href = `/confirmation?confirmation=${result.booking.confirmationNumber}`;
       } else {
         alert(`Booking failed: ${result.message}`);
       }

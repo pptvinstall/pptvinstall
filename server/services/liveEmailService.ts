@@ -323,18 +323,26 @@ class LiveEmailService {
         customerEmailOptions.attachments = [{
           filename: `PPTVInstall-${booking.confirmationNumber}.ics`,
           content: calendarAttachment,
-          contentType: 'text/calendar'
+          contentType: 'text/calendar; method=REQUEST; charset="UTF-8"'
         }];
       }
 
       // Email to business owner
-      const businessEmailOptions = {
+      const businessEmailOptions: any = {
         from: `"PPTVInstall System" <${process.env.GMAIL_USER || 'pptvinstall@gmail.com'}>`,
         to: process.env.GMAIL_USER || 'pptvinstall@gmail.com',
         subject: `🚨 NEW BOOKING: ${booking.confirmationNumber} - ${this.formatCurrency(booking.totalAmount)} - ${booking.selectedDate}`,
         html: this.generateBusinessEmailHTML(booking),
         text: `NEW BOOKING ALERT!\n\nConfirmation: ${booking.confirmationNumber}\nCustomer: ${booking.fullName} (${booking.phone})\nEmail: ${booking.email}\nAddress: ${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.zipCode}\nDate & Time: ${booking.selectedDate} • ${booking.selectedTime}\nTotal Revenue: ${this.formatCurrency(booking.totalAmount)}\n${booking.notes ? `\nNotes: ${booking.notes}` : ''}\n\nServices:\n${booking.services.map(s => `- ${s.displayName}: ${this.formatCurrency(s.price)}`).join('\n')}`
       };
+
+      if (calendarAttachment) {
+        businessEmailOptions.attachments = [{
+          filename: `PPTVInstall-${booking.confirmationNumber}.ics`,
+          content: calendarAttachment,
+          contentType: 'text/calendar; method=REQUEST; charset="UTF-8"'
+        }];
+      }
 
       // Send both emails
       const [customerResult, businessResult] = await Promise.all([
