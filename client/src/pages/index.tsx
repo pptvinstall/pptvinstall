@@ -133,9 +133,9 @@ export default function HomePage() {
     setBookingFormErrors(errors);
     
     if (errors.length === 0) {
-      // Form is valid, proceed to preview
+      // Form is valid, proceed to scheduling
       setShowBookingForm(false);
-      // TODO: Show booking preview/confirmation
+      setShowScheduling(true);
     }
   };
 
@@ -754,6 +754,183 @@ export default function HomePage() {
             >
               Continue to Booking
             </button>
+          </div>
+        )}
+
+        {/* Booking Information Form */}
+        {showBookingForm && cart.items.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Booking Information</h3>
+              <button
+                onClick={() => setShowBookingForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Error Messages */}
+            {bookingFormErrors.length > 0 && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following:</h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  {bookingFormErrors.map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {/* Personal Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={bookingInfo.fullName}
+                    onChange={(e) => {
+                      setBookingInfo(prev => ({ ...prev, fullName: e.target.value }));
+                      if (bookingFormErrors.length > 0) setBookingFormErrors([]);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    value={bookingInfo.phone}
+                    onChange={(e) => setBookingInfo(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={bookingInfo.email}
+                  onChange={(e) => setBookingInfo(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="your.email@example.com"
+                />
+              </div>
+
+              {/* Service Address */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Service Address</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Address *
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingInfo.address.street}
+                      onChange={(e) => setBookingInfo(prev => ({ 
+                        ...prev, 
+                        address: { ...prev.address, street: e.target.value }
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="123 Main Street"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="col-span-2 md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        value={bookingInfo.address.city}
+                        onChange={(e) => setBookingInfo(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, city: e.target.value }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Atlanta"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        State
+                      </label>
+                      <select
+                        value={bookingInfo.address.state}
+                        onChange={(e) => setBookingInfo(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, state: e.target.value }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="Georgia">Georgia</option>
+                        <option value="Alabama">Alabama</option>
+                        <option value="Tennessee">Tennessee</option>
+                        <option value="North Carolina">North Carolina</option>
+                        <option value="South Carolina">South Carolina</option>
+                        <option value="Florida">Florida</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Zip Code *
+                      </label>
+                      <input
+                        type="text"
+                        value={bookingInfo.address.zipCode}
+                        onChange={(e) => setBookingInfo(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, zipCode: e.target.value }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="30309"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Special Instructions */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Special Instructions (Optional)
+                </label>
+                <textarea
+                  value={bookingInfo.notes}
+                  onChange={(e) => setBookingInfo(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Gate code, special instructions, preferred contact method, etc."
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowBookingForm(false)}
+                  className="flex-1 py-3 px-6 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200"
+                >
+                  Back to Cart
+                </button>
+                <button
+                  onClick={handleBookingFormSubmit}
+                  className="flex-1 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200"
+                >
+                  Continue to Scheduling
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
