@@ -32,7 +32,8 @@ import { Checkbox } from "./checkbox";
 import { Badge } from "./badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookingConfirmationModal } from "./booking-confirmation-modal";
-import { StickyBookingSummary } from "./sticky-summary-bar";
+import { StickySummaryBar } from './sticky-summary-bar';
+import { calculateTotalPrice } from '../../lib/pricing';
 
 // Type definitions
 interface TVServiceOption {
@@ -124,51 +125,60 @@ export function IntegratedBookingWizard({
     confirmPassword: ""
   });
 
-  // Calculate total price
-  const calculateTotalPrice = useCallback(() => {
-    let total = 0;
-
-    // TV installation pricing - simple calculation
-    tvServices.forEach(tv => {
-      let price = 100; // Base price
-      
-      // Mount type pricing
-      if (tv.mountType === "tilting") {
-        price += tv.size === "large" ? 50 : 40;
-      } else if (tv.mountType === "full_motion") {
-        price += tv.size === "large" ? 80 : 60;
-      } else if (tv.mountType === "fixed") {
-        price += tv.size === "large" ? 40 : 30;
-      }
-      // customer_provided adds $0
-      
-      // Location surcharge
-      if (tv.location === "fireplace") price += 100;
-      
-      // Add-ons
-      if (tv.masonryWall) price += 50;
-      if (tv.highRise) price += 25;
-      if (tv.outletNeeded) price += 100;
-      
-      total += price;
-    });
-
-    // Smart home pricing
-    smartHomeServices.forEach(device => {
-      total += pricing.calculateSmartHomeInstallation({
-        type: device.type,
-        count: device.count,
-        hasExistingWiring: device.hasExistingWiring
-      });
-    });
-
-    // Deinstallation pricing
-    deinstallationServices.forEach(service => {
-      total += service.basePrice;
-    });
-
-    return total;
+  const selectedServices = useMemo(() => {
+    return [...tvServices, ...smartHomeServices, ...deinstallationServices];
   }, [tvServices, smartHomeServices, deinstallationServices]);
+
+  const selectedAddons = useMemo(() => {
+    // This should ideally derive addons based on selected services
+    return [];
+  }, []);
+
+  // Calculate total price
+  // const calculateTotalPrice = useCallback(() => {
+  //   let total = 0;
+
+  //   // TV installation pricing - simple calculation
+  //   tvServices.forEach(tv => {
+  //     let price = 100; // Base price
+
+  //     // Mount type pricing
+  //     if (tv.mountType === "tilting") {
+  //       price += tv.size === "large" ? 50 : 40;
+  //     } else if (tv.mountType === "full_motion") {
+  //       price += tv.size === "large" ? 80 : 60;
+  //     } else if (tv.mountType === "fixed") {
+  //       price += tv.size === "large" ? 40 : 30;
+  //     }
+  //     // customer_provided adds $0
+
+  //     // Location surcharge
+  //     if (tv.location === "fireplace") price += 100;
+
+  //     // Add-ons
+  //     if (tv.masonryWall) price += 50;
+  //     if (tv.highRise) price += 25;
+  //     if (tv.outletNeeded) price += 100;
+
+  //     total += price;
+  //   });
+
+  //   // Smart home pricing
+  //   smartHomeServices.forEach(device => {
+  //     total += pricing.calculateSmartHomeInstallation({
+  //       type: device.type,
+  //       count: device.count,
+  //       hasExistingWiring: device.hasExistingWiring
+  //     });
+  //   });
+
+  //   // Deinstallation pricing
+  //   deinstallationServices.forEach(service => {
+  //     total += service.basePrice;
+  //   });
+
+  //   return total;
+  // }, [tvServices, smartHomeServices, deinstallationServices]);
 
   // Service handlers
   const handleServiceSelection = (type: "tv" | "smartHome" | "deinstallation", service: any) => {
@@ -196,52 +206,52 @@ export function IntegratedBookingWizard({
     if (selectedDate && businessHours.length > 0) {
       const dayOfWeek = selectedDate.getDay();
       const businessHour = businessHours.find((bh: any) => bh.dayOfWeek === dayOfWeek);
-      
+
       if (businessHour && businessHour.isAvailable) {
         const slots = [];
         const startTime = businessHour.startTime || "09:00";
         const endTime = businessHour.endTime || "17:00";
-        
+
         // Generate common time slots
         const commonTimes = ["10:00", "12:30", "15:00", "17:30"];
-        
+
         // Filter times that fall within business hours
         commonTimes.forEach(time => {
           const [hour] = time.split(':').map(Number);
           const [startHour] = startTime.split(':').map(Number);
           const [endHour] = endTime.split(':').map(Number);
-          
+
           if (hour >= startHour && hour <= endHour - 2) { // -2 for 2-hour service window
             slots.push(time);
           }
         });
-        
+
         // If no common times fit, generate 2-hour intervals within business hours
         if (slots.length === 0) {
           const [startHour, startMin] = startTime.split(':').map(Number);
           const [endHour, endMin] = endTime.split(':').map(Number);
-          
+
           let currentHour = startHour;
           let currentMin = startMin;
-          
+
           while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin - 120)) {
             const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
             slots.push(timeString);
-            
+
             // Add 2 hours
             currentMin += 120;
             if (currentMin >= 60) {
               currentHour += Math.floor(currentMin / 60);
               currentMin = currentMin % 60;
             }
-            
+
             // Stop if we exceed business hours
             if (currentHour > endHour || (currentHour === endHour && currentMin > endMin)) break;
           }
         }
-        
+
         setTimeSlots(slots);
-        
+
         // Auto-select first available time if none selected
         if (slots.length > 0 && !selectedTime) {
           setSelectedTime(slots[0]);
@@ -257,7 +267,7 @@ export function IntegratedBookingWizard({
   };
 
   // Get pricing total
-  const pricingTotal = useMemo(() => calculateTotalPrice(), [calculateTotalPrice]);
+  //const pricingTotal = useMemo(() => calculateTotalPrice(), [calculateTotalPrice]);
 
   // Navigation handlers
   const canProceedToNext = () => {
@@ -309,7 +319,7 @@ export function IntegratedBookingWizard({
                   <CardDescription className="text-blue-100">
                     Step {currentStep + 1} of 4
                   </CardDescription>
-                  
+
                   {/* Progress bar */}
                   <div className="w-full bg-blue-400/30 rounded-full h-2 mt-4">
                     <div 
@@ -349,7 +359,7 @@ export function IntegratedBookingWizard({
                       </div>
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                         <span className="font-medium">Estimated Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(pricingTotal)}</span>
+                        <span className="text-xl font-bold">{formatPrice(calculateTotalPrice(selectedServices, selectedAddons || []))}</span>
                       </div>
                       {deinstallationServices.length > 0 && (
                         <div className="text-xs text-muted-foreground">
@@ -363,7 +373,7 @@ export function IntegratedBookingWizard({
                       <div className="space-y-4">
                         <Separator />
                         <h4 className="text-sm font-medium">Selected Services:</h4>
-                        
+
                         {/* TV Services */}
                         {tvServices.map((service, index) => (
                           <div key={service.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
@@ -757,7 +767,7 @@ export function IntegratedBookingWizard({
                       {/* Total */}
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
                         <span className="font-medium">Total:</span>
-                        <span className="text-xl font-bold">{formatPrice(pricingTotal)}</span>
+                        <span className="text-xl font-bold">{formatPrice(calculateTotalPrice(selectedServices, selectedAddons || []))}</span>
                       </div>
                     </div>
                   </div>
@@ -791,9 +801,9 @@ export function IntegratedBookingWizard({
       </div>
 
       {/* Sticky Summary Bar */}
-      <StickyBookingSummary
+      <StickySummaryBar
         services={[...tvServices, ...smartHomeServices, ...deinstallationServices]}
-        totalPrice={calculateTotalPrice()}
+        totalPrice={calculateTotalPrice(selectedServices, selectedAddons || [])}
         onProceed={() => setCurrentStep(1)}
         isVisible={currentStep === 0 && (tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0)}
       />
@@ -814,7 +824,7 @@ export function IntegratedBookingWizard({
             zipCode: formData.zipCode,
             preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
             appointmentTime: selectedTime || "",
-            pricingTotal: pricingTotal,
+            pricingTotal: calculateTotalPrice(selectedServices, selectedAddons || []),
             tvInstallations: tvServices.map(tv => ({
               size: tv.size,
               location: tv.location,
@@ -843,7 +853,7 @@ export function IntegratedBookingWizard({
                 preferredDate: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
                 appointmentTime: selectedTime || "",
                 serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
-                pricingTotal: pricingTotal.toString(),
+                pricingTotal: calculateTotalPrice(selectedServices, selectedAddons || []).toString(),
                 notes: formData.notes,
                 consentToContact: formData.consentToContact,
                 pricingBreakdown: [
@@ -852,7 +862,8 @@ export function IntegratedBookingWizard({
                     size: tv.size,
                     location: tv.location,
                     mountType: tv.mountType,
-                    masonryWall: tv.masonryWall,
+                    masonry```text
+Wall: tv.masonryWall,
                     highRise: tv.highRise,
                     outletRelocation: tv.outletNeeded,
                     outletImage: tv.outletImage

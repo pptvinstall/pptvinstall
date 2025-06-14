@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import type { Booking } from '@shared/schema';
 import { format, parseISO } from 'date-fns';
 import * as ics from 'ics';

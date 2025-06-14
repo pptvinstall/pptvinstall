@@ -1115,7 +1115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bookings", async (req, res) => {
     const startTime = performanceMonitor.startTimer();
     const cacheKey = createCacheKey(req);
-    
+
     try {
       // Check cache first
       const cached = getCachedResponse(cacheKey);
@@ -1164,7 +1164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       performanceMonitor.endTimer(startTime, 'bookings-query');
-      
+
       sendOptimizedResponse(res, { bookings: formattedBookings }, { 
         cache: true, 
         cacheKey,
@@ -1902,7 +1902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if customer already exists
-      const existingCustomer = await storage.getCustomerByEmail(email);
+      constexistingCustomer = await storage.getCustomerByEmail(email);
 
       if (existingCustomer) {
         return res.status(400).json({
