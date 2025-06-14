@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 // TV Installation Options
 interface TVInstallOptions {
@@ -15,10 +15,28 @@ interface SmartHomeOptions {
   quantity: number;
 }
 
+// Cart Item interface
+interface CartItem {
+  id: string;
+  serviceType: 'tv-installation' | 'tv-removal' | 'smart-home';
+  displayName: string;
+  price: number;
+  configuration: any; // Store the specific config for each service
+}
+
 // Booking Options
 interface BookingOptions {
   selectedDate: string | null;
   selectedTime: string | null;
+}
+
+// Cart state
+interface CartState {
+  items: CartItem[];
+  subtotal: number;
+  discount: number;
+  discountLabel: string;
+  total: number;
 }
 
 export default function HomePage() {
@@ -40,6 +58,16 @@ export default function HomePage() {
     selectedDate: null,
     selectedTime: null
   });
+
+  const [cart, setCart] = useState<CartState>({
+    items: [],
+    subtotal: 0,
+    discount: 0,
+    discountLabel: '',
+    total: 0
+  });
+
+  const [showScheduling, setShowScheduling] = useState(false);
 
   const handleServiceSelect = (service: string) => {
     setSelectedService(service);
@@ -88,8 +116,75 @@ export default function HomePage() {
   const availableDates = getAvailableDates();
   const availableTimeSlots = getAvailableTimeSlots();
 
-  // Pricing calculation for all services
-  const estimatedTotal = useMemo(() => {
+  // Cart management functions
+  const calculateCartTotals = useCallback((items: CartItem[]) => {
+    const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+    
+    let discount = 0;
+    let discountLabel = '';
+    
+    // Bundle discount logic
+    const hasSmartHome = items.some(item => item.serviceType === 'smart-home');
+    const hasTVInstall = items.some(item => item.serviceType === 'tv-installation');
+    const distinctServices = new Set(items.map(item => item.serviceType)).size;
+    const totalItems = items.length;
+    
+    if (hasSmartHome && hasTVInstall) {
+      discount = 25;
+      discountLabel = 'Smart Home + TV Bundle';
+    } else if (totalItems >= 3) {
+      discount = Math.round(subtotal * 0.1);
+      discountLabel = '3+ Items (10% off)';
+    } else if (distinctServices >= 2) {
+      discount = Math.round(subtotal * 0.05);
+      discountLabel = 'Multi-Service (5% off)';
+    }
+    
+    return {
+      subtotal,
+      discount,
+      discountLabel,
+      total: subtotal - discount
+    };
+  }, []);
+
+  const generateCartItemId = () => `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const addToCart = useCallback((serviceType: 'tv-installation' | 'tv-removal' | 'smart-home', displayName: string, price: number, configuration: any) => {
+    const newItem: CartItem = {
+      id: generateCartItemId(),
+      serviceType,
+      displayName,
+      price,
+      configuration
+    };
+    
+    setCart(prevCart => {
+      const newItems = [...prevCart.items, newItem];
+      const totals = calculateCartTotals(newItems);
+      return {
+        items: newItems,
+        ...totals
+      };
+    });
+    
+    // Reset current service selection to allow adding more
+    setSelectedService(null);
+  }, [calculateCartTotals]);
+
+  const removeFromCart = useCallback((itemId: string) => {
+    setCart(prevCart => {
+      const newItems = prevCart.items.filter(item => item.id !== itemId);
+      const totals = calculateCartTotals(newItems);
+      return {
+        items: newItems,
+        ...totals
+      };
+    });
+  }, [calculateCartTotals]);
+
+  // Individual service pricing calculations
+  const currentServicePrice = useMemo(() => {
     let total = 0;
 
     if (selectedService === 'tv-installation') {
@@ -141,6 +236,26 @@ export default function HomePage() {
 
     return total;
   }, [selectedService, tvOptions, smartHomeOptions]);
+
+  // Helper functions for cart display names
+  const generateDisplayName = (serviceType: string, options: any) => {
+    if (serviceType === 'tv-installation') {
+      const mountType = options.mountType === 'fixed' ? 'Fixed' : 
+                       options.mountType === 'tilting' ? 'Tilting' : 
+                       options.mountType === 'full-motion' ? 'Full Motion' : 'Customer Mount';
+      const wallType = options.wallType === 'over-fireplace' ? 'Over Fireplace' : 'Standard Wall';
+      const material = options.wallMaterial === 'brick-stone' ? ', Brick/Stone' :
+                      options.wallMaterial === 'high-rise-steel' ? ', High-Rise' : '';
+      return `TV Install - ${mountType}, ${wallType}${material}`;
+    } else if (serviceType === 'tv-removal') {
+      return 'TV De-Installation';
+    } else if (serviceType === 'smart-home') {
+      const deviceName = options.deviceType === 'security-camera' ? 'Security Camera' :
+                         options.deviceType === 'video-doorbell' ? 'Video Doorbell' : 'Floodlight Camera';
+      return `${options.quantity}x ${deviceName}`;
+    }
+    return 'Service';
+  };
 
   // Get current mount prices for display
   const getCurrentMountPrices = () => {
@@ -417,8 +532,81 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Add to Cart Button */}
+        {selectedService && currentServicePrice > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => {
+                const displayName = generateDisplayName(selectedService, 
+                  selectedService === 'tv-installation' ? tvOptions :
+                  selectedService === 'smart-home' ? smartHomeOptions : {}
+                );
+                addToCart(selectedService as any, displayName, currentServicePrice, 
+                  selectedService === 'tv-installation' ? tvOptions :
+                  selectedService === 'smart-home' ? smartHomeOptions : {}
+                );
+              }}
+              className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${
+                selectedService === 'tv-installation' ? 'bg-blue-600 hover:bg-blue-700' :
+                selectedService === 'tv-removal' ? 'bg-orange-600 hover:bg-orange-700' :
+                'bg-green-600 hover:bg-green-700'
+              } shadow-lg hover:shadow-xl`}
+            >
+              Add to Cart - ${currentServicePrice}
+            </button>
+          </div>
+        )}
+
+        {/* Cart Display */}
+        {cart.items.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Services</h3>
+            
+            <div className="space-y-3">
+              {cart.items.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{item.displayName}</p>
+                    <p className="text-sm text-gray-600">${item.price}</p>
+                  </div>
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-red-600 hover:text-red-800 font-medium text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>Subtotal:</span>
+                <span>${cart.subtotal}</span>
+              </div>
+              {cart.discount > 0 && (
+                <div className="flex justify-between items-center text-sm text-green-600">
+                  <span>{cart.discountLabel}:</span>
+                  <span>-${cart.discount}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-lg font-semibold text-gray-900 mt-2">
+                <span>Total:</span>
+                <span>${cart.total}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowScheduling(true)}
+              className="w-full mt-4 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200"
+            >
+              Continue to Scheduling
+            </button>
+          </div>
+        )}
+
         {/* Date & Time Selection */}
-        {selectedService && estimatedTotal > 0 && (
+        {showScheduling && cart.items.length > 0 && (
           <div className="mt-8 bg-white rounded-lg shadow-lg p-6 space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Schedule Your Service</h3>
             
