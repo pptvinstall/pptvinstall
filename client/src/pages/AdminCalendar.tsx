@@ -52,9 +52,9 @@ const AdminCalendar = () => {
   });
 
   // Ensure proper data structure with fallbacks
-  const allBookings: AdminBooking[] = calendarData?.bookings || [];
-  const dailyBookings: AdminBooking[] = dailyData?.bookings || [];
-  const totalBookings = allBookings.length;
+  const allBookings: AdminBooking[] = Array.isArray(calendarData?.bookings) ? calendarData.bookings : [];
+  const dailyBookings: AdminBooking[] = Array.isArray(dailyData?.bookings) ? dailyData.bookings : [];
+  const totalBookings = calendarData?.totalBookings || allBookings.length;
 
   // Check for existing session on load
   useEffect(() => {
@@ -217,8 +217,8 @@ const AdminCalendar = () => {
               type="password"
               placeholder="Enter admin password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onKeyPress={(e: React.KeyboardEvent) => e.key === 'Enter' && handleLogin()}
             />
             <Button onClick={handleLogin} className="w-full">
               Access Calendar
@@ -499,7 +499,7 @@ const AdminCalendar = () => {
                   <Input
                     type="date"
                     value={blockTimeData.date}
-                    onChange={(e) => setBlockTimeData(prev => ({...prev, date: e.target.value}))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBlockTimeData(prev => ({...prev, date: e.target.value}))}
                   />
                 </div>
                 <div>
@@ -507,7 +507,7 @@ const AdminCalendar = () => {
                   <Input
                     type="time"
                     value={blockTimeData.startTime}
-                    onChange={(e) => setBlockTimeData(prev => ({...prev, startTime: e.target.value}))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBlockTimeData(prev => ({...prev, startTime: e.target.value}))}
                   />
                 </div>
                 <div>
@@ -515,7 +515,7 @@ const AdminCalendar = () => {
                   <Input
                     type="time"
                     value={blockTimeData.endTime}
-                    onChange={(e) => setBlockTimeData(prev => ({...prev, endTime: e.target.value}))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBlockTimeData(prev => ({...prev, endTime: e.target.value}))}
                   />
                 </div>
                 <div>
@@ -523,7 +523,7 @@ const AdminCalendar = () => {
                   <Input
                     placeholder="e.g., Personal appointment, Maintenance"
                     value={blockTimeData.reason}
-                    onChange={(e) => setBlockTimeData(prev => ({...prev, reason: e.target.value}))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBlockTimeData(prev => ({...prev, reason: e.target.value}))}
                   />
                 </div>
                 <div className="flex gap-2 pt-4">
