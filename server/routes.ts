@@ -88,6 +88,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add logging middleware
   app.use(logger.logRequest.bind(logger));
 
+  // Admin authentication middleware
+const authenticateAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1]; // Bearer <token>
+
+  // Check if password matches (in production, use proper JWT or session)
+  const adminPassword = process.env.ADMIN_PASSWORD || '9663';
+
+  if (token === adminPassword) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
+// Admin booking endpoints
+app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching admin bookings:', error);
+    res.status(500).json({ error: 'Failed to fetch bookings' });
+  }
+});
+
+app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['confirmed', 'cancelled', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const result = await db
+      .update(bookings)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(bookings.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    res.json(result[0]);
+  } catch (error) {
+    console.error('Error updating booking:', error);
+    res.status(500).json({ error: 'Failed to update booking' });
+  }
+});
+
   // API routes
   app.get("/api/health", async (req, res) => {
     try {
@@ -872,7 +924,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           try {
             // Use our internal availability service
-            const success = availabilityService.blockTimeSlots(date, timeSlots, reason);
+            const success = availabilityService.blockTimeSlots(```text
+date, timeSlots, reason);
 
             if (!success) {
               logger.error('Failed to block time slots', new Error('Failed to block time slots'), {
@@ -1830,8 +1883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "Booking cancelled successfully"
       });
-    } catch (error) {
-      logger.error("Error cancelling booking:", error as Error);
+    } catch (error) {      logger.error("Error cancelling booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to cancel booking"
@@ -3542,12 +3594,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Google Calendar Integration Endpoints
-  
+
   // Initialize Google Calendar service
   app.post("/api/calendar/initialize", async (req: Request, res: Response) => {
     try {
       const initialized = await googleCalendarService.initialize();
-      
+
       res.json({
         success: initialized,
         message: initialized ? "Google Calendar service initialized" : "Failed to initialize Google Calendar service"
@@ -3566,14 +3618,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const dateParam = req.params.date;
       const date = new Date(dateParam);
-      
+
       if (isNaN(date.getTime())) {
         return res.status(400).json({
           success: false,
           message: "Invalid date format"
         });
       }
-      
+
       // Get already booked time slots from database
       const bookedSlots = await db.select().from(bookings).where(
         and(
@@ -3581,13 +3633,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(bookings.status, 'confirmed')
         )
       );
-      
+
       const bookedTimes = bookedSlots.map(booking => booking.appointmentTime);
-      
+
       // Get available slots from Google Calendar and filter out booked ones
       const allSlots = await googleCalendarService.getAvailableSlots(date);
       const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
-      
+
       res.json({
         success: true,
         date: dateParam,
@@ -3607,7 +3659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/calendar", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
@@ -3659,7 +3711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { password } = req.query;
       const { date } = req.params;
-      
+
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
@@ -3705,7 +3757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/bookings/complete", async (req: Request, res: Response) => {
     try {
       const bookingData = req.body;
-      
+
       // Validate required fields
       if (!bookingData.fullName || !bookingData.email || !bookingData.phone || 
           !bookingData.selectedDate || !bookingData.selectedTime || !bookingData.services) {
@@ -3718,32 +3770,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse selected date and time with better error handling
       let startTime: Date;
       let endTime: Date;
-      
+
       try {
         const [startTimeStr, endTimeStr] = bookingData.selectedTime.split(' - ');
         if (!startTimeStr || !endTimeStr) {
           throw new Error('Invalid time format');
         }
-        
+
         const bookingDate = new Date(bookingData.selectedDate);
         if (isNaN(bookingDate.getTime())) {
           throw new Error('Invalid date format');
         }
-        
+
         // Parse start time
         startTime = new Date(bookingDate);
         const startMatch = startTimeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
         if (!startMatch) {
           throw new Error('Invalid start time format');
         }
-        
+
         let hour = parseInt(startMatch[1]);
         const minute = parseInt(startMatch[2]);
         const period = startMatch[3].toUpperCase();
-        
+
         if (period === 'PM' && hour !== 12) hour += 12;
         if (period === 'AM' && hour === 12) hour = 0;
-        
+
         startTime.setHours(hour, minute, 0, 0);
 
         // Parse end time
@@ -3752,16 +3804,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!endMatch) {
           throw new Error('Invalid end time format');
         }
-        
+
         let endHour = parseInt(endMatch[1]);
         const endMinute = parseInt(endMatch[2]);
         const endPeriod = endMatch[3].toUpperCase();
-        
+
         if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
         if (endPeriod === 'AM' && endHour === 12) endHour = 0;
-        
+
         endTime.setHours(endHour, endMinute, 0, 0);
-        
+
         // Validate time range
         if (startTime >= endTime) {
           throw new Error('End time must be after start time');
@@ -3784,7 +3836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       if (existingBooking.length > 0) {
-        logger.warn(`Double booking attempt blocked for ${bookingData.selectedDate} at ${bookingData.selectedTime}`, {
+        logger.warn(`Double booking attempt blocked for ${bookingData.email} at ${bookingData.selectedDate} at ${bookingData.selectedTime}`, {
           attemptedCustomer: bookingData.email,
           existingBooking: existingBooking[0].id
         });
@@ -3822,7 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate primary service for calendar title
       const primaryService = bookingData.services[0]?.displayName || 'Service';
-      
+
       // Create calendar event
       const eventData = {
         title: `PPTVInstall – ${bookingData.fullName} – ${primaryService}`,
@@ -3842,7 +3894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const calendarEventId = await googleCalendarService.createBookingEvent(eventData);
-      
+
       if (calendarEventId) {
         logger.info(`Calendar event created for booking ${booking.id}: ${calendarEventId}`);
       } else {
@@ -3865,7 +3917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalAmount: bookingData.totalAmount,
           calendarEventId
         };
-        
+
         const emailResult = await liveEmailService.sendBookingConfirmation(emailData);
         if (emailResult.success) {
           logger.info(`Live confirmation emails sent successfully for booking ${booking.id}`);
