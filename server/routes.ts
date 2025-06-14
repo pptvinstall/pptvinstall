@@ -28,6 +28,7 @@ import {
   sendEnhancedCancellationEmail,
   sendServiceEditNotification
 } from "./services/enhancedEmailService";
+import { liveEmailService } from "./services/liveEmailService";
 import { pushNotificationService } from "./services/pushNotificationService";
 import { 
   optimizeQuery, 
@@ -385,6 +386,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'Failed to send test emails',
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test live Gmail SMTP connection
+  app.get('/api/email/test-gmail-connection', async (req: Request, res: Response) => {
+    try {
+      const result = await liveEmailService.testEmailConnection();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
   });
@@ -3615,12 +3629,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.warn(`Failed to create calendar event for booking ${booking.id}`);
       }
 
-      // Send confirmation emails
+      // Send live confirmation emails via Gmail SMTP
       try {
-        await sendEnhancedBookingConfirmation(booking, bookingData.services);
-        logger.info(`Confirmation email sent for booking ${booking.id}`);
+        const emailData = {
+          id: booking.id?.toString() || '',
+          confirmationNumber: `PPT-${booking.id?.toString().padStart(4, '0')}`,
+          fullName: bookingData.fullName,
+          email: bookingData.email,
+          phone: bookingData.phone,
+          address: bookingData.address,
+          notes: bookingData.notes,
+          selectedDate: bookingData.selectedDate,
+          selectedTime: bookingData.selectedTime,
+          services: bookingData.services,
+          totalAmount: bookingData.totalAmount,
+          calendarEventId
+        };
+        
+        const emailResult = await liveEmailService.sendBookingConfirmation(emailData);
+        if (emailResult.success) {
+          logger.info(`Live confirmation emails sent successfully for booking ${booking.id}`);
+        } else {
+          logger.error(`Failed to send live confirmation emails for booking ${booking.id}: ${emailResult.error}`);
+        }
       } catch (emailError) {
-        logger.error(`Failed to send confirmation email for booking ${booking.id}:`, emailError as Error);
+        logger.error(`Error sending live confirmation emails for booking ${booking.id}:`, emailError as Error);
       }
 
       // Log booking completion
