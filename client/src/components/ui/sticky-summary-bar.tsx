@@ -35,8 +35,7 @@ export function StickyBookingSummary({
               <div className="flex flex-wrap gap-2 max-w-md">
                 {services.slice(0, 3).map((service, index) => (
                   <span key={service.id} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {service.name} ${service.price}
-                    {index < Math.min(services.length, 3) - 1 && services.length > 1 ? ' +' : ''}
+                    {service.name} ${Number(service.price) || 0}
                   </span>
                 ))}
                 {services.length > 3 && (
@@ -50,7 +49,7 @@ export function StickyBookingSummary({
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-sm text-gray-600">Total</div>
-                <div className="text-2xl font-bold text-blue-600">${totalPrice}</div>
+                <div className="text-2xl font-bold text-blue-600">${Number(totalPrice) || 0}</div>
               </div>
               
               <Button 

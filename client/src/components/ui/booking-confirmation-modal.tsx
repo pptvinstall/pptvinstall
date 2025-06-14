@@ -70,7 +70,7 @@ export function BookingConfirmationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[100]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <CheckCircle className="h-6 w-6 text-green-600" />
@@ -91,15 +91,20 @@ export function BookingConfirmationModal({
               </h3>
               <div className="space-y-2">
                 {bookingData.services?.map((service, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="font-medium">{service.name || service.type}</span>
-                    <span className="font-semibold text-blue-600">${service.price}</span>
+                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium">{service.name || service.type}</div>
+                      {service.description && (
+                        <div className="text-sm text-gray-600">{service.description}</div>
+                      )}
+                    </div>
+                    <span className="font-semibold text-blue-600">${Number(service.price) || 0}</span>
                   </div>
                 ))}
                 <Separator />
-                <div className="flex justify-between items-center font-bold text-lg">
+                <div className="flex justify-between items-center font-bold text-lg bg-blue-50 p-3 rounded-lg">
                   <span>Total:</span>
-                  <span className="text-blue-600">${bookingData.pricingTotal}</span>
+                  <span className="text-blue-600">${Number(bookingData.pricingTotal) || 0}</span>
                 </div>
               </div>
             </CardContent>
