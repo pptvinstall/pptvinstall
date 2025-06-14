@@ -2,7 +2,7 @@ import { type Express, Request as ExpressRequest, Response, NextFunction } from 
 import { type Server } from "http";
 import { db } from "./db";
 import { 
-  bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
+  bookingSchema, bookings as bookingsTable, businessHoursSchema, customers, customerSchema, 
   insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema,
   promotions, promotionSchema, insertPromotionSchema, Promotion, Booking
 } from "@shared/schema";
@@ -1917,7 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if customer already exists
-      constexistingCustomer = await storage.getCustomerByEmail(email);
+      const existingCustomer = await storage.getCustomerByEmail(email);
 
       if (existingCustomer) {
         return res.status(400).json({
@@ -2828,6 +2828,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: "Failed to fetch business hours for the specified day"
       });
+    }
+  });
+
+  // Block time slot endpoint
+  app.post("/api/admin/block-time", async (req: Request, res: Response) => {
+    try {
+      const { password, date, startTime, endTime, reason } = req.body;
+
+      if (!verifyAdminPassword(password)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      if (!date || !startTime || !endTime) {
+        return res.status(400).json({ error: 'Date, start time, and end time are required' });
+      }
+
+      // Create a blocked time entry in the bookings table
+      const blockedSlot = await db.insert(bookingsTable).values({
+        name: 'BLOCKED TIME',
+        email: 'admin@jwood.com',
+        phone: '000-000-0000',
+        streetAddress: 'N/A',
+        city: 'N/A',
+        state: 'GA',
+        zipCode: '00000',
+        serviceType: 'BLOCKED',
+        scheduledDate: date,
+        scheduledTime: startTime,
+        totalAmount: '0.00',
+        notes: reason || 'Time blocked by admin',
+        status: 'confirmed',
+        confirmationNumber: `BLOCK-${Date.now()}`,
+        isTestBooking: false
+      }).returning();
+
+      logger.info(`Admin blocked time slot: ${date} ${startTime}-${endTime}`, {
+        date,
+        startTime,
+        endTime,
+        reason
+      });
+
+      res.json({ 
+        success: true, 
+        message: 'Time slot blocked successfully',
+        blockedSlot: blockedSlot[0]
+      });
+    } catch (error) {
+      logger.error('Error blocking time slot:', error as Error);
+      res.status(500).json({ error: 'Failed to block time slot' });
     }
   });
 

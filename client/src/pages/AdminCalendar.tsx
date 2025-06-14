@@ -29,7 +29,7 @@ const AdminCalendar = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
   const [blockTimeData, setBlockTimeData] = useState({
     date: '',
     startTime: '',
@@ -50,6 +50,11 @@ const AdminCalendar = () => {
     enabled: isAuthenticated && selectedDate.length > 0,
     refetchInterval: 30000,
   });
+
+  // Ensure proper data structure with fallbacks
+  const bookings: AdminBooking[] = calendarData?.bookings || [];
+  const dailyBookings: AdminBooking[] = dailyData?.bookings || [];
+  const totalBookings = bookings.length;
 
   // Check for existing session on load
   useEffect(() => {
