@@ -167,7 +167,7 @@ export function ServiceSelectionGrid({
 
           {/* TV De-Installation Tab */}
           <TabsContent value="deinstallation" className="mt-4">
-            <ScrollArea className="h-[300px] pr-2">
+            <div className="h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {isLoading ? (
                 <div className="grid grid-cols-1 gap-4">
                   <ServiceCardSkeleton />
@@ -177,40 +177,64 @@ export function ServiceSelectionGrid({
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="space-y-4"
+                  className="space-y-6"
                 >
                   <motion.div variants={itemVariants}>
-                    <ServiceCard
-                      title="TV De-Installation"
-                      description="Safe removal of mounted TV and bracket, includes cable cleanup"
-                      icon={<Icons.tvUnmount className="h-6 w-6" />}
-                      price={50}
-                      onClick={() => onServiceAdd("deinstallation", {
-                        type: "deinstallation",
-                        tvSize: "small",
-                        wallType: "standard",
-                        cableCleanup: true,
-                        basePrice: 50
-                      })}
-                    />
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-center mb-4">
+                        <div className="p-3 bg-green-100 rounded-lg mr-4">
+                          <Icons.tvUnmount className="h-8 w-8 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-green-800">TV De-Installation</h3>
+                          <p className="text-green-600">Professional removal service</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-green-700 mb-4">
+                        Safe removal of mounted TV and bracket. Includes cable cleanup and wall restoration.
+                      </p>
+                      
+                      <div className="bg-green-100 rounded-lg p-4 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-green-800">Flat Rate Price:</span>
+                          <span className="text-2xl font-bold text-green-600">$50</span>
+                        </div>
+                        <p className="text-sm text-green-600 mt-1">Per TV regardless of size or wall type</p>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => onServiceAdd("deinstallation", {
+                          id: `deinstall-${Date.now()}`,
+                          type: "deinstallation",
+                          price: 50,
+                          count: 1,
+                          name: "TV De-Installation",
+                          description: "Professional TV removal service"
+                        })}
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        size="lg"
+                      >
+                        Add TV De-Installation Service
+                      </Button>
+                    </div>
                   </motion.div>
                   
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-800 mb-2">What's Included:</h4>
-                    <ul className="text-sm text-green-700 space-y-1">
-                      <li>• Safe TV removal from wall mount</li>
-                      <li>• Complete bracket and hardware removal</li>
-                      <li>• Cable management and cleanup</li>
-                      <li>• Wall restoration (filling mounting holes)</li>
-                      <li>• Disposal of old mounting hardware</li>
-                    </ul>
-                    <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-600">
-                      <strong>Flat Rate:</strong> $50 per TV regardless of size or wall type
+                  <motion.div variants={itemVariants}>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 shadow-sm">
+                      <h4 className="font-semibold text-green-800 mb-3">What's Included:</h4>
+                      <ul className="text-sm text-green-700 space-y-2">
+                        <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Safe TV removal from wall mount</li>
+                        <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Complete bracket and hardware removal</li>
+                        <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Cable management and cleanup</li>
+                        <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Wall restoration (filling mounting holes)</li>
+                        <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Disposal of old mounting hardware</li>
+                      </ul>
                     </div>
-                  </div>
+                  </motion.div>
                 </motion.div>
               )}
-            </ScrollArea>
+            </div>
           </TabsContent>
 
           {/* Smart Home Tab */}

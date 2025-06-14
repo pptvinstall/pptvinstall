@@ -189,34 +189,55 @@ export function IntegratedBookingWizard({
         const startTime = businessHour.startTime || "09:00";
         const endTime = businessHour.endTime || "17:00";
         
-        // Generate time slots every 2 hours
-        const [startHour, startMin] = startTime.split(':').map(Number);
-        const [endHour, endMin] = endTime.split(':').map(Number);
+        // Generate common time slots
+        const commonTimes = ["10:00", "12:30", "15:00", "17:30"];
         
-        let currentHour = startHour;
-        let currentMin = startMin;
-        
-        while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin - 120)) {
-          const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
-          slots.push(timeString);
+        // Filter times that fall within business hours
+        commonTimes.forEach(time => {
+          const [hour] = time.split(':').map(Number);
+          const [startHour] = startTime.split(':').map(Number);
+          const [endHour] = endTime.split(':').map(Number);
           
-          // Add 2 hours
-          currentMin += 120;
-          if (currentMin >= 60) {
-            currentHour += Math.floor(currentMin / 60);
-            currentMin = currentMin % 60;
+          if (hour >= startHour && hour <= endHour - 2) { // -2 for 2-hour service window
+            slots.push(time);
           }
+        });
+        
+        // If no common times fit, generate 2-hour intervals within business hours
+        if (slots.length === 0) {
+          const [startHour, startMin] = startTime.split(':').map(Number);
+          const [endHour, endMin] = endTime.split(':').map(Number);
           
-          // Stop if we exceed business hours
-          if (currentHour > endHour || (currentHour === endHour && currentMin > endMin)) break;
+          let currentHour = startHour;
+          let currentMin = startMin;
+          
+          while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin - 120)) {
+            const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+            slots.push(timeString);
+            
+            // Add 2 hours
+            currentMin += 120;
+            if (currentMin >= 60) {
+              currentHour += Math.floor(currentMin / 60);
+              currentMin = currentMin % 60;
+            }
+            
+            // Stop if we exceed business hours
+            if (currentHour > endHour || (currentHour === endHour && currentMin > endMin)) break;
+          }
         }
         
         setTimeSlots(slots);
+        
+        // Auto-select first available time if none selected
+        if (slots.length > 0 && !selectedTime) {
+          setSelectedTime(slots[0]);
+        }
       } else {
         setTimeSlots([]);
       }
     }
-  }, [selectedDate, businessHours]);
+  }, [selectedDate, businessHours, selectedTime]);
 
   const formatPrice = (price: number) => {
     return `$${price.toFixed(0)}`;
@@ -253,33 +274,34 @@ export function IntegratedBookingWizard({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-center">
-                  Book Your Service
-                </CardTitle>
-                <CardDescription className="text-center">
-                  Step {currentStep + 1} of 4
-                </CardDescription>
-                
-                {/* Progress bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentStep + 1) / 4) * 100}%` }}
-                  />
-                </div>
-              </CardHeader>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4 pb-32">
+        <div className="max-w-4xl mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="shadow-xl border-0 overflow-hidden">
+                <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-6">
+                  <CardTitle className="text-2xl font-bold">
+                    Book Your Service
+                  </CardTitle>
+                  <CardDescription className="text-blue-100">
+                    Step {currentStep + 1} of 4
+                  </CardDescription>
+                  
+                  {/* Progress bar */}
+                  <div className="w-full bg-blue-400/30 rounded-full h-2 mt-4">
+                    <div 
+                      className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm"
+                      style={{ width: `${((currentStep + 1) / 4) * 100}%` }}
+                    />
+                  </div>
+                </CardHeader>
 
               <CardContent className="space-y-6">
                 {/* Step 1: Service Selection */}
@@ -499,9 +521,21 @@ export function IntegratedBookingWizard({
                             id="phone"
                             type="tel"
                             value={formData.phone}
-                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                            onChange={(e) => {
+                              // Auto-format phone number
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length >= 6) {
+                                value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+                              } else if (value.length >= 3) {
+                                value = value.replace(/(\d{3})(\d{3})/, '($1) $2');
+                              } else if (value.length > 0) {
+                                value = value.replace(/(\d{3})/, '($1)');
+                              }
+                              setFormData(prev => ({ ...prev, phone: value }));
+                            }}
                             placeholder="(555) 123-4567"
                             className="mt-1"
+                            maxLength={14}
                           />
                         </div>
                       </div>
@@ -747,9 +781,18 @@ export function IntegratedBookingWizard({
                 </Button>
               </CardFooter>
             </Card>
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
+
+      {/* Sticky Summary Bar */}
+      <StickyBookingSummary
+        services={[...tvServices, ...smartHomeServices, ...deinstallationServices]}
+        totalPrice={calculateTotalPrice()}
+        onProceed={() => setCurrentStep(1)}
+        isVisible={currentStep === 0 && (tvServices.length > 0 || smartHomeServices.length > 0 || deinstallationServices.length > 0)}
+      />
 
       {/* Booking Confirmation Modal */}
       {showConfirmationModal && (
@@ -837,6 +880,6 @@ export function IntegratedBookingWizard({
           isSubmitting={isSubmitting}
         />
       )}
-    </div>
+    </>
   );
 }

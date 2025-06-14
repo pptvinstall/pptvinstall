@@ -13,7 +13,7 @@ interface SimpleTVFormProps {
 export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
   const [tvSize, setTvSize] = useState<"small" | "large">("small");
   const [location, setLocation] = useState<"standard" | "fireplace">("standard");
-  const [mountType, setMountType] = useState<"fixed" | "tilting" | "full_motion">("fixed");
+  const [mountType, setMountType] = useState<"fixed" | "tilting" | "full_motion" | "customer_provided">("fixed");
   const [masonryWall, setMasonryWall] = useState(false);
   const [highRise, setHighRise] = useState(false);
   const [outletNeeded, setOutletNeeded] = useState(false);
@@ -21,7 +21,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
   const calculatePrice = () => {
     let basePrice = 100; // Base TV installation price
     
-    // Mount type pricing (no TV size upcharge per new requirements)
+    // Mount type pricing
     if (mountType === "tilting") {
       basePrice += tvSize === "large" ? 50 : 40;
     } else if (mountType === "full_motion") {
@@ -29,6 +29,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
     } else if (mountType === "fixed") {
       basePrice += tvSize === "large" ? 40 : 30;
     }
+    // customer_provided mount adds $0
     
     // Location surcharge
     if (location === "fireplace") basePrice += 100;
@@ -104,8 +105,8 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
 
       {/* Mount Type */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">Mount Type</Label>
-        <RadioGroup value={mountType} onValueChange={(value: "fixed" | "tilting" | "full_motion") => setMountType(value)}>
+        <Label className="text-base font-medium">Select Your Mount</Label>
+        <RadioGroup value={mountType} onValueChange={(value: "fixed" | "tilting" | "full_motion" | "customer_provided") => setMountType(value)}>
           <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="fixed" id="fixed" />
@@ -142,6 +143,16 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
               +${tvSize === "large" ? "80" : "60"}
             </span>
           </div>
+          <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="customer_provided" id="customer_provided" />
+              <div>
+                <Label htmlFor="customer_provided" className="font-medium cursor-pointer">Customer-Provided Mount</Label>
+                <p className="text-xs text-gray-500">You provide the mount, we install it</p>
+              </div>
+            </div>
+            <span className="text-green-600 font-semibold">$0</span>
+          </div>
         </RadioGroup>
       </div>
 
@@ -158,7 +169,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
               />
               <div>
                 <Label htmlFor="masonry" className="font-medium cursor-pointer">Brick/Stone Surface</Label>
-                <p className="text-xs text-gray-500">Special mounting for brick or masonry walls</p>
+                <p className="text-xs text-gray-500">+$50 (includes specialized hardware for masonry)</p>
               </div>
             </div>
             <span className="text-blue-600 font-semibold">+$50</span>
@@ -172,7 +183,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
               />
               <div>
                 <Label htmlFor="highrise" className="font-medium cursor-pointer">High-Rise/Steel Studs</Label>
-                <p className="text-xs text-gray-500">Installation in high-rise buildings with steel studs</p>
+                <p className="text-xs text-gray-500">+$25 (complex building access and steel stud mounting)</p>
               </div>
             </div>
             <span className="text-blue-600 font-semibold">+$25</span>
@@ -186,7 +197,7 @@ export function SimpleTVForm({ onServiceAdd }: SimpleTVFormProps) {
               />
               <div>
                 <Label htmlFor="outlet" className="font-medium cursor-pointer">Wire Concealment & Outlet</Label>
-                <p className="text-xs text-gray-500">Professional wire concealment and outlet installation</p>
+                <p className="text-xs text-gray-500">+$100 (includes outlet installation and wire hiding)</p>
               </div>
             </div>
             <span className="text-blue-600 font-semibold">+$100</span>
