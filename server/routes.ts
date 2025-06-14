@@ -807,8 +807,8 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           return res.json({
             success: true,
             isAvailable: false,
-                        message: 'This time slot is already booked. Please choose a different time.',
-                        error: 'TIME_SLOT_CONFLICT',
+            message: 'This time slot is already booked. Please choose a different time.',
+            error: 'TIME_SLOT_CONFLICT',
             suggestedTimes: [] // Could add logic to suggest alternative times
           });
         }
