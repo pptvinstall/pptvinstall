@@ -1,5 +1,4 @@
-/* Import our custom accessibility styles */
-@import './components/ui/accessibility-styles.css';
+/* Clean foundation CSS */
 
 @tailwind base;
 @tailwind components;

@@ -1,5 +1,11 @@
-// Legacy App component - kept for compatibility
-// Main routing is handled in main.tsx
+import { Route, Switch } from "wouter";
+import HomePage from "@/pages/index";
+
 export default function App() {
-  return null;
+  return (
+    <Switch>
+      <Route path="/" component={HomePage} />
+      <Route>404 - Page Not Found</Route>
+    </Switch>
+  );
 }
