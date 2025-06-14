@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Clock, User, Phone, MapPin, DollarSign, Filter, Eye, Plus, Edit, X, CheckCircle, Download, LogOut, Moon, Sun } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
 
 interface AdminBooking {
   id: number;
@@ -52,9 +52,9 @@ const AdminCalendar = () => {
   });
 
   // Ensure proper data structure with fallbacks
-  const bookings: AdminBooking[] = calendarData?.bookings || [];
+  const allBookings: AdminBooking[] = calendarData?.bookings || [];
   const dailyBookings: AdminBooking[] = dailyData?.bookings || [];
-  const totalBookings = bookings.length;
+  const totalBookings = allBookings.length;
 
   // Check for existing session on load
   useEffect(() => {
@@ -173,24 +173,24 @@ const AdminCalendar = () => {
   };
 
   const getTodaysBookings = () => {
-    if (!calendarData?.bookings) return [];
+    if (!allBookings.length) return [];
     const today = new Date().toISOString().split('T')[0];
-    return calendarData.bookings.filter((booking: AdminBooking) => booking.date === today);
+    return allBookings.filter((booking: AdminBooking) => booking.date === today);
   };
 
   const getThisWeeksBookings = () => {
-    if (!calendarData?.bookings) return [];
+    if (!allBookings.length) return [];
     const today = new Date();
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
-    return calendarData.bookings.filter((booking: AdminBooking) => {
+    return allBookings.filter((booking: AdminBooking) => {
       const bookingDate = new Date(booking.date);
       return bookingDate >= today && bookingDate <= weekFromNow;
     });
   };
 
   const getFilteredBookings = () => {
-    if (!calendarData?.bookings) return [];
+    if (!allBookings.length) return [];
     
     switch (filter) {
       case 'today':
@@ -198,7 +198,7 @@ const AdminCalendar = () => {
       case 'week':
         return getThisWeeksBookings();
       default:
-        return calendarData.bookings;
+        return allBookings;
     }
   };
 

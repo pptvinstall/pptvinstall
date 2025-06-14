@@ -629,11 +629,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get existing bookings from the database
-      const dbBookings = await db.select().from(bookings).where(
+      const dbBookings = await db.select().from(bookingsTable).where(
         and(
-          sql`DATE(${bookings.preferredDate}) >= ${start.toISOString().split('T')[0]}`,
-          sql`DATE(${bookings.preferredDate}) <= ${end.toISOString().split('T')[0]}`,
-          eq(bookings.status, 'active')
+          sql`DATE(${bookingsTable.preferredDate}) >= ${start.toISOString().split('T')[0]}`,
+          sql`DATE(${bookingsTable.preferredDate}) <= ${end.toISOString().split('T')[0]}`,
+          eq(bookingsTable.status, 'active')
         )
       );
 
