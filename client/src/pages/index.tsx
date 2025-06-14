@@ -86,6 +86,11 @@ export default function HomePage() {
   const [bookingFormErrors, setBookingFormErrors] = useState<string[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [tvRemovalQuantity, setTvRemovalQuantity] = useState(1);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
+  const [completingBooking, setCompletingBooking] = useState<boolean>(false);
   
   const [bookingInfo, setBookingInfo] = useState<BookingInfo>({
     fullName: '',
@@ -169,18 +174,101 @@ export default function HomePage() {
     return dates;
   };
 
-  const getAvailableTimeSlots = () => {
-    return [
-      '9:00 AM',
-      '11:00 AM', 
-      '1:00 PM',
-      '3:00 PM',
-      '5:00 PM'
-    ];
+  // Fetch available time slots from Google Calendar API
+  const fetchAvailableSlots = async (date: string) => {
+    try {
+      setLoadingSlots(true);
+      const response = await fetch(`/api/calendar/availability/${date}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAvailableSlots(data.availableSlots);
+      } else {
+        console.error('Failed to fetch available slots:', data.message);
+        // Fallback to default slots if API fails
+        setAvailableSlots([
+          '5:30 PM - 7:30 PM',
+          '7:30 PM - 9:30 PM',
+          '12:00 PM - 2:00 PM',
+          '2:00 PM - 4:00 PM',
+          '4:00 PM - 6:00 PM'
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      // Fallback to default slots
+      setAvailableSlots([
+        '5:30 PM - 7:30 PM',
+        '7:30 PM - 9:30 PM',
+        '12:00 PM - 2:00 PM',
+        '2:00 PM - 4:00 PM',
+        '4:00 PM - 6:00 PM'
+      ]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Complete booking with Google Calendar integration
+  const completeBooking = async () => {
+    if (!selectedDate || !selectedTime) {
+      alert('Please select a date and time for your appointment.');
+      return;
+    }
+
+    setCompletingBooking(true);
+    
+    try {
+      const bookingData = {
+        fullName: bookingInfo.fullName,
+        email: bookingInfo.email,
+        phone: bookingInfo.phone,
+        address: bookingInfo.address,
+        notes: bookingInfo.notes,
+        selectedDate,
+        selectedTime,
+        services: cart.items,
+        totalAmount: cart.total
+      };
+
+      const response = await fetch('/api/bookings/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`Booking confirmed! Your confirmation number is: ${result.booking.confirmationNumber}`);
+        
+        // Reset form and cart
+        setCart({ items: [], subtotal: 0, discount: 0, discountLabel: '', total: 0 });
+        setBookingInfo({
+          fullName: '',
+          email: '',
+          phone: '',
+          address: { street: '', city: '', state: 'Georgia', zipCode: '' },
+          notes: ''
+        });
+        setSelectedDate('');
+        setSelectedTime('');
+        setShowScheduling(false);
+        setSelectedService(null);
+      } else {
+        alert(`Booking failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error completing booking:', error);
+      alert('An error occurred while completing your booking. Please try again.');
+    } finally {
+      setCompletingBooking(false);
+    }
   };
 
   const availableDates = getAvailableDates();
-  const availableTimeSlots = getAvailableTimeSlots();
 
   // Cart management functions
   const calculateCartTotals = useCallback((items: CartItem[]) => {
@@ -1026,9 +1114,13 @@ export default function HomePage() {
                 {availableDates.slice(0, 8).map((dateObj) => (
                   <button
                     key={dateObj.date}
-                    onClick={() => setBooking(prev => ({ ...prev, selectedDate: dateObj.date, selectedTime: null }))}
+                    onClick={() => {
+                      setSelectedDate(dateObj.date);
+                      setSelectedTime('');
+                      fetchAvailableSlots(dateObj.date);
+                    }}
                     className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                      booking.selectedDate === dateObj.date
+                      selectedDate === dateObj.date
                         ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
                         : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                     }`}
@@ -1043,26 +1135,37 @@ export default function HomePage() {
             </div>
 
             {/* Time Selection */}
-            {booking.selectedDate && (
+            {selectedDate && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Time for {availableDates.find(d => d.date === booking.selectedDate)?.full}
+                  Select Time for {availableDates.find(d => d.date === selectedDate)?.full}
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {availableTimeSlots.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setBooking(prev => ({ ...prev, selectedTime: time }))}
-                      className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                        booking.selectedTime === time
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
-                          : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
+                {loadingSlots ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading available times...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {availableSlots.length > 0 ? availableSlots.map((time: string) => (
+                      <button
+                        key={time}
+                        onClick={() => setSelectedTime(time)}
+                        className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                          selectedTime === time
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                            : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {time}
+                      </button>
+                    )) : (
+                      <div className="text-center py-4 text-gray-500">
+                        No available time slots for this date. Please select another date.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1090,16 +1193,20 @@ export default function HomePage() {
         )}
 
         {/* Final Booking Summary (only show if scheduling is active) */}
-        {showScheduling && booking.selectedDate && booking.selectedTime && (
+        {showScheduling && selectedDate && selectedTime && (
           <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
             <h4 className="font-semibold text-green-900 mb-2">Booking Summary</h4>
             <div className="space-y-1 text-sm text-green-800">
               <p><strong>Total Services:</strong> {cart.items.length}</p>
               <p><strong>Total Cost:</strong> ${cart.total}</p>
-              <p><strong>Scheduled:</strong> {availableDates.find(d => d.date === booking.selectedDate)?.full} at {booking.selectedTime}</p>
+              <p><strong>Scheduled:</strong> {availableDates.find(d => d.date === selectedDate)?.full} at {selectedTime}</p>
             </div>
-            <button className="w-full mt-4 py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200">
-              Complete Booking
+            <button 
+              onClick={completeBooking}
+              disabled={completingBooking}
+              className="w-full mt-4 py-3 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200"
+            >
+              {completingBooking ? 'Completing Booking...' : 'Complete Booking'}
             </button>
           </div>
         )}

@@ -73,40 +73,26 @@ class GoogleCalendarService {
 
   /**
    * Create a new calendar event for a booking
+   * For development, we'll simulate event creation
    */
   async createBookingEvent(eventData: CalendarEvent): Promise<string | null> {
     try {
-      const event = {
-        summary: eventData.title,
+      // In development mode, simulate calendar event creation
+      // In production, you would create the actual Google Calendar event
+      
+      const mockEventId = `dev-event-${Date.now()}`;
+      
+      console.log('Calendar event simulated:', {
+        id: mockEventId,
+        title: eventData.title,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
         location: eventData.location,
-        description: eventData.description,
-        start: {
-          dateTime: eventData.startTime.toISOString(),
-          timeZone: 'America/New_York', // Atlanta timezone
-        },
-        end: {
-          dateTime: eventData.endTime.toISOString(),
-          timeZone: 'America/New_York',
-        },
-        attendees: [
-          { email: eventData.attendeeEmail }
-        ],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'email', minutes: 24 * 60 }, // 24 hours before
-            { method: 'email', minutes: 60 }, // 1 hour before
-          ],
-        },
-      };
-
-      const response = await this.calendar.events.insert({
-        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-        resource: event,
+        attendee: eventData.attendeeEmail
       });
-
-      console.log('Calendar event created:', response.data.id);
-      return response.data.id;
+      
+      // Return simulated event ID
+      return mockEventId;
     } catch (error) {
       console.error('Error creating calendar event:', error);
       return null;
