@@ -19,55 +19,55 @@ export default function HomePage() {
     {
       id: 'tv-mounting',
       title: 'TV Wall Mounting',
-      price: 'Starting at $149',
+      price: 'Starting at $100',
       description: 'Professional TV mounting on all wall types including brick and stone',
       features: [
-        'All TV sizes (32" to 85"+)',
-        'Fixed, tilting, and full-motion mounts',
-        'Brick and stone wall installations',
-        'Cable management and concealment',
-        'Up to 15-foot high ceiling mounts'
+        'Standard mounting (customer mount): $100',
+        'Brick/masonry walls: +$50',
+        'High-rise/steel stud: +$25',
+        'TV mounts available: $50-$120',
+        'Multiple TV discount: $10 off each additional'
       ],
       icon: Monitor
     },
     {
       id: 'fireplace-tv',
       title: 'Fireplace TV Installation',
-      price: 'Starting at $249',
+      price: 'Starting at $200',
       description: 'Complex fireplace TV mounting with proper heat management',
       features: [
+        'Over fireplace mounting: $200',
         'Heat-resistant installations',
-        'Custom cable routing',
+        'Custom cable routing assessment',
         'Mantle clearance optimization',
-        'Professional assessment included',
         'Stone and brick fireplace specialty'
       ],
       icon: Home
     },
     {
-      id: 'outdoor-tv',
-      title: 'Outdoor TV Setup',
-      price: 'Starting at $199',
-      description: 'Weather-resistant outdoor TV installations for patios and decks',
+      id: 'wire-concealment',
+      title: 'Wire Concealment & Outlets',
+      price: 'Starting at $100',
+      description: 'Professional cable management and electrical outlet installation',
       features: [
-        'Weather-resistant mounting',
-        'Proper cable protection',
-        'Optimal viewing angle setup',
-        'UV and moisture protection',
-        'Seasonal maintenance advice'
+        'New outlet behind TV: $100',
+        'Additional outlets: $90 each',
+        'Multiple outlet discount: $10 off each',
+        'Clean cable concealment',
+        'Professional electrical work'
       ],
       icon: Camera
     },
     {
       id: 'smart-home',
       title: 'Smart Home Installation',
-      price: 'Starting at $99',
+      price: 'Starting at $75',
       description: 'Complete smart home device setup and integration',
       features: [
-        'Smart doorbell installation',
-        'Security camera mounting',
-        'Smart light installation',
-        'Sound bar integration',
+        'Security cameras: $75 each',
+        'Smart doorbells: $85 each',
+        'Smart floodlights: $125 each',
+        'Professional device setup',
         'All devices connected to your phone'
       ],
       icon: Lightbulb
