@@ -342,35 +342,35 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header */}
-      <header className="bg-white/98 backdrop-blur-lg shadow-2xl border-b border-gray-100 sticky top-0 z-50">
+      <header className="bg-white shadow-lg border-b border-blue-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/">
               <div className="flex items-center space-x-4 cursor-pointer group">
-                <ArrowLeft className="h-6 w-6 text-gray-600 group-hover:text-[#dc2626] transition-colors duration-200" />
+                <ArrowLeft className="h-6 w-6 text-blue-600 group-hover:text-red-600 transition-colors duration-200" />
                 <Logo size="md" variant="color" showText={true} />
               </div>
             </Link>
             
-            <div className="text-sm text-gray-600">
-              Need help? <span className="font-bold text-[#dc2626] text-lg">(404) 702-4748</span>
+            <div className="text-sm text-blue-900">
+              Need help? <span className="font-bold text-blue-600 text-lg">(404) 702-4748</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Progress Bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-gray-900">Book Your Service</h1>
-            <div className="text-sm text-gray-600">
+      <div className="bg-white border-b border-blue-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-blue-900">Book Your Service</h2>
+            <div className="text-sm text-blue-600 font-semibold">
               Step {Object.keys(stepProgress).indexOf(currentStep) + 1} of 4
             </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-blue-100 rounded-full h-3">
             <div 
-              className="bg-gradient-to-r from-slate-700 to-red-600 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-blue-500 h-3 rounded-full transition-all duration-300"
               style={{ width: `${stepProgress[currentStep]}%` }}
             ></div>
           </div>

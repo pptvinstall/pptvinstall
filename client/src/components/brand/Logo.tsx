@@ -39,23 +39,13 @@ export function Logo({
 
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
-      {/* Modern PPTV Logo */}
-      <div className={`${logoSizes[size]} flex items-center justify-center relative`}>
-        {/* PPTV Text Logo */}
-        <div className="flex items-baseline font-bold tracking-tight">
-          <span className={`${
-            size === 'sm' ? 'text-xl' :
-            size === 'md' ? 'text-2xl' :
-            size === 'lg' ? 'text-3xl' :
-            'text-4xl'
-          } text-[#1e293b] font-black`}>PP</span>
-          <span className={`${
-            size === 'sm' ? 'text-xl' :
-            size === 'md' ? 'text-2xl' :
-            size === 'lg' ? 'text-3xl' :
-            'text-4xl'
-          } text-[#dc2626] font-black`}>TV</span>
-        </div>
+      {/* Authentic PPTV Logo */}
+      <div className={`${logoSizes[size]} rounded-lg bg-white shadow-lg flex items-center justify-center relative overflow-hidden border border-gray-200`}>
+        <img 
+          src="/attached_assets/IMG_0032_1750000108185.jpg" 
+          alt="Picture Perfect TV Install Logo"
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Company Name */}
@@ -64,16 +54,16 @@ export function Logo({
           <h1 className={`font-bold leading-tight ${textSizes[size]} ${
             variant === 'light' ? 'text-white' : 
             variant === 'dark' ? 'text-gray-900' : 
-            'text-gray-900'
+            'text-blue-900'
           }`}>
             Picture Perfect TV Install
           </h1>
           <p className={`text-xs ${
-            variant === 'light' ? 'text-blue-200' : 
+            variant === 'light' ? 'text-blue-100' : 
             variant === 'dark' ? 'text-gray-600' : 
-            'text-gray-600'
-          } font-medium tracking-wide`}>
-            PREMIUM TV MOUNTING & SMART HOME
+            'text-blue-600'
+          } font-semibold tracking-wide uppercase`}>
+            Professional TV Mounting & Smart Home
           </p>
         </div>
       )}
