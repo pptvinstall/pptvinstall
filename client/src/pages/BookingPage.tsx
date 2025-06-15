@@ -342,7 +342,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-purple-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/">
@@ -353,7 +353,7 @@ export default function BookingPage() {
             </Link>
             
             <div className="text-sm text-gray-600">
-              Need help? <span className="font-semibold text-purple-600">(404) 702-4748</span>
+              Need help? <span className="font-semibold text-red-600">(404) 702-4748</span>
             </div>
           </div>
         </div>
@@ -370,7 +370,7 @@ export default function BookingPage() {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-slate-700 to-red-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${stepProgress[currentStep]}%` }}
             ></div>
           </div>

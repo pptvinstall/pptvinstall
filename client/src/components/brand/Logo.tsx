@@ -40,20 +40,20 @@ export function Logo({
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       {/* Circular Logo with PPTV Image */}
-      <div className={`${logoSizes[size]} rounded-full bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 shadow-xl flex items-center justify-center relative overflow-hidden border-3 border-blue-400/30`}>
-        {/* PPTV Logo Background */}
+      <div className={`${logoSizes[size]} rounded-full bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 shadow-xl flex items-center justify-center relative overflow-hidden border-2 border-slate-600/30`}>
+        {/* PPTV Logo Background - Using the circular cropped version */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/attached_assets/018935ae0ebdae1e5f51794af428a79cc04c836b25_1749998390623.jpg')`,
-            backgroundSize: 'contain',
+            backgroundImage: `url('/attached_assets/circle-cropped_1749999624202.JPG')`,
+            backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'brightness(1.2) contrast(1.1)'
+            filter: 'brightness(1.3) contrast(1.2)'
           }}
         />
         
-        {/* Enhanced overlay for better visibility */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-500/10 to-purple-600/20 rounded-full" />
+        {/* Minimal overlay for clean presentation */}
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-slate-900/5 to-slate-900/10 rounded-full" />
       </div>
 
       {/* Company Name */}
