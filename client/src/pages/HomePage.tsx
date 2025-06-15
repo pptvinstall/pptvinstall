@@ -114,7 +114,7 @@ export default function HomePage() {
       <header className="bg-white/90 backdrop-blur-md shadow-xl border-b border-blue-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Logo size="md" variant="color" showText={true} />
+            <Logo size="lg" variant="color" showText={true} style="entertainment" />
             
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#services" className="text-gray-700 hover:text-blue-600 font-medium">Services</a>
@@ -148,10 +148,14 @@ export default function HomePage() {
               </div>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Picture Perfect<br />
-              <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-                TV Install
+            <div className="mb-6">
+              <Logo size="xl" variant="color" showText={true} style="entertainment" className="justify-center" />
+            </div>
+            
+            <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-white">
+              Metro Atlanta's Premier
+              <span className="block bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                TV Mounting Experts
               </span>
             </h1>
             

@@ -1,23 +1,25 @@
-import { Monitor, Zap } from "lucide-react";
+import { Monitor, Zap, Play } from "lucide-react";
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'light' | 'dark' | 'color';
   showText?: boolean;
   className?: string;
+  style?: 'modern' | 'entertainment' | 'professional';
 }
 
 export function Logo({ 
   size = 'md', 
   variant = 'color', 
   showText = true, 
-  className = '' 
+  className = '',
+  style = 'entertainment'
 }: LogoProps) {
   const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-12 w-12',
-    xl: 'h-16 w-16'
+    sm: showText ? 'h-8' : 'h-8 w-8',
+    md: showText ? 'h-10' : 'h-10 w-10',  
+    lg: showText ? 'h-12' : 'h-12 w-12',
+    xl: showText ? 'h-16' : 'h-16 w-16'
   };
 
   const textSizes = {
@@ -50,6 +52,44 @@ export function Logo({
         return 'text-gray-900';
     }
   };
+
+  if (style === 'entertainment' && showText) {
+    return (
+      <div className={`flex items-center ${className}`}>
+        {/* PPTV Style Logo */}
+        <div className="relative">
+          {/* PP Letters with TV content pattern */}
+          <div className="flex items-center">
+            <div className="relative">
+              {/* First P */}
+              <div className={`${size === 'sm' ? 'text-3xl' : size === 'md' ? 'text-4xl' : size === 'lg' ? 'text-5xl' : 'text-6xl'} font-black relative`}>
+                <span className="absolute inset-0 bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 bg-clip-text text-transparent opacity-90">
+                  P
+                </span>
+                <span className="relative bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 bg-clip-text text-transparent">
+                  P
+                </span>
+              </div>
+            </div>
+            
+            {/* TV Letters */}
+            <div className="relative ml-1">
+              <div className={`${size === 'sm' ? 'text-3xl' : size === 'md' ? 'text-4xl' : size === 'lg' ? 'text-5xl' : 'text-6xl'} font-black`}>
+                <span className="bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">
+                  TV
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Subtitle */}
+          <div className={`${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : size === 'lg' ? 'text-base' : 'text-lg'} font-semibold text-gray-600 mt-1 tracking-wider`}>
+            INSTALL
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
