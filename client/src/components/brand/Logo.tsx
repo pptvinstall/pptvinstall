@@ -39,32 +39,42 @@ export function Logo({
 
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
-      {/* Circular Logo with PPTV Image */}
-      <div className={`${logoSizes[size]} rounded-full bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 shadow-xl flex items-center justify-center relative overflow-hidden border-2 border-slate-600/30`}>
-        {/* PPTV Logo Background - Using the circular cropped version */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url('/attached_assets/circle-cropped_1749999624202.JPG')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'brightness(1.3) contrast(1.2)'
-          }}
-        />
-        
-        {/* Minimal overlay for clean presentation */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-slate-900/5 to-slate-900/10 rounded-full" />
+      {/* Modern PPTV Logo */}
+      <div className={`${logoSizes[size]} flex items-center justify-center relative`}>
+        {/* PPTV Text Logo */}
+        <div className="flex items-baseline font-bold tracking-tight">
+          <span className={`${
+            size === 'sm' ? 'text-xl' :
+            size === 'md' ? 'text-2xl' :
+            size === 'lg' ? 'text-3xl' :
+            'text-4xl'
+          } text-[#1e293b] font-black`}>PP</span>
+          <span className={`${
+            size === 'sm' ? 'text-xl' :
+            size === 'md' ? 'text-2xl' :
+            size === 'lg' ? 'text-3xl' :
+            'text-4xl'
+          } text-[#dc2626] font-black`}>TV</span>
+        </div>
       </div>
 
       {/* Company Name */}
       {showText && (
         <div className="flex flex-col">
-          <span className={`${textSizes[size]} font-bold ${getTextColor()} leading-tight`}>
-            Picture Perfect
-          </span>
-          <span className={`${size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : size === 'lg' ? 'text-base' : 'text-lg'} font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent leading-tight`}>
-            TV Install
-          </span>
+          <h1 className={`font-bold leading-tight ${textSizes[size]} ${
+            variant === 'light' ? 'text-white' : 
+            variant === 'dark' ? 'text-gray-900' : 
+            'text-gray-900'
+          }`}>
+            Picture Perfect TV Install
+          </h1>
+          <p className={`text-xs ${
+            variant === 'light' ? 'text-blue-200' : 
+            variant === 'dark' ? 'text-gray-600' : 
+            'text-gray-600'
+          } font-medium tracking-wide`}>
+            PREMIUM TV MOUNTING & SMART HOME
+          </p>
         </div>
       )}
     </div>

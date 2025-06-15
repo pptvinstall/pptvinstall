@@ -131,69 +131,71 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 text-white py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-800/20 via-slate-700/20 to-red-600/20"></div>
+      <section className="relative bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#7f1d1d] text-white py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-black/30"></div>
         
-        {/* Animated background elements - Updated to match PPTV brand colors */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-slate-400/15 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-red-400/15 rounded-full blur-xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-slate-600/15 rounded-full blur-xl animate-pulse delay-500"></div>
+        {/* Premium geometric patterns */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full" style={{
+            backgroundImage: `radial-gradient(circle at 20% 50%, #dc2626 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1e293b 0%, transparent 50%), radial-gradient(circle at 40% 80%, #dc2626 0%, transparent 50%)`
+          }}></div>
+        </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="mb-8">
-              <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md rounded-full px-6 py-3 mb-6">
-                <Award className="h-5 w-5 text-yellow-300" />
-                <span className="text-sm font-medium">Licensed & Insured • 500+ Happy Customers</span>
+            <div className="mb-12">
+              <div className="flex justify-center mb-6">
+                <div className="text-8xl md:text-9xl font-black tracking-tighter">
+                  <span className="text-white">PP</span><span className="text-[#dc2626]">TV</span>
+                </div>
+              </div>
+              <div className="text-sm uppercase tracking-[0.2em] text-gray-300 font-semibold">
+                Picture Perfect TV Install
               </div>
             </div>
             
-            <div className="mb-8">
-              <Logo size="xl" variant="color" showText={true} className="justify-center" />
-            </div>
-            
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
-              Metro Atlanta's Premier
-              <span className="block bg-gradient-to-r from-slate-300 via-slate-200 to-red-400 bg-clip-text text-transparent">
-                TV Mounting Experts
+            <h1 className="text-5xl md:text-7xl font-black mb-8 leading-[0.9] tracking-tight">
+              <span className="block text-white">PREMIUM</span>
+              <span className="block bg-gradient-to-r from-white via-gray-200 to-[#dc2626] bg-clip-text text-transparent">
+                TV MOUNTING
               </span>
+              <span className="block text-white">ATLANTA</span>
             </h1>
             
-            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-4xl mx-auto leading-relaxed">
-              Metro Atlanta's premier TV mounting and smart home installation service. 
-              Professional results, same-day availability, lifetime satisfaction guarantee.
+            <p className="text-xl md:text-2xl mb-12 text-gray-200 max-w-4xl mx-auto leading-relaxed font-light">
+              Elite TV mounting and smart home installation service. 
+              <span className="text-[#dc2626] font-semibold">Same-day service</span>, lifetime warranty, premium results.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/booking" className="group bg-gradient-to-r from-white to-slate-50 text-slate-900 px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2">
-                <PlayCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                <span>Book Now - Free Quote</span>
-                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+              <Link href="/booking" className="group bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white px-10 py-5 rounded-2xl font-black text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 uppercase tracking-wide">
+                <PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                <span>Book Premium Service</span>
+                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href="tel:+14047024748" className="group border-2 border-white/30 backdrop-blur-md text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white hover:text-slate-900 transition-all duration-300 flex items-center justify-center space-x-2">
-                <Phone className="h-5 w-5" />
+              <a href="tel:+14047024748" className="group border-2 border-white/40 backdrop-blur-md text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-white hover:text-[#1e293b] transition-all duration-300 flex items-center justify-center space-x-3 uppercase tracking-wide">
+                <Phone className="h-6 w-6" />
                 <span>(404) 702-4748</span>
               </a>
             </div>
             
-            {/* Trust indicators */}
-            <div className="flex flex-wrap justify-center items-center gap-8 text-blue-200 text-sm">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-4 w-4" />
-                <span>Fully Insured</span>
+            {/* Premium trust indicators */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-gray-200">
+              <div className="flex flex-col items-center space-y-2 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <Shield className="h-8 w-8 text-[#dc2626]" />
+                <span className="font-bold text-sm uppercase tracking-wide">Lifetime Warranty</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4" />
-                <span>Same Day Service</span>
+              <div className="flex flex-col items-center space-y-2 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <Clock className="h-8 w-8 text-[#dc2626]" />
+                <span className="font-bold text-sm uppercase tracking-wide">Same-Day Service</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span>500+ Installs</span>
+              <div className="flex flex-col items-center space-y-2 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <Star className="h-8 w-8 text-[#dc2626]" />
+                <span className="font-bold text-sm uppercase tracking-wide">Premium Quality</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Star className="h-4 w-4 text-yellow-300" />
-                <span>5 Star Rated</span>
+              <div className="flex flex-col items-center space-y-2 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <MapPin className="h-8 w-8 text-[#dc2626]" />
+                <span className="font-bold text-sm uppercase tracking-wide">Metro Atlanta</span>
               </div>
             </div>
           </div>
@@ -203,52 +205,130 @@ export default function HomePage() {
 
 
       {/* Services Section */}
-      <section id="services" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center space-x-2 bg-blue-100 rounded-full px-4 py-2 mb-4">
-              <Wrench className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-600">Our Services</span>
+      <section id="services" className="py-32 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="mb-6">
+              <span className="text-[#dc2626] font-black text-lg uppercase tracking-[0.3em]">Our Services</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Professional Installation
-              <span className="block text-blue-600">Services</span>
+            <h2 className="text-5xl md:text-6xl font-black text-[#1e293b] mb-8 tracking-tight">
+              PREMIUM<br/>
+              <span className="text-[#dc2626]">INSTALLATIONS</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              From basic TV mounting to complete smart home automation, we deliver 
-              exceptional results every time.
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Elite TV mounting and smart home automation solutions. 
+              <span className="text-[#1e293b] font-semibold">Professional grade equipment</span>, precision installation, lifetime warranty.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <div key={index} className="group bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-                    <service.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">{service.title}</h3>
-                </div>
-                <p className="text-gray-600 mb-6 leading-relaxed">{service.description}</p>
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6">
-                  {service.price}
-                </div>
-                <ul className="space-y-3">
-                  {service.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center text-gray-600">
-                      <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <Link href="/booking" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 group">
-                    <span>Book This Service</span>
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* TV Mounting */}
+            <div className="bg-gradient-to-br from-gray-50 to-white p-10 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-3 border-2 border-gray-100 group">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#1e293b] to-[#dc2626] rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <Monitor className="h-10 w-10 text-white" />
               </div>
-            ))}
+              <h3 className="text-3xl font-black text-[#1e293b] mb-6 tracking-tight">TV WALL MOUNTING</h3>
+              <p className="text-gray-600 mb-8 leading-relaxed text-lg">
+                Premium TV mounting with precision installation. Professional-grade mounts, 
+                seamless wire concealment, and lifetime satisfaction guarantee.
+              </p>
+              <ul className="space-y-3 text-gray-700 mb-8">
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">All TV sizes (32" to 85"+)</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Complete wire concealment</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Precision leveling guarantee</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Lifetime warranty</span>
+                </li>
+              </ul>
+              <div className="text-4xl font-black text-[#dc2626] mb-6">Starting at $149</div>
+              <Link href="/booking">
+                <button className="w-full bg-gradient-to-r from-[#1e293b] to-[#dc2626] text-white py-4 px-8 rounded-2xl font-bold hover:from-[#0f172a] hover:to-[#b91c1c] transition-all duration-300 transform hover:scale-105 shadow-xl text-lg uppercase tracking-wide">
+                  Book Premium Service
+                </button>
+              </Link>
+            </div>
+
+            {/* Smart Home */}
+            <div className="bg-gradient-to-br from-gray-50 to-white p-10 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-3 border-2 border-gray-100 group">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#1e293b] to-[#dc2626] rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <Home className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-3xl font-black text-[#1e293b] mb-6 tracking-tight">SMART HOME SETUP</h3>
+              <p className="text-gray-600 mb-8 leading-relaxed text-lg">
+                Complete smart home automation with premium security cameras, video doorbells, 
+                and intelligent lighting systems. Professional installation guaranteed.
+              </p>
+              <ul className="space-y-3 text-gray-700 mb-8">
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">4K security cameras</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Smart video doorbells</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Automated lighting</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Complete integration</span>
+                </li>
+              </ul>
+              <div className="text-4xl font-black text-[#dc2626] mb-6">Starting at $199</div>
+              <Link href="/booking">
+                <button className="w-full bg-gradient-to-r from-[#1e293b] to-[#dc2626] text-white py-4 px-8 rounded-2xl font-bold hover:from-[#0f172a] hover:to-[#b91c1c] transition-all duration-300 transform hover:scale-105 shadow-xl text-lg uppercase tracking-wide">
+                  Book Smart Home
+                </button>
+              </Link>
+            </div>
+
+            {/* Wire Management */}
+            <div className="bg-gradient-to-br from-gray-50 to-white p-10 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-3 border-2 border-gray-100 group">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#1e293b] to-[#dc2626] rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <Zap className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-3xl font-black text-[#1e293b] mb-6 tracking-tight">WIRE MANAGEMENT</h3>
+              <p className="text-gray-600 mb-8 leading-relaxed text-lg">
+                Premium wire concealment and cable management. Invisible wiring solutions 
+                that maintain your home's clean aesthetic with professional-grade results.
+              </p>
+              <ul className="space-y-3 text-gray-700 mb-8">
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">In-wall concealment</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Premium cable systems</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Custom outlet installation</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-[#dc2626] mr-3" />
+                  <span className="font-semibold">Seamless finish work</span>
+                </li>
+              </ul>
+              <div className="text-4xl font-black text-[#dc2626] mb-6">Starting at $99</div>
+              <Link href="/booking">
+                <button className="w-full bg-gradient-to-r from-[#1e293b] to-[#dc2626] text-white py-4 px-8 rounded-2xl font-bold hover:from-[#0f172a] hover:to-[#b91c1c] transition-all duration-300 transform hover:scale-105 shadow-xl text-lg uppercase tracking-wide">
+                  Book Wire Service
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
