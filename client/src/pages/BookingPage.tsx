@@ -340,20 +340,20 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-100 sticky top-0 z-50">
+      <header className="bg-white/98 backdrop-blur-lg shadow-2xl border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <Link href="/">
-              <div className="flex items-center space-x-3 cursor-pointer">
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              <div className="flex items-center space-x-4 cursor-pointer group">
+                <ArrowLeft className="h-6 w-6 text-gray-600 group-hover:text-[#dc2626] transition-colors duration-200" />
                 <Logo size="md" variant="color" showText={true} />
               </div>
             </Link>
             
             <div className="text-sm text-gray-600">
-              Need help? <span className="font-semibold text-red-600">(404) 702-4748</span>
+              Need help? <span className="font-bold text-[#dc2626] text-lg">(404) 702-4748</span>
             </div>
           </div>
         </div>

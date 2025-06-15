@@ -107,22 +107,22 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <SEOHead />
       
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md shadow-xl border-b border-slate-100 sticky top-0 z-50">
+      <header className="bg-white/98 backdrop-blur-lg shadow-2xl border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <Logo size="lg" variant="color" showText={true} />
             
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#services" className="text-gray-700 hover:text-red-600 font-medium">Services</a>
-              <a href="#about" className="text-gray-700 hover:text-red-600 font-medium">About</a>
-              <a href="#contact" className="text-gray-700 hover:text-red-600 font-medium">Contact</a>
+              <a href="#services" className="text-gray-700 hover:text-[#dc2626] font-semibold transition-colors duration-200 text-sm uppercase tracking-wide">Services</a>
+              <a href="#about" className="text-gray-700 hover:text-[#dc2626] font-semibold transition-colors duration-200 text-sm uppercase tracking-wide">About</a>
+              <a href="#contact" className="text-gray-700 hover:text-[#dc2626] font-semibold transition-colors duration-200 text-sm uppercase tracking-wide">Contact</a>
               <Link href="/booking">
-                <button className="bg-gradient-to-r from-slate-800 to-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-slate-900 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                  Book Service
+                <button className="bg-gradient-to-r from-[#1e293b] to-[#dc2626] text-white px-8 py-3 rounded-xl font-bold hover:from-[#0f172a] hover:to-[#b91c1c] transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 text-sm uppercase tracking-wide">
+                  Book Now
                 </button>
               </Link>
             </nav>
@@ -351,46 +351,50 @@ export default function HomePage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-slate-800 via-slate-700 to-red-600">
+      <section id="contact" className="py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#7f1d1d]">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="space-y-8">
-            <h2 className="text-4xl md:text-5xl font-bold text-white">Ready to Get Started?</h2>
-            <p className="text-xl text-slate-200 max-w-3xl mx-auto">
-              Book your installation online or call us for immediate assistance. 
-              Same-day service available throughout Metro Atlanta.
-            </p>
+          <div className="space-y-12">
+            <div>
+              <span className="text-[#dc2626] font-black text-xl uppercase tracking-[0.3em] mb-6 block">Get Started</span>
+              <h2 className="text-6xl md:text-7xl font-black text-white mb-6 tracking-tight">
+                READY FOR<br/>
+                <span className="text-[#dc2626]">PREMIUM?</span>
+              </h2>
+              <p className="text-2xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+                Book your premium installation service or call for immediate consultation. 
+                <span className="text-[#dc2626] font-bold">Same-day service</span> available throughout Metro Atlanta.
+              </p>
+            </div>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-8 justify-center items-center">
               <Link href="/booking">
-                <button className="bg-white text-slate-800 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105">
-                  Book Online Now
+                <button className="bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white px-12 py-6 rounded-2xl text-xl font-black hover:from-[#b91c1c] hover:to-[#991b1b] transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:scale-105 uppercase tracking-wide">
+                  Book Premium Service
                 </button>
               </Link>
               
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="tel:404-702-4748" 
-                  className="flex items-center space-x-2 text-white hover:text-red-200 font-semibold text-lg"
-                >
-                  <Phone className="h-5 w-5" />
-                  <span>(404) 702-4748</span>
-                </a>
-              </div>
+              <a 
+                href="tel:404-702-4748" 
+                className="flex items-center space-x-3 text-white hover:text-[#dc2626] font-bold text-xl border-2 border-white/30 px-12 py-6 rounded-2xl transition-all duration-300 hover:border-[#dc2626] uppercase tracking-wide"
+              >
+                <Phone className="h-6 w-6" />
+                <span>(404) 702-4748</span>
+              </a>
             </div>
 
-            <div className="border-t border-slate-400/30 pt-8 mt-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-slate-200">
-                <div className="flex items-center justify-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>(404) 702-4748</span>
+            <div className="border-t border-white/20 pt-12 mt-16">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-200">
+                <div className="flex flex-col items-center space-y-3 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <Phone className="h-8 w-8 text-[#dc2626]" />
+                  <span className="font-bold text-lg uppercase tracking-wide">(404) 702-4748</span>
                 </div>
-                <div className="flex items-center justify-center space-x-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>Serving Metro Atlanta</span>
+                <div className="flex flex-col items-center space-y-3 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <MapPin className="h-8 w-8 text-[#dc2626]" />
+                  <span className="font-bold text-lg uppercase tracking-wide">Metro Atlanta</span>
                 </div>
-                <div className="flex items-center justify-center space-x-2">
-                  <Clock className="h-5 w-5" />
-                  <span>Same-Day Service Available</span>
+                <div className="flex flex-col items-center space-y-3 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <Clock className="h-8 w-8 text-[#dc2626]" />
+                  <span className="font-bold text-lg uppercase tracking-wide">Same-Day Service</span>
                 </div>
               </div>
             </div>
