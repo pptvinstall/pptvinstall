@@ -40,19 +40,20 @@ export function Logo({
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
       {/* Circular Logo with PPTV Image */}
-      <div className={`${logoSizes[size]} rounded-full bg-gradient-to-br from-gray-900 via-gray-800 to-black shadow-lg flex items-center justify-center relative overflow-hidden border-2 border-gray-700`}>
+      <div className={`${logoSizes[size]} rounded-full bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 shadow-xl flex items-center justify-center relative overflow-hidden border-3 border-blue-400/30`}>
         {/* PPTV Logo Background */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('/attached_assets/018935ae0ebdae1e5f51794af428a79cc04c836b25_1749998390623.jpg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            filter: 'brightness(1.2) contrast(1.1)'
           }}
         />
         
-        {/* Subtle overlay for better contrast */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-black/10 to-black/20 rounded-full" />
+        {/* Enhanced overlay for better visibility */}
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-500/10 to-purple-600/20 rounded-full" />
       </div>
 
       {/* Company Name */}

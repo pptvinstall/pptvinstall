@@ -154,7 +154,7 @@ export default function HomePage() {
             
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
               Metro Atlanta's Premier
-              <span className="block bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 bg-clip-text text-transparent">
                 TV Mounting Experts
               </span>
             </h1>
@@ -350,7 +350,7 @@ export default function HomePage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-indigo-600">
+      <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-red-500">
         <div className="max-w-7xl mx-auto text-center">
           <div className="space-y-8">
             <h2 className="text-4xl md:text-5xl font-bold text-white">Ready to Get Started?</h2>
@@ -361,7 +361,7 @@ export default function HomePage() {
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Link href="/booking">
-                <button className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105">
+                <button className="bg-white text-purple-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105">
                   Book Online Now
                 </button>
               </Link>
@@ -369,7 +369,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <a 
                   href="tel:404-702-4748" 
-                  className="flex items-center space-x-2 text-white hover:text-blue-200 font-semibold text-lg"
+                  className="flex items-center space-x-2 text-white hover:text-purple-200 font-semibold text-lg"
                 >
                   <Phone className="h-5 w-5" />
                   <span>(404) 702-4748</span>
@@ -377,8 +377,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="border-t border-blue-500 pt-8 mt-12">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-blue-100">
+            <div className="border-t border-purple-400/30 pt-8 mt-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-purple-100">
                 <div className="flex items-center justify-center space-x-2">
                   <Phone className="h-5 w-5" />
                   <span>(404) 702-4748</span>
