@@ -84,7 +84,7 @@ function verifyAdminPassword(password: string | undefined): boolean {
   return isValid;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Add logging middleware
   app.use(logger.logRequest.bind(logger));
 

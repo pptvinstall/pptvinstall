@@ -19,8 +19,8 @@ import {
   ArrowRight,
   PlayCircle
 } from "lucide-react";
-import Logo from "@/components/brand/Logo";
-import SEOHead from "@/components/seo/SEOHead";
+import Logo from "../components/brand/Logo";
+import SEOHead from "../components/seo/SEOHead";
 
 export default function HomePage() {
   const services = [
