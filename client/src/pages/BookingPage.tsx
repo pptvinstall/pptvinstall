@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Calendar, Clock, MapPin, User, Phone, Mail, CreditCard, CheckCircle, Trash2, Edit3 } from 'lucide-react';
+import Logo from '../components/brand/Logo';
 
 // TV Installation Options
 interface TVInstallOptions {
@@ -345,14 +346,9 @@ export default function BookingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/">
-              <div className="flex items-center space-x-2 cursor-pointer">
+              <div className="flex items-center space-x-3 cursor-pointer">
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
-                <div className="flex items-center space-x-2">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">P</span>
-                  </div>
-                  <span className="text-xl font-bold text-gray-900">Picture Perfect TV Install</span>
-                </div>
+                <Logo size="md" variant="color" showText={true} />
               </div>
             </Link>
             
