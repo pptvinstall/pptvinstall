@@ -114,7 +114,7 @@ export default function HomePage() {
       <header className="bg-white/90 backdrop-blur-md shadow-xl border-b border-blue-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Logo size="lg" variant="color" showText={true} style="entertainment" />
+            <Logo size="lg" variant="color" showText={true} />
             
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#services" className="text-gray-700 hover:text-blue-600 font-medium">Services</a>
@@ -148,11 +148,11 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="mb-6">
-              <Logo size="xl" variant="color" showText={true} style="entertainment" className="justify-center" />
+            <div className="mb-8">
+              <Logo size="xl" variant="color" showText={true} className="justify-center" />
             </div>
             
-            <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-white">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
               Metro Atlanta's Premier
               <span className="block bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
                 TV Mounting Experts
@@ -402,14 +402,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">P</span>
-                </div>
-                <span className="text-lg font-bold">Picture Perfect TV Install</span>
-              </div>
-              <p className="text-gray-400">
-                Metro Atlanta's premier TV mounting and smart home installation service.
+              <Logo size="md" variant="dark" showText={true} />
+              <p className="text-gray-400 max-w-sm">
+                Metro Atlanta's premier TV mounting and smart home installation service. Licensed, insured, and committed to perfect results every time.
               </p>
             </div>
             
