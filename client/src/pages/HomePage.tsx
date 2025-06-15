@@ -111,17 +111,17 @@ export default function HomePage() {
       <SEOHead />
       
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md shadow-xl border-b border-blue-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-md shadow-xl border-b border-purple-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Logo size="lg" variant="color" showText={true} />
             
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#services" className="text-gray-700 hover:text-blue-600 font-medium">Services</a>
-              <a href="#about" className="text-gray-700 hover:text-blue-600 font-medium">About</a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-600 font-medium">Contact</a>
+              <a href="#services" className="text-gray-700 hover:text-purple-600 font-medium">Services</a>
+              <a href="#about" className="text-gray-700 hover:text-purple-600 font-medium">About</a>
+              <a href="#contact" className="text-gray-700 hover:text-purple-600 font-medium">Contact</a>
               <Link href="/booking">
-                <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                <button className="bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-700 hover:via-purple-700 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl">
                   Book Service
                 </button>
               </Link>
@@ -131,13 +131,14 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white py-24 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-900 via-purple-800 to-red-900 text-white py-24 overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-transparent to-purple-600/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-red-600/20"></div>
         
-        {/* Animated background elements */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-400/10 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-400/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+        {/* Animated background elements - Updated to match PPTV colors */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-400/15 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-400/15 rounded-full blur-xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-red-400/15 rounded-full blur-xl animate-pulse delay-500"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -165,12 +166,12 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/booking" className="group bg-gradient-to-r from-white to-blue-50 text-blue-900 px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2">
+              <Link href="/booking" className="group bg-gradient-to-r from-white to-purple-50 text-purple-900 px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2">
                 <PlayCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                 <span>Book Now - Free Quote</span>
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href="tel:+14047024748" className="group border-2 border-white/30 backdrop-blur-md text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white hover:text-blue-900 transition-all duration-300 flex items-center justify-center space-x-2">
+              <a href="tel:+14047024748" className="group border-2 border-white/30 backdrop-blur-md text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white hover:text-purple-900 transition-all duration-300 flex items-center justify-center space-x-2">
                 <Phone className="h-5 w-5" />
                 <span>(404) 702-4748</span>
               </a>
