@@ -11,8 +11,16 @@ import {
   Camera,
   Home,
   Lightbulb,
-  Volume2
+  Volume2,
+  Award,
+  Users,
+  Wrench,
+  Zap,
+  ArrowRight,
+  PlayCircle
 } from "lucide-react";
+import Logo from "@/components/brand/Logo";
+import SEOHead from "@/components/seo/SEOHead";
 
 export default function HomePage() {
   const services = [
@@ -100,16 +108,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <SEOHead />
+      
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md shadow-lg border-b border-blue-100 sticky top-0 z-50">
+      <header className="bg-white/90 backdrop-blur-md shadow-xl border-b border-blue-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">P</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Picture Perfect TV Install</span>
-            </div>
+            <Logo size="md" variant="color" showText={true} />
             
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#services" className="text-gray-700 hover:text-blue-600 font-medium">Services</a>
