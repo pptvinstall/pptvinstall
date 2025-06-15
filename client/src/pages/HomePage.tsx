@@ -131,117 +131,119 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-7xl font-bold text-gray-900 leading-tight">
-                Metro Atlanta's
-                <span className="block bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Premier TV Install
-                </span>
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
-                Professional TV mounting and smart home installation service. Licensed, insured technicians with same-day availability.
-              </p>
+      <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-transparent to-purple-600/20"></div>
+        
+        {/* Animated background elements */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-400/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-400/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="mb-8">
+              <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md rounded-full px-6 py-3 mb-6">
+                <Award className="h-5 w-5 text-yellow-300" />
+                <span className="text-sm font-medium">Licensed & Insured • 500+ Happy Customers</span>
+              </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/booking">
-                <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-2xl hover:shadow-3xl transform hover:scale-105">
-                  Book Installation Now
-                </button>
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+              Picture Perfect<br />
+              <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                TV Install
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-4xl mx-auto leading-relaxed">
+              Metro Atlanta's premier TV mounting and smart home installation service. 
+              Professional results, same-day availability, lifetime satisfaction guarantee.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="/booking" className="group bg-gradient-to-r from-white to-blue-50 text-blue-900 px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2">
+                <PlayCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                <span>Book Now - Free Quote</span>
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a 
-                href="tel:404-702-4748" 
-                className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 font-semibold text-lg"
-              >
+              <a href="tel:+14047024748" className="group border-2 border-white/30 backdrop-blur-md text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white hover:text-blue-900 transition-all duration-300 flex items-center justify-center space-x-2">
                 <Phone className="h-5 w-5" />
                 <span>(404) 702-4748</span>
               </a>
             </div>
-
-            {/* Key Benefits */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-              <div className="flex flex-col items-center space-y-3 p-6 bg-white/60 backdrop-blur-sm rounded-xl shadow-lg">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Licensed & Insured</h3>
-                <p className="text-gray-600 text-center">Professional technicians with full licensing and insurance coverage</p>
+            
+            {/* Trust indicators */}
+            <div className="flex flex-wrap justify-center items-center gap-8 text-blue-200 text-sm">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-4 w-4" />
+                <span>Fully Insured</span>
               </div>
-              
-              <div className="flex flex-col items-center space-y-3 p-6 bg-white/60 backdrop-blur-sm rounded-xl shadow-lg">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Same-Day Service</h3>
-                <p className="text-gray-600 text-center">Fast scheduling with same-day installation availability</p>
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span>Same Day Service</span>
               </div>
-              
-              <div className="flex flex-col items-center space-y-3 p-6 bg-white/60 backdrop-blur-sm rounded-xl shadow-lg">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Star className="h-6 w-6 text-yellow-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">100% Satisfaction</h3>
-                <p className="text-gray-600 text-center">Guaranteed quality work with complete customer satisfaction</p>
+              <div className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>500+ Installs</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Star className="h-4 w-4 text-yellow-300" />
+                <span>5 Star Rated</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+
+
       {/* Services Section */}
-      <section id="services" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">Our Services</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              From standard TV mounting to complex smart home installations, we handle every project with precision and care.
+      <section id="services" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center space-x-2 bg-blue-100 rounded-full px-4 py-2 mb-4">
+              <Wrench className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-600">Our Services</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Professional Installation
+              <span className="block text-blue-600">Services</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              From basic TV mounting to complete smart home automation, we deliver 
+              exceptional results every time.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {services.map((service) => {
-              const IconComponent = service.icon;
-              return (
-                <div key={service.id} className="group bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300">
-                  <div className="p-8">
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
-                          <IconComponent className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900">{service.title}</h3>
-                          <p className="text-lg font-semibold text-blue-600">{service.price}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-gray-600 mb-6 text-lg">{service.description}</p>
-
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-900">Includes:</h4>
-                      <ul className="space-y-2">
-                        {service.features.map((feature, index) => (
-                          <li key={index} className="flex items-center space-x-3">
-                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                            <span className="text-gray-700">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <Link href="/booking">
-                      <button className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl group-hover:scale-105 transform">
-                        Book This Service
-                      </button>
-                    </Link>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {services.map((service, index) => (
+              <div key={index} className="group bg-white rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                    <service.icon className="h-6 w-6 text-white" />
                   </div>
+                  <h3 className="text-xl font-bold text-gray-900">{service.title}</h3>
                 </div>
-              );
-            })}
+                <p className="text-gray-600 mb-6 leading-relaxed">{service.description}</p>
+                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6">
+                  {service.price}
+                </div>
+                <ul className="space-y-3">
+                  {service.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center text-gray-600">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <Link href="/booking" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 group">
+                    <span>Book This Service</span>
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
