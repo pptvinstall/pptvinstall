@@ -209,6 +209,29 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Business hours endpoint
+  app.get("/api/business-hours", (req, res) => {
+    const defaultBusinessHours = [
+      { dayOfWeek: 0, startTime: "11:00", endTime: "19:00", isAvailable: true }, // Sunday
+      { dayOfWeek: 1, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Monday
+      { dayOfWeek: 2, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Tuesday
+      { dayOfWeek: 3, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Wednesday
+      { dayOfWeek: 4, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Thursday
+      { dayOfWeek: 5, startTime: "18:30", endTime: "22:30", isAvailable: true }, // Friday
+      { dayOfWeek: 6, startTime: "11:00", endTime: "19:00", isAvailable: true }, // Saturday
+    ];
+    
+    res.json({
+      success: true,
+      businessHours: defaultBusinessHours
+    });
+  });
+
+  // All bookings endpoint
+  app.get("/api/bookings", (req, res) => {
+    res.json(bookingStorage);
+  });
+
   // 404 for other API routes
   app.use("/api/*", (req, res) => {
     res.status(404).json({ error: "Endpoint not found" });

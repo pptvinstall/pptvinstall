@@ -683,8 +683,8 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       // Get existing bookings from the database
       const dbBookings = await db.select().from(bookingsTable).where(
         and(
-          sql`DATE(${bookingsTable.preferredDate}) >= ${start.toISOString().split('T')[0]}`,
-          sql`DATE(${bookingsTable.preferredDate}) <= ${end.toISOString().split('T')[0]}`,
+          sql`${bookingsTable.preferredDate} >= ${start.toISOString().split('T')[0]}`,
+          sql`${bookingsTable.preferredDate} <= ${end.toISOString().split('T')[0]}`,
           eq(bookingsTable.status, 'active')
         )
       );
@@ -796,7 +796,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         // Check if the time slot is already booked in the database
         const existingBookings = await db.select().from(bookings).where(
           and(
-            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+            sql`${bookings.preferredDate} = ${dateStr}`,
             eq(bookings.appointmentTime, timeSlot as string),
             eq(bookings.status, 'active')
           )
@@ -2333,7 +2333,7 @@ date, timeSlots, reason);
       if (status !== 'cancelled' && preferredDate && appointmentTime) {
         const existingBookings = await db.select().from(bookings).where(
           and(
-            sql`DATE(${bookings.preferredDate}) = ${preferredDate}`,
+            sql`${bookings.preferredDate} = ${preferredDate}`,
             eq(bookings.appointmentTime, appointmentTime),
             eq(bookings.status, 'active'),
             sql`${bookings.id} != ${bookingId}`
