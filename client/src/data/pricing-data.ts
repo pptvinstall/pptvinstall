@@ -32,11 +32,6 @@ export const pricingData = {
       name: "TV Unmounting",
       price: 50,
       description: "Removing a mounted TV from the wall."
-    },
-    deinstallation: {
-      name: "TV De-Installation",
-      price: 50,
-      description: "Professional removal of mounted TV and bracket. Includes safe dismounting and cable management cleanup."
     }
   },
 

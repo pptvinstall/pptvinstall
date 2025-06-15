@@ -1,8 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes-minimal";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import compression from 'compression';
-import { createServer } from 'http';
 
 const app = express();
 // Optimize compression for better performance
@@ -16,9 +15,9 @@ app.use(compression({
     return compression.filter(req, res);
   }
 }));
-// Optimize JSON parsing for memory efficiency (2MB limit)
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: false, limit: '2mb' }));
+// Increase JSON request size limit to handle image uploads (10MB limit)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Add caching for static assets
 app.use((req, res, next) => {
@@ -140,8 +139,7 @@ const gracefulShutdown = (signal: string) => {
 // Main application startup
 (async () => {
   try {
-    await registerRoutes(app);
-    const server = createServer(app);
+    const server = await registerRoutes(app);
     serverInstance = server;
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

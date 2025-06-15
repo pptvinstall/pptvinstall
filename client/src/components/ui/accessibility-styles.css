@@ -1,0 +1,231 @@
+/* Accessibility styles for integrated booking wizard */
+
+/* High contrast mode */
+.high-contrast-mode {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  
+  --primary: 220 100% 50%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 0 0% 96.1%;
+  --secondary-foreground: 0 0% 0%;
+  
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 0 0% 0%;
+  
+  --accent: 220 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 0 0% 0%;
+  --input: 0 0% 0%;
+  --ring: 0 0% 0%;
+}
+
+.high-contrast-mode {
+  /* Add high contrast specific overrides */
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+.high-contrast-mode h1,
+.high-contrast-mode h2,
+.high-contrast-mode h3,
+.high-contrast-mode h4,
+.high-contrast-mode h5,
+.high-contrast-mode h6 {
+  color: #000 !important;
+}
+
+.high-contrast-mode .card,
+.high-contrast-mode .border,
+.high-contrast-mode input,
+.high-contrast-mode select,
+.high-contrast-mode textarea {
+  border: 2px solid #000 !important;
+}
+
+.high-contrast-mode button:not(.btn-primary) {
+  background-color: #fff !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+}
+
+.high-contrast-mode .btn-primary,
+.high-contrast-mode button[data-variant="default"] {
+  background-color: #0000ff !important;
+  color: #fff !important;
+  border: 2px solid #000 !important;
+}
+
+.high-contrast-mode .text-muted-foreground {
+  color: #000 !important;
+  opacity: 0.8;
+}
+
+/* Text size adjustments */
+.text-lg {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+}
+
+.text-lg input,
+.text-lg select,
+.text-lg textarea,
+.text-lg button,
+.text-lg .card-content {
+  font-size: 1.125rem !important;
+}
+
+.text-xl {
+  font-size: 1.25rem !important;
+  line-height: 1.875rem !important;
+}
+
+.text-xl h1,
+.text-xl h2,
+.text-xl h3,
+.text-xl h4 {
+  font-size: 1.5rem !important;
+}
+
+.text-xl input,
+.text-xl select,
+.text-xl textarea,
+.text-xl button,
+.text-xl .card-content {
+  font-size: 1.25rem !important;
+  padding: 0.75rem !important;
+}
+
+/* Booking assistant styles */
+.booking-assistant {
+  border: 2px solid var(--primary);
+  background-color: rgba(var(--primary), 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.booking-assistant h3 {
+  color: hsl(var(--primary));
+  margin-top: 0;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.booking-assistant-content {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.booking-assistant-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(var(--primary), 0.1);
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary));
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.booking-assistant-button:hover {
+  background-color: rgba(var(--primary), 0.2);
+}
+
+/* Step Guide Styles */
+.step-guide {
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 16px;
+  margin-bottom: 16px;
+}
+
+.step-guide-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: hsl(var(--primary));
+}
+
+.step-guide-content {
+  font-size: 0.95rem;
+}
+
+.step-guide-tip {
+  background-color: rgba(var(--primary), 0.1);
+  border-left: 3px solid hsl(var(--primary));
+  padding: 12px;
+  border-radius: 0 4px 4px 0;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+/* Tutorial styles */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.tutorial-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+}
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.tutorial-slide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.tutorial-image {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+.tutorial-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid hsl(var(--border));
+}

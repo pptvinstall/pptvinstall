@@ -2,7 +2,7 @@ import { type Express, Request as ExpressRequest, Response, NextFunction } from 
 import { type Server } from "http";
 import { db } from "./db";
 import { 
-  bookingSchema, bookings as bookingsTable, businessHoursSchema, customers, customerSchema, 
+  bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
   insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema,
   promotions, promotionSchema, insertPromotionSchema, Promotion, Booking
 } from "@shared/schema";
@@ -28,18 +28,7 @@ import {
   sendEnhancedCancellationEmail,
   sendServiceEditNotification
 } from "./services/enhancedEmailService";
-import { liveEmailService } from "./services/liveEmailService";
 import { pushNotificationService } from "./services/pushNotificationService";
-import { 
-  optimizeQuery, 
-  sendOptimizedResponse, 
-  createCacheKey, 
-  getCachedResponse,
-  clearCache,
-  performanceMonitor,
-  getMemoryUsage
-} from "./performance-optimizer";
-import { googleCalendarService } from './google-calendar';
 
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
@@ -55,7 +44,7 @@ function verifyAdminPassword(password: string | undefined): boolean {
   // Use both the environment variable and hardcoded password as fallback
   const envPassword = process.env.ADMIN_PASSWORD;
   const hardcodedPassword = "PictureP3rfectTV2025";
-
+  
   // Debug log to see if environment variable is correctly loaded
   logger.debug('Admin password verification', {
     envVarSet: !!envPassword,
@@ -73,7 +62,7 @@ function verifyAdminPassword(password: string | undefined): boolean {
   const isValidEnv = envPassword && password === envPassword;
   const isValidHardcoded = password === hardcodedPassword;
   const isValid = isValidEnv || isValidHardcoded;
-
+  
   logger.auth('Admin authentication attempt', {
     success: isValid,
     passwordProvided: !!password,
@@ -84,61 +73,9 @@ function verifyAdminPassword(password: string | undefined): boolean {
   return isValid;
 }
 
-export async function registerRoutes(app: Express): Promise<void> {
+export async function registerRoutes(app: Express): Promise<Server> {
   // Add logging middleware
   app.use(logger.logRequest.bind(logger));
-
-  // Admin authentication middleware
-const authenticateAdmin = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1]; // Bearer <token>
-
-  // Check if password matches (in production, use proper JWT or session)
-  const adminPassword = process.env.ADMIN_PASSWORD || '9663';
-
-  if (token === adminPassword) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-};
-
-// Admin booking endpoints
-app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
-  try {
-    const result = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching admin bookings:', error);
-    res.status(500).json({ error: 'Failed to fetch bookings' });
-  }
-});
-
-app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!['confirmed', 'cancelled', 'pending'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    const result = await db
-      .update(bookings)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(bookings.id, id))
-      .returning();
-
-    if (result.length === 0) {
-      return res.status(404).json({ error: 'Booking not found' });
-    }
-
-    res.json(result[0]);
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    res.status(500).json({ error: 'Failed to update booking' });
-  }
-});
 
   // API routes
   app.get("/api/health", async (req, res) => {
@@ -158,7 +95,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   app.get("/api/health/detailed", async (req, res) => {
     try {
       const { password } = req.query;
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
@@ -168,7 +105,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
 
       const health = await monitoring.getSystemHealth();
       const launchConfig = monitoring.getLaunchConfig();
-
+      
       res.json({
         success: true,
         health,
@@ -188,7 +125,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   app.post("/api/admin/launch-mode", async (req, res) => {
     try {
       const { password, enable } = req.body;
-
+      
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
@@ -202,7 +139,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       }
 
       const launchConfig = monitoring.getLaunchConfig();
-
+      
       res.json({
         success: true,
         message: enable ? "Launch mode enabled" : "Launch mode status retrieved",
@@ -215,12 +152,12 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       });
     }
   });
-
+  
   // Public route for email preview page to check basic email settings
   app.get("/api/email/check-config", (req: Request, res: Response) => {
     try {
       logger.info('Email environment basic check requested');
-
+      
       // Only provide basic information that's needed for the email preview UI
       res.json({
         success: true,
@@ -236,19 +173,19 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       });
     }
   });
-
+  
   // Route to check email-related environment variables
   app.get("/api/admin/check-email-env", (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Unauthorized"
         });
       }
-
+      
       // Gather email configuration
       const emailConfig = {
         SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? `Set (length: ${process.env.SENDGRID_API_KEY.length})` : 'Not set',
@@ -257,9 +194,9 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         NODE_ENV: process.env.NODE_ENV,
         host: req.headers.host
       };
-
+      
       logger.info('Email environment variables checked');
-
+      
       res.json({
         success: true,
         emailConfig
@@ -277,25 +214,25 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
   app.get("/api/admin/test-email", async (req, res) => {
     try {
       const { email, password, type } = req.query;
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid admin password"
         });
       }
-
+      
       if (!email) {
         return res.status(400).json({
           success: false,
           message: "Email address is required"
         });
       }
-
+      
       logger.info(`Testing email functionality to address: ${email}, type: ${type || 'both'}`);
-
+      
       const timestamp = new Date().toLocaleTimeString();
-
+      
       // Create a test booking object with distinctive information
       const testBooking = {
         id: `TEST-${Date.now()}`,
@@ -316,18 +253,18 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           { type: "tv", size: "large", location: "standard", mountType: "fixed" }
         ]
       };
-
+      
       // Log SendGrid configuration
       logger.debug("SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
         fromEmail: process.env.EMAIL_FROM || 'pptvinstall@gmail.com',
         adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com'
       });
-
+      
       // Variable to track email results
       let customerEmailResult = false;
       let adminEmailResult = false;
-
+      
       // Send test customer email if requested type is 'customer' or not specified
       if (!type || type === 'customer') {
         try {
@@ -341,12 +278,12 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           }
         }
       }
-
+      
       // Send test admin notification if requested type is 'admin' or not specified
       if (!type || type === 'admin') {
         try {
           logger.debug("Sending test admin notification email...");
-
+          
           // Create admin email with modified subject for easier identification in inbox
           const adminMsg = {
             to: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
@@ -355,13 +292,13 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
             text: "Admin notification for test booking",
             html: emailTemplates.getAdminNotificationEmailTemplate(testBooking),
           };
-
+          
           logger.debug("Admin email payload:", JSON.stringify({
             to: adminMsg.to,
             from: adminMsg.from,
             subject: adminMsg.subject
           }));
-
+          
           // Send directly through SendGrid for custom subject
           import('@sendgrid/mail').then(sgModule => {
             const sgMail = sgModule.default;
@@ -377,7 +314,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           }
         }
       }
-
+      
       res.json({
         success: true,
         results: {
@@ -396,12 +333,12 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       });
     }
   });
-
+  
   // Test enhanced email sending functionality 
   app.post("/api/email/send-test-to-multiple", async (req: Request, res: Response) => {
     try {
       const { emailType = EmailType.BOOKING_CONFIRMATION } = req.body;
-
+      
       if (!Object.values(EmailType).includes(emailType)) {
         return res.status(400).json({ 
           success: false,
@@ -409,21 +346,21 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           validTypes: Object.values(EmailType)
         });
       }
-
+      
       logger.info(`Sending test emails to both user and JWoodceo@gmail.com, type: ${emailType}`);
-
+      
       // Import dynamically to avoid circular dependencies
       const { sendTestEmail } = await import('./services/enhancedEmailService');
-
+      
       // Get admin email from environment variables or use default
       const adminEmail = process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com';
-
+      
       // Send to JWoodceo@gmail.com
       const jwoodResult = await sendTestEmail(emailType, 'JWoodceo@gmail.com');
-
+      
       // Send to admin email
       const yourResult = await sendTestEmail(emailType, adminEmail);
-
+      
       return res.json({
         success: true,
         message: `Test ${emailType} emails sent to JWoodceo@gmail.com and ${adminEmail}`,
@@ -442,19 +379,6 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
     }
   });
 
-  // Test live Gmail SMTP connection
-  app.get('/api/email/test-gmail-connection', async (req: Request, res: Response) => {
-    try {
-      const result = await liveEmailService.testEmailConnection();
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
-    }
-  });
-
   app.post("/api/email/test-send", async (req: Request, res: Response) => {
     try {
       const { 
@@ -462,7 +386,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         emailType, 
         sendCalendar = true 
       } = req.body;
-
+      
       if (!email) {
         return res.status(400).json({
           success: false,
@@ -471,9 +395,9 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       }
 
       logger.info(`Testing enhanced email functionality to address: ${email}, type: ${emailType || 'booking_confirmation'}`);
-
+      
       const timestamp = new Date().toLocaleTimeString();
-
+      
       // Create a comprehensive test booking object with all possible options
       const testBooking: Booking = {
         id: `TEST-${Date.now()}`,
@@ -538,7 +462,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         ]
         // No longer including the customer property as it's not part of the Booking type
       };
-
+      
       // Log SendGrid configuration
       logger.debug("Enhanced Email Test - SendGrid Config:", {
         apiKeySet: !!process.env.SENDGRID_API_KEY,
@@ -546,9 +470,9 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         adminEmail: process.env.ADMIN_EMAIL || 'pptvinstall@gmail.com',
         emailType: emailType || EmailType.BOOKING_CONFIRMATION
       });
-
+      
       let result = false;
-
+      
       // Send the appropriate email based on type
       switch (emailType) {
         case EmailType.BOOKING_CONFIRMATION:
@@ -592,7 +516,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           // Default to booking confirmation
           result = await sendEnhancedBookingConfirmation(testBooking);
       }
-
+      
       res.json({
         success: true,
         result: result,
@@ -602,22 +526,22 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       });
     } catch (error: any) {
       logger.error("Error in enhanced email test endpoint:", error);
-
+      
       // Detailed error handling for better client feedback
       let errorMessage = "An error occurred while testing enhanced email functionality";
       let errorDetails = null;
-
+      
       // Check for SendGrid specific errors
       if (error?.response?.body) {
         logger.error("SendGrid API error response:", error.response.body);
         errorDetails = error.response.body;
-
+        
         // Extract specific SendGrid error if available
         if (error.response.body.errors && error.response.body.errors.length > 0) {
           errorMessage = `SendGrid error: ${error.response.body.errors[0].message}`;
         }
       }
-
+      
       res.status(500).json({
         success: false,
         message: errorMessage,
@@ -681,11 +605,11 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       }
 
       // Get existing bookings from the database
-      const dbBookings = await db.select().from(bookingsTable).where(
+      const dbBookings = await db.select().from(bookings).where(
         and(
-          sql`${bookingsTable.preferredDate} >= ${start.toISOString().split('T')[0]}`,
-          sql`${bookingsTable.preferredDate} <= ${end.toISOString().split('T')[0]}`,
-          eq(bookingsTable.status, 'active')
+          sql`DATE(${bookings.preferredDate}) >= ${start.toISOString().split('T')[0]}`,
+          sql`DATE(${bookings.preferredDate}) <= ${end.toISOString().split('T')[0]}`,
+          eq(bookings.status, 'active')
         )
       );
 
@@ -730,24 +654,24 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
 
       // Format date string for consistency
       const dateStr = new Date(date as string).toISOString().split('T')[0]; // YYYY-MM-DD
-
+      
       // Parse the date parts to avoid timezone issues
       const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-
+      
       // Check if the selected time is in the past
       const now = new Date();
-
+      
       // Always check time availability regardless of date
       // Parse the timeSlot (e.g., "7:30 PM")
       const isPM = (timeSlot as string).includes('PM');
       const timeComponents = (timeSlot as string).replace(/ (AM|PM)$/, '').split(':');
       let hour = parseInt(timeComponents[0], 10);
       const minute = timeComponents.length > 1 ? parseInt(timeComponents[1], 10) : 0;
-
+      
       // Convert to 24-hour format
       if (isPM && hour < 12) hour += 12;
       if (!isPM && hour === 12) hour = 0;
-
+      
       // Create a date with the selected time for comparison using component parts to avoid timezone issues
       const selectedDateTime = new Date(
         year, 
@@ -756,7 +680,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         hour,
         minute
       );
-
+        
       // Get the configurable booking buffer hours
       let bufferHours = 2; // Default fallback value of 2 hours
       try {
@@ -767,10 +691,10 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
       } catch (bufferError) {
         logger.error("Error fetching booking buffer setting, using default:", bufferError as Error);
       }
-
+      
       // Add the configured buffer time for bookings
       const bufferTime = new Date(now.getTime() + bufferHours * 60 * 60 * 1000);
-
+      
       // Check if the selected time is in the past or within the buffer period
       if (selectedDateTime <= bufferTime) {
         return res.json({
@@ -779,7 +703,7 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
           message: "This time slot is no longer available for booking"
         });
       }
-
+      
       // Check if the selected date is in the past
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const selectedDate = new Date(dateStr);
@@ -796,20 +720,17 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
         // Check if the time slot is already booked in the database
         const existingBookings = await db.select().from(bookings).where(
           and(
-            sql`${bookings.preferredDate} = ${dateStr}`,
+            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
             eq(bookings.appointmentTime, timeSlot as string),
             eq(bookings.status, 'active')
           )
         );
 
         if (existingBookings.length > 0) {
-          logger.info('WARNING: Time slot already booked, returning conflict error');
           return res.json({
             success: true,
             isAvailable: false,
-            message: 'This time slot is already booked. Please choose a different time.',
-            error: 'TIME_SLOT_CONFLICT',
-            suggestedTimes: [] // Could add logic to suggest alternative times
+            message: "This time slot is already booked"
           });
         }
       } catch (dbError) {
@@ -924,9 +845,8 @@ app.patch('/api/admin/bookings/:id', authenticateAdmin, async (req, res) => {
 
           try {
             // Use our internal availability service
-            const success = availabilityService.blockTimeSlots(```text
-date, timeSlots, reason);
-
+            const success = availabilityService.blockTimeSlots(date, timeSlots, reason);
+            
             if (!success) {
               logger.error('Failed to block time slots', new Error('Failed to block time slots'), {
                 date,
@@ -999,7 +919,7 @@ date, timeSlots, reason);
   app.post("/api/booking", async (req, res) => {
     try {
       logger.debug("Booking submission received:", JSON.stringify(req.body, null, 2));
-
+      
       // First, check if we have a valid booking object before parsing
       if (!req.body || Object.keys(req.body).length === 0) {
         logger.error("Empty booking submission received");
@@ -1008,31 +928,29 @@ date, timeSlots, reason);
           message: "No booking data provided"
         });
       }
-
+      
       try {
         const booking = bookingSchema.parse(req.body);
         logger.info("Booking validated successfully");
-
+        
         // Check if this time slot is already booked
         const dateStr = new Date(booking.preferredDate).toISOString().split('T')[0]; // YYYY-MM-DD
-        logger.debug('Checking for existing bookings on date: ' + dateStr + ' and time: ' + booking.appointmentTime);
-
+        logger.debug(`Checking for existing bookings on date: ${dateStr} and time: ${booking.appointmentTime}`);
+        
         // Continue with booking logic
-        const existingBookings = await db.select().from(bookingsTable).where(
+        const existingBookings = await db.select().from(bookings).where(
           and(
-            eq(bookingsTable.preferredDate, dateStr),
-            eq(bookingsTable.appointmentTime, booking.appointmentTime),
-            eq(bookingsTable.status, 'active')
+            sql`DATE(${bookings.preferredDate}) = ${dateStr}`,
+            eq(bookings.appointmentTime, booking.appointmentTime),
+            eq(bookings.status, 'active')
           )
         );
 
         if (existingBookings.length > 0) {
-          logger.info('WARNING: Time slot already booked, returning conflict error');
+          logger.warn("Time slot already booked, returning conflict error");
           return res.status(409).json({
             success: false,
-            message: 'This time slot is already booked. Please choose a different time.',
-                        error: 'TIME_SLOT_CONFLICT',
-            suggestedTimes: [] // Could add logic to suggest alternative times
+            message: "This time slot is already booked. Please select another time."
           });
         }
 
@@ -1043,22 +961,22 @@ date, timeSlots, reason);
         }
 
         logger.debug("Preparing to insert booking into database");
-
+        
         // Handle account creation if requested
         if (req.body.createAccount) {
           logger.info("User requested account creation during booking");
-
+          
           try {
             // Check if user already exists
             const existingCustomer = await db.select().from(customers).where(eq(customers.email, booking.email)).limit(1);
-
+            
             if (existingCustomer.length > 0) {
               logger.info("Customer already exists, not creating a new account");
             } else {
               // Create new customer account
               const hashedPassword = req.body.password ? await bcrypt.hash(req.body.password, 10) : null;
               logger.debug("Creating new customer account");
-
+              
               await db.insert(customers).values({
                 name: booking.name,
                 email: booking.email,
@@ -1073,7 +991,7 @@ date, timeSlots, reason);
                 isVerified: true, // Auto-verify since they're creating during booking
                 loyaltyPoints: 0
               });
-
+              
               logger.info("Customer account created successfully");
             }
           } catch (accountError) {
@@ -1081,7 +999,7 @@ date, timeSlots, reason);
             logger.error("Error creating customer account:", accountError);
           }
         }
-
+        
         // Insert into database
         const insertedBookings = await db.insert(bookings).values({
           name: booking.name,
@@ -1094,9 +1012,9 @@ date, timeSlots, reason);
           zipCode: booking.zipCode,
           notes: booking.notes,
           serviceType: booking.serviceType,
-          preferredDate: new Date(booking.preferredDate).toISOString(),
+          preferredDate: booking.preferredDate,
           appointmentTime: booking.appointmentTime,
-          status: 'confirmed',
+          status: 'active',
           pricingTotal: booking.pricingTotal ? booking.pricingTotal.toString() : null,
           pricingBreakdown: pricingBreakdownStr
         }).returning();
@@ -1117,18 +1035,18 @@ date, timeSlots, reason);
         // Send unified confirmation email using Gmail SMTP
         let customerEmailSent = false;
         let adminEmailSent = false;
-
+        
         logger.info("Starting Gmail email sending process...");
-
+        
         try {
           const { sendUnifiedBookingConfirmation } = await import('./services/gmailEmailService');
-
+          
           logger.info("Sending unified confirmation emails via Gmail...");
           const emailResults = await sendUnifiedBookingConfirmation(bookingWithId);
-
+          
           customerEmailSent = emailResults.customerSent;
           adminEmailSent = emailResults.adminSent;
-
+          
           logger.info(`Gmail email sending summary - Customer: ${customerEmailSent}, Admin: ${adminEmailSent}`);
         } catch (error: any) {
           logger.error("Error sending Gmail emails:", error as Error);
@@ -1140,7 +1058,7 @@ date, timeSlots, reason);
           message: "Booking confirmed successfully",
           booking: bookingWithId
         });
-
+        
         // Exit the nested try/catch block
         return;
       } catch (parseError) {
@@ -1168,7 +1086,7 @@ date, timeSlots, reason);
 
       const errorMessage = error instanceof Error ? error.message : String(error);
       const stackTrace = error instanceof Error ? error.stack : 'No stack trace available';
-
+      
       logger.error(`Booking submission error details: ${errorMessage}`, error instanceof Error ? error : new Error(errorMessage));
       logger.debug(`Stack trace: ${stackTrace}`);
 
@@ -1179,45 +1097,88 @@ date, timeSlots, reason);
     }
   });
 
-  // Get all bookings - Optimized with caching
+  // Get all bookings
   app.get("/api/bookings", async (req, res) => {
-    const startTime = performanceMonitor.startTimer();
-    const cacheKey = createCacheKey(req);
-
     try {
-      // Check cache first
-      const cached = getCachedResponse(cacheKey);
-      if (cached) {
-        performanceMonitor.endTimer(startTime, 'bookings-cached');
-        return sendOptimizedResponse(res, { bookings: cached }, { 
-          cache: true, 
-          cacheKey,
-          cacheTtl: 30000 
-        });
-      }
+      const dbBookings = await db.select().from(bookings).orderBy(bookings.preferredDate);
 
-      // Execute optimized query
-      const dbBookings = await optimizeQuery(
-        () => db.select().from(bookings).orderBy(bookings.preferredDate),
-        'all-bookings',
-        30000
-      );
-
-      // Format bookings efficiently
+      // Format bookings to match expected structure
       const formattedBookings = dbBookings.map(booking => {
         let pricingBreakdown = null;
         if (booking.pricingBreakdown) {
           try {
-            pricingBreakdown = JSON.parse(booking.pricingBreakdown as string);
-          } catch (error) {
-            // Try to fix common JSON issues silently
+            // Try to parse the JSON
+            pricingBreakdown = JSON.parse(booking.pricingBreakdown);
+          } catch (e) {
+            logger.error('Error parsing pricingBreakdown JSON:', e as Error);
+            // Log the problematic data for debugging
+            logger.info('Attempting to fix problematic pricing data');
+            
             try {
-              const fixedJson = (booking.pricingBreakdown as string)
-                .replace(/'/g, '"')
-                .replace(/(\w+):/g, '"$1":');
-              pricingBreakdown = JSON.parse(fixedJson);
-            } catch (secondError) {
-              pricingBreakdown = [];
+              // Function to help with deeply nested JSON
+              const fixNestedJson = (jsonStr: string) => {
+                // First, handle the case of over-escaped JSON (common in the DB)
+                if (jsonStr.includes('\\"')) {
+                  try {
+                    // Try to parse it as a JSON string that contains escaped JSON
+                    const unescaped = JSON.parse(`"${jsonStr.replace(/^"|"$/g, '').replace(/\\"/g, '"')}"`);
+                    return JSON.parse(unescaped);
+                  } catch (error) {
+                    // Failed to parse as nested JSON
+                  }
+                }
+                
+                // Replace single quotes with double quotes
+                let fixedJson = jsonStr.replace(/'/g, '"');
+                
+                // Add missing quotes around property names
+                fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+                
+                // Add missing quotes around property values that are not numbers or booleans
+                fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
+                
+                return JSON.parse(fixedJson);
+              };
+              
+              // Replace double-escaped quotes
+              let intermediateJson = booking.pricingBreakdown
+                .replace(/\\\\"/g, '\\"') // Replace \\" with \"
+                .replace(/\\"/g, '"')     // Replace \" with "
+                .replace(/"{/g, '{')      // Replace "{ with {
+                .replace(/}"/g, '}');     // Replace }" with }
+              
+              // Handle the case where the string might be an array-like string with JSON objects
+              if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
+                intermediateJson = intermediateJson.replace(/^"|"$/g, '');
+              }
+              
+              // Try to parse the fixed JSON
+              pricingBreakdown = JSON.parse(intermediateJson);
+              logger.info('Successfully fixed and parsed JSON with intermediate approach');
+            } catch (intermediateError) {
+              try {
+                // As a last resort, try to extract valid JSON substrings
+                const jsonMatches = booking.pricingBreakdown.match(/\{[^{}]*\}/g);
+                if (jsonMatches && jsonMatches.length > 0) {
+                  pricingBreakdown = jsonMatches.map(jsonStr => {
+                    try {
+                      return JSON.parse(jsonStr.replace(/\\"/g, '"'));
+                    } catch (err) {
+                      return null;
+                    }
+                  }).filter(Boolean);
+                  
+                  logger.info('Extracted valid JSON objects from malformed string');
+                } else {
+                  // If all attempts fail, create a basic empty object
+                  logger.error('Could not extract valid JSON objects');
+                  pricingBreakdown = {};
+                }
+              } catch (finalError) {
+                // If all attempts fail, create a basic empty object
+                logger.error('All JSON parsing attempts failed:', finalError as Error);
+                pricingBreakdown = {};
+              }
             }
           }
         }
@@ -1231,15 +1192,8 @@ date, timeSlots, reason);
         };
       });
 
-      performanceMonitor.endTimer(startTime, 'bookings-query');
-
-      sendOptimizedResponse(res, { bookings: formattedBookings }, { 
-        cache: true, 
-        cacheKey,
-        cacheTtl: 30000 
-      });
+      res.json({ bookings: formattedBookings });
     } catch (error) {
-      performanceMonitor.endTimer(startTime, 'bookings-error');
       logger.error("Error fetching bookings:", error as Error);
       res.status(500).json({
         success: false,
@@ -1276,16 +1230,12 @@ date, timeSlots, reason);
       if (booking.pricingBreakdown) {
         try {
           // Try to parse the JSON
-          pricingBreakdown = booking.pricingBreakdown ? 
-          (typeof booking.pricingBreakdown === 'string' ? 
-            JSON.parse(booking.pricingBreakdown) : 
-            booking.pricingBreakdown) : 
-          {};
+          pricingBreakdown = JSON.parse(booking.pricingBreakdown);
         } catch (e) {
           logger.error('Error parsing pricingBreakdown JSON:', e as Error);
           // Log the problematic data for debugging
           logger.info('Attempting to fix problematic pricing data');
-
+            
           try {
             // Function to help with deeply nested JSON
             const fixNestedJson = (jsonStr: string) => {
@@ -1299,31 +1249,31 @@ date, timeSlots, reason);
                   // Failed to parse as nested JSON
                 }
               }
-
+              
               // Replace single quotes with double quotes
               let fixedJson = jsonStr.replace(/'/g, '"');
-
+              
               // Add missing quotes around property names
               fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-
+              
               // Add missing quotes around property values that are not numbers or booleans
               fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-
+              
               return JSON.parse(fixedJson);
             };
-
+            
             // Replace double-escaped quotes
             let intermediateJson = booking.pricingBreakdown
               .replace(/\\\\"/g, '\\"') // Replace \\" with \"
               .replace(/\\"/g, '"')     // Replace \" with "
               .replace(/"{/g, '{')      // Replace "{ with {
               .replace(/}"/g, '}');     // Replace }" with }
-
+            
             // Handle the case where the string might be an array-like string with JSON objects
             if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
               intermediateJson = intermediateJson.replace(/^"|"$/g, '');
             }
-
+            
             // Try to parse the fixed JSON
             pricingBreakdown = JSON.parse(intermediateJson);
             logger.info('Successfully fixed and parsed JSON with intermediate approach');
@@ -1339,7 +1289,7 @@ date, timeSlots, reason);
                     return null;
                   }
                 }).filter(Boolean);
-
+                
                 logger.info('Extracted valid JSON objects from malformed string');
               } else {
                 // If all attempts fail, create a basic empty object
@@ -1461,11 +1411,11 @@ date, timeSlots, reason);
       try {
         if (process.env.SENDGRID_API_KEY) {
           const booking = result[0];
-
+          
           // Send customer confirmation email
           await sendEnhancedBookingConfirmation(booking);
           logger.info("Enhanced customer confirmation email sent successfully");
-
+          
           // Send separate admin notification
           try {
             // Import admin notification function from enhanced email service
@@ -1553,12 +1503,12 @@ date, timeSlots, reason);
       const id = parseInt(req.params.id);
       const updates = {...req.body};
       const sendUpdateEmail = updates.sendUpdateEmail === true;
-
+      
       // Remove the sendUpdateEmail flag from updates so it doesn't get stored
       if (updates.sendUpdateEmail !== undefined) {
         delete updates.sendUpdateEmail;
       }
-
+      
       // Make sure createdAt is a proper Date object if it exists
       if (updates.createdAt && typeof updates.createdAt === 'string') {
         // Don't send createdAt in update - it will be preserved
@@ -1585,7 +1535,7 @@ date, timeSlots, reason);
           });
         }
       }
-
+      
       // Handle pricingBreakdown - if it's a string, parse it
       if (typeof updates.pricingBreakdown === 'string') {
         try {
@@ -1595,7 +1545,7 @@ date, timeSlots, reason);
           logger.error('Error parsing pricingBreakdown JSON in update:', e as Error);
           // Log the problematic data for debugging
           logger.info('Attempting to fix problematic pricing data in update');
-
+          
           try {
             // Function to help with deeply nested JSON
             const fixNestedJson = (jsonStr: string) => {
@@ -1609,31 +1559,31 @@ date, timeSlots, reason);
                   // Failed to parse as nested JSON
                 }
               }
-
+              
               // Replace single quotes with double quotes
               let fixedJson = jsonStr.replace(/'/g, '"');
-
+              
               // Add missing quotes around property names
               fixedJson = fixedJson.replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-
+              
               // Add missing quotes around property values that are not numbers or booleans
               fixedJson = fixedJson.replace(/:\s*([a-zA-Z][a-zA-Z0-9_]*)\s*([,}])/g, ':"$1"$2');
-
+              
               return JSON.parse(fixedJson);
             };
-
+            
             // Replace double-escaped quotes
             let intermediateJson = updates.pricingBreakdown
               .replace(/\\\\"/g, '\\"') // Replace \\" with \"
               .replace(/\\"/g, '"')     // Replace \" with "
               .replace(/"{/g, '{')      // Replace "{ with {
               .replace(/}"/g, '}');     // Replace }" with }
-
+            
             // Handle the case where the string might be an array-like string with JSON objects
             if (intermediateJson.startsWith('"[') || intermediateJson.endsWith(']"')) {
               intermediateJson = intermediateJson.replace(/^"|"$/g, '');
             }
-
+            
             // Try to parse the fixed JSON
             updates.pricingBreakdown = JSON.parse(intermediateJson);
             logger.info('Successfully fixed and parsed JSON with intermediate approach in update');
@@ -1649,7 +1599,7 @@ date, timeSlots, reason);
                     return null;
                   }
                 }).filter(Boolean);
-
+                
                 logger.info('Extracted valid JSON objects from malformed string in update');
               } else {
                 // If all attempts fail, create a basic empty object
@@ -1666,15 +1616,6 @@ date, timeSlots, reason);
       }
 
       // Update the booking in the database
-          // Check if there's actually data to update
-      if (Object.keys(updates).length === 0) {
-        logger.warn('No valid update data provided', { bookingId: id });
-        return res.status(400).json({
-          success: false,
-          message: 'No valid update data provided'
-        });
-      }
-
       const result = await db.update(bookings)
         .set(updates)
         .where(eq(bookings.id, id))
@@ -1703,7 +1644,7 @@ date, timeSlots, reason);
           // Calculate what fields have changed
           const updatedBooking = result[0];
           const changes: Record<string, any> = {};
-
+          
           // Compare fields and add to changes if they're different
           for (const key in updates) {
             if (Object.prototype.hasOwnProperty.call(updates, key) && 
@@ -1711,7 +1652,7 @@ date, timeSlots, reason);
               changes[key] = updates[key];
             }
           }
-
+          
           // Only send email if there were actual changes
           if (Object.keys(changes).length > 0) {
             emailSent = await sendServiceEditNotification(updatedBooking, changes);
@@ -1740,16 +1681,16 @@ date, timeSlots, reason);
   });
 
   // Customer API Endpoints
-
+  
   // Register a new customer
   // Import email service
   const { sendBookingConfirmationEmails } = await import('./services/emailService');
-
+  
   // SMS Routes
   app.post("/api/sms/send", async (req: Request, res: Response) => {
     try {
       const { to, message, bookingId } = req.body;
-
+      
       // Validate required fields
       if (!to || !message) {
         return res.status(400).json({
@@ -1757,7 +1698,7 @@ date, timeSlots, reason);
           message: "Phone number and message are required"
         });
       }
-
+      
       // Check if Twilio is configured
       if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
         logger.warn("Twilio not configured, SMS not sent");
@@ -1766,14 +1707,14 @@ date, timeSlots, reason);
           message: "SMS service not configured"
         });
       }
-
+      
       // For now, just log the SMS (would integrate with Twilio in production)
       logger.info(`SMS would be sent to ${to}: ${message}`, {
         bookingId,
         phone: to,
         messageLength: message.length
       });
-
+      
       res.json({
         success: true,
         message: "SMS sent successfully",
@@ -1792,34 +1733,34 @@ date, timeSlots, reason);
   app.get("/api/customer-portal/:email/:token", async (req: Request, res: Response) => {
     try {
       const { email, token } = req.params;
-
+      
       // For now, use a simple token validation (in production, use JWT or similar)
       // Token format: base64(email + timestamp + secret)
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
-
+      
       if (token !== expectedToken) {
         return res.status(403).json({
           success: false,
           message: "Invalid or expired access token"
         });
       }
-
+      
       // Find booking by email (get the most recent active booking)
       const bookingResults = await db.select()
         .from(bookings)
         .where(eq(bookings.email, email))
         .orderBy(desc(bookings.createdAt))
         .limit(1);
-
+      
       if (bookingResults.length === 0) {
         return res.status(404).json({
           success: false,
           message: "No booking found for this email"
         });
       }
-
+      
       const booking = bookingResults[0];
-
+      
       res.json({
         success: true,
         booking: {
@@ -1853,7 +1794,7 @@ date, timeSlots, reason);
     try {
       const { email, token } = req.params;
       const { reason } = req.body;
-
+      
       // Validate token
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
       if (token !== expectedToken) {
@@ -1862,7 +1803,7 @@ date, timeSlots, reason);
           message: "Invalid access token"
         });
       }
-
+      
       // Update booking status to cancelled
       const result = await db.update(bookings)
         .set({
@@ -1871,19 +1812,20 @@ date, timeSlots, reason);
         })
         .where(eq(bookings.email, email))
         .returning();
-
+      
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-
+      
       res.json({
         success: true,
         message: "Booking cancelled successfully"
       });
-    } catch (error) {      logger.error("Error cancelling booking:", error as Error);
+    } catch (error) {
+      logger.error("Error cancelling booking:", error as Error);
       res.status(500).json({
         success: false,
         message: "Failed to cancel booking"
@@ -1895,7 +1837,7 @@ date, timeSlots, reason);
     try {
       const { email, token } = req.params;
       const { newDate, newTime, reason } = req.body;
-
+      
       // Validate token
       const expectedToken = Buffer.from(`${email}-${process.env.PORTAL_SECRET || 'default-secret'}`).toString('base64');
       if (token !== expectedToken) {
@@ -1904,29 +1846,29 @@ date, timeSlots, reason);
           message: "Invalid access token"
         });
       }
-
+      
       // Update booking with new date and time
       const updateData: any = {
         preferredDate: newDate,
         appointmentTime: newTime
       };
-
+      
       if (reason) {
         updateData.notes = `Rescheduled by customer: ${reason}`;
       }
-
+      
       const result = await db.update(bookings)
         .set(updateData)
         .where(eq(bookings.email, email))
         .returning();
-
+      
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-
+      
       res.json({
         success: true,
         message: "Booking rescheduled successfully"
@@ -1943,7 +1885,7 @@ date, timeSlots, reason);
   app.post("/api/customers/register", async (req: Request, res: Response) => {
     try {
       const { name, email, phone, password, streetAddress, addressLine2, city, state, zipCode } = req.body;
-
+      
       // Validate input data
       try {
         insertCustomerSchema.parse({
@@ -1967,17 +1909,17 @@ date, timeSlots, reason);
         }
         throw validationError;
       }
-
+      
       // Check if customer already exists
       const existingCustomer = await storage.getCustomerByEmail(email);
-
+      
       if (existingCustomer) {
         return res.status(400).json({
           success: false,
           message: "A customer with this email already exists"
         });
       }
-
+      
       // Create new customer
       const newCustomer = await storage.createCustomer({
         name,
@@ -1991,10 +1933,10 @@ date, timeSlots, reason);
         zipCode,
         loyaltyPoints: 0
       });
-
+      
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = newCustomer;
-
+      
       res.status(201).json({
         success: true,
         message: "Customer registered successfully",
@@ -2008,25 +1950,25 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Customer login
   app.post("/api/customers/login", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-
+      
       // Validate credentials
       const customer = await storage.validateCustomerCredentials(email, password);
-
+      
       if (!customer) {
         return res.status(401).json({
           success: false,
           message: "Invalid credentials"
         });
       }
-
+      
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = customer;
-
+      
       res.json({
         success: true,
         message: "Login successful",
@@ -2040,31 +1982,31 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get customer profile
   app.get("/api/customers/profile/:id", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
-
+      
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-
+      
       const customer = await storage.getCustomerById(customerId);
-
+      
       if (!customer) {
         return res.status(404).json({
           success: false,
           message: "Customer not found"
         });
       }
-
+      
       // Don't return the password
       const { password, ...customerWithoutPassword } = customer;
-
+      
       res.json({
         success: true,
         customer: customerWithoutPassword
@@ -2077,20 +2019,20 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Update customer profile
   app.put("/api/customers/profile/:id", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
       const updates = req.body;
-
+      
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-
+      
       // Don't allow updating the email or loyalty points directly
       delete updates.email;
       delete updates.loyaltyPoints;
@@ -2100,12 +2042,12 @@ date, timeSlots, reason);
       delete updates.isVerified;
       delete updates.passwordResetToken;
       delete updates.passwordResetExpires;
-
+      
       const updatedCustomer = await storage.updateCustomer(customerId, updates);
-
+      
       // Don't return the password
       const { password, ...customerWithoutPassword } = updatedCustomer;
-
+      
       res.json({
         success: true,
         message: "Profile updated successfully",
@@ -2121,12 +2063,12 @@ date, timeSlots, reason);
   });
 
   // Push Notification API Endpoints
-
+  
   // Get VAPID public key for web push subscription
   app.get("/api/push/vapid-public-key", (req: Request, res: Response) => {
     try {
       const publicKey = pushNotificationService.getPublicKey();
-
+      
       res.json({
         success: true,
         publicKey
@@ -2139,18 +2081,18 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Save push subscription for a customer
   app.post("/api/customers/:id/push-subscription", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const userId = parseInt(id);
       const { subscription } = req.body;
-
+      
       // Validate the subscription object
       try {
         const validatedSubscription = pushSubscriptionSchema.parse(subscription);
-
+        
         // Check if user exists
         const user = await storage.getCustomerById(userId);
         if (!user) {
@@ -2159,24 +2101,24 @@ date, timeSlots, reason);
             message: "User not found"
           });
         }
-
+        
         // Save the subscription
         const success = await pushNotificationService.saveSubscription(userId, validatedSubscription);
-
+        
         if (!success) {
           return res.status(500).json({
             success: false,
             message: "Failed to save push subscription"
           });
         }
-
+        
         // Send a test notification to confirm subscription
         await pushNotificationService.sendNotification(
           userId,
           "Notifications Enabled",
           "You will now receive booking notifications from Picture Perfect TV Install."
         );
-
+        
         res.json({
           success: true,
           message: "Push subscription saved successfully"
@@ -2196,14 +2138,14 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Update notification settings for a customer
   app.put("/api/customers/:id/notification-settings", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const userId = parseInt(id);
       const { settings, enabled } = req.body;
-
+      
       // Check if user exists
       const user = await storage.getCustomerById(userId);
       if (!user) {
@@ -2212,36 +2154,36 @@ date, timeSlots, reason);
           message: "User not found"
         });
       }
-
+      
       // Update database record
       const updateData: any = {};
-
+      
       // Update notification enabled/disabled status if provided
       if (typeof enabled === 'boolean') {
         updateData.notificationsEnabled = enabled;
-
+        
         // If notifications are being disabled, we don't need to update settings
         if (!enabled) {
           await pushNotificationService.disableNotifications(userId);
-
+          
           return res.json({
             success: true,
             message: "Notifications disabled successfully"
           });
         }
       }
-
+      
       // Update notification settings if provided
       if (settings) {
         try {
           const validatedSettings = notificationSettingsSchema.parse(settings);
           updateData.notificationSettings = validatedSettings;
-
+          
           // Update the user's notification settings
           await db.update(customers)
             .set({ notificationSettings: validatedSettings as any })
             .where(eq(customers.id, userId));
-
+          
           res.json({
             success: true,
             message: "Notification settings updated successfully"
@@ -2267,21 +2209,21 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get customer bookings
   app.get("/api/customers/:id/bookings", async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id);
-
+      
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-
+      
       const bookings = await storage.getCustomerBookings(customerId);
-
+      
       res.json({
         success: true,
         bookings
@@ -2294,32 +2236,32 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Customer update their booking
   app.put("/api/customers/bookings/:id", async (req: Request, res: Response) => {
     try {
       const bookingId = parseInt(req.params.id);
       const { preferredDate, appointmentTime, notes, status } = req.body;
-
+      
       if (isNaN(bookingId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid booking ID"
         });
       }
-
+      
       // Load the existing booking
       const existingBookingResult = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-
+      
       if (existingBookingResult.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Booking not found"
         });
       }
-
+      
       const existingBooking = existingBookingResult[0];
-
+      
       // Only allow editing of active bookings (except for cancellation)
       if (existingBooking.status !== 'active' && status !== 'cancelled') {
         return res.status(400).json({
@@ -2327,58 +2269,47 @@ date, timeSlots, reason);
           message: "Only active bookings can be updated"
         });
       }
-
+      
       // If this is a cancellation, we don't need to check for time slot conflicts
       // Otherwise check if this time slot is already booked by someone else
       if (status !== 'cancelled' && preferredDate && appointmentTime) {
         const existingBookings = await db.select().from(bookings).where(
           and(
-            sql`${bookings.preferredDate} = ${preferredDate}`,
+            sql`DATE(${bookings.preferredDate}) = ${preferredDate}`,
             eq(bookings.appointmentTime, appointmentTime),
             eq(bookings.status, 'active'),
             sql`${bookings.id} != ${bookingId}`
           )
         );
-
+        
         if (existingBookings.length > 0) {
-          logger.info('WARNING: Time slot already booked, returning conflict error');
           return res.status(409).json({
             success: false,
-            message: 'This time slot is already booked. Please choose a different time.',
-                        error: 'TIME_SLOT_CONFLICT',
-            suggestedTimes: [] // Could add logic to suggest alternative times
+            message: "This time slot is already booked. Please select another time."
           });
         }
       }
-
+      
       // Prepare updates
       const updates: any = {};
       if (preferredDate) updates.preferredDate = preferredDate;
       if (appointmentTime) updates.appointmentTime = appointmentTime;
       if (notes !== undefined) updates.notes = notes;
       if (status) updates.status = status;
-
+      
       // Update the booking
-          // Check if there's actually data to update
-      if (Object.keys(updates).length === 0) {
-        logger.warn('No valid update data provided', { bookingId: bookingId });
-        return res.status(400).json({
-          success: false,
-          message: 'No valid update data provided'
-        });
-      }
       const result = await db.update(bookings)
         .set(updates)
         .where(eq(bookings.id, bookingId))
         .returning();
-
+      
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Failed to update booking"
         });
       }
-
+      
       // Send appropriate enhanced notification email
       try {
         if (status === 'cancelled') {
@@ -2402,7 +2333,7 @@ date, timeSlots, reason);
         logger.error("Error sending enhanced customer booking email:", emailError as Error);
         // We don't want to fail the request if the email fails
       }
-
+      
       res.json({
         success: true,
         message: status === 'cancelled' ? "Booking cancelled successfully" : "Booking updated successfully",
@@ -2416,22 +2347,22 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Reset password request
   app.post("/api/customers/reset-password-request", async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-
+      
       // Request password reset
       const resetToken = await storage.requestPasswordReset(email);
-
+      
       // Even if the email doesn't exist, still return success
       // This is to prevent email enumeration attacks
       res.json({
         success: true,
         message: "If your email exists in our system, you will receive a password reset link shortly"
       });
-
+      
       // If a token was generated, send an email with the reset link
       if (resetToken) {
         // TODO: Implement sending reset email here
@@ -2445,29 +2376,29 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Reset password
   app.post("/api/customers/reset-password", async (req: Request, res: Response) => {
     try {
       const { email, token, newPassword } = req.body;
-
+      
       if (!email || !token || !newPassword) {
         return res.status(400).json({
           success: false,
           message: "Missing required fields"
         });
       }
-
+      
       // Try to reset the password
       const success = await storage.resetPassword(email, token, newPassword);
-
+      
       if (!success) {
         return res.status(400).json({
           success: false,
           message: "Invalid or expired reset token"
         });
       }
-
+      
       res.json({
         success: true,
         message: "Password reset successful"
@@ -2480,21 +2411,21 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Verify customer email
   app.get("/api/customers/verify/:email/:token", async (req: Request, res: Response) => {
     try {
       const { email, token } = req.params;
-
+      
       const success = await storage.verifyCustomer(email, token);
-
+      
       if (!success) {
         return res.status(400).json({
           success: false,
           message: "Invalid verification token"
         });
       }
-
+      
       res.json({
         success: true,
         message: "Email verified successfully"
@@ -2507,21 +2438,21 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Admin customer management endpoints
-
+  
   // List all customers (admin)
   app.get("/api/admin/customers", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       // Get all customers from database
       const result = await db.select({
         id: customers.id,
@@ -2537,7 +2468,7 @@ date, timeSlots, reason);
         lastLogin: customers.lastLogin,
         isVerified: customers.isVerified
       }).from(customers);
-
+      
       res.json({
         success: true,
         customers: result
@@ -2550,39 +2481,39 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get customer details (admin)
   app.get("/api/admin/customers/:id", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
       const customerId = parseInt(req.params.id);
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-
+      
       const customer = await storage.getCustomerById(customerId);
-
+      
       if (!customer) {
         return res.status(404).json({
           success: false,
           message: "Customer not found"
         });
       }
-
+      
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = customer;
-
+      
       res.json({
         success: true,
         customer: customerWithoutPassword
@@ -2595,32 +2526,32 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Update customer (admin)
   app.put("/api/admin/customers/:id", async (req: Request, res: Response) => {
     try {
       const { password, ...updates } = req.body;
       const customerId = parseInt(req.params.id);
-
+      
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       if (isNaN(customerId)) {
         return res.status(400).json({
           success: false,
           message: "Invalid customer ID"
         });
       }
-
+      
       const updatedCustomer = await storage.updateCustomer(customerId, updates);
-
+      
       // Don't return the password
       const { password: _, ...customerWithoutPassword } = updatedCustomer;
-
+      
       res.json({
         success: true,
         message: "Customer updated successfully",
@@ -2634,7 +2565,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Admin endpoints
   // The adminPassword variable is no longer needed here because it's managed by verifyAdminPassword function.
 
@@ -2653,86 +2584,6 @@ date, timeSlots, reason);
         success: false,
         message: "Invalid password"
       });
-    }
-  });
-
-  // Optimized admin endpoints for booking management
-  app.put("/api/admin/bookings/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { status } = req.body;
-
-      if (isNaN(id)) {
-        return res.status(400).json({ success: false, message: "Invalid booking ID" });
-      }
-
-      const result = await db.update(bookings)
-        .set({ status })
-        .where(eq(bookings.id, id))
-        .returning();
-
-      if (result.length === 0) {
-        return res.status(404).json({ success: false, message: "Booking not found" });
-      }
-
-      // Clear cache when booking is updated
-      clearCache('bookings');
-
-      res.json({ success: true, booking: result[0] });
-    } catch (error) {
-      logger.error("Error updating booking:", error as Error);
-      res.status(500).json({ success: false, message: "Failed to update booking" });
-    }
-  });
-
-  app.delete("/api/admin/bookings/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-
-      if (isNaN(id)) {
-        return res.status(400).json({ success: false, message: "Invalid booking ID" });
-      }
-
-      const result = await db.delete(bookings)
-        .where(eq(bookings.id, id))
-        .returning();
-
-      if (result.length === 0) {
-        return res.status(404).json({ success: false, message: "Booking not found" });
-      }
-
-      // Clear cache when booking is deleted
-      clearCache('bookings');
-
-      res.json({ success: true, message: "Booking deleted successfully" });
-    } catch (error) {
-      logger.error("Error deleting booking:", error as Error);
-      res.status(500).json({ success: false, message: "Failed to delete booking" });
-    }
-  });
-
-  // Performance monitoring endpoint
-  app.get("/api/admin/performance", async (req: Request, res: Response) => {
-    try {
-      const { password } = req.query;
-      if (!verifyAdminPassword(password as string)) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
-      }
-
-      const metrics = performanceMonitor.getAllMetrics();
-      const memoryUsage = getMemoryUsage();
-
-      res.json({
-        success: true,
-        data: {
-          metrics,
-          memory: memoryUsage,
-          timestamp: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      logger.error("Error fetching performance data:", error as Error);
-      res.status(500).json({ success: false, message: "Failed to fetch performance data" });
     }
   });
 
@@ -2788,23 +2639,23 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Business Hours endpoints
-
+  
   // Get all business hours (Admin)
   app.get("/api/admin/business-hours", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       const businessHours = await storage.getBusinessHours();
-
+      
       res.json({
         success: true,
         businessHours
@@ -2817,16 +2668,16 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get all business hours (Public) - No authentication needed
   app.get("/api/business-hours", async (req: Request, res: Response) => {
     try {
       const businessHours = await storage.getBusinessHours();
-
+      
       logger.debug('Fetched business hours for client', { 
         businessHoursCount: businessHours.length
       });
-
+      
       res.json({
         success: true,
         businessHours
@@ -2839,20 +2690,20 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get business hours for specific day
   app.get("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
     try {
       const { password } = req.query;
       const dayOfWeek = parseInt(req.params.dayOfWeek);
-
+      
       if (!verifyAdminPassword(password as string)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       // Validate day of week
       if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
         return res.status(400).json({
@@ -2860,16 +2711,16 @@ date, timeSlots, reason);
           message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
         });
       }
-
+      
       const hours = await storage.getBusinessHoursForDay(dayOfWeek);
-
+      
       if (!hours) {
         return res.status(404).json({
           success: false,
           message: "Business hours not found for the specified day"
         });
       }
-
+      
       res.json({
         success: true,
         businessHours: hours
@@ -2882,70 +2733,20 @@ date, timeSlots, reason);
       });
     }
   });
-
-  // Block time slot endpoint
-  app.post("/api/admin/block-time", async (req: Request, res: Response) => {
-    try {
-      const { password, date, startTime, endTime, reason } = req.body;
-
-      if (!verifyAdminPassword(password)) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      if (!date || !startTime || !endTime) {
-        return res.status(400).json({ error: 'Date, start time, and end time are required' });
-      }
-
-      // Create a blocked time entry in the bookings table
-      const blockedSlot = await db.insert(bookingsTable).values({
-        name: 'BLOCKED TIME',
-        email: 'admin@jwood.com',
-        phone: '000-000-0000',
-        streetAddress: 'N/A',
-        city: 'N/A',
-        state: 'GA',
-        zipCode: '00000',
-        serviceType: 'BLOCKED',
-        scheduledDate: date,
-        scheduledTime: startTime,
-        totalAmount: '0.00',
-        notes: reason || 'Time blocked by admin',
-        status: 'confirmed',
-        confirmationNumber: `BLOCK-${Date.now()}`,
-        isTestBooking: false
-      }).returning();
-
-      logger.info(`Admin blocked time slot: ${date} ${startTime}-${endTime}`, {
-        date,
-        startTime,
-        endTime,
-        reason
-      });
-
-      res.json({ 
-        success: true, 
-        message: 'Time slot blocked successfully',
-        blockedSlot: blockedSlot[0]
-      });
-    } catch (error) {
-      logger.error('Error blocking time slot:', error as Error);
-      res.status(500).json({ error: 'Failed to block time slot' });
-    }
-  });
-
+  
   // Update business hours for a specific day
   app.post("/api/admin/business-hours/:dayOfWeek", async (req: Request, res: Response) => {
     try {
       const { password, startTime, endTime, isAvailable } = req.body;
       const dayOfWeek = parseInt(req.params.dayOfWeek);
-
+      
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       // Validate day of week
       if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
         return res.status(400).json({
@@ -2953,7 +2754,7 @@ date, timeSlots, reason);
           message: "Invalid day of week. Must be a number between 0 (Sunday) and 6 (Saturday)"
         });
       }
-
+      
       // Validate input data
       try {
         businessHoursSchema.parse({
@@ -2972,14 +2773,14 @@ date, timeSlots, reason);
         }
         throw validationError;
       }
-
+      
       // Update business hours in storage
       const updatedHours = await storage.updateBusinessHours(dayOfWeek, {
         startTime,
         endTime,
         isAvailable: isAvailable !== undefined ? isAvailable : true
       });
-
+      
       res.json({
         success: true,
         message: "Business hours updated successfully",
@@ -2993,7 +2794,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // API endpoint to get booking archives
   app.get("/api/booking-archives", async (req: Request, res: Response) => {
     try {
@@ -3005,16 +2806,16 @@ date, timeSlots, reason);
           message: "Unauthorized - Invalid admin password"
         });
       }
-
+      
       // Get archives from the database
       const archives = await storage.getBookingArchives();
-
+      
       // Sort by archivedAt date, most recent first
       archives.sort((a, b) => {
         if (!a.archivedAt || !b.archivedAt) return 0;
         return new Date(b.archivedAt).getTime() - new Date(a.archivedAt).getTime();
       });
-
+      
       res.json({
         success: true,
         archives
@@ -3031,7 +2832,7 @@ date, timeSlots, reason);
   // System Settings API Routes
   // Analytics API - Get Meta Pixel event data
   app.get("/api/admin/analytics", handleGetAnalytics);
-
+  
   app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSystemSettings();
@@ -3047,19 +2848,19 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   app.get("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
     try {
       const name = req.params.name;
       const setting = await storage.getSystemSettingByName(name);
-
+      
       if (!setting) {
         return res.status(404).json({
           success: false,
           message: "System setting not found"
         });
       }
-
+      
       res.json({
         success: true,
         setting
@@ -3072,26 +2873,26 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   app.post("/api/admin/system-settings/:name", async (req: Request, res: Response) => {
     try {
       const { password, value } = req.body;
       const name = req.params.name;
-
+      
       if (!verifyAdminPassword(password)) {
         return res.status(401).json({
           success: false,
           message: "Invalid password"
         });
       }
-
+      
       if (value === undefined) {
         return res.status(400).json({
           success: false,
           message: "Value is required"
         });
       }
-
+      
       const updatedSetting = await storage.updateSystemSetting(name, value);
       res.json({
         success: true,
@@ -3106,19 +2907,19 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Public API for system settings (only specific settings)
   app.get("/api/system-settings/booking-buffer", async (req: Request, res: Response) => {
     try {
       const setting = await storage.getSystemSettingByName('bookingBufferHours');
-
+      
       if (!setting) {
         return res.status(404).json({
           success: false,
           message: "Setting not found"
         });
       }
-
+      
       res.json({
         success: true,
         bookingBufferHours: setting.bookingBufferHours
@@ -3136,7 +2937,7 @@ date, timeSlots, reason);
   app.delete("/api/bookings/:id", async (req, res) => {
     const { id } = req.params;
     const { reason, note, skipArchive, sendCancellationEmail } = req.query;
-
+    
     try {
       if (isNaN(parseInt(id))) {
         return res.status(400).json({
@@ -3144,28 +2945,28 @@ date, timeSlots, reason);
           message: "Invalid booking ID"
         });
       }
-
+      
       // First, check if the booking exists in the database
       const bookingId = parseInt(id);
-
+      
       try {
         // Get the booking before deletion to use for email notification
         const booking = await storage.getBooking(bookingId);
-
+        
         if (!booking) {
           return res.status(404).json({
             success: false,
             message: "Booking not found"
           });
         }
-
+        
         // Use storage interface to handle deletion and archiving
         await storage.deleteBooking(bookingId, 
           skipArchive === 'true' ? undefined : (reason as string || 'admin-deleted'), 
           note as string
         );
-
-        // Send cancellation email if requested```text
+        
+        // Send cancellation email if requested
         if (sendCancellationEmail === 'true' && booking.email) {
           try {
             const emailResult = await sendBookingCancellationEmail(booking, reason as string);
@@ -3179,7 +2980,7 @@ date, timeSlots, reason);
             // Continue with the deletion even if email fails
           }
         }
-
+        
         res.json({ 
           success: true, 
           message: skipArchive === 'true' 
@@ -3203,7 +3004,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get all booking archives
   app.get("/api/admin/booking-archives", async (req, res) => {
     try {
@@ -3215,9 +3016,9 @@ date, timeSlots, reason);
           message: "Unauthorized" 
         });
       }
-
+      
       const archives = await storage.getBookingArchives();
-
+      
       res.json({
         success: true,
         archives
@@ -3230,7 +3031,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get a specific booking archive by ID
   app.get("/api/admin/booking-archives/:id", async (req, res) => {
     try {
@@ -3242,7 +3043,7 @@ date, timeSlots, reason);
           message: "Unauthorized" 
         });
       }
-
+      
       const { id } = req.params;
       if (isNaN(parseInt(id))) {
         return res.status(400).json({
@@ -3250,16 +3051,16 @@ date, timeSlots, reason);
           message: "Invalid archive ID"
         });
       }
-
+      
       const archive = await storage.getBookingArchiveById(parseInt(id));
-
+      
       if (!archive) {
         return res.status(404).json({
           success: false,
           message: "Archive not found"
         });
       }
-
+      
       res.json({
         success: true,
         archive
@@ -3272,7 +3073,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get booking archives by reason
   app.get("/api/admin/booking-archives/reason/:reason", async (req, res) => {
     try {
@@ -3284,10 +3085,10 @@ date, timeSlots, reason);
           message: "Unauthorized" 
         });
       }
-
+      
       const { reason } = req.params;
       const archives = await storage.getBookingArchivesByReason(reason);
-
+      
       res.json({
         success: true,
         archives
@@ -3300,7 +3101,7 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Get booking archives by customer email
   app.get("/api/admin/booking-archives/email/:email", async (req, res) => {
     try {
@@ -3312,10 +3113,10 @@ date, timeSlots, reason);
           message: "Unauthorized" 
         });
       }
-
+      
       const { email } = req.params;
       const archives = await storage.getBookingArchivesByEmail(email);
-
+      
       res.json({
         success: true,
         archives
@@ -3344,36 +3145,36 @@ date, timeSlots, reason);
           promotions: []
         });
       }
-
+      
       // Check if we have valid dates for any time-limited promotions
       const now = new Date();
       const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-
+      
       // Filter promotions based on date ranges if they exist
       const activePromotions = dbPromotions.filter(promo => {
         // If no dates are specified, or isActive is explicitly false, use the isActive flag
         if (!promo.startDate && !promo.endDate) {
           return promo.isActive;
         }
-
+        
         // If we have a date range, check if today falls within it
         if (promo.startDate && promo.endDate) {
           return promo.isActive && promo.startDate <= today && promo.endDate >= today;
         }
-
+        
         // If only start date, check if today is after start date
         if (promo.startDate && !promo.endDate) {
           return promo.isActive && promo.startDate <= today;
         }
-
+        
         // If only end date, check if today is before end date
         if (!promo.startDate && promo.endDate) {
           return promo.isActive && promo.endDate >= today;
         }
-
+        
         return promo.isActive;
       });
-
+      
       // Map to expected format
       const formattedPromotions = activePromotions.map(p => ({
         id: p.id.toString(),
@@ -3388,10 +3189,10 @@ date, timeSlots, reason);
         priority: p.priority,
         isActive: p.isActive
       }));
-
+      
       // Add cache headers to prevent too many requests (10 minutes)
       res.setHeader('Cache-Control', 'public, max-age=600');
-
+      
       res.json({
         success: true,
         promotions: formattedPromotions
@@ -3422,7 +3223,7 @@ date, timeSlots, reason);
       // Validate promotion data
       try {
         const validPromotion = promotionSchema.parse(promotion);
-
+        
         // Insert promotion into database
         const result = await db.insert(promotions).values({
           title: validPromotion.title,
@@ -3444,7 +3245,7 @@ date, timeSlots, reason);
         });
       } catch (validationError) {
         logger.error("Promotion validation error:", validationError);
-
+        
         if (validationError instanceof ZodError) {
           return res.status(400).json({
             success: false,
@@ -3452,7 +3253,7 @@ date, timeSlots, reason);
             errors: validationError.errors
           });
         }
-
+        
         throw validationError;
       }
     } catch (error) {
@@ -3469,7 +3270,7 @@ date, timeSlots, reason);
     try {
       const { id } = req.params;
       const { password, promotion } = req.body;
-
+      
       // Verify admin password
       if (!verifyAdminPassword(password)) {
         logger.auth('Invalid password for updating promotion');
@@ -3478,7 +3279,7 @@ date, timeSlots, reason);
           message: "Invalid admin password"
         });
       }
-
+      
       // Parse the ID
       const promotionId = parseInt(id);
       if (isNaN(promotionId)) {
@@ -3487,11 +3288,11 @@ date, timeSlots, reason);
           message: "Invalid promotion ID"
         });
       }
-
+      
       // Validate promotion data
       try {
         const validPromotion = promotionSchema.parse(promotion);
-
+        
         // Update promotion in database
         const result = await db.update(promotions)
           .set({
@@ -3509,14 +3310,14 @@ date, timeSlots, reason);
           })
           .where(eq(promotions.id, promotionId))
           .returning();
-
+          
         if (result.length === 0) {
           return res.status(404).json({
             success: false,
             message: "Promotion not found"
           });
         }
-
+        
         res.json({
           success: true,
           message: "Promotion updated successfully",
@@ -3524,7 +3325,7 @@ date, timeSlots, reason);
         });
       } catch (validationError) {
         logger.error("Promotion validation error:", validationError);
-
+        
         if (validationError instanceof ZodError) {
           return res.status(400).json({
             success: false,
@@ -3532,7 +3333,7 @@ date, timeSlots, reason);
             errors: validationError.errors
           });
         }
-
+        
         throw validationError;
       }
     } catch (error) {
@@ -3543,13 +3344,13 @@ date, timeSlots, reason);
       });
     }
   });
-
+  
   // Admin: Delete promotion
   app.delete("/api/admin/promotions/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { password } = req.query;
-
+      
       // Verify admin password
       if (!verifyAdminPassword(password as string)) {
         logger.auth('Invalid password for deleting promotion');
@@ -3558,7 +3359,7 @@ date, timeSlots, reason);
           message: "Invalid admin password"
         });
       }
-
+      
       // Parse the ID
       const promotionId = parseInt(id);
       if (isNaN(promotionId)) {
@@ -3567,19 +3368,19 @@ date, timeSlots, reason);
           message: "Invalid promotion ID"
         });
       }
-
+      
       // Delete promotion from database
       const result = await db.delete(promotions)
         .where(eq(promotions.id, promotionId))
         .returning();
-
+        
       if (result.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Promotion not found"
         });
       }
-
+      
       res.json({
         success: true,
         message: "Promotion deleted successfully"
@@ -3589,363 +3390,6 @@ date, timeSlots, reason);
       res.status(500).json({
         success: false,
         message: "Failed to delete promotion"
-      });
-    }
-  });
-
-  // Google Calendar Integration Endpoints
-
-  // Initialize Google Calendar service
-  app.post("/api/calendar/initialize", async (req: Request, res: Response) => {
-    try {
-      const initialized = await googleCalendarService.initialize();
-
-      res.json({
-        success: initialized,
-        message: initialized ? "Google Calendar service initialized" : "Failed to initialize Google Calendar service"
-      });
-    } catch (error) {
-      logger.error("Error initializing Google Calendar:", error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to initialize Google Calendar service"
-      });
-    }
-  });
-
-  // Check availability for a specific date
-  app.get("/api/calendar/availability/:date", async (req: Request, res: Response) => {
-    try {
-      const dateParam = req.params.date;
-      const date = new Date(dateParam);
-
-      if (isNaN(date.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid date format"
-        });
-      }
-
-      // Get already booked time slots from database
-      const bookedSlots = await db.select().from(bookings).where(
-        and(
-          eq(bookings.preferredDate, dateParam),
-          eq(bookings.status, 'confirmed')
-        )
-      );
-
-      const bookedTimes = bookedSlots.map(booking => booking.appointmentTime);
-
-      // Get available slots from Google Calendar and filter out booked ones
-      const allSlots = await googleCalendarService.getAvailableSlots(date);
-      const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
-
-      res.json({
-        success: true,
-        date: dateParam,
-        availableSlots,
-        bookedSlots: bookedTimes
-      });
-    } catch (error) {
-      logger.error("Error checking calendar availability:", error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to check calendar availability"
-      });
-    }
-  });
-
-  // Admin Calendar - Get all upcoming bookings
-  app.get("/api/admin/calendar", async (req: Request, res: Response) => {
-    try {
-      const { password } = req.query;
-
-      if (!verifyAdminPassword(password as string)) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized"
-        });
-      }
-
-      // Get all confirmed bookings from today onwards
-      const today = new Date().toISOString().split('T')[0];
-      const upcomingBookings = await db.select().from(bookings).where(
-        and(
-          sql`${bookings.preferredDate} >= ${today}`,
-          eq(bookings.status, 'confirmed')
-        )
-      ).orderBy(bookings.preferredDate, bookings.appointmentTime);
-
-      // Format bookings for calendar display
-      const calendarBookings = upcomingBookings.map(booking => ({
-        id: booking.id,
-        title: `${booking.name} - ${booking.serviceType}`,
-        customerName: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        address: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
-        serviceType: booking.serviceType,
-        date: booking.preferredDate,
-        time: booking.appointmentTime,
-        notes: booking.notes,
-        pricingTotal: booking.pricingTotal,
-        createdAt: booking.createdAt
-      }));
-
-      res.json({
-        success: true,
-        bookings: calendarBookings,
-        totalBookings: calendarBookings.length
-      });
-    } catch (error) {
-      logger.error("Error fetching admin calendar:", error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch calendar data"
-      });
-    }
-  });
-
-  // Admin Calendar - Get bookings for specific date
-  app.get("/api/admin/calendar/:date", async (req: Request, res: Response) => {
-    try {
-      const { password } = req.query;
-      const { date } = req.params;
-
-      if (!verifyAdminPassword(password as string)) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized"
-        });
-      }
-
-      const dayBookings = await db.select().from(bookings).where(
-        and(
-          eq(bookings.preferredDate, date),
-          eq(bookings.status, 'confirmed')
-        )
-      ).orderBy(bookings.appointmentTime);
-
-      const formattedBookings = dayBookings.map(booking => ({
-        id: booking.id,
-        customerName: booking.name,
-        email: booking.email,
-        phone: booking.phone,
-        address: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
-        serviceType: booking.serviceType,
-        time: booking.appointmentTime,
-        notes: booking.notes,
-        pricingTotal: booking.pricingTotal
-      }));
-
-      res.json({
-        success: true,
-        date,
-        bookings: formattedBookings,
-        totalBookings: formattedBookings.length
-      });
-    } catch (error) {
-      logger.error("Error fetching daily bookings:", error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch daily bookings"
-      });
-    }
-  });
-
-  // Complete booking with calendar event creation
-  app.post("/api/bookings/complete", async (req: Request, res: Response) => {
-    try {
-      const bookingData = req.body;
-
-      // Validate required fields
-      if (!bookingData.fullName || !bookingData.email || !bookingData.phone || 
-          !bookingData.selectedDate || !bookingData.selectedTime || !bookingData.services) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required booking information"
-        });
-      }
-
-      // Parse selected date and time with better error handling
-      let startTime: Date;
-      let endTime: Date;
-
-      try {
-        const [startTimeStr, endTimeStr] = bookingData.selectedTime.split(' - ');
-        if (!startTimeStr || !endTimeStr) {
-          throw new Error('Invalid time format');
-        }
-
-        const bookingDate = new Date(bookingData.selectedDate);
-        if (isNaN(bookingDate.getTime())) {
-          throw new Error('Invalid date format');
-        }
-
-        // Parse start time
-        startTime = new Date(bookingDate);
-        const startMatch = startTimeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-        if (!startMatch) {
-          throw new Error('Invalid start time format');
-        }
-
-        let hour = parseInt(startMatch[1]);
-        const minute = parseInt(startMatch[2]);
-        const period = startMatch[3].toUpperCase();
-
-        if (period === 'PM' && hour !== 12) hour += 12;
-        if (period === 'AM' && hour === 12) hour = 0;
-
-        startTime.setHours(hour, minute, 0, 0);
-
-        // Parse end time
-        endTime = new Date(bookingDate);
-        const endMatch = endTimeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-        if (!endMatch) {
-          throw new Error('Invalid end time format');
-        }
-
-        let endHour = parseInt(endMatch[1]);
-        const endMinute = parseInt(endMatch[2]);
-        const endPeriod = endMatch[3].toUpperCase();
-
-        if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
-        if (endPeriod === 'AM' && endHour === 12) endHour = 0;
-
-        endTime.setHours(endHour, endMinute, 0, 0);
-
-        // Validate time range
-        if (startTime >= endTime) {
-          throw new Error('End time must be after start time');
-        }
-      } catch (timeError) {
-        logger.error('Time parsing error:', timeError as Error);
-        return res.status(400).json({
-          success: false,
-          message: `Invalid time format: ${(timeError as Error).message}`
-        });
-      }
-
-      // CRITICAL: Check for existing bookings at this exact time slot to prevent double bookings
-      const existingBooking = await db.select().from(bookings).where(
-        and(
-          eq(bookings.preferredDate, bookingData.selectedDate),
-          eq(bookings.appointmentTime, bookingData.selectedTime),
-          eq(bookings.status, 'confirmed')
-        )
-      );
-
-      if (existingBooking.length > 0) {
-        logger.warn(`Double booking attempt blocked for ${bookingData.email} at ${bookingData.selectedDate} at ${bookingData.selectedTime}`, {
-          attemptedCustomer: bookingData.email,
-          existingBooking: existingBooking[0].id
-        });
-        return res.status(409).json({
-          success: false,
-          message: "That time slot is no longer available. Please select a different time."
-        });
-      }
-
-      // Check if time slot is still available in Google Calendar
-      const isAvailable = await googleCalendarService.isTimeSlotAvailable(startTime, endTime);
-      if (!isAvailable) {
-        return res.status(409).json({
-          success: false,
-          message: "Selected time slot is no longer available"
-        });
-      }
-
-      // Create booking in database first
-      const booking = await storage.createBooking({
-        name: bookingData.fullName,
-        email: bookingData.email,
-        phone: bookingData.phone,
-        streetAddress: bookingData.address.street,
-        city: bookingData.address.city,
-        state: bookingData.address.state,
-        zipCode: bookingData.address.zipCode,
-        preferredDate: bookingData.selectedDate,
-        appointmentTime: bookingData.selectedTime,
-        serviceType: bookingData.services.map((s: any) => s.displayName).join(', '),
-        status: 'confirmed',
-        pricingTotal: bookingData.totalAmount,
-        notes: bookingData.notes || ''
-      });
-
-      // Generate primary service for calendar title
-      const primaryService = bookingData.services[0]?.displayName || 'Service';
-
-      // Create calendar event
-      const eventData = {
-        title: `PPTVInstall – ${bookingData.fullName} – ${primaryService}`,
-        description: googleCalendarService.generateBookingDescription({
-          fullName: bookingData.fullName,
-          address: bookingData.address,
-          email: bookingData.email,
-          phone: bookingData.phone,
-          services: bookingData.services,
-          totalAmount: bookingData.totalAmount,
-          notes: bookingData.notes
-        }),
-        startTime,
-        endTime,
-        location: `${bookingData.address.street}, ${bookingData.address.city}, ${bookingData.address.state} ${bookingData.address.zipCode}`,
-        attendeeEmail: bookingData.email
-      };
-
-      const calendarEventId = await googleCalendarService.createBookingEvent(eventData);
-
-      if (calendarEventId) {
-        logger.info(`Calendar event created for booking ${booking.id}: ${calendarEventId}`);
-      } else {
-        logger.warn(`Failed to create calendar event for booking ${booking.id}`);
-      }
-
-      // Send live confirmation emails via Gmail SMTP
-      try {
-        const emailData = {
-          id: booking.id?.toString() || '',
-          confirmationNumber: `PPT-${booking.id?.toString().padStart(4, '0')}`,
-          fullName: bookingData.fullName,
-          email: bookingData.email,
-          phone: bookingData.phone,
-          address: bookingData.address,
-          notes: bookingData.notes,
-          selectedDate: bookingData.selectedDate,
-          selectedTime: bookingData.selectedTime,
-          services: bookingData.services,
-          totalAmount: bookingData.totalAmount,
-          calendarEventId
-        };
-
-        const emailResult = await liveEmailService.sendBookingConfirmation(emailData);
-        if (emailResult.success) {
-          logger.info(`Live confirmation emails sent successfully for booking ${booking.id}`);
-        } else {
-          logger.error(`Failed to send live confirmation emails for booking ${booking.id}: ${emailResult.error}`);
-        }
-      } catch (emailError) {
-        logger.error(`Error sending live confirmation emails for booking ${booking.id}:`, emailError as Error);
-      }
-
-      // Log booking completion
-      await monitoring.logBookingEvent(booking, 'created');
-
-      res.json({
-        success: true,
-        message: "Booking completed successfully",
-        booking: {
-          id: booking.id,
-          confirmationNumber: `PPT-${booking.id.toString().padStart(4, '0')}`,
-          calendarEventId
-        }
-      });
-
-    } catch (error) {
-      logger.error("Error completing booking:", error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to complete booking"
       });
     }
   });

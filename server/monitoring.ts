@@ -94,11 +94,11 @@ export class MonitoringService {
     const responseTime = Date.now() - startTime;
     const uptime = Math.round((Date.now() - this.startTime) / 1000);
 
-    // Determine overall health status - relaxed thresholds to prevent false alarms
+    // Determine overall health status
     let status: SystemHealth['status'] = 'healthy';
     if (!databaseHealthy) {
       status = 'unhealthy';
-    } else if (!emailHealthy || memory.percentage > 95 || responseTime > 5000) {
+    } else if (!emailHealthy || memory.percentage > 90 || responseTime > 2000) {
       status = 'degraded';
     }
 
@@ -145,9 +145,6 @@ export class MonitoringService {
   }
 
   private async sendAlert(level: 'INFO' | 'WARNING' | 'CRITICAL', message: string, data: any) {
-    // Temporarily disable alerts to prevent UI interference
-    return;
-    
     if (!this.launchConfig.alertsEnabled) return;
 
     const alert = {

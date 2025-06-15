@@ -59,28 +59,22 @@ type BookingArchive = {
 
 // Helper functions to format dates
 function formatDate(dateString: string | null): string {
-  if (!dateString || typeof dateString !== 'string') return 'N/A';
+  if (!dateString) return 'N/A';
   try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString;
-    }
-    return format(date, 'MM/dd/yyyy');
+    return format(new Date(dateString), 'MM/dd/yyyy');
   } catch (e) {
-    return dateString || 'N/A';
+    console.error('Error formatting date:', e);
+    return dateString;
   }
 }
 
 function formatDateTime(dateString: string | null): string {
-  if (!dateString || typeof dateString !== 'string') return 'N/A';
+  if (!dateString) return 'N/A';
   try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString;
-    }
-    return format(date, 'MM/dd/yyyy h:mm a');
+    return format(new Date(dateString), 'MM/dd/yyyy h:mm a');
   } catch (e) {
-    return dateString || 'N/A';
+    console.error('Error formatting date:', e);
+    return dateString;
   }
 }
 

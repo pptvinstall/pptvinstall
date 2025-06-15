@@ -181,7 +181,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, []) // Remove state dependency to prevent memory leaks
+  }, [state])
 
   return {
     ...state,

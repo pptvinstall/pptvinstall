@@ -113,27 +113,21 @@ export function BookingDetailsDialog({ booking, onClose, open }: BookingDetailsD
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/bookings/${id}`);
       if (!response.ok) {
-        // If the booking is already deleted (404), treat it as success
-        if (response.status === 404) {
-          return { success: true, message: "Booking was already deleted" };
-        }
         throw new Error('Failed to delete booking');
       }
-      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/bookings'] });
       onClose();
       toast({
         title: "Booking deleted",
-        description: data?.message || "The booking has been permanently deleted.",
+        description: "The booking has been permanently deleted.",
       });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Deletion failed",
-        description: error instanceof Error ? error.message : "Failed to delete the booking. Please try again.",
+        description: "Failed to delete the booking. Please try again.",
         variant: "destructive"
       });
     }
