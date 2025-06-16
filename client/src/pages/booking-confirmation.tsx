@@ -291,6 +291,25 @@ export default function BookingConfirmation() {
         });
       }
 
+      // Process TV De-Installation services
+      const deinstallationItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) =>
+        item.type === 'deinstallation'
+      );
+
+      if (deinstallationItems.length > 0) {
+        breakdown.push({
+          category: 'TV De-Installation',
+          items: deinstallationItems.map((item: PricingBreakdownItem, index: number) => ({
+            name: deinstallationItems.length > 1 ? `TV De-Installation Service ${index + 1}` : 'TV De-Installation Service',
+            details: [
+              'Professional TV removal from wall mount',
+              'Mount removal from wall (standard residential walls)',
+              '$50 flat rate service'
+            ]
+          }))
+        });
+      }
+
       // Process Sound System services
       const soundSystemItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) =>
         item.type === 'soundbar' || item.type === 'surroundSound' || item.type === 'speakerMount'
