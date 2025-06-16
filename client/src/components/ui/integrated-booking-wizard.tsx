@@ -371,8 +371,8 @@ export function IntegratedBookingWizard({
 
   // Recalculate pricing whenever services change
   useEffect(() => {
-    calculatePricingTotal(tvServices, smartHomeServices, soundSystemServices);
-  }, [tvServices, smartHomeServices, soundSystemServices]);
+    calculatePricingTotal(tvServices, smartHomeServices, tvDeinstallations);
+  }, [tvServices, smartHomeServices, tvDeinstallations]);
 
   // Time slot availability check with real-time validation and improved error handling
   const isTimeSlotAvailable = useCallback(
@@ -631,46 +631,45 @@ export function IntegratedBookingWizard({
     setNewDeviceCount(1);
     setHasExistingWiring(true);
     
-    calculatePricingTotal(tvServices, [...smartHomeServices, newDevice], soundSystemServices);
+    calculatePricingTotal(tvServices, [...smartHomeServices, newDevice], tvDeinstallations);
   }
 
-  const addSoundSystemService = () => {
-    const newSoundSystem: SoundSystemServiceOption = {
-      id: `ss-${Date.now()}`,
-      type: newSoundSystemType,
-      count: newSoundSystemCount
+  const addTvDeinstallationService = () => {
+    const newDeinstallation: TVDeinstallationOption = {
+      id: `deinstall-${Date.now()}`,
+      type: 'deinstallation'
     };
     
-    setSoundSystemServices([...soundSystemServices, newSoundSystem]);
+    setTvDeinstallations([...tvDeinstallations, newDeinstallation]);
     
-    // Reset form for next sound system service
-    setNewSoundSystemType('soundbar');
-    setNewSoundSystemCount(1);
-    
-    calculatePricingTotal(tvServices, smartHomeServices, [...soundSystemServices, newSoundSystem]);
+    calculatePricingTotal(tvServices, smartHomeServices, [...tvDeinstallations, newDeinstallation]);
   }
 
-  const removeSoundSystemService = (id: string) => {
-    const updatedServices = soundSystemServices.filter(service => service.id !== id);
-    setSoundSystemServices(updatedServices);
+  const removeTvDeinstallationService = (id: string) => {
+    const updatedServices = tvDeinstallations.filter(service => service.id !== id);
+    setTvDeinstallations(updatedServices);
     calculatePricingTotal(tvServices, smartHomeServices, updatedServices);
   };
   
   // Remove a service
-  const removeService = (type: 'tv' | 'smartHome', id: string) => {
+  const removeService = (type: 'tv' | 'smartHome' | 'deinstallation', id: string) => {
     if (type === 'tv') {
       const updatedTvServices = tvServices.filter(tv => tv.id !== id);
       setTvServices(updatedTvServices);
-      calculatePricingTotal(updatedTvServices, smartHomeServices, soundSystemServices);
-    } else {
+      calculatePricingTotal(updatedTvServices, smartHomeServices, tvDeinstallations);
+    } else if (type === 'smartHome') {
       const updatedSmartHomeServices = smartHomeServices.filter(device => device.id !== id);
       setSmartHomeServices(updatedSmartHomeServices);
-      calculatePricingTotal(tvServices, updatedSmartHomeServices, soundSystemServices);
+      calculatePricingTotal(tvServices, updatedSmartHomeServices, tvDeinstallations);
+    } else if (type === 'deinstallation') {
+      const updatedDeinstallations = tvDeinstallations.filter(service => service.id !== id);
+      setTvDeinstallations(updatedDeinstallations);
+      calculatePricingTotal(tvServices, smartHomeServices, updatedDeinstallations);
     }
   };
   
   // Calculate total price
-  const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[], soundSystems: SoundSystemServiceOption[] = []) => {
+  const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[], deinstallations: TVDeinstallationOption[] = []) => {
     let total = 0;
     
     // Calculate TV installations
@@ -714,19 +713,10 @@ export function IntegratedBookingWizard({
       total += price;
     });
     
-    // Calculate sound system services
-    soundSystems.forEach(system => {
-      let price = 0;
-      
-      if (system.type === 'soundbar') {
-        price = pricing.soundSystem.soundbar.price * system.count;
-      } else if (system.type === 'surroundSound') {
-        price = pricing.soundSystem.surroundSound.price * system.count;
-      } else if (system.type === 'speakerMount') {
-        price = pricing.soundSystem.speakerMount.price * system.count;
-      }
-      
-      total += price;
+    // Calculate TV de-installation services
+    deinstallations.forEach(deinstall => {
+      // TV De-Installation is a flat $50 rate
+      total += 50;
     });
     
     setPricingTotal(total);
