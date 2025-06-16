@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { 
   CalendarIcon, Plus, Clock, MinusCircle, User, Home, Mail, Phone, 
   Info, Minus, PlusCircle, AlertTriangle, HelpCircle, ChevronRight,
-  ChevronLeft, CheckCircle, Settings2 
+  ChevronLeft, CheckCircle, Settings2, X 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,12 @@ interface SmartHomeDeviceOption {
   type: 'doorbell' | 'camera' | 'floodlight';
   count: number;
   hasExistingWiring?: boolean;
+}
+
+interface SoundSystemServiceOption {
+  id: string;
+  type: 'soundbar' | 'surroundSound' | 'speakerMount';
+  count: number;
 }
 
 interface BookingFormData {
@@ -180,6 +186,7 @@ export function IntegratedBookingWizard({
   const [currentStep, setCurrentStep] = useState(0);
   const [tvServices, setTvServices] = useState<TVServiceOption[]>([]);
   const [smartHomeServices, setSmartHomeServices] = useState<SmartHomeDeviceOption[]>([]);
+  const [soundSystemServices, setSoundSystemServices] = useState<SoundSystemServiceOption[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
@@ -333,6 +340,10 @@ export function IntegratedBookingWizard({
   const [newDeviceType, setNewDeviceType] = useState<'doorbell' | 'camera' | 'floodlight'>('camera');
   const [newDeviceCount, setNewDeviceCount] = useState(1);
   const [hasExistingWiring, setHasExistingWiring] = useState(true);
+
+  // Sound System
+  const [newSoundSystemType, setNewSoundSystemType] = useState<'soundbar' | 'surroundSound' | 'speakerMount'>('soundbar');
+  const [newSoundSystemCount, setNewSoundSystemCount] = useState(1);
   
   // Scroll to top when changing steps
   useEffect(() => {
@@ -616,7 +627,29 @@ export function IntegratedBookingWizard({
     setNewDeviceCount(1);
     setHasExistingWiring(true);
     
-    calculatePricingTotal(tvServices, [...smartHomeServices, newDevice]);
+    calculatePricingTotal(tvServices, [...smartHomeServices, newDevice], soundSystemServices);
+  }
+
+  const addSoundSystemService = () => {
+    const newSoundSystem: SoundSystemServiceOption = {
+      id: `ss-${Date.now()}`,
+      type: newSoundSystemType,
+      count: newSoundSystemCount
+    };
+    
+    setSoundSystemServices([...soundSystemServices, newSoundSystem]);
+    
+    // Reset form for next sound system service
+    setNewSoundSystemType('soundbar');
+    setNewSoundSystemCount(1);
+    
+    calculatePricingTotal(tvServices, smartHomeServices, [...soundSystemServices, newSoundSystem]);
+  }
+
+  const removeSoundSystemService = (id: string) => {
+    const updatedServices = soundSystemServices.filter(service => service.id !== id);
+    setSoundSystemServices(updatedServices);
+    calculatePricingTotal(tvServices, smartHomeServices, updatedServices);
   };
   
   // Remove a service
@@ -1583,6 +1616,96 @@ export function IntegratedBookingWizard({
                             className="w-full"
                           >
                             <Plus className="h-4 w-4 mr-2" /> Add Device
+                          </Button>
+                        </div>
+                      </TabsContent>
+                      
+                      {/* Sound System */}
+                      <TabsContent value="soundsystem" className="space-y-4 mt-4">
+                        {/* Current Sound System Services */}
+                        {soundSystemServices.length > 0 && (
+                          <div className="space-y-3 mb-6">
+                            <h4 className="text-sm font-medium">Your Sound System Installations</h4>
+                            <div className="space-y-2">
+                              {soundSystemServices.map((service, index) => (
+                                <div key={service.id} className="flex items-start justify-between p-3 bg-muted rounded-md">
+                                  <div>
+                                    <p className="font-medium">
+                                      {service.type === 'soundbar' 
+                                        ? 'Soundbar Installation' 
+                                        : service.type === 'surroundSound' 
+                                        ? '5.1 Surround Sound' 
+                                        : 'Speaker Mount'}
+                                    </p>
+                                    <p className="text-sm">Quantity: {service.count}</p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeSoundSystemService(service.id)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Add New Sound System Service */}
+                        <div className="space-y-4 bg-muted/30 p-4 rounded-md">
+                          <h4 className="text-sm font-medium">Add Sound System Installation</h4>
+                          
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Service Type</label>
+                              <RadioGroup
+                                value={newSoundSystemType}
+                                onValueChange={(value) => setNewSoundSystemType(value as 'soundbar' | 'surroundSound' | 'speakerMount')}
+                                className="flex flex-col space-y-2"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="soundbar" id="soundbar" />
+                                  <Label htmlFor="soundbar" className="flex flex-col">
+                                    <span>Soundbar Installation & Setup</span>
+                                    <span className="text-xs text-muted-foreground">$150 - Professional mounting and TV integration</span>
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="surroundSound" id="surroundSound" />
+                                  <Label htmlFor="surroundSound" className="flex flex-col">
+                                    <span>5.1 Surround Sound Installation</span>
+                                    <span className="text-xs text-muted-foreground">$300 - Complete system setup with speaker placement</span>
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="speakerMount" id="speakerMount" />
+                                  <Label htmlFor="speakerMount" className="flex flex-col">
+                                    <span>Individual Speaker Wall Mount</span>
+                                    <span className="text-xs text-muted-foreground">$50 each - Professional speaker mounting</span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Quantity</label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="10"
+                                value={newSoundSystemCount}
+                                onChange={(e) => setNewSoundSystemCount(parseInt(e.target.value) || 1)}
+                                className="w-20"
+                              />
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            onClick={addSoundSystemService}
+                            className="w-full"
+                          >
+                            <Plus className="h-4 w-4 mr-2" /> Add Sound System Service
                           </Button>
                         </div>
                       </TabsContent>
