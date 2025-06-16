@@ -503,7 +503,7 @@ function generateAdminNotificationEmailTemplate(emailData: BookingEmailData): { 
   };
 }
 
-// Email Templates
+// Legacy Email Templates (keeping for compatibility)
 
 function getAdminNotificationEmailTemplate(booking: Booking): string {
   return `
