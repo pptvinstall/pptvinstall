@@ -69,10 +69,9 @@ interface SmartHomeDeviceOption {
   hasExistingWiring?: boolean;
 }
 
-interface SoundSystemServiceOption {
+interface TVDeinstallationOption {
   id: string;
-  type: 'soundbar' | 'surroundSound' | 'speakerMount';
-  count: number;
+  type: 'deinstallation';
 }
 
 interface BookingFormData {
@@ -186,7 +185,7 @@ export function IntegratedBookingWizard({
   const [currentStep, setCurrentStep] = useState(0);
   const [tvServices, setTvServices] = useState<TVServiceOption[]>([]);
   const [smartHomeServices, setSmartHomeServices] = useState<SmartHomeDeviceOption[]>([]);
-  const [soundSystemServices, setSoundSystemServices] = useState<SoundSystemServiceOption[]>([]);
+  const [tvDeinstallations, setTvDeinstallations] = useState<TVDeinstallationOption[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
@@ -613,7 +612,7 @@ export function IntegratedBookingWizard({
     setNewTvOutletNeeded(false);
     setNewTvOutletImage(undefined);
     
-    calculatePricingTotal([...tvServices, newTv], smartHomeServices, soundSystemServices);
+    calculatePricingTotal([...tvServices, newTv], smartHomeServices, tvDeinstallations);
   };
   
   // Add smart home service option

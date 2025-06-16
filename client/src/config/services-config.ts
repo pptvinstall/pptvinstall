@@ -118,49 +118,19 @@ export const SERVICES_CONFIG: Record<string, ServiceConfig> = {
     }
   },
 
-  // Sound System Services
-  soundbarInstallation: {
-    id: 'soundbarInstallation',
-    name: 'Soundbar Installation',
-    displayName: 'Soundbar Installation & Setup',
-    description: 'Professional soundbar mounting, wiring, and audio calibration',
-    category: 'soundSystem',
+  // TV De-Installation Service
+  tvDeinstallation: {
+    id: 'tvDeinstallation',
+    name: 'TV De-Installation',
+    displayName: 'TV De-Installation',
+    description: 'Remove TV from wall mount and remove mount from wall (standard residential walls only)',
+    category: 'tv',
     pricing: {
-      basePrice: 125,
+      basePrice: 50,
     },
     emailTemplate: {
-      subject: 'Soundbar Installation Service Confirmation',
-      itemDescription: 'Professional soundbar installation with mounting and audio setup'
-    }
-  },
-
-  surroundSoundInstallation: {
-    id: 'surroundSoundInstallation',
-    name: 'Surround Sound Installation',
-    displayName: '5.1 Surround Sound Installation',
-    description: 'Complete 5.1 surround sound system installation with speaker placement and calibration',
-    category: 'soundSystem',
-    pricing: {
-      basePrice: 350,
-    },
-    emailTemplate: {
-      subject: '5.1 Surround Sound Installation Confirmation',
-      itemDescription: 'Complete 5.1 surround sound system installation with professional calibration'
-    }
-  },
-
-  speakerMount: {
-    id: 'speakerMount',
-    name: 'Speaker Wall Mount',
-    displayName: 'Speaker Wall Mount Installation',
-    description: 'Professional speaker wall mounting with optimal positioning',
-    category: 'soundSystem',
-    pricing: {
-      basePrice: 75,
-    },
-    emailTemplate: {
-      subject: 'Speaker Mount Installation Confirmation',
-      itemDescription: 'Professional speaker wall mount installation'
+      subject: 'TV De-Installation Service Confirmation',
+      itemDescription: 'TV De-Installation - Remove TV and mount from wall'
     }
   }
 };
@@ -170,7 +140,7 @@ export function getServiceById(serviceId: string): ServiceConfig | undefined {
   return SERVICES_CONFIG[serviceId];
 }
 
-export function getServicesByCategory(category: 'tv' | 'smartHome' | 'soundSystem'): ServiceConfig[] {
+export function getServicesByCategory(category: 'tv' | 'smartHome'): ServiceConfig[] {
   return Object.values(SERVICES_CONFIG).filter(service => service.category === category);
 }
 
