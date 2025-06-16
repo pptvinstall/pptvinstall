@@ -51,7 +51,7 @@ export function ReviewBookingStep({
   const [serviceToRemove, setServiceToRemove] = useState<{type: 'tv' | 'smartHome' | 'tvDeinstallation', id: string} | null>(null);
   const hasServices = tvInstallations.length > 0 || smartHomeInstallations.length > 0 || tvDeinstallations.length > 0;
 
-  const handleRemoveClick = (type: 'tv' | 'smartHome', id: string) => {
+  const handleRemoveClick = (type: 'tv' | 'smartHome' | 'tvDeinstallation', id: string) => {
     setServiceToRemove({ type, id });
   };
 
@@ -164,16 +164,38 @@ export function ReviewBookingStep({
             </div>
           )}
           
-          {/* TV Removal Services */}
-          {tvRemovalService && (
+          {/* TV De-Installation Services */}
+          {tvDeinstallations.length > 0 && (
             <div className="space-y-2">
-              <h5 className="text-sm font-medium">TV Removal:</h5>
-              <div className="text-xs sm:text-sm p-2 bg-muted rounded-md">
-                <p>
-                  {tvRemovalService.isUnmountOnly ? 'TV Unmounting' : 'TV Remounting'} 
-                  {tvRemovalService.count > 1 ? ` (${tvRemovalService.count} TVs)` : ''}
-                </p>
-              </div>
+              <h5 className="text-sm font-medium">TV De-Installation:</h5>
+              <ul className="text-xs sm:text-sm space-y-2">
+                <AnimatePresence>
+                  {tvDeinstallations.map((service, index) => (
+                    <motion.li
+                      key={service.id}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-start justify-between p-2 bg-muted rounded-md"
+                    >
+                      <div>
+                        <p className="font-medium">TV De-Installation Service</p>
+                        <p className="text-xs text-muted-foreground">Remove TV and mount from wall - $50</p>
+                      </div>
+                      {onRemoveService && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveClick('tvDeinstallation', service.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
             </div>
           )}
           
