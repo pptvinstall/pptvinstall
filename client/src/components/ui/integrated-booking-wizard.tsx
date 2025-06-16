@@ -48,7 +48,7 @@ import { TVInstallation, SmartHomeInstallation } from "@/types/booking";
 import { ReviewBookingStep } from "@/components/steps/review-booking-step";
 import { BookingConfirmationModal } from "@/components/ui/booking-confirmation-modal";
 
-import { createCalendarEvent, downloadICSFile, generateGoogleCalendarURL } from "@/lib/calendar-export";
+
 
 // Service-related interfaces 
 interface TVServiceOption {
@@ -2436,15 +2436,7 @@ export function IntegratedBookingWizard({
             
             console.log('Booking submission result:', result);
             
-            // Generate and download calendar file after successful booking
-            if (result && selectedDate && selectedTime) {
-              const calendarEvent = createCalendarEvent({
-                ...bookingData,
-                customerName: bookingData.name,
-                customerEmail: bookingData.email
-              });
-              downloadICSFile(calendarEvent, `TV_Installation_${bookingData.name.replace(/\s+/g, '_')}`);
-            }
+            // Calendar file will be included in the confirmation email automatically
             
             // Don't close the modal here - let the BookingConfirmationModal handle state transitions
           } catch (error) {
