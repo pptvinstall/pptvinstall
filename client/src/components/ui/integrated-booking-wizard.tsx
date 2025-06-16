@@ -1047,6 +1047,7 @@ export function IntegratedBookingWizard({
       password: formData.createAccount ? formData.password : undefined,
       tvInstallations,
       smartHomeInstallations,
+      soundSystemInstallations,
       pricingBreakdown: [
         ...tvServices.map(tv => ({
           type: 'tv',
@@ -1062,6 +1063,10 @@ export function IntegratedBookingWizard({
           type: device.type,
           count: device.count,
           hasExistingWiring: device.hasExistingWiring
+        })),
+        ...soundSystemServices.map(system => ({
+          type: system.type,
+          count: system.count
         }))
       ]
     };
@@ -2244,6 +2249,22 @@ export function IntegratedBookingWizard({
                             </ul>
                           </div>
                         )}
+                        
+                        {/* Sound System Services */}
+                        {soundSystemServices.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-medium">Sound System Installations:</h5>
+                            <ul className="text-xs sm:text-sm space-y-2">
+                              {soundSystemServices.map((system) => (
+                                <li key={system.id} className="p-2 bg-muted rounded-md">
+                                  {system.type === 'soundbar' && `Soundbar Installation & Setup (Qty: ${system.count})`}
+                                  {system.type === 'surroundSound' && `5.1 Surround Sound Installation (Qty: ${system.count})`}
+                                  {system.type === 'speakerMount' && `Speaker Wall Mount (Qty: ${system.count})`}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -2344,7 +2365,7 @@ export function IntegratedBookingWizard({
 
                   <Button
                     onClick={handleNextClick}
-                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0)}
+                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0)}
                     className="w-full sm:w-auto"
                   >
                     {isSubmitting
@@ -2386,7 +2407,11 @@ export function IntegratedBookingWizard({
           smartHomeInstallations: smartHomeServices.map(device => ({
             deviceType: device.type,
             location: 'Indoor'
-          })) as { deviceType: string; location: string; }[]
+          })) as { deviceType: string; location: string; }[],
+          soundSystemInstallations: soundSystemServices.map(system => ({
+            systemType: system.type,
+            count: system.count
+          })) as { systemType: string; count: number; }[]
         }}
         onConfirm={async () => {
           try {
@@ -2404,7 +2429,7 @@ export function IntegratedBookingWizard({
               appointmentTime: selectedTime,
               notes: formData.notes || '',
               consentToContact: formData.consentToContact,
-              serviceType: tvServices.length > 0 ? "TV Installation" : "Smart Home Installation",
+              serviceType: tvServices.length > 0 ? "TV Installation" : soundSystemServices.length > 0 ? "Sound System Installation" : "Smart Home Installation",
               pricingTotal: pricingTotal.toString(),
               // Convert to the format expected by the server
               pricingBreakdown: [
@@ -2422,6 +2447,10 @@ export function IntegratedBookingWizard({
                   type: device.type,
                   count: device.count,
                   hasExistingWiring: device.hasExistingWiring
+                })),
+                ...soundSystemServices.map(system => ({
+                  type: system.type,
+                  count: system.count
                 }))
               ],
               // Account creation data
