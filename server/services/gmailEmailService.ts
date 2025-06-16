@@ -107,10 +107,13 @@ function generateBookingConfirmationEmail(booking: Booking): string {
   // Process service breakdown
   const pricingBreakdown = booking.pricingBreakdown || [];
   const tvItems = pricingBreakdown.filter((item: any) => item.type === 'tv');
+  const deinstallationItems = pricingBreakdown.filter((item: any) => item.type === 'deinstallation');
   
   let servicesHtml = '';
+  
+  // TV Installation services
   if (tvItems.length > 0) {
-    servicesHtml = tvItems.map((tv: any, index: number) => `
+    servicesHtml += tvItems.map((tv: any, index: number) => `
       <div style="padding: 12px 0; border-bottom: 1px solid #eee;">
         <div style="font-weight: 500; color: #333;">
           TV ${index + 1}: ${tv.size === 'large' ? '56"+ TV' : '32"-55" TV'} Installation
@@ -127,7 +130,26 @@ function generateBookingConfirmationEmail(booking: Booking): string {
         </ul>
       </div>
     `).join('');
-  } else {
+  }
+  
+  // TV De-Installation services
+  if (deinstallationItems.length > 0) {
+    servicesHtml += deinstallationItems.map((item: any, index: number) => `
+      <div style="padding: 12px 0; border-bottom: 1px solid #eee;">
+        <div style="font-weight: 500; color: #333;">
+          TV De-Installation Service ${deinstallationItems.length > 1 ? `${index + 1}` : ''}
+        </div>
+        <ul style="list-style-type: disc; padding-left: 20px; margin: 8px 0 0 0; color: #666; font-size: 14px;">
+          <li>Professional TV removal from wall mount</li>
+          <li>Mount removal from wall (standard residential walls)</li>
+          <li>$50 flat rate service</li>
+        </ul>
+      </div>
+    `).join('');
+  }
+  
+  // Fallback if no detailed breakdown
+  if (!servicesHtml) {
     servicesHtml = `
       <div style="padding: 12px 0;">
         <div style="color: #666;">${booking.serviceType || 'TV Installation Service'}</div>
