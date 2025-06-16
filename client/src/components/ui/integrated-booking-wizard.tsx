@@ -370,6 +370,11 @@ export function IntegratedBookingWizard({
     fetchBookingBuffer();
   }, []);
 
+  // Recalculate pricing whenever services change
+  useEffect(() => {
+    calculatePricingTotal(tvServices, smartHomeServices, soundSystemServices);
+  }, [tvServices, smartHomeServices, soundSystemServices]);
+
   // Time slot availability check with real-time validation and improved error handling
   const isTimeSlotAvailable = useCallback(
     (date: string, time: string) => {
@@ -608,7 +613,7 @@ export function IntegratedBookingWizard({
     setNewTvOutletNeeded(false);
     setNewTvOutletImage(undefined);
     
-    calculatePricingTotal([...tvServices, newTv], smartHomeServices);
+    calculatePricingTotal([...tvServices, newTv], smartHomeServices, soundSystemServices);
   };
   
   // Add smart home service option
@@ -666,7 +671,7 @@ export function IntegratedBookingWizard({
   };
   
   // Calculate total price
-  const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[]) => {
+  const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[], soundSystems: SoundSystemServiceOption[] = []) => {
     let total = 0;
     
     // Calculate TV installations
@@ -705,6 +710,21 @@ export function IntegratedBookingWizard({
         price = pricing.smartHome.doorbell.price * device.count;
       } else if (device.type === 'floodlight') {
         price = pricing.smartHome.floodlight.price * device.count;
+      }
+      
+      total += price;
+    });
+    
+    // Calculate sound system services
+    soundSystems.forEach(system => {
+      let price = 0;
+      
+      if (system.type === 'soundbar') {
+        price = pricing.soundSystem.soundbar.price * system.count;
+      } else if (system.type === 'surroundSound') {
+        price = pricing.soundSystem.surroundSound.price * system.count;
+      } else if (system.type === 'speakerMount') {
+        price = pricing.soundSystem.speakerMount.price * system.count;
       }
       
       total += price;
@@ -780,7 +800,7 @@ export function IntegratedBookingWizard({
 
     if (currentStep === 0) {
       // Service selection validation
-      if (tvServices.length === 0 && smartHomeServices.length === 0) {
+      if (tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0) {
         toast({
           title: "Service required",
           description: "Please select at least one service",
@@ -993,6 +1013,15 @@ export function IntegratedBookingWizard({
       basePrice: 0 // Price is calculated on backend
     }));
 
+    // Convert sound system services to the correct format
+    const soundSystemInstallations = soundSystemServices.map(system => ({
+      id: system.id,
+      name: `${system.type === 'soundbar' ? 'Soundbar' : system.type === 'surroundSound' ? '5.1 Surround Sound' : 'Speaker Mount'} Installation`,
+      description: `Installation of ${system.type === 'soundbar' ? 'soundbar' : system.type === 'surroundSound' ? '5.1 surround sound system' : 'speaker mount'} (Qty: ${system.count})`,
+      type: system.type,
+      basePrice: 0 // Price is calculated on backend
+    }));
+
     // Prepare booking data - directly include all fields in the top-level object
     // Normalize email to lowercase for consistency
     const normalizedEmail = formData.email ? formData.email.toLowerCase().trim() : '';
@@ -1009,7 +1038,7 @@ export function IntegratedBookingWizard({
       notes: formData.notes || undefined,
       preferredDate: safeFormatDate(selectedDate, "yyyy-MM-dd", ""),
       appointmentTime: selectedTime || "",
-      serviceType: tvInstallations.length > 0 ? "TV Installation" : "Smart Home Installation",
+      serviceType: tvInstallations.length > 0 ? "TV Installation" : soundSystemInstallations.length > 0 ? "Sound System Installation" : "Smart Home Installation",
       status: "active",
       pricingTotal,
       consentToContact: formData.consentToContact,
