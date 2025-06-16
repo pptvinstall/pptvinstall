@@ -114,6 +114,25 @@ export const pricingData = {
     }
   },
 
+  // Sound System Installation
+  soundSystem: {
+    soundbar: {
+      name: "Soundbar Installation & Setup",
+      price: 150,
+      description: "Professional soundbar mounting and audio setup with TV integration."
+    },
+    surroundSound: {
+      name: "5.1 Surround Sound Installation",
+      price: 300,
+      description: "Complete 5.1 surround sound system installation with speaker placement and calibration."
+    },
+    speakerMount: {
+      name: "Individual Speaker Wall Mount",
+      price: 50,
+      description: "Professional wall mounting for individual speakers."
+    }
+  },
+
   // Custom Services (Hourly Rate)
   customServices: {
     handyman: {

@@ -13,6 +13,9 @@ export interface ServiceOptions {
   smartCameras?: number;
   smartDoorbells?: number;
   smartFloodlights?: number;
+  soundbars?: number;
+  surroundSoundSystems?: number;
+  speakerMounts?: number;
   generalLaborHours?: number;
   needsUnmount?: boolean;
   needsRemount?: boolean;
@@ -189,6 +192,55 @@ export function calculatePrice(options: any) {
     breakdown.push({
       category: 'Smart Home Installation',
       items: smartHomeItems
+    });
+  }
+
+  // Sound System Installation
+  const soundSystemItems = [];
+
+  // Soundbar installation
+  if (options.soundbars && options.soundbars > 0) {
+    const soundbarService = pricing.soundSystem.soundbar;
+    const totalSoundbarPrice = soundbarService.price * options.soundbars;
+
+    soundSystemItems.push({
+      name: `${soundbarService.name} (${options.soundbars} soundbar${options.soundbars > 1 ? 's' : ''})`,
+      price: totalSoundbarPrice
+    });
+
+    additionalServices += totalSoundbarPrice;
+  }
+
+  // Surround sound installation
+  if (options.surroundSoundSystems && options.surroundSoundSystems > 0) {
+    const surroundService = pricing.soundSystem.surroundSound;
+    const totalSurroundPrice = surroundService.price * options.surroundSoundSystems;
+
+    soundSystemItems.push({
+      name: `${surroundService.name} (${options.surroundSoundSystems} system${options.surroundSoundSystems > 1 ? 's' : ''})`,
+      price: totalSurroundPrice
+    });
+
+    additionalServices += totalSurroundPrice;
+  }
+
+  // Individual speaker mounts
+  if (options.speakerMounts && options.speakerMounts > 0) {
+    const speakerMountService = pricing.soundSystem.speakerMount;
+    const totalSpeakerMountPrice = speakerMountService.price * options.speakerMounts;
+
+    soundSystemItems.push({
+      name: `${speakerMountService.name} (${options.speakerMounts} speaker${options.speakerMounts > 1 ? 's' : ''})`,
+      price: totalSpeakerMountPrice
+    });
+
+    additionalServices += totalSpeakerMountPrice;
+  }
+
+  if (soundSystemItems.length > 0) {
+    breakdown.push({
+      category: 'Sound System Installation',
+      items: soundSystemItems
     });
   }
 

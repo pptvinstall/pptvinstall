@@ -1241,9 +1241,10 @@ export function IntegratedBookingWizard({
                     </div>
                     
                     <Tabs defaultValue="tv" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
+                      <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="tv">TV Installation</TabsTrigger>
                         <TabsTrigger value="smarthome">Smart Home</TabsTrigger>
+                        <TabsTrigger value="soundsystem">Sound System</TabsTrigger>
                       </TabsList>
                       
                       {/* TV Installation */}
