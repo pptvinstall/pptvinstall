@@ -72,6 +72,7 @@ interface SmartHomeDeviceOption {
 interface TVDeinstallationOption {
   id: string;
   type: 'deinstallation';
+  quantity?: number;
 }
 
 interface BookingFormData {
@@ -717,8 +718,12 @@ export function IntegratedBookingWizard({
       smartHomeTotal += price;
     });
     
-    // Calculate TV de-installation services
-    const deinstallationTotal = deinstallations.length * 50;
+    // Calculate TV de-installation services with quantity
+    let deinstallationTotal = 0;
+    deinstallations.forEach(deinstall => {
+      const quantity = deinstall.quantity || 1;
+      deinstallationTotal += quantity * 50; // $50 per TV
+    });
     
     // Calculate subtotal
     const subtotal = tvTotal + smartHomeTotal + deinstallationTotal;
@@ -1053,13 +1058,14 @@ export function IntegratedBookingWizard({
       basePrice: 0 // Price is calculated on backend
     }));
 
-    // Convert TV de-installation services to the correct format
+    // Convert TV de-installation services to the correct format with quantity
     const tvDeinstallationServices = tvDeinstallations.map(deinstall => ({
       id: deinstall.id,
       name: 'TV De-Installation Service',
-      description: 'Professional TV removal from wall mount and mount removal from wall (standard residential walls only)',
+      description: `Professional TV removal from wall mount and mount removal from wall (standard residential walls only) - Quantity: ${deinstall.quantity || 1}`,
       type: 'deinstallation',
-      basePrice: 50 // Flat $50 rate
+      basePrice: 50,
+      quantity: deinstall.quantity || 1
     }));
 
     // Prepare booking data - directly include all fields in the top-level object
@@ -1689,7 +1695,7 @@ export function IntegratedBookingWizard({
                       {/* TV De-Installation */}
                       <TabsContent value="soundsystem" className="space-y-4 mt-4">
                         {/* Current TV De-Installation Services */}
-                        {tvDeinstallations.length > 0 && (
+                        {tvDeinstallations.length > 0 && tvDeinstallations[0].quantity && tvDeinstallations[0].quantity > 0 && (
                           <div className="space-y-3 mb-6">
                             <h4 className="text-sm font-medium">Your TV De-Installation Services</h4>
                             <div className="space-y-2">
@@ -1697,12 +1703,19 @@ export function IntegratedBookingWizard({
                                 <div key={service.id} className="flex items-start justify-between p-3 bg-muted rounded-md">
                                   <div>
                                     <p className="font-medium">TV De-Installation Service</p>
-                                    <p className="text-sm">$50 - Remove TV and mount from wall</p>
+                                    <p className="text-sm">
+                                      {service.quantity || 1} TV{(service.quantity || 1) > 1 ? 's' : ''} × $50 = ${(service.quantity || 1) * 50}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">Remove TV and mount from wall</p>
                                   </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => removeTvDeinstallationService(service.id)}
+                                    onClick={() => {
+                                      // Reset quantity to 0 which will remove the service
+                                      setTvDeinstallations([]);
+                                      calculatePricingTotal(tvServices, smartHomeServices, []);
+                                    }}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -1733,20 +1746,58 @@ export function IntegratedBookingWizard({
                             
                             <div className="bg-primary/10 p-3 rounded-md">
                               <div className="text-center">
-                                <p className="text-lg font-semibold">Flat Rate: $50</p>
+                                <p className="text-lg font-semibold">$50 per TV</p>
                                 <p className="text-sm text-muted-foreground">No additional charges</p>
                               </div>
                             </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="deinstall-quantity" className="text-sm font-medium">
+                                How many TVs need to be removed?
+                              </Label>
+                              <Select
+                                value={tvDeinstallations.length > 0 ? tvDeinstallations[0].quantity?.toString() || "1" : "0"}
+                                onValueChange={(value) => {
+                                  const quantity = parseInt(value);
+                                  if (quantity === 0) {
+                                    // Remove all de-installation services
+                                    setTvDeinstallations([]);
+                                  } else {
+                                    // Update or add de-installation service with quantity
+                                    const service = {
+                                      id: `deinstall-${Date.now()}`,
+                                      name: "TV De-Installation Service",
+                                      description: "Professional TV removal from wall mount and mount removal from wall (standard residential walls only)",
+                                      type: "deinstallation" as const,
+                                      basePrice: 50,
+                                      quantity: quantity
+                                    };
+                                    setTvDeinstallations([service]);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select quantity" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">None</SelectItem>
+                                  <SelectItem value="1">1 TV</SelectItem>
+                                  <SelectItem value="2">2 TVs</SelectItem>
+                                  <SelectItem value="3">3 TVs</SelectItem>
+                                  <SelectItem value="4">4 TVs</SelectItem>
+                                  <SelectItem value="5">5 TVs</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              {tvDeinstallations.length > 0 && tvDeinstallations[0].quantity && (
+                                <div className="bg-green-50 p-2 rounded-md">
+                                  <p className="text-sm text-green-700 font-medium">
+                                    Total: {tvDeinstallations[0].quantity} TV{tvDeinstallations[0].quantity > 1 ? 's' : ''} × $50 = ${tvDeinstallations[0].quantity * 50}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          
-                          <Button 
-                            onClick={addTvDeinstallationService}
-                            className="w-full"
-                            disabled={tvDeinstallations.length > 0}
-                          >
-                            <Plus className="h-4 w-4 mr-2" /> 
-                            {tvDeinstallations.length > 0 ? 'Service Added' : 'Add TV De-Installation Service'}
-                          </Button>
                         </div>
                       </TabsContent>
                     </Tabs>
@@ -1759,7 +1810,12 @@ export function IntegratedBookingWizard({
                         <div>
                           <Badge variant="outline" className="mr-2">{tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}</Badge>
                           <Badge variant="outline" className="mr-2">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
-                          <Badge variant="outline">{tvDeinstallations.length} De-Installation{tvDeinstallations.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline">
+                            {tvDeinstallations.length > 0 && tvDeinstallations[0].quantity ? 
+                              `${tvDeinstallations[0].quantity} De-Installation${tvDeinstallations[0].quantity !== 1 ? 's' : ''}` : 
+                              '0 De-Installations'
+                            }
+                          </Badge>
                         </div>
                       </div>
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
