@@ -2175,6 +2175,7 @@ export function IntegratedBookingWizard({
                     selectedTime={selectedTime}
                     formData={formData}
                     pricingTotal={pricingTotal}
+                    pricingBreakdown={pricingBreakdown}
                     onEditServices={() => goToEditServices()}
                     onRemoveService={(type, id) => {
                       // Create updated service arrays

@@ -26,6 +26,12 @@ interface ReviewBookingStepProps {
   selectedTime: string | undefined;
   formData: any;
   pricingTotal: number;
+  pricingBreakdown?: {
+    subtotal: number;
+    discounts: number;
+    appliedDiscounts: Array<{name: string; amount: number; description: string}>;
+    total: number;
+  };
   onEditServices?: () => void;
   onRemoveService?: (type: 'tv' | 'smartHome' | 'tvDeinstallation', id: string) => void;
   onReschedule?: (date: Date, time: string) => void;
@@ -42,6 +48,7 @@ export function ReviewBookingStep({
   selectedTime,
   formData,
   pricingTotal,
+  pricingBreakdown,
   onEditServices,
   onRemoveService,
   onReschedule,
@@ -337,9 +344,48 @@ export function ReviewBookingStep({
       {/* Pricing */}
       <div className="relative">
         <h4 className="text-sm font-medium mb-2">Pricing</h4>
-        <div className="bg-muted p-3 rounded-md flex justify-between items-center">
-          <span className="font-medium">Estimated Total:</span>
-          <span className="text-xl font-bold">${pricingTotal}</span>
+        <div className="bg-muted p-3 rounded-md space-y-2">
+          {/* Show detailed breakdown if available */}
+          {pricingBreakdown && pricingBreakdown.appliedDiscounts.length > 0 ? (
+            <>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Subtotal:</span>
+                <span className="text-sm">${pricingBreakdown.subtotal}</span>
+              </div>
+              
+              {/* Show applied discounts */}
+              {pricingBreakdown.appliedDiscounts.map((discount, index) => (
+                <div key={index} className="flex justify-between items-center text-green-600">
+                  <span className="text-sm">{discount.name}:</span>
+                  <span className="text-sm">-${discount.amount}</span>
+                </div>
+              ))}
+              
+              <Separator className="my-2" />
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Final Total:</span>
+                <span className="text-xl font-bold">${pricingBreakdown.total}</span>
+              </div>
+              
+              {/* Show discount descriptions */}
+              {pricingBreakdown.appliedDiscounts.length > 0 && (
+                <div className="mt-2 p-2 bg-green-50 rounded text-xs text-green-700">
+                  {pricingBreakdown.appliedDiscounts.map((discount, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      <span>✓</span>
+                      <span>{discount.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Estimated Total:</span>
+              <span className="text-xl font-bold">${pricingTotal}</span>
+            </div>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
           Payment will be collected after installation. Cash, Zelle, and Apple Pay accepted.
