@@ -789,7 +789,7 @@ export function IntegratedBookingWizard({
 
     if (currentStep === 0) {
       // Service selection validation
-      if (tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0) {
+      if (tvServices.length === 0 && smartHomeServices.length === 0 && tvDeinstallations.length === 0) {
         toast({
           title: "Service required",
           description: "Please select at least one service",
@@ -943,7 +943,7 @@ export function IntegratedBookingWizard({
     if (!validateCurrentStep()) return;
     
     // If this is the last step, check if there are any services selected before proceeding
-    if (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0) {
+    if (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0 && tvDeinstallations.length === 0) {
       toast({
         title: "No services selected",
         description: "Please add at least one service before confirming your booking.",
@@ -1002,13 +1002,13 @@ export function IntegratedBookingWizard({
       basePrice: 0 // Price is calculated on backend
     }));
 
-    // Convert sound system services to the correct format
-    const soundSystemInstallations = soundSystemServices.map(system => ({
-      id: system.id,
-      name: `${system.type === 'soundbar' ? 'Soundbar' : system.type === 'surroundSound' ? '5.1 Surround Sound' : 'Speaker Mount'} Installation`,
-      description: `Installation of ${system.type === 'soundbar' ? 'soundbar' : system.type === 'surroundSound' ? '5.1 surround sound system' : 'speaker mount'} (Qty: ${system.count})`,
-      type: system.type,
-      basePrice: 0 // Price is calculated on backend
+    // Convert TV de-installation services to the correct format
+    const tvDeinstallationServices = tvDeinstallations.map(deinstall => ({
+      id: deinstall.id,
+      name: 'TV De-Installation Service',
+      description: 'Professional TV removal from wall mount and mount removal from wall (standard residential walls only)',
+      type: 'deinstallation',
+      basePrice: 50 // Flat $50 rate
     }));
 
     // Prepare booking data - directly include all fields in the top-level object
@@ -1027,7 +1027,7 @@ export function IntegratedBookingWizard({
       notes: formData.notes || undefined,
       preferredDate: safeFormatDate(selectedDate, "yyyy-MM-dd", ""),
       appointmentTime: selectedTime || "",
-      serviceType: tvInstallations.length > 0 ? "TV Installation" : soundSystemInstallations.length > 0 ? "Sound System Installation" : "Smart Home Installation",
+      serviceType: tvInstallations.length > 0 ? "TV Installation" : tvDeinstallationServices.length > 0 ? "TV De-Installation" : "Smart Home Installation",
       status: "active",
       pricingTotal,
       consentToContact: formData.consentToContact,
@@ -1036,7 +1036,7 @@ export function IntegratedBookingWizard({
       password: formData.createAccount ? formData.password : undefined,
       tvInstallations,
       smartHomeInstallations,
-      soundSystemInstallations,
+      tvDeinstallationServices,
       pricingBreakdown: [
         ...tvServices.map(tv => ({
           type: 'tv',
@@ -1053,9 +1053,9 @@ export function IntegratedBookingWizard({
           count: device.count,
           hasExistingWiring: device.hasExistingWiring
         })),
-        ...soundSystemServices.map(system => ({
-          type: system.type,
-          count: system.count
+        ...tvDeinstallations.map(deinstall => ({
+          type: 'deinstallation',
+          price: 50
         }))
       ]
     };
