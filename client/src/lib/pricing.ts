@@ -34,12 +34,20 @@ export const pricing = pricingData;
 // Export Pricing types
 export type Pricing = typeof pricingData;
 
-// Calculate pricing based on selected options
+// Interface for discount information
+interface DiscountInfo {
+  name: string;
+  amount: number;
+  description: string;
+}
+
+// Calculate pricing based on selected options with combo discounts
 export function calculatePrice(options: any) {
   let basePrice = 0;
   let additionalServices = 0;
   let discounts = 0;
   const breakdown: any[] = [];
+  const appliedDiscounts: DiscountInfo[] = [];
 
   // First process TV mounts which are the base service
   if (options.tvMountType) {
@@ -278,7 +286,45 @@ export function calculatePrice(options: any) {
     }
   }
 
-  // Removed discount calculations as requested per requirements
+  // Apply combo discounts
+  const subtotal = basePrice + additionalServices;
+  
+  // Combo Discount 1: TV Mounting + TV De-Installation = $25 off
+  const hasTvMounting = options.tvMountType && (options.tvCount > 0 || basePrice > 0);
+  const hasTvDeinstallation = options.tvDeinstallation > 0;
+  
+  if (hasTvMounting && hasTvDeinstallation) {
+    const comboDiscount = 25;
+    appliedDiscounts.push({
+      name: 'TV Mounting + De-Installation Combo',
+      amount: comboDiscount,
+      description: 'Save $25 when booking TV mounting and de-installation together'
+    });
+    discounts += comboDiscount;
+  }
+  
+  // Count total services for bulk discount
+  let totalServices = 0;
+  if (hasTvMounting) totalServices++;
+  if (hasTvDeinstallation) totalServices += options.tvDeinstallation || 0;
+  if (options.securityCameras) totalServices += options.securityCameras;
+  if (options.smartDoorbells) totalServices += options.smartDoorbells;
+  if (options.smartFloodlights) totalServices += options.smartFloodlights;
+  if (options.soundbars) totalServices += options.soundbars;
+  if (options.surroundSoundSystems) totalServices += options.surroundSoundSystems;
+  if (options.speakerMounts) totalServices += options.speakerMounts;
+  
+  // Combo Discount 2: 3+ services = 10% off subtotal (only if combo discount not already applied)
+  if (totalServices >= 3 && !appliedDiscounts.some(d => d.name.includes('Combo'))) {
+    const bulkDiscountPercent = 0.10;
+    const bulkDiscount = Math.round(subtotal * bulkDiscountPercent);
+    appliedDiscounts.push({
+      name: '3+ Services Bulk Discount',
+      amount: bulkDiscount,
+      description: 'Save 10% when booking 3 or more services'
+    });
+    discounts += bulkDiscount;
+  }
 
   // Apply travel fee if applicable
   if (pricing.travel.fee > 0) {
@@ -293,16 +339,20 @@ export function calculatePrice(options: any) {
     additionalServices += pricing.travel.fee;
   }
 
-  // Calculate the total price without discounts
-  const total = basePrice + additionalServices;
+  // Calculate the final total after discounts
+  const total = Math.max(0, subtotal - discounts);
 
   return {
     total,
     basePrice,
     additionalServices,
-    discounts: 0, // Set to zero as we've removed all discounts
+    discounts,
+    appliedDiscounts,
+    subtotal,
     breakdown,
     formattedTotal: formatPrice(total),
-    formattedBasePrice: formatPrice(basePrice)
+    formattedBasePrice: formatPrice(basePrice),
+    formattedSubtotal: formatPrice(subtotal),
+    formattedDiscounts: formatPrice(discounts)
   };
 }

@@ -189,6 +189,12 @@ export function IntegratedBookingWizard({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [pricingTotal, setPricingTotal] = useState(0);
+  const [pricingBreakdown, setPricingBreakdown] = useState<{
+    subtotal: number;
+    discounts: number;
+    appliedDiscounts: Array<{name: string; amount: number; description: string}>;
+    total: number;
+  }>({ subtotal: 0, discounts: 0, appliedDiscounts: [], total: 0 });
   const [timeSlotAvailability, setTimeSlotAvailability] = useState<Record<string, boolean>>({});
   const [bookingBufferHours, setBookingBufferHours] = useState<number>(2); // Default to 2 hours
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -666,11 +672,10 @@ export function IntegratedBookingWizard({
     }
   };
   
-  // Calculate total price
+  // Calculate total price with combo discounts
   const calculatePricingTotal = (tvs: TVServiceOption[], devices: SmartHomeDeviceOption[], deinstallations: TVDeinstallationOption[] = []) => {
-    let total = 0;
-    
     // Calculate TV installations
+    let tvTotal = 0;
     tvs.forEach(tv => {
       let price = tv.location === 'standard' ? pricing.tvMounting.standard.price : pricing.tvMounting.fireplace.price;
       
@@ -693,10 +698,11 @@ export function IntegratedBookingWizard({
         price += pricing.tvMounts[mountKey]?.price || 0;
       }
       
-      total += price;
+      tvTotal += price;
     });
     
     // Calculate smart home devices
+    let smartHomeTotal = 0;
     devices.forEach(device => {
       let price = 0;
       
@@ -708,13 +714,60 @@ export function IntegratedBookingWizard({
         price = pricing.smartHome.floodlight.price * device.count;
       }
       
-      total += price;
+      smartHomeTotal += price;
     });
     
     // Calculate TV de-installation services
-    deinstallations.forEach(deinstall => {
-      // TV De-Installation is a flat $50 rate
-      total += 50;
+    const deinstallationTotal = deinstallations.length * 50;
+    
+    // Calculate subtotal
+    const subtotal = tvTotal + smartHomeTotal + deinstallationTotal;
+    
+    // Apply combo discounts
+    let discounts = 0;
+    const appliedDiscounts = [];
+    
+    // Combo Discount 1: TV Mounting + TV De-Installation = $25 off
+    const hasTvMounting = tvs.length > 0;
+    const hasTvDeinstallation = deinstallations.length > 0;
+    
+    if (hasTvMounting && hasTvDeinstallation) {
+      const comboDiscount = 25;
+      appliedDiscounts.push({
+        name: 'TV Mounting + De-Installation Combo',
+        amount: comboDiscount,
+        description: 'Save $25 when booking TV mounting and de-installation together'
+      });
+      discounts += comboDiscount;
+    }
+    
+    // Count total services for bulk discount
+    let totalServices = 0;
+    if (hasTvMounting) totalServices += tvs.length;
+    if (hasTvDeinstallation) totalServices += deinstallations.length;
+    totalServices += devices.reduce((sum, d) => sum + d.count, 0);
+    
+    // Combo Discount 2: 3+ services = 10% off subtotal (only if combo discount not already applied)
+    if (totalServices >= 3 && !appliedDiscounts.some(d => d.name.includes('Combo'))) {
+      const bulkDiscountPercent = 0.10;
+      const bulkDiscount = Math.round(subtotal * bulkDiscountPercent);
+      appliedDiscounts.push({
+        name: '3+ Services Bulk Discount',
+        amount: bulkDiscount,
+        description: 'Save 10% when booking 3 or more services'
+      });
+      discounts += bulkDiscount;
+    }
+    
+    // Calculate final total
+    const total = Math.max(0, subtotal - discounts);
+    
+    // Store discount information for display
+    setPricingBreakdown({
+      subtotal,
+      discounts,
+      appliedDiscounts,
+      total
     });
     
     setPricingTotal(total);
