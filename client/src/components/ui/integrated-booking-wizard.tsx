@@ -2217,16 +2217,14 @@ export function IntegratedBookingWizard({
                           </div>
                         )}
                         
-                        {/* Sound System Services */}
-                        {soundSystemServices.length > 0 && (
+                        {/* TV De-Installation Services */}
+                        {tvDeinstallations.length > 0 && (
                           <div className="space-y-2">
-                            <h5 className="text-sm font-medium">Sound System Installations:</h5>
+                            <h5 className="text-sm font-medium">TV De-Installation Services:</h5>
                             <ul className="text-xs sm:text-sm space-y-2">
-                              {soundSystemServices.map((system) => (
-                                <li key={system.id} className="p-2 bg-muted rounded-md">
-                                  {system.type === 'soundbar' && `Soundbar Installation & Setup (Qty: ${system.count})`}
-                                  {system.type === 'surroundSound' && `5.1 Surround Sound Installation (Qty: ${system.count})`}
-                                  {system.type === 'speakerMount' && `Speaker Wall Mount (Qty: ${system.count})`}
+                              {tvDeinstallations.map((service) => (
+                                <li key={service.id} className="p-2 bg-muted rounded-md">
+                                  TV De-Installation Service - $50
                                 </li>
                               ))}
                             </ul>
@@ -2313,9 +2311,9 @@ export function IntegratedBookingWizard({
                         {tvServices.length > 0 && `${tvServices.length} TV${tvServices.length !== 1 ? 's' : ''}`}
                         {tvServices.length > 0 && smartHomeServices.length > 0 && ', '}
                         {smartHomeServices.length > 0 && `${smartHomeServices.length} Smart Device${smartHomeServices.length !== 1 ? 's' : ''}`}
-                        {(tvServices.length > 0 || smartHomeServices.length > 0) && soundSystemServices.length > 0 && ', '}
-                        {soundSystemServices.length > 0 && `${soundSystemServices.length} Sound System${soundSystemServices.length !== 1 ? 's' : ''}`}
-                        {tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0 && 'No services selected'}
+                        {(tvServices.length > 0 || smartHomeServices.length > 0) && tvDeinstallations.length > 0 && ', '}
+                        {tvDeinstallations.length > 0 && `${tvDeinstallations.length} TV De-Installation${tvDeinstallations.length !== 1 ? 's' : ''}`}
+                        {tvServices.length === 0 && smartHomeServices.length === 0 && tvDeinstallations.length === 0 && 'No services selected'}
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
@@ -2337,7 +2335,7 @@ export function IntegratedBookingWizard({
 
                   <Button
                     onClick={handleNextClick}
-                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0)}
+                    disabled={isSubmitting || (currentStep === 3 && tvServices.length === 0 && smartHomeServices.length === 0 && tvDeinstallations.length === 0)}
                     className="w-full sm:w-auto"
                   >
                     {isSubmitting
