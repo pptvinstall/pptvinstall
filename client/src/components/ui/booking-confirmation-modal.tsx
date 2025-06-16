@@ -30,6 +30,10 @@ interface BookingData {
     deviceType: string;
     location: string;
   }>;
+  soundSystemInstallations?: Array<{
+    systemType: string;
+    count: number;
+  }>;
 }
 
 interface BookingConfirmationModalProps {
@@ -196,6 +200,26 @@ export function BookingConfirmationModal({
                             <div>
                               <p className="font-medium">{device.deviceType}</p>
                               <Badge variant="outline">{device.location}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {bookingData.soundSystemInstallations && bookingData.soundSystemInstallations.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm text-muted-foreground mb-2">Sound System Services</p>
+                      <div className="space-y-2">
+                        {bookingData.soundSystemInstallations.map((system: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">
+                                {system.systemType === 'soundbar' && 'Soundbar Installation & Setup'}
+                                {system.systemType === 'surroundSound' && '5.1 Surround Sound Installation'}
+                                {system.systemType === 'speakerMount' && 'Speaker Wall Mount'}
+                              </p>
+                              <Badge variant="outline">Qty: {system.count}</Badge>
                             </div>
                           </div>
                         ))}

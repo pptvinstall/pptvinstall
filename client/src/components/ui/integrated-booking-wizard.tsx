@@ -662,11 +662,11 @@ export function IntegratedBookingWizard({
     if (type === 'tv') {
       const updatedTvServices = tvServices.filter(tv => tv.id !== id);
       setTvServices(updatedTvServices);
-      calculatePricingTotal(updatedTvServices, smartHomeServices);
+      calculatePricingTotal(updatedTvServices, smartHomeServices, soundSystemServices);
     } else {
       const updatedSmartHomeServices = smartHomeServices.filter(device => device.id !== id);
       setSmartHomeServices(updatedSmartHomeServices);
-      calculatePricingTotal(tvServices, updatedSmartHomeServices);
+      calculatePricingTotal(tvServices, updatedSmartHomeServices, soundSystemServices);
     }
   };
   
