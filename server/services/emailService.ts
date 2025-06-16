@@ -215,6 +215,294 @@ export async function sendWelcomeEmail(customer: Customer): Promise<boolean> {
   }
 }
 
+/**
+ * Generate services list from booking data using the new config system
+ */
+function generateServicesListFromBooking(booking: Booking): string[] {
+  const services: string[] = [];
+  
+  if (booking.pricingBreakdown && Array.isArray(booking.pricingBreakdown)) {
+    // Process each service in the pricing breakdown
+    booking.pricingBreakdown.forEach((item: any) => {
+      let serviceDescription = '';
+      
+      // Handle TV installations
+      if (item.type === 'tv') {
+        serviceDescription = `TV Installation (${item.size === 'large' ? '56" or larger' : '32"-55"'})`;
+        if (item.location === 'fireplace') serviceDescription += ' - Over Fireplace';
+        if (item.mountType && item.mountType !== 'customer') {
+          serviceDescription += ` - ${item.mountType === 'fixed' ? 'Fixed' : item.mountType === 'tilting' ? 'Tilting' : 'Full Motion'} Mount`;
+        }
+        if (item.masonryWall) serviceDescription += ' - Non-Drywall Surface';
+        if (item.highRise) serviceDescription += ' - High-Rise/Steel Studs';
+        if (item.outletRelocation) serviceDescription += ' - With Outlet Installation';
+      }
+      
+      // Handle Smart Home services
+      else if (item.type === 'camera') {
+        serviceDescription = `Smart Security Camera Installation${item.count > 1 ? ` (×${item.count})` : ''}`;
+      }
+      else if (item.type === 'doorbell') {
+        serviceDescription = `Smart Doorbell Installation${item.count > 1 ? ` (×${item.count})` : ''}`;
+        if (item.hasExistingWiring === false) serviceDescription += ' - New Wiring Required';
+      }
+      else if (item.type === 'floodlight') {
+        serviceDescription = `Smart Floodlight Installation${item.count > 1 ? ` (×${item.count})` : ''}`;
+        if (item.hasExistingWiring === false) serviceDescription += ' - New Wiring Required';
+      }
+      
+      // Handle Sound System services
+      else if (item.type === 'soundbar') {
+        serviceDescription = `Soundbar Installation & Setup${item.count > 1 ? ` (×${item.count})` : ''}`;
+      }
+      else if (item.type === 'surroundSound') {
+        serviceDescription = `5.1 Surround Sound Installation${item.count > 1 ? ` (×${item.count})` : ''}`;
+      }
+      else if (item.type === 'speakerMount') {
+        serviceDescription = `Speaker Wall Mount Installation${item.count > 1 ? ` (×${item.count})` : ''}`;
+      }
+      
+      if (serviceDescription) {
+        services.push(serviceDescription);
+      }
+    });
+  }
+  
+  // Fallback to serviceType if no breakdown available
+  if (services.length === 0 && booking.serviceType) {
+    services.push(booking.serviceType);
+  }
+  
+  return services;
+}
+
+/**
+ * Generate customer confirmation email template
+ */
+function generateCustomerConfirmationEmailTemplate(emailData: BookingEmailData): { subject: string; html: string; text: string } {
+  const servicesHtml = emailData.services.map(service => 
+    `<li style="margin-bottom: 8px; color: #0f172a;">${service}</li>`
+  ).join('');
+  
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Booking Confirmation</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 40px; text-align: center;">
+          <div style="background-color: #ffffff; display: inline-block; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;">
+            <span style="font-size: 20px; font-weight: bold; color: #10b981;">Picture Perfect TV Install</span>
+          </div>
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Booking Confirmed!</h1>
+          <p style="color: #d1fae5; margin: 10px 0 0 0; font-size: 16px;">Thank you for choosing our professional installation services</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px;">
+          <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <p style="margin: 0; color: #065f46; font-weight: 600; font-size: 16px;">✅ Your booking has been received and we'll contact you within 2 hours to confirm your appointment</p>
+          </div>
+
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+            Hello ${emailData.customerName},<br><br>
+            Thank you for booking with Picture Perfect TV Install! We're excited to help you create the perfect entertainment setup in your home.
+          </p>
+
+          <!-- Booking Details -->
+          <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">📋 Your Booking Details</h2>
+            <div style="margin-bottom: 15px;">
+              <p style="margin: 0 0 5px 0; color: #64748b; font-size: 14px; font-weight: 500;">Booking ID</p>
+              <p style="margin: 0 0 15px 0; color: #0f172a; font-size: 16px; font-weight: 600;">#${emailData.bookingId}</p>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <p style="margin: 0 0 5px 0; color: #64748b; font-size: 14px; font-weight: 500;">Services Requested</p>
+              <ul style="margin: 0; padding-left: 20px;">
+                ${servicesHtml}
+              </ul>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 14px; font-weight: 500;">Requested Date</p>
+                <p style="margin: 0 0 15px 0; color: #10b981; font-size: 16px; font-weight: 700;">${emailData.appointmentDate}</p>
+              </div>
+              <div>
+                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 14px; font-weight: 500;">Requested Time</p>
+                <p style="margin: 0; color: #10b981; font-size: 16px; font-weight: 700;">${emailData.appointmentTime}</p>
+              </div>
+            </div>
+            <div style="margin-top: 15px;">
+              <p style="margin: 0 0 5px 0; color: #64748b; font-size: 14px; font-weight: 500;">Estimated Total</p>
+              <p style="margin: 0; color: #059669; font-size: 20px; font-weight: 700;">$${emailData.totalAmount}</p>
+            </div>
+          </div>
+
+          <!-- Installation Address -->
+          <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">📍 Installation Address</h2>
+            <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px;">
+              <p style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 600;">${emailData.serviceAddress}</p>
+            </div>
+          </div>
+
+          ${emailData.notes ? `
+          <div style="background-color: #fefce8; border: 2px solid #facc15; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #ca8a04; margin: 0 0 15px 0; font-size: 18px;">📝 Special Instructions</h2>
+            <p style="margin: 0; color: #713f12; font-size: 16px; line-height: 1.6;">${emailData.notes}</p>
+          </div>
+          ` : ''}
+
+          <!-- Contact Information -->
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #ffffff; margin: 0 0 15px 0; font-size: 20px;">📞 Need to Make Changes?</h2>
+            <p style="color: #dbeafe; margin: 0 0 20px 0; font-size: 16px;">Contact us if you need to reschedule or have questions</p>
+            <a href="tel:404-702-4748" style="display: inline-block; background-color: #ffffff; color: #2563eb; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700; margin-right: 15px;">📞 Call Us</a>
+            <a href="mailto:${FROM_EMAIL}" style="display: inline-block; background-color: #1e40af; color: #ffffff; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 700;">✉️ Email Us</a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 30px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">Picture Perfect TV Install - Professional Installation Services</p>
+          <p style="margin: 0; color: #94a3b8; font-size: 12px;">Atlanta Metro Area | Licensed & Insured | 5-Star Rated</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+    Booking Confirmation - Picture Perfect TV Install
+    
+    Hello ${emailData.customerName},
+    
+    Thank you for booking with Picture Perfect TV Install! Your booking has been confirmed.
+    
+    Booking Details:
+    - Booking ID: #${emailData.bookingId}
+    - Services: ${emailData.services.join(', ')}
+    - Date: ${emailData.appointmentDate}
+    - Time: ${emailData.appointmentTime}
+    - Address: ${emailData.serviceAddress}
+    - Estimated Total: $${emailData.totalAmount}
+    
+    ${emailData.notes ? `Special Instructions: ${emailData.notes}` : ''}
+    
+    We'll contact you within 2 hours to confirm your appointment details.
+    
+    Contact us: 404-702-4748 or ${FROM_EMAIL}
+    
+    Thank you for choosing Picture Perfect TV Install!
+  `;
+
+  return {
+    subject: 'Your TV Installation Booking Confirmation - Picture Perfect TV Install',
+    html,
+    text
+  };
+}
+
+/**
+ * Generate admin notification email template
+ */
+function generateAdminNotificationEmailTemplate(emailData: BookingEmailData): { subject: string; html: string; text: string } {
+  const servicesHtml = emailData.services.map(service => 
+    `<li style="margin-bottom: 8px; color: #0f172a;">${service}</li>`
+  ).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Booking Alert</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 30px 40px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">New Booking Alert!</h1>
+          <p style="color: #e2e8f0; margin: 10px 0 0 0; font-size: 16px;">A new customer has scheduled an installation</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px;">
+          <div style="background-color: #f1f5f9; border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <p style="margin: 0; color: #0f172a; font-weight: 600; font-size: 16px;">⚡ Priority: Contact customer within 2 hours</p>
+          </div>
+
+          <!-- Customer Information -->
+          <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #2563eb; margin: 0 0 20px 0; font-size: 20px;">👤 Customer Information</h2>
+            <p><strong>Name:</strong> ${emailData.customerName}</p>
+            <p><strong>Email:</strong> <a href="mailto:${emailData.customerEmail}">${emailData.customerEmail}</a></p>
+            <p><strong>Phone:</strong> <a href="tel:${emailData.customerEmail}">${emailData.customerEmail}</a></p>
+          </div>
+
+          <!-- Booking Details -->
+          <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #2563eb; margin: 0 0 20px 0; font-size: 20px;">🔧 Service Details</h2>
+            <p><strong>Booking ID:</strong> #${emailData.bookingId}</p>
+            <p><strong>Services Requested:</strong></p>
+            <ul>${servicesHtml}</ul>
+            <p><strong>Requested Date:</strong> ${emailData.appointmentDate}</p>
+            <p><strong>Requested Time:</strong> ${emailData.appointmentTime}</p>
+            <p><strong>Estimated Total:</strong> $${emailData.totalAmount}</p>
+          </div>
+
+          <!-- Address -->
+          <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #2563eb; margin: 0 0 20px 0; font-size: 20px;">📍 Installation Address</h2>
+            <p style="font-size: 16px; font-weight: 600;">${emailData.serviceAddress}</p>
+          </div>
+
+          ${emailData.notes ? `
+          <div style="background-color: #fefce8; border: 2px solid #facc15; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+            <h2 style="color: #ca8a04; margin: 0 0 15px 0; font-size: 18px;">📝 Special Instructions</h2>
+            <p style="margin: 0; color: #713f12; font-size: 16px;">${emailData.notes}</p>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+    New Booking Alert - Picture Perfect TV Install
+    
+    Customer: ${emailData.customerName}
+    Email: ${emailData.customerEmail}
+    Phone: ${emailData.customerEmail}
+    
+    Booking ID: #${emailData.bookingId}
+    Services: ${emailData.services.join(', ')}
+    Date: ${emailData.appointmentDate}
+    Time: ${emailData.appointmentTime}
+    Address: ${emailData.serviceAddress}
+    Total: $${emailData.totalAmount}
+    
+    ${emailData.notes ? `Special Instructions: ${emailData.notes}` : ''}
+    
+    Contact customer within 2 hours to confirm appointment.
+  `;
+
+  return {
+    subject: 'New Booking Alert - Picture Perfect TV Install',
+    html,
+    text
+  };
+}
+
 // Email Templates
 
 function getAdminNotificationEmailTemplate(booking: Booking): string {

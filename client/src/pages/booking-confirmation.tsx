@@ -291,6 +291,28 @@ export default function BookingConfirmation() {
         });
       }
 
+      // Process Sound System services
+      const soundSystemItems = bookingData.pricingBreakdown.filter((item: PricingBreakdownItem) =>
+        item.type === 'soundbar' || item.type === 'surroundSound' || item.type === 'speakerMount'
+      );
+
+      if (soundSystemItems.length > 0) {
+        breakdown.push({
+          category: 'Sound System',
+          items: soundSystemItems.map((item: PricingBreakdownItem) => {
+            const systemName =
+              item.type === 'soundbar' ? 'Soundbar Installation & Setup' :
+                item.type === 'surroundSound' ? '5.1 Surround Sound Installation' :
+                item.type === 'speakerMount' ? 'Speaker Wall Mount' : 'Sound System Service';
+
+            return {
+              name: `${systemName}${(item as any).count > 1 ? ` (×${(item as any).count})` : ''}`,
+              details: []
+            };
+          })
+        });
+      }
+
       return breakdown;
     }
 
@@ -344,6 +366,19 @@ export default function BookingConfirmation() {
           trimmedCategory.includes('Floodlight')) {
           serviceTypeBreakdown.push({
             category: 'Smart Home',
+            items: [{
+              name: trimmedCategory,
+              details: []
+            }]
+          });
+        }
+        // Check if this is a sound system category
+        else if (trimmedCategory.includes('Soundbar') ||
+          trimmedCategory.includes('Surround Sound') ||
+          trimmedCategory.includes('Speaker') ||
+          trimmedCategory.includes('Sound System')) {
+          serviceTypeBreakdown.push({
+            category: 'Sound System',
             items: [{
               name: trimmedCategory,
               details: []
