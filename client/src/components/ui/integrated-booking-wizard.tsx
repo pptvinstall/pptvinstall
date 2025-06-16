@@ -2343,7 +2343,12 @@ export function IntegratedBookingWizard({
                     <div>
                       <p className="text-xs sm:text-sm font-medium">Selected Services:</p>
                       <p className="text-xs text-muted-foreground">
-                        {tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}, {smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}
+                        {tvServices.length > 0 && `${tvServices.length} TV${tvServices.length !== 1 ? 's' : ''}`}
+                        {tvServices.length > 0 && smartHomeServices.length > 0 && ', '}
+                        {smartHomeServices.length > 0 && `${smartHomeServices.length} Smart Device${smartHomeServices.length !== 1 ? 's' : ''}`}
+                        {(tvServices.length > 0 || smartHomeServices.length > 0) && soundSystemServices.length > 0 && ', '}
+                        {soundSystemServices.length > 0 && `${soundSystemServices.length} Sound System${soundSystemServices.length !== 1 ? 's' : ''}`}
+                        {tvServices.length === 0 && smartHomeServices.length === 0 && soundSystemServices.length === 0 && 'No services selected'}
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
