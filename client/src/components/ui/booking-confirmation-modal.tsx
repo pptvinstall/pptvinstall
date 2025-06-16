@@ -207,19 +207,15 @@ export function BookingConfirmationModal({
                     </div>
                   )}
 
-                  {bookingData.soundSystemInstallations && bookingData.soundSystemInstallations.length > 0 && (
+                  {bookingData.tvDeinstallationServices && bookingData.tvDeinstallationServices.length > 0 && (
                     <div className="mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">Sound System Services</p>
+                      <p className="text-sm text-muted-foreground mb-2">TV De-Installation Services</p>
                       <div className="space-y-2">
-                        {bookingData.soundSystemInstallations.map((system: any, index: number) => (
+                        {bookingData.tvDeinstallationServices.map((service: any, index: number) => (
                           <div key={index} className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium">
-                                {system.systemType === 'soundbar' && 'Soundbar Installation & Setup'}
-                                {system.systemType === 'surroundSound' && '5.1 Surround Sound Installation'}
-                                {system.systemType === 'speakerMount' && 'Speaker Wall Mount'}
-                              </p>
-                              <Badge variant="outline">Qty: {system.count}</Badge>
+                              <p className="font-medium">TV De-Installation Service</p>
+                              <p className="text-sm text-muted-foreground">Remove TV and mount from wall - $50</p>
                             </div>
                           </div>
                         ))}
