@@ -340,9 +340,7 @@ export function IntegratedBookingWizard({
   const [newDeviceCount, setNewDeviceCount] = useState(1);
   const [hasExistingWiring, setHasExistingWiring] = useState(true);
 
-  // Sound System
-  const [newSoundSystemType, setNewSoundSystemType] = useState<'soundbar' | 'surroundSound' | 'speakerMount'>('soundbar');
-  const [newSoundSystemCount, setNewSoundSystemCount] = useState(1);
+
   
   // Scroll to top when changing steps
   useEffect(() => {
@@ -1643,29 +1641,23 @@ export function IntegratedBookingWizard({
                         </div>
                       </TabsContent>
                       
-                      {/* Sound System */}
+                      {/* TV De-Installation */}
                       <TabsContent value="soundsystem" className="space-y-4 mt-4">
-                        {/* Current Sound System Services */}
-                        {soundSystemServices.length > 0 && (
+                        {/* Current TV De-Installation Services */}
+                        {tvDeinstallations.length > 0 && (
                           <div className="space-y-3 mb-6">
-                            <h4 className="text-sm font-medium">Your Sound System Installations</h4>
+                            <h4 className="text-sm font-medium">Your TV De-Installation Services</h4>
                             <div className="space-y-2">
-                              {soundSystemServices.map((service, index) => (
+                              {tvDeinstallations.map((service, index) => (
                                 <div key={service.id} className="flex items-start justify-between p-3 bg-muted rounded-md">
                                   <div>
-                                    <p className="font-medium">
-                                      {service.type === 'soundbar' 
-                                        ? 'Soundbar Installation' 
-                                        : service.type === 'surroundSound' 
-                                        ? '5.1 Surround Sound' 
-                                        : 'Speaker Mount'}
-                                    </p>
-                                    <p className="text-sm">Quantity: {service.count}</p>
+                                    <p className="font-medium">TV De-Installation Service</p>
+                                    <p className="text-sm">$50 - Remove TV and mount from wall</p>
                                   </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => removeSoundSystemService(service.id)}
+                                    onClick={() => removeTvDeinstallationService(service.id)}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -1675,60 +1667,40 @@ export function IntegratedBookingWizard({
                           </div>
                         )}
                         
-                        {/* Add New Sound System Service */}
+                        {/* Add TV De-Installation Service */}
                         <div className="space-y-4 bg-muted/30 p-4 rounded-md">
-                          <h4 className="text-sm font-medium">Add Sound System Installation</h4>
+                          <h4 className="text-sm font-medium">TV De-Installation Service</h4>
                           
                           <div className="space-y-3">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Service Type</label>
-                              <RadioGroup
-                                value={newSoundSystemType}
-                                onValueChange={(value) => setNewSoundSystemType(value as 'soundbar' | 'surroundSound' | 'speakerMount')}
-                                className="flex flex-col space-y-2"
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="soundbar" id="soundbar" />
-                                  <Label htmlFor="soundbar" className="flex flex-col">
-                                    <span>Soundbar Installation & Setup</span>
-                                    <span className="text-xs text-muted-foreground">$150 - Professional mounting and TV integration</span>
-                                  </Label>
+                            <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-md">
+                              <div className="flex">
+                                <div className="flex-shrink-0">
+                                  <Info className="h-5 w-5 text-blue-500" />
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="surroundSound" id="surroundSound" />
-                                  <Label htmlFor="surroundSound" className="flex flex-col">
-                                    <span>5.1 Surround Sound Installation</span>
-                                    <span className="text-xs text-muted-foreground">$300 - Complete system setup with speaker placement</span>
-                                  </Label>
+                                <div className="ml-3">
+                                  <p className="text-sm text-blue-700">
+                                    <strong>Service includes:</strong> Professional removal of TV from wall mount and complete mount removal from wall. 
+                                    Service is for standard residential walls only (drywall with wood studs).
+                                  </p>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="speakerMount" id="speakerMount" />
-                                  <Label htmlFor="speakerMount" className="flex flex-col">
-                                    <span>Individual Speaker Wall Mount</span>
-                                    <span className="text-xs text-muted-foreground">$50 each - Professional speaker mounting</span>
-                                  </Label>
-                                </div>
-                              </RadioGroup>
+                              </div>
                             </div>
                             
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Quantity</label>
-                              <Input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={newSoundSystemCount}
-                                onChange={(e) => setNewSoundSystemCount(parseInt(e.target.value) || 1)}
-                                className="w-20"
-                              />
+                            <div className="bg-primary/10 p-3 rounded-md">
+                              <div className="text-center">
+                                <p className="text-lg font-semibold">Flat Rate: $50</p>
+                                <p className="text-sm text-muted-foreground">No additional charges</p>
+                              </div>
                             </div>
                           </div>
                           
                           <Button 
-                            onClick={addSoundSystemService}
+                            onClick={addTvDeinstallationService}
                             className="w-full"
+                            disabled={tvDeinstallations.length > 0}
                           >
-                            <Plus className="h-4 w-4 mr-2" /> Add Sound System Service
+                            <Plus className="h-4 w-4 mr-2" /> 
+                            {tvDeinstallations.length > 0 ? 'Service Added' : 'Add TV De-Installation Service'}
                           </Button>
                         </div>
                       </TabsContent>
@@ -2402,10 +2374,10 @@ export function IntegratedBookingWizard({
             deviceType: device.type,
             location: 'Indoor'
           })) as { deviceType: string; location: string; }[],
-          soundSystemInstallations: soundSystemServices.map(system => ({
-            systemType: system.type,
-            count: system.count
-          })) as { systemType: string; count: number; }[]
+          tvDeinstallationServices: tvDeinstallations.map(deinstall => ({
+            serviceType: 'deinstallation',
+            price: 50
+          })) as { serviceType: string; price: number; }[]
         }}
         onConfirm={async () => {
           try {
@@ -2423,7 +2395,7 @@ export function IntegratedBookingWizard({
               appointmentTime: selectedTime,
               notes: formData.notes || '',
               consentToContact: formData.consentToContact,
-              serviceType: tvServices.length > 0 ? "TV Installation" : soundSystemServices.length > 0 ? "Sound System Installation" : "Smart Home Installation",
+              serviceType: tvServices.length > 0 ? "TV Installation" : tvDeinstallations.length > 0 ? "TV De-Installation" : "Smart Home Installation",
               pricingTotal: pricingTotal.toString(),
               // Convert to the format expected by the server
               pricingBreakdown: [
@@ -2442,9 +2414,9 @@ export function IntegratedBookingWizard({
                   count: device.count,
                   hasExistingWiring: device.hasExistingWiring
                 })),
-                ...soundSystemServices.map(system => ({
-                  type: system.type,
-                  count: system.count
+                ...tvDeinstallations.map(deinstall => ({
+                  type: 'deinstallation',
+                  price: 50
                 }))
               ],
               // Account creation data
