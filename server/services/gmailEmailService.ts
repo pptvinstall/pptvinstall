@@ -134,18 +134,25 @@ function generateBookingConfirmationEmail(booking: Booking): string {
   
   // TV De-Installation services
   if (deinstallationItems.length > 0) {
-    servicesHtml += deinstallationItems.map((item: any, index: number) => `
+    servicesHtml += deinstallationItems.map((item: any, index: number) => {
+      const quantity = item.quantity || 1;
+      const total = quantity * 50;
+      return `
       <div style="padding: 12px 0; border-bottom: 1px solid #eee;">
         <div style="font-weight: 500; color: #333;">
-          TV De-Installation Service ${deinstallationItems.length > 1 ? `${index + 1}` : ''}
+          TV De-Installation Service
         </div>
         <ul style="list-style-type: disc; padding-left: 20px; margin: 8px 0 0 0; color: #666; font-size: 14px;">
           <li>Professional TV removal from wall mount</li>
           <li>Mount removal from wall (standard residential walls)</li>
-          <li>$50 flat rate service</li>
+          <li><strong>Quantity: ${quantity} TV${quantity > 1 ? 's' : ''}</strong></li>
         </ul>
+        <div style="color: #0066cc; font-weight: 500; margin-top: 8px;">
+          ${quantity} TV${quantity > 1 ? 's' : ''} × $50 = $${total}
+        </div>
       </div>
-    `).join('');
+      `;
+    }).join('');
   }
   
   // Fallback if no detailed breakdown

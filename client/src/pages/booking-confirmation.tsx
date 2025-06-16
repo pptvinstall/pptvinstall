@@ -299,14 +299,19 @@ export default function BookingConfirmation() {
       if (deinstallationItems.length > 0) {
         breakdown.push({
           category: 'TV De-Installation',
-          items: deinstallationItems.map((item: PricingBreakdownItem, index: number) => ({
-            name: deinstallationItems.length > 1 ? `TV De-Installation Service ${index + 1}` : 'TV De-Installation Service',
-            details: [
-              'Professional TV removal from wall mount',
-              'Mount removal from wall (standard residential walls)',
-              '$50 flat rate service'
-            ]
-          }))
+          items: deinstallationItems.map((item: PricingBreakdownItem, index: number) => {
+            const quantity = (item as any).quantity || 1;
+            const total = quantity * 50;
+            return {
+              name: 'TV De-Installation Service',
+              details: [
+                'Professional TV removal from wall mount',
+                'Mount removal from wall (standard residential walls)',
+                `Quantity: ${quantity} TV${quantity > 1 ? 's' : ''}`,
+                `${quantity} TV${quantity > 1 ? 's' : ''} × $50 = $${total}`
+              ]
+            };
+          })
         });
       }
 

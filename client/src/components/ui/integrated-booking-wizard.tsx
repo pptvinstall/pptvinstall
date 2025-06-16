@@ -1112,7 +1112,8 @@ export function IntegratedBookingWizard({
         })),
         ...tvDeinstallations.map(deinstall => ({
           type: 'deinstallation',
-          price: 50
+          price: 50,
+          quantity: deinstall.quantity || 1
         }))
       ]
     };
