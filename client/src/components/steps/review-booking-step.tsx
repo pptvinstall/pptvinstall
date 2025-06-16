@@ -19,7 +19,7 @@ import { RescheduleDialog } from "@/components/ui/reschedule-dialog";
 
 interface ReviewBookingStepProps {
   tvInstallations: any[];
-  tvRemovalService: any;
+  tvDeinstallations: any[];
   smartHomeInstallations: any[];
   handymanService: any;
   selectedDate: Date | undefined;
@@ -27,7 +27,7 @@ interface ReviewBookingStepProps {
   formData: any;
   pricingTotal: number;
   onEditServices?: () => void;
-  onRemoveService?: (type: 'tv' | 'smartHome', id: string) => void;
+  onRemoveService?: (type: 'tv' | 'smartHome' | 'tvDeinstallation', id: string) => void;
   onReschedule?: (date: Date, time: string) => void;
   bookingId?: number | string;
   noServicesMessage?: string;
@@ -35,7 +35,7 @@ interface ReviewBookingStepProps {
 
 export function ReviewBookingStep({
   tvInstallations,
-  tvRemovalService,
+  tvDeinstallations,
   smartHomeInstallations,
   handymanService,
   selectedDate,
@@ -48,8 +48,8 @@ export function ReviewBookingStep({
   bookingId,
   noServicesMessage = "No services selected. Please add at least one service before confirming."
 }: ReviewBookingStepProps) {
-  const [serviceToRemove, setServiceToRemove] = useState<{type: 'tv' | 'smartHome', id: string} | null>(null);
-  const hasServices = tvInstallations.length > 0 || smartHomeInstallations.length > 0;
+  const [serviceToRemove, setServiceToRemove] = useState<{type: 'tv' | 'smartHome' | 'tvDeinstallation', id: string} | null>(null);
+  const hasServices = tvInstallations.length > 0 || smartHomeInstallations.length > 0 || tvDeinstallations.length > 0;
 
   const handleRemoveClick = (type: 'tv' | 'smartHome', id: string) => {
     setServiceToRemove({ type, id });

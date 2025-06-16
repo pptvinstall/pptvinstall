@@ -1298,7 +1298,7 @@ export function IntegratedBookingWizard({
                       <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="tv">TV Installation</TabsTrigger>
                         <TabsTrigger value="smarthome">Smart Home</TabsTrigger>
-                        <TabsTrigger value="soundsystem">Sound System</TabsTrigger>
+                        <TabsTrigger value="soundsystem">TV De-Installation</TabsTrigger>
                       </TabsList>
                       
                       {/* TV Installation */}
@@ -1713,7 +1713,8 @@ export function IntegratedBookingWizard({
                         <h4 className="text-sm font-medium">Total Selected:</h4>
                         <div>
                           <Badge variant="outline" className="mr-2">{tvServices.length} TV{tvServices.length !== 1 ? 's' : ''}</Badge>
-                          <Badge variant="outline">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline" className="mr-2">{smartHomeServices.length} Device{smartHomeServices.length !== 1 ? 's' : ''}</Badge>
+                          <Badge variant="outline">{tvDeinstallations.length} De-Installation{tvDeinstallations.length !== 1 ? 's' : ''}</Badge>
                         </div>
                       </div>
                       <div className="bg-muted p-3 rounded-md flex justify-between items-center">
@@ -2114,7 +2115,7 @@ export function IntegratedBookingWizard({
                 {currentStep === 3 && (
                   <ReviewBookingStep
                     tvInstallations={tvServices}
-                    tvRemovalService={null}
+                    tvDeinstallations={tvDeinstallations}
                     smartHomeInstallations={smartHomeServices}
                     handymanService={null}
                     selectedDate={selectedDate}
@@ -2126,6 +2127,7 @@ export function IntegratedBookingWizard({
                       // Create updated service arrays
                       let updatedTvServices = [...tvServices];
                       let updatedSmartHomeServices = [...smartHomeServices];
+                      let updatedTvDeinstallations = [...tvDeinstallations];
                       
                       if (type === 'tv') {
                         updatedTvServices = tvServices.filter(tv => tv.id !== id);
@@ -2133,12 +2135,16 @@ export function IntegratedBookingWizard({
                       } else if (type === 'smartHome') {
                         updatedSmartHomeServices = smartHomeServices.filter(device => device.id !== id);
                         setSmartHomeServices(updatedSmartHomeServices);
+                      } else if (type === 'tvDeinstallation') {
+                        updatedTvDeinstallations = tvDeinstallations.filter(service => service.id !== id);
+                        setTvDeinstallations(updatedTvDeinstallations);
                       }
                       
                       // Recalculate pricing based on the updated service arrays
                       calculatePricingTotal(
                         type === 'tv' ? updatedTvServices : tvServices, 
-                        type === 'smartHome' ? updatedSmartHomeServices : smartHomeServices
+                        type === 'smartHome' ? updatedSmartHomeServices : smartHomeServices,
+                        type === 'tvDeinstallation' ? updatedTvDeinstallations : tvDeinstallations
                       );
                       
                       // Toast to confirm removal
