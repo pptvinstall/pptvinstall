@@ -1,59 +1,52 @@
 # Picture Perfect TV Install
 
-A professional home service platform specializing in TV mounting and smart home installations across Metro Atlanta, providing a seamless and intuitive booking experience with robust technological infrastructure.
+A professional home service platform specializing in TV mounting and smart home installations across Metro Atlanta.
 
-## Features
+## Production Deployment
 
-- Responsive, modern React + TypeScript frontend
-- PostgreSQL with Drizzle ORM for efficient data management
-- Framer Motion for interactive, engaging animations
-- Wouter for smooth, single-page routing
-- SendGrid for transactional email communications
-- Comprehensive admin panel with advanced management tools
-- Smart home device integration with detailed installation tracking
+### Environment Variables Required
 
-## Running in Development
-
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Start the development server with `npm run dev`
-4. The application will be available at http://localhost:5000
-
-## Deployment to Production
-
-The application is configured to be easily deployed to production environments. There are two main scripts for deployment:
-
-### Option 1: Full Build and Run
-
-Run the `build-and-run.sh` script which:
-1. Installs all dependencies
-2. Builds the application
-3. Starts the server in production mode
-
-```bash
-./build-and-run.sh
+```
+DATABASE_URL=your_postgresql_connection_string
+NODE_ENV=production
+PORT=5000
 ```
 
-### Option 2: Run Pre-built Application
+### Build & Deploy
 
-If you've already built the application, you can use the `serve-production.sh` script to start the server:
-
+1. Install dependencies:
 ```bash
-./serve-production.sh
+npm install
 ```
 
-## Environment Configuration
+2. Build the application:
+```bash
+npm run build
+```
 
-The application uses the following environment variables:
+3. Start production server:
+```bash
+npm run start
+```
 
-- `PORT`: The port where the application will run (defaults to 5000)
-- `NODE_ENV`: Set to 'production' for production mode
-- `DATABASE_URL`: PostgreSQL connection string
+### Railway/Render Deployment
 
-## Admin Access
+This project is ready for deployment on Railway or Render. Ensure the following:
 
-The admin panel is available at `/admin`. Default credentials:
-- Password: See environment variable or ask administrator
+- Set `NODE_ENV=production` in environment variables
+- Configure `DATABASE_URL` with your PostgreSQL connection string
+- The build command is: `npm run build`
+- The start command is: `npm run start`
+- Uses port 5000 (configurable via PORT environment variable)
+
+### Tech Stack
+
+- **Frontend**: React + TypeScript, Vite
+- **Backend**: Express.js
+- **Database**: PostgreSQL with Drizzle ORM
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Routing**: Wouter
+- **Animations**: Framer Motion
 
 ## License
 

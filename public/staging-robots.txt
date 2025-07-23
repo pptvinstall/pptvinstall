@@ -1,6 +1,0 @@
-# Staging Environment - Block all crawlers
-User-agent: *
-Disallow: /
-
-# Prevent staging from being indexed
-Sitemap:
