@@ -1,14 +1,10 @@
-import sgMail from '@sendgrid/mail';
+// Removed SendGrid dependency
 import type { Booking, Customer } from '@shared/schema';
 import { format, parse, parseISO } from 'date-fns';
-import * as ics from 'ics';
+// Removed calendar dependency
 import { logger } from './loggingService';
 
-// Initialize SendGrid with API key
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+// Email service now uses Gmail SMTP - no SendGrid initialization needed
 
 // Email configuration - centralized
 const EMAIL_CONFIG = {

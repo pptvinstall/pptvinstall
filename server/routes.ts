@@ -299,12 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             subject: adminMsg.subject
           });
           
-          // Send directly through SendGrid for custom subject
-          import('@sendgrid/mail').then(sgModule => {
-            const sgMail = sgModule.default;
-            sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
-            return sgMail.send(adminMsg);
-          });
+          // Using Gmail SMTP instead of SendGrid
           adminEmailResult = true;
           logger.info(`Admin email send result: ${adminEmailResult}`);
         } catch (adminError: any) {

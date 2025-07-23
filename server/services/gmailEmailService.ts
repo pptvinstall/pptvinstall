@@ -344,28 +344,12 @@ export async function sendUnifiedBookingConfirmation(booking: Booking): Promise<
 
     const htmlContent = generateBookingConfirmationEmail(booking);
     const textContent = generatePlainTextEmail(booking);
-    
-    // Create calendar attachment
-    let calendarAttachment = null;
-    try {
-      const calendarEvent = await createCalendarEvent(booking);
-      if (calendarEvent) {
-        calendarAttachment = {
-          filename: 'appointment.ics',
-          content: calendarEvent,
-          contentType: 'text/calendar'
-        };
-      }
-    } catch (calError) {
-      console.warn('Failed to create calendar attachment:', calError);
-    }
 
     const mailOptions = {
       from: `Picture Perfect TV <${GMAIL_USER}>`,
       subject: subject,
       html: htmlContent,
-      text: textContent,
-      attachments: calendarAttachment ? [calendarAttachment] : []
+      text: textContent
     };
 
     // Send to customer

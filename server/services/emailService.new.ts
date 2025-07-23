@@ -1,14 +1,8 @@
-import sgMail from '@sendgrid/mail';
+// Removed SendGrid dependency - using Gmail SMTP instead
 import type { Booking, Customer } from '@shared/schema';
 import { format, parse, parseISO } from 'date-fns';
-import * as ics from 'ics';
-import type { EventAttributes, EventStatus } from 'ics';
 
-// Initialize SendGrid with API key
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+// Email service now uses Gmail SMTP - no SendGrid initialization needed
 
 // Email configuration
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'PPTVInstall@gmail.com';
