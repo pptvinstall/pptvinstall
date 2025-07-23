@@ -469,6 +469,94 @@ export async function sendUnifiedBookingConfirmation(booking: Booking): Promise<
   }
 }
 
+/**
+ * Send booking confirmation email (wrapper for unified function)
+ */
+export async function sendBookingConfirmationEmail(booking: Booking): Promise<boolean> {
+  const result = await sendUnifiedBookingConfirmation(booking);
+  return result.customerSent;
+}
+
+/**
+ * Send admin notification email (wrapper for unified function) 
+ */
+export async function sendAdminNotificationEmail(booking: Booking): Promise<boolean> {
+  const result = await sendUnifiedBookingConfirmation(booking);
+  return result.adminSent;
+}
+
+/**
+ * Send booking cancellation email
+ */
+export async function sendBookingCancellationEmail(booking: Booking, reason?: string): Promise<boolean> {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    console.error('Gmail transporter not available - check GMAIL_APP_PASSWORD');
+    return false;
+  }
+
+  try {
+    const subject = `Booking Cancellation - ${COMPANY_NAME}`;
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Cancellation - ${COMPANY_NAME}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: #dc3545; color: white; border-radius: 8px;">
+    <h1>Booking Cancellation</h1>
+    <p>${COMPANY_NAME}</p>
+  </div>
+  
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h2>Booking Cancelled</h2>
+    <p>Dear ${booking.name},</p>
+    <p>Your booking (ID: ${booking.id}) has been cancelled.</p>
+    ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+    <p>If you have any questions, please contact us at ${COMPANY_PHONE}.</p>
+  </div>
+  
+  <div style="text-align: center; color: #666; font-size: 12px;">
+    <p>${COMPANY_NAME} | ${COMPANY_PHONE} | ${COMPANY_WEBSITE}</p>
+  </div>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `Picture Perfect TV <${GMAIL_USER}>`,
+      to: booking.email,
+      subject: subject,
+      html: htmlContent
+    });
+
+    console.log(`✅ Cancellation email sent to: ${booking.email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send cancellation email:', error);
+    return false;
+  }
+}
+
+/**
+ * Email templates object for compatibility
+ */
+export const emailTemplates = {
+  bookingConfirmation: (booking: Booking) => generateBookingConfirmationEmail(booking),
+  adminNotification: (booking: Booking) => generateBookingConfirmationEmail(booking),
+  cancellation: (booking: Booking, reason?: string) => `Booking ${booking.id} cancelled. Reason: ${reason || 'Not specified'}`,
+  getBookingConfirmationEmailTemplate: (booking: Booking) => generateBookingConfirmationEmail(booking),
+  getAdminNotificationEmailTemplate: (booking: Booking) => generateBookingConfirmationEmail(booking),
+  getBookingCancellationEmailTemplate: (booking: Booking, reason?: string) => `Booking ${booking.id} cancelled. Reason: ${reason || 'Not specified'}`
+};
+
 export default {
-  sendUnifiedBookingConfirmation
+  sendUnifiedBookingConfirmation,
+  sendBookingConfirmationEmail,
+  sendAdminNotificationEmail, 
+  sendBookingCancellationEmail,
+  emailTemplates
 };

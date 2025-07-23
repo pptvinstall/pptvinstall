@@ -18,7 +18,7 @@ import {
   sendAdminNotificationEmail,
   sendBookingCancellationEmail,
   emailTemplates
-} from "./services/emailService";
+} from "./services/gmailEmailService";
 import { handleGetAnalytics } from "./analytics";
 import { 
   sendEnhancedEmail, 
