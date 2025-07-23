@@ -10,6 +10,7 @@ import { ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
+import { monitoring } from "./monitoring";
 import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { 
@@ -18,6 +19,7 @@ import {
   sendBookingCancellationEmail,
   emailTemplates
 } from "./services/emailService";
+import { handleGetAnalytics } from "./analytics";
 import { 
   sendEnhancedEmail, 
   EmailType, 
@@ -2828,31 +2830,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // System Settings API Routes
-  // Analytics API - Get Meta Pixel event data (placeholder implementation)
-  app.get("/api/admin/analytics", async (req: Request, res: Response) => {
-    try {
-      // Placeholder analytics data - replace with actual implementation
-      const analyticsData = {
-        totalEvents: 0,
-        pageViews: 0,
-        bookings: 0,
-        uniqueVisitors: 0,
-        conversionRate: 0,
-        recentEvents: []
-      };
-      
-      res.json({
-        success: true,
-        data: analyticsData
-      });
-    } catch (error) {
-      logger.error('Error fetching analytics data', error as Error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch analytics data"
-      });
-    }
-  });
+  // Analytics API - Get Meta Pixel event data
+  app.get("/api/admin/analytics", handleGetAnalytics);
   
   app.get("/api/admin/system-settings", async (req: Request, res: Response) => {
     try {
