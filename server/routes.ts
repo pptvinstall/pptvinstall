@@ -11,7 +11,7 @@ import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./stor
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
 import { monitoring } from "./monitoring";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { 
   sendBookingConfirmationEmail, 
@@ -293,11 +293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             html: emailTemplates.getAdminNotificationEmailTemplate(testBooking),
           };
           
-          logger.debug("Admin email payload:", JSON.stringify({
+          logger.debug("Admin email payload:", {
             to: adminMsg.to,
             from: adminMsg.from,
             subject: adminMsg.subject
-          }));
+          });
           
           // Send directly through SendGrid for custom subject
           import('@sendgrid/mail').then(sgModule => {
@@ -918,7 +918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Booking endpoints
   app.post("/api/booking", async (req, res) => {
     try {
-      logger.debug("Booking submission received:", JSON.stringify(req.body, null, 2));
+      logger.debug("Booking submission received:", { body: req.body });
       
       // First, check if we have a valid booking object before parsing
       if (!req.body || Object.keys(req.body).length === 0) {
@@ -986,8 +986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 city: booking.city,
                 state: booking.state,
                 zipCode: booking.zipCode,
-                password: hashedPassword,
-                memberSince: new Date().toISOString(),
+                password: hashedPassword || '',
+                memberSince: new Date(),
                 isVerified: true, // Auto-verify since they're creating during booking
                 loyaltyPoints: 0
               });
@@ -996,7 +996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } catch (accountError) {
             // Log error but continue with booking
-            logger.error("Error creating customer account:", accountError);
+            logger.error("Error creating customer account:", accountError as Error);
           }
         }
         
@@ -1062,7 +1062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Exit the nested try/catch block
         return;
       } catch (parseError) {
-        logger.error("Booking schema validation failed:", parseError);
+        logger.error("Booking schema validation failed:", parseError as Error);
         if (parseError instanceof ZodError) {
           return res.status(400).json({
             success: false,
@@ -1413,14 +1413,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const booking = result[0];
           
           // Send customer confirmation email
-          await sendEnhancedBookingConfirmation(booking);
+          const bookingWithStatus = {
+            ...booking,
+            id: booking.id.toString(),
+            status: (booking.status || 'active') as 'active' | 'cancelled' | 'completed' | 'scheduled',
+            addressLine2: booking.addressLine2 || undefined,
+            notes: booking.notes || undefined,
+            tvSize: booking.tvSize || undefined,
+            mountType: booking.mountType || undefined,
+            wallMaterial: booking.wallMaterial || undefined,
+            specialInstructions: booking.specialInstructions || undefined,
+            pricingTotal: booking.pricingTotal || undefined,
+            pricingBreakdown: booking.pricingBreakdown || undefined,
+            cancellationReason: booking.cancellationReason || undefined,
+            createdAt: booking.createdAt?.toISOString()
+          };
+          await sendEnhancedBookingConfirmation(bookingWithStatus);
           logger.info("Enhanced customer confirmation email sent successfully");
           
           // Send separate admin notification
           try {
             // Import admin notification function from enhanced email service
             const { sendAdminNotification } = await import('./services/enhancedEmailService');
-            const adminEmailSent = await sendAdminNotification(booking);
+            const adminEmailSent = await sendAdminNotification(bookingWithStatus);
             logger.info(`Admin notification email sent successfully: ${adminEmailSent}`);
           } catch (adminError: any) {
             logger.error("Error sending admin notification email:", adminError as Error);
@@ -1648,14 +1663,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Compare fields and add to changes if they're different
           for (const key in updates) {
             if (Object.prototype.hasOwnProperty.call(updates, key) && 
-                updates[key] !== originalBooking[key]) {
-              changes[key] = updates[key];
+                updates[key as keyof typeof updates] !== (originalBooking as any)[key]) {
+              changes[key] = updates[key as keyof typeof updates];
             }
           }
           
           // Only send email if there were actual changes
           if (Object.keys(changes).length > 0) {
-            emailSent = await sendServiceEditNotification(updatedBooking, changes);
+            const updatedBookingWithStatus = {
+              ...updatedBooking,
+              id: updatedBooking.id.toString(),
+              status: (updatedBooking.status || 'active') as 'active' | 'cancelled' | 'completed' | 'scheduled',
+              addressLine2: updatedBooking.addressLine2 || undefined,
+              notes: updatedBooking.notes || undefined,
+              tvSize: updatedBooking.tvSize || undefined,
+              mountType: updatedBooking.mountType || undefined,
+              wallMaterial: updatedBooking.wallMaterial || undefined,
+              specialInstructions: updatedBooking.specialInstructions || undefined,
+              pricingTotal: updatedBooking.pricingTotal || undefined,
+              pricingBreakdown: updatedBooking.pricingBreakdown || undefined,
+              cancellationReason: updatedBooking.cancellationReason || undefined,
+              createdAt: updatedBooking.createdAt?.toISOString()
+            };
+            emailSent = await sendServiceEditNotification(updatedBookingWithStatus, changes);
             logger.info(`Enhanced booking update email ${emailSent ? 'sent' : 'failed to send'} for booking ID ${id}`);
           } else {
             logger.info(`No changes detected for booking ID ${id}, skipping update email`);
@@ -2314,19 +2344,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         if (status === 'cancelled') {
           // Send enhanced cancellation email
-          await sendEnhancedCancellationEmail(result[0]);
+          const cancelBooking = {
+            ...result[0],
+            id: result[0].id.toString(),
+            status: (result[0].status || 'cancelled') as 'active' | 'cancelled' | 'completed' | 'scheduled',
+            addressLine2: result[0].addressLine2 || undefined,
+            notes: result[0].notes || undefined,
+            tvSize: result[0].tvSize || undefined,
+            mountType: result[0].mountType || undefined,
+            wallMaterial: result[0].wallMaterial || undefined,
+            specialInstructions: result[0].specialInstructions || undefined,
+            pricingTotal: result[0].pricingTotal || undefined,
+            pricingBreakdown: result[0].pricingBreakdown || undefined,
+            cancellationReason: result[0].cancellationReason || undefined,
+            createdAt: result[0].createdAt?.toISOString()
+          };
+          await sendEnhancedCancellationEmail(cancelBooking);
           logger.info(`Enhanced customer booking cancellation email sent for booking ID ${bookingId}`);
         } else if (preferredDate || appointmentTime) {
           // Send reschedule confirmation if date or time changed
+          const rescheduleBooking = {
+            ...result[0],
+            id: result[0].id.toString(),
+            status: (result[0].status || 'active') as 'active' | 'cancelled' | 'completed' | 'scheduled',
+            addressLine2: result[0].addressLine2 || undefined,
+            notes: result[0].notes || undefined,
+            tvSize: result[0].tvSize || undefined,
+            mountType: result[0].mountType || undefined,
+            wallMaterial: result[0].wallMaterial || undefined,
+            specialInstructions: result[0].specialInstructions || undefined,
+            pricingTotal: result[0].pricingTotal || undefined,
+            pricingBreakdown: result[0].pricingBreakdown || undefined,
+            cancellationReason: result[0].cancellationReason || undefined,
+            createdAt: result[0].createdAt?.toISOString()
+          };
           await sendRescheduleConfirmation(
-            result[0], 
+            rescheduleBooking, 
             existingBooking.preferredDate,
             existingBooking.appointmentTime
           );
           logger.info(`Enhanced reschedule confirmation email sent for booking ID ${bookingId}`);
         } else {
           // Send service edit notification for other updates
-          await sendServiceEditNotification(result[0], updates);
+          const serviceEditBooking = {
+            ...result[0],
+            id: result[0].id.toString(),
+            status: (result[0].status || 'active') as 'active' | 'cancelled' | 'completed' | 'scheduled',
+            addressLine2: result[0].addressLine2 || undefined,
+            notes: result[0].notes || undefined,
+            tvSize: result[0].tvSize || undefined,
+            mountType: result[0].mountType || undefined,
+            wallMaterial: result[0].wallMaterial || undefined,
+            specialInstructions: result[0].specialInstructions || undefined,
+            pricingTotal: result[0].pricingTotal || undefined,
+            pricingBreakdown: result[0].pricingBreakdown || undefined,
+            cancellationReason: result[0].cancellationReason || undefined,
+            createdAt: result[0].createdAt?.toISOString()
+          };
+          await sendServiceEditNotification(serviceEditBooking, updates);
           logger.info(`Enhanced service edit notification email sent for booking ID ${bookingId}`);
         }
       } catch (emailError) {
@@ -3244,7 +3319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           promotion: result[0]
         });
       } catch (validationError) {
-        logger.error("Promotion validation error:", validationError);
+        logger.error("Promotion validation error:", validationError as Error);
         
         if (validationError instanceof ZodError) {
           return res.status(400).json({
@@ -3324,7 +3399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           promotion: result[0]
         });
       } catch (validationError) {
-        logger.error("Promotion validation error:", validationError);
+        logger.error("Promotion validation error:", validationError as Error);
         
         if (validationError instanceof ZodError) {
           return res.status(400).json({

@@ -109,13 +109,14 @@ export function InstallationSlideshow() {
       </div>
       
       {/* Horizontal carousel for additional images */}
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        className="w-full mx-auto relative"
-      >
+      <div className="relative" style={{ position: 'relative' }}>
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full mx-auto relative"
+        >
         <CarouselContent>
           {installationImages.slice(6).map((image, index) => (
             <CarouselItem key={index} className="md:basis-1/3 lg:basis-1/4">
@@ -156,6 +157,7 @@ export function InstallationSlideshow() {
         <CarouselPrevious className="hidden md:flex -left-6 bg-white/90 hover:bg-white" />
         <CarouselNext className="hidden md:flex -right-6 bg-white/90 hover:bg-white" />
       </Carousel>
+      </div>
     </div>
   );
 }
