@@ -1,8 +1,6 @@
 import nodemailer from 'nodemailer';
 import type { Booking } from '@shared/schema';
 import { format, parseISO } from 'date-fns';
-import * as ics from 'ics';
-import type { EventAttributes } from 'ics';
 
 // Gmail SMTP configuration
 const GMAIL_USER = process.env.GMAIL_USER || 'pptvinstall@gmail.com';
@@ -28,73 +26,7 @@ const createTransporter = () => {
   });
 };
 
-/**
- * Create calendar event for booking with Eastern Time timezone
- */
-async function createCalendarEvent(booking: Booking): Promise<string | null> {
-  try {
-    if (!booking.preferredDate || !booking.appointmentTime) {
-      console.warn('Missing date or time for calendar event');
-      return null;
-    }
 
-    const appointmentDate = parseISO(booking.preferredDate);
-    const [time, meridiem] = booking.appointmentTime.split(' ');
-    const [hours, minutes] = time.split(':').map(Number);
-    
-    let adjustedHours = hours;
-    if (meridiem?.toLowerCase() === 'pm' && hours !== 12) {
-      adjustedHours += 12;
-    } else if (meridiem?.toLowerCase() === 'am' && hours === 12) {
-      adjustedHours = 0;
-    }
-
-    // Create date in Eastern Time (Atlanta, GA timezone)
-    const startDateTime = new Date(appointmentDate);
-    startDateTime.setHours(adjustedHours, minutes || 0, 0, 0);
-    
-    const endDateTime = new Date(startDateTime);
-    endDateTime.setHours(startDateTime.getHours() + 2);
-
-    const event: EventAttributes = {
-      start: [
-        startDateTime.getFullYear(),
-        startDateTime.getMonth() + 1,
-        startDateTime.getDate(),
-        startDateTime.getHours(),
-        startDateTime.getMinutes()
-      ],
-      end: [
-        endDateTime.getFullYear(),
-        endDateTime.getMonth() + 1,
-        endDateTime.getDate(),
-        endDateTime.getHours(),
-        endDateTime.getMinutes()
-      ],
-      startInputType: 'local',
-      startOutputType: 'local',
-      title: `TV Installation Service - ${COMPANY_NAME}`,
-      description: `TV Installation appointment for ${booking.name}\n\nService: ${booking.serviceType}\nLocation: ${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}\n\nContact: ${COMPANY_PHONE}`,
-      location: `${booking.streetAddress}, ${booking.city}, ${booking.state} ${booking.zipCode}`,
-      organizer: { name: COMPANY_NAME, email: GMAIL_USER },
-      attendees: [
-        { name: booking.name, email: booking.email }
-      ]
-    };
-
-    const { error, value } = ics.createEvent(event);
-    
-    if (error) {
-      console.error('Error creating calendar event:', error);
-      return null;
-    }
-
-    return value || null;
-  } catch (error) {
-    console.error('Calendar event creation failed:', error);
-    return null;
-  }
-}
 
 /**
  * Generate unified booking confirmation email content
