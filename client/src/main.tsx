@@ -14,6 +14,7 @@ import ErrorBoundary from './components/error-boundary';
 
 import './lib/process-polyfill';
 import './index.css';
+import { performanceMonitor } from './lib/performance-monitor';
 
 // Service Worker Registration (temporarily disabled)
 // Uncomment when ready for PWA deployment
@@ -64,12 +65,20 @@ import './index.css';
 //   });
 // }
 
-// Create a client
+// Create a client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minute
+      staleTime: 5 * 60 * 1000, // 5 minutes - increased for better caching
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep data cached longer (updated API)
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false, // Reduce unnecessary refetches
+      retry: 1,
+      // Enable background refetching for better UX
+      refetchInterval: false,
+      refetchIntervalInBackground: false,
+    },
+    mutations: {
       retry: 1,
     },
   },
@@ -97,12 +106,20 @@ const AdminBookings = lazy(() => import('@/pages/admin-bookings')); // Added adm
 
 
 
-// ScrollToTop component to handle scroll restoration
+// Optimized ScrollToTop component with better performance
 const ScrollToTop = () => {
   const [location] = useLocation();
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Start performance monitoring for route changes
+    performanceMonitor.startRouteTimer(location);
+    
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // End performance monitoring after scroll
+      setTimeout(() => performanceMonitor.endRouteTimer(location), 100);
+    });
   }, [location]);
 
   return null;
@@ -128,7 +145,7 @@ createRoot(document.getElementById('root')!).render(
           <Nav />
           <PWAInstallBanner />
           <main className="flex-grow pt-16">
-            <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner size="lg" /></div>}>
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><LoadingSpinner size="lg" /></div>}>
               <Router>
                 <ScrollToTop />
                 <Switch>

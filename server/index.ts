@@ -2,28 +2,52 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import compression from 'compression';
+import { 
+  requestDeduplication, 
+  memoryMonitoring, 
+  responseOptimization, 
+  rateLimiting 
+} from './middleware/optimization';
 
 const app = express();
+
+// Apply optimization middleware
+app.use(responseOptimization());
+app.use(memoryMonitoring());
+app.use(requestDeduplication());
+app.use(rateLimiting(200, 15 * 60 * 1000)); // 200 requests per 15 minutes
+
 // Optimize compression for better performance
 app.use(compression({ 
-  level: 6, // Higher compression for better file size reduction
-  threshold: 0, // Compress all responses
+  level: 9, // Maximum compression for best file size reduction
+  threshold: 1024, // Only compress responses larger than 1KB
   filter: (req, res) => {
     if (req.headers['x-no-compression']) {
       return false;
     }
-    return compression.filter(req, res);
+    // Compress text-based content
+    return /json|text|javascript|css|xml|svg/.test(res.getHeader('content-type') as string);
   }
 }));
 // Increase JSON request size limit to handle image uploads (10MB limit)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Add caching for static assets
+// Enhanced caching for static assets
 app.use((req, res, next) => {
-  // Only apply to static assets
-  if (req.url.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+  // Apply different caching strategies based on file type
+  if (req.url.match(/\.(css|js)$/)) {
+    // CSS and JS files - cache for 7 days
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+  } else if (req.url.match(/\.(jpg|jpeg|png|gif|webp|avif)$/)) {
+    // Images - cache for 30 days
+    res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+  } else if (req.url.match(/\.(woff|woff2|ttf|eot|otf)$/)) {
+    // Fonts - cache for 1 year
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (req.url.match(/\.(ico|svg)$/)) {
+    // Icons - cache for 7 days
+    res.setHeader('Cache-Control', 'public, max-age=604800');
   }
   next();
 });
