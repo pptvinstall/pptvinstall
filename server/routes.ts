@@ -1,12 +1,13 @@
 import { type Express, Request as ExpressRequest, Response, NextFunction } from "express";
 import { type Server } from "http";
+import { createHash, timingSafeEqual } from "crypto";
 import { db } from "./db";
 import { 
   bookingSchema, bookings, businessHoursSchema, customers, customerSchema, 
   insertCustomerSchema, pushSubscriptionSchema, notificationSettingsSchema,
   promotions, promotionSchema, insertPromotionSchema, Promotion, Booking
 } from "@shared/schema";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import { loadBookings, saveBookings, ensureDataDirectory, storage } from "./storage";
 import { availabilityService, TimeSlot, BlockedDay } from "./services/availabilityService";
 import { logger } from "./services/loggingService";
@@ -17,6 +18,7 @@ import {
   sendBookingConfirmationEmail, 
   sendAdminNotificationEmail,
   sendBookingCancellationEmail,
+  sendVaultRelayEmail,
   emailTemplates
 } from "./services/gmailEmailService";
 import { handleGetAnalytics } from "./analytics";
@@ -33,6 +35,20 @@ import { pushNotificationService } from "./services/pushNotificationService";
 // Extend Express Request type to include requestId
 interface Request extends ExpressRequest {
   requestId?: string;
+}
+
+const vaultEmailRelaySchema = z.object({
+  kind: z.string().trim().max(80).optional(),
+  to: z.string().trim().email().max(320),
+  subject: z.string().trim().min(1).max(200),
+  html: z.string().max(200_000),
+  text: z.string().max(50_000)
+}).strict();
+
+function secureSecretMatch(provided: string, expected: string): boolean {
+  const left = createHash("sha256").update(provided).digest();
+  const right = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(left, right);
 }
 
 // Load bookings from storage
@@ -89,6 +105,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     }
+  });
+
+  // Private server-to-server relay used by J-Wood Music Vault transactional email.
+  // Gmail credentials stay on Render; callers must present the shared relay secret.
+  app.post("/api/internal/vault-email", async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+
+    const expectedSecret = process.env.VAULT_EMAIL_RELAY_SECRET || "";
+    if (!expectedSecret) {
+      logger.error("Vault email relay is not configured");
+      return res.status(503).json({ success: false, message: "Vault email relay is not configured." });
+    }
+
+    const authorization = req.get("authorization") || "";
+    const prefix = "Bearer ";
+    const providedSecret = authorization.startsWith(prefix) ? authorization.slice(prefix.length) : "";
+    if (!providedSecret || !secureSecretMatch(providedSecret, expectedSecret)) {
+      logger.auth("Vault email relay denied");
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const parsed = vaultEmailRelaySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: "Invalid email payload." });
+    }
+
+    const result = await sendVaultRelayEmail({
+      to: parsed.data.to,
+      subject: parsed.data.subject,
+      html: parsed.data.html,
+      text: parsed.data.text
+    });
+
+    if (!result.sent) {
+      return res.status(502).json({ success: false, message: "Email delivery failed." });
+    }
+
+    return res.status(202).json({ success: true, messageId: result.messageId });
   });
 
   // Enhanced health endpoint for monitoring services

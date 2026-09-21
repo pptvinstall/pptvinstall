@@ -4,7 +4,9 @@ import { format, parseISO } from 'date-fns';
 
 // Gmail SMTP configuration
 const GMAIL_USER = process.env.GMAIL_USER || 'pptvinstall@gmail.com';
-const GMAIL_APP_PASSWORD = 'xsjlfjpqderocpyh'; // Updated Gmail App Password
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || '';
+const VAULT_GMAIL_USER = process.env.VAULT_GMAIL_USER || '';
+const VAULT_GMAIL_APP_PASSWORD = process.env.VAULT_GMAIL_APP_PASSWORD || '';
 const ADMIN_EMAIL = 'pptvinstall@gmail.com';
 const COMPANY_NAME = 'Picture Perfect TV Install';
 const COMPANY_PHONE = '404-702-4748';
@@ -22,6 +24,21 @@ const createTransporter = () => {
     auth: {
       user: GMAIL_USER,
       pass: GMAIL_APP_PASSWORD
+    }
+  });
+};
+
+const createVaultTransporter = () => {
+  if (!VAULT_GMAIL_USER || !VAULT_GMAIL_APP_PASSWORD) {
+    console.warn('Vault Gmail credentials not set. Vault email functionality will be disabled.');
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: VAULT_GMAIL_USER,
+      pass: VAULT_GMAIL_APP_PASSWORD
     }
   });
 };
@@ -458,6 +475,34 @@ export async function sendBookingCancellationEmail(booking: Booking, reason?: st
 }
 
 /**
+ * Send a transactional email on behalf of the J-Wood Music Vault.
+ * The caller is authenticated by the route layer; SMTP credentials never leave this server.
+ */
+export async function sendVaultRelayEmail(input: { to: string; subject: string; html: string; text: string }): Promise<{ sent: boolean; messageId: string | null }> {
+  const transporter = createVaultTransporter();
+
+  if (!transporter) {
+    console.error('Vault relay unavailable - check VAULT_GMAIL_USER / VAULT_GMAIL_APP_PASSWORD');
+    return { sent: false, messageId: null };
+  }
+
+  try {
+    const result = await transporter.sendMail({
+      from: `J-Wood Music Vault <${VAULT_GMAIL_USER}>`,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      text: input.text
+    });
+    console.log(`✅ Vault transactional email sent to: ${input.to}`);
+    return { sent: true, messageId: result.messageId || null };
+  } catch (error) {
+    console.error('Vault transactional email failed:', error);
+    return { sent: false, messageId: null };
+  }
+}
+
+/**
  * Email templates object for compatibility
  */
 export const emailTemplates = {
@@ -474,5 +519,6 @@ export default {
   sendBookingConfirmationEmail,
   sendAdminNotificationEmail, 
   sendBookingCancellationEmail,
+  sendVaultRelayEmail,
   emailTemplates
 };
