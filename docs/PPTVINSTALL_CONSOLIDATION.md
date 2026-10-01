@@ -89,3 +89,14 @@ Capture estimates vs actuals and calculate historical medians/percentiles by tas
 
 ### Phase 6 — Cutover
 Verify desktop/mobile/PWA, booking, quote, admin, notifications, database migrations, build, deployment and rollback. Merge only after checks pass. Archive old repositories only after owner approval.
+
+## Status (2026-10-01)
+
+Phase 1 parity work is done on `consolidation/job-os`; Job OS feature work has not started.
+
+- Application tree now equals Release Candidate `main` @ `ecb11f4` (the verified live baseline), minus tooling noise. See `docs/PRODUCTION_BASELINE.md`.
+- Repository audit, feature matrix, and archive candidates: `docs/REPOSITORY_INVENTORY.md`.
+- Architecture: `docs/ARCHITECTURE.md`. Job OS / dynamic pricing design: `docs/JOB_OS_ARCHITECTURE.md`. Cutover steps: `docs/CUTOVER_CHECKLIST.md`.
+- Verified locally: `npm ci`, `tsc --noEmit`, `npm run build`, `npm run smoke` (all pass; health returns 503 without a real DB, which the smoke script accepts).
+- Not verified: live Render state, real database, email/SMS/push/AI providers, browser/mobile UI. No unit test suite exists yet.
+- Production was not touched: no Render, DNS, deploy, or merge to any `main`.
