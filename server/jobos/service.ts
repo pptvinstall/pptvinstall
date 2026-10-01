@@ -20,12 +20,16 @@ import {
   type EconomicsConfig,
   type JobContextInput,
   type JobScopeInput,
+  categorySchema,
+  workTemplateSchema,
 } from "@shared/pricing";
 import {
   InvoicePolicyError,
   assertPaymentAllowed,
   buildIntakePrompt,
   buildIntelligence,
+  buildItemIntelligence,
+  itemComplexity,
   computeInvoiceTotals,
   computeProfitability,
   findComparableJobs,
@@ -37,6 +41,7 @@ import {
   paymentInputSchema,
   scopeSignature,
   verifyEvidence,
+  type CompletedItemRecord,
   type CompletedJobRecord,
   type ScopeDraft,
 } from "@shared/jobos";
@@ -211,6 +216,7 @@ export class JobOsService {
     await this.store.replaceScopeItems(jobId, [
       ...parsed.tvs.map((tv) => ({ kind: "tv" as const, attributes: tv })),
       ...parsed.extras.map((e) => ({ kind: "extra" as const, attributes: e })),
+      ...parsed.items.map((it) => ({ kind: "item" as const, attributes: it })),
     ]);
   }
 
@@ -408,15 +414,82 @@ export class JobOsService {
     return out;
   }
 
+  /** Per-item records (any action/category) from actuals that carry per-item minutes. */
+  async completedItemRecords(): Promise<CompletedItemRecord[]> {
+    const rows = await this.store.listActuals();
+    const out: CompletedItemRecord[] = [];
+    for (const a of rows) {
+      if (!a.quoteVersionId || !a.actuals.items?.length) continue;
+      const job = await this.store.getJob(a.jobId);
+      const version = await this.store.getQuoteVersion(a.quoteVersionId);
+      if (!job || !version) continue;
+      const scope = parseJobScope(version.snapshot.scope);
+      const results = version.snapshot.composition.pricing.work?.items ?? [];
+      for (const act of a.actuals.items) {
+        const item = scope.items.find((i) => i.id === act.itemId);
+        const est = results.find((r) => r.itemId === act.itemId);
+        if (!item || !est || act.actualMinutes === undefined) continue;
+        out.push({
+          jobId: job.id,
+          itemId: item.id,
+          synthetic: job.source === "synthetic",
+          action: item.action,
+          thenAction: item.thenAction ?? null,
+          category: item.category,
+          templateId: item.templateId ?? null,
+          band: est.bandKey,
+          surface: item.environment.surface,
+          complexity: itemComplexity(item),
+          quantity: item.quantity,
+          estimateMinutes: est.minutes,
+          actualMinutes: act.actualMinutes,
+        });
+      }
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- work templates (config data, no code or migration)
+  private async mutateWorkConfig(mutate: (work: EconomicsConfig["work"]) => EconomicsConfig["work"], actor: string, reason: string) {
+    const current = await this.getActiveConfig();
+    const work = mutate(JSON.parse(JSON.stringify(current.config.work)) as EconomicsConfig["work"]);
+    return this.updateConfig({ config: { ...current.config, work }, reason }, actor);
+  }
+
+  /** Create or replace an owner template. Validated against the work schema (recipes must exist). */
+  async upsertWorkTemplate(id: string, template: unknown, actor: string, reason?: string) {
+    const slug = z.string().regex(/^[a-z0-9_]{1,40}$/).parse(id);
+    const parsed = workTemplateSchema.parse(template);
+    return this.mutateWorkConfig((w) => ({ ...w, templates: { ...w.templates, [slug]: parsed } }), actor, reason ?? `template ${slug} saved`);
+  }
+
+  async deleteWorkTemplate(id: string, actor: string) {
+    const slug = z.string().regex(/^[a-z0-9_]{1,40}$/).parse(id);
+    const current = await this.getActiveConfig();
+    if (!current.config.work.templates[slug]) throw new NotFoundError("Template");
+    return this.mutateWorkConfig((w) => {
+      const { [slug]: _removed, ...rest } = w.templates;
+      return { ...w, templates: rest };
+    }, actor, `template ${slug} removed`);
+  }
+
+  /** Add or replace a taxonomy category, so a new kind of item needs only config. */
+  async upsertWorkCategory(id: string, category: unknown, actor: string) {
+    const slug = z.string().regex(/^[a-z0-9_]{1,40}$/).parse(id);
+    const parsed = categorySchema.parse(category);
+    return this.mutateWorkConfig((w) => ({ ...w, categories: { ...w.categories, [slug]: parsed } }), actor, `category ${slug} saved`);
+  }
+
   async intelligence(opts: { includeSynthetic?: boolean; comparableTo?: string } = {}) {
     const records = await this.completedRecords();
+    const itemReport = buildItemIntelligence(await this.completedItemRecords(), opts);
     const report = buildIntelligence(records, opts);
     let comparable: ReturnType<typeof findComparableJobs> = [];
     if (opts.comparableTo) {
       const job = await this.requireJob(opts.comparableTo);
       comparable = findComparableJobs(scopeSignature(parseJobScope(job.scope)), records, 5, opts);
     }
-    return { report, comparable };
+    return { report, comparable, itemReport };
   }
 
   // ---------------------------------------------------------------- AI intake
@@ -425,19 +498,22 @@ export class JobOsService {
     const normalized = clean.toLowerCase().replace(/\s+/g, " ").trim();
     const provider = this.opts.intakeProvider;
     const aiUsable = opts.allowAi && !!provider && provider.enabled();
-    const hash = hashObject({ m: normalized, mode: aiUsable ? "ai" : "heuristic" });
+    const active = await this.getActiveConfig();
+    const work = active.config.work;
+    // The taxonomy (category keywords) is config, so the cache key includes the config version.
+    const hash = hashObject({ m: normalized, mode: aiUsable ? "ai" : "heuristic", v: active.version });
 
     const cached = await this.store.getIntakeCache(hash);
     if (cached) {
       const intake = parseIntakeResponse(JSON.stringify(cached.intake));
-      return { draft: intakeToScopeDraft(intake, cached.source), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
+      return { draft: intakeToScopeDraft(intake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
     }
 
     let source: "ai" | "heuristic" = "heuristic";
-    let intake = heuristicIntake(clean);
+    let intake = heuristicIntake(clean, work);
     if (aiUsable && provider) {
       try {
-        intake = parseIntakeResponse(await provider.complete(buildIntakePrompt(clean)));
+        intake = parseIntakeResponse(await provider.complete(buildIntakePrompt(clean, work)));
         source = "ai";
       } catch (err) {
         // Invalid or failed AI output never reaches pricing; fall back to the deterministic parser.
@@ -446,7 +522,7 @@ export class JobOsService {
     }
     const verified = verifyEvidence(intake, clean);
     await this.store.putIntakeCache({ inputHash: hash, source, intake: verified.intake });
-    return { draft: intakeToScopeDraft(verified.intake, source), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
+    return { draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
   }
 }
 

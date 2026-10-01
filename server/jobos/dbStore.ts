@@ -187,7 +187,7 @@ export class DbJobOsStore implements JobOsStore {
     if (!row) throw new NotFoundError("Job");
     return toJob(row);
   }
-  async replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra"; attributes: unknown }>) {
+  async replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra" | "item"; attributes: unknown }>) {
     await this.db.transaction(async (tx) => {
       await tx.delete(s.scopeItems).where(eq(s.scopeItems.jobId, jobId));
       if (items.length) await tx.insert(s.scopeItems).values(items.map((it, position) => ({ jobId, kind: it.kind, position, attributes: it.attributes })));

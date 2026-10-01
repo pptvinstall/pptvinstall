@@ -70,7 +70,7 @@ export interface JobOsStore {
   getJob(id: string): Promise<JobRecord | null>;
   listJobs(opts?: { status?: JobStatus; limit?: number }): Promise<JobRecord[]>;
   updateJob(id: string, patch: JobPatch): Promise<JobRecord>;
-  replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra"; attributes: unknown }>): Promise<void>;
+  replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra" | "item"; attributes: unknown }>): Promise<void>;
 
   // quotes
   createQuote(jobId: string): Promise<QuoteRecord>;

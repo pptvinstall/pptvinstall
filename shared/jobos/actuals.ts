@@ -7,7 +7,20 @@ import type { QuoteSnapshot } from "../pricing/quote";
 // version it is compared against. Everything derived here is an ESTIMATE (it uses
 // configured fuel/vehicle/labor assumptions) and is labelled as such.
 
-export const UNEXPECTED_CONDITIONS = ["hidden_wiring", "wall_surprise", "access_issue", "extra_scope", "customer_not_ready", "mount_incompatible", "other"] as const;
+export const UNEXPECTED_CONDITIONS = [
+  "hidden_wiring",
+  "wall_surprise",
+  "access_issue",
+  "extra_scope",
+  "customer_not_ready",
+  "mount_incompatible",
+  "heavier_than_expected",
+  "missing_parts",
+  "missing_hardware",
+  "surface_surprise",
+  "structure_concern",
+  "other",
+] as const;
 export const PAYMENT_METHODS = ["cash", "zelle", "venmo", "apple_pay", "other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
@@ -26,9 +39,30 @@ export const jobActualsInputSchema = z
     actualMaterialsCents: z.number().int().min(0).max(5_000_000).default(0),
     otherSpendCents: z.number().int().min(0).max(5_000_000).default(0),
     unexpectedConditions: z.array(z.enum(UNEXPECTED_CONDITIONS)).max(10).default([]),
+    /** Scope additions/removals/changes discovered on site. kind and itemId are optional context for intelligence. */
     scopeChanges: z
-      .array(z.object({ description: z.string().min(1).max(200), amountDeltaCents: z.number().int().min(-5_000_000).max(5_000_000) }))
+      .array(
+        z.object({
+          description: z.string().min(1).max(200),
+          amountDeltaCents: z.number().int().min(-5_000_000).max(5_000_000),
+          kind: z.enum(["added", "removed", "changed"]).optional(),
+          itemId: z.string().max(64).optional(),
+        }),
+      )
       .max(20)
+      .default([]),
+    /** Per work item actuals (any action/category). Optional: job totals above remain the source of truth. */
+    items: z
+      .array(
+        z.object({
+          itemId: z.string().min(1).max(64),
+          actualMinutes: minutes.optional(),
+          helperMinutes: minutes.optional(),
+          actualMaterialsCents: z.number().int().min(0).max(5_000_000).optional(),
+          note: z.string().max(200).optional(),
+        }),
+      )
+      .max(60)
       .default([]),
     collectedCents: z.number().int().min(0).max(10_000_000).default(0),
     paymentMethod: z.enum(PAYMENT_METHODS).optional(),
@@ -78,6 +112,8 @@ export interface Profitability {
     materialsCents: Variance;
     priceVsCollectedCents: Variance;
   };
+  /** Estimate vs actual per work item (only items with a recorded actual). Empty for TV-only jobs. */
+  items: Array<{ itemId: string; label: string; quantity: number; estimateMinutes: number; actualMinutes: number; deltaMinutes: number; ratio: number | null; estimateMaterialsCents: number; actualMaterialsCents: number | null }>;
 }
 
 function variance(estimate: number, actual: number): Variance {
@@ -100,6 +136,23 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
   const net = gross - safeCents(ownerHours * config.labor.targetLaborPerHourCents);
   const pct = (n: number) => (actuals.collectedCents > 0 ? n / actuals.collectedCents : 0);
 
+  const itemVariances: Profitability["items"] = [];
+  for (const a of actuals.items) {
+    const e = est.work?.items.find((i) => i.itemId === a.itemId);
+    if (!e || a.actualMinutes === undefined) continue;
+    itemVariances.push({
+      itemId: a.itemId,
+      label: e.customerText,
+      quantity: e.quantity,
+      estimateMinutes: e.minutes,
+      actualMinutes: a.actualMinutes,
+      deltaMinutes: a.actualMinutes - e.minutes,
+      ratio: e.minutes > 0 ? a.actualMinutes / e.minutes : null,
+      estimateMaterialsCents: e.materialsCostCents,
+      actualMaterialsCents: a.actualMaterialsCents ?? null,
+    });
+  }
+
   return {
     estimate: true,
     note: "Estimates only: fuel, vehicle and owner-time values come from the configured assumptions, not receipts.",
@@ -121,5 +174,6 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
       materialsCents: variance(est.materials.costCents, actuals.actualMaterialsCents),
       priceVsCollectedCents: variance(args.customerQuotedCents, actuals.collectedCents),
     },
+    items: itemVariances,
   };
 }

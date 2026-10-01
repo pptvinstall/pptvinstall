@@ -96,7 +96,7 @@ export class MemoryJobOsStore implements JobOsStore {
     Object.assign(j, clone(patch), { updatedAt: now() });
     return clone(j);
   }
-  async replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra"; attributes: unknown }>) {
+  async replaceScopeItems(jobId: string, items: Array<{ kind: "tv" | "extra" | "item"; attributes: unknown }>) {
     this.scopeItems.set(jobId, clone(items));
   }
   getScopeItemsForTest(jobId: string) {

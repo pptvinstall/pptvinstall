@@ -120,6 +120,17 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   app.post(`${A}/invoices/:id/void`, wrap(async (req, res) => res.json(await service.voidInvoice(idParam(req)))));
   app.post(`${A}/invoices/:id/payments`, wrap(async (req, res) => res.status(201).json(await service.recordPayment(idParam(req), req.body))));
 
+  // ---- work templates and taxonomy (owner config; new item types need no code or migration)
+  app.put(`${A}/work-templates/:id`, wrap(async (req, res) => {
+    const body = z.object({ template: z.unknown(), reason: z.string().max(200).optional() }).parse(req.body);
+    res.json(await service.upsertWorkTemplate(String(req.params.id), body.template, actor, body.reason));
+  }));
+  app.delete(`${A}/work-templates/:id`, wrap(async (req, res) => res.json(await service.deleteWorkTemplate(String(req.params.id), actor))));
+  app.put(`${A}/work-categories/:id`, wrap(async (req, res) => {
+    const body = z.object({ category: z.unknown() }).parse(req.body);
+    res.json(await service.upsertWorkCategory(String(req.params.id), body.category, actor));
+  }));
+
   // ---- pricing intelligence (advisory only)
   app.get(`${A}/intelligence`, wrap(async (req, res) => {
     const comparableTo = typeof req.query.comparableTo === "string" ? uuid.parse(req.query.comparableTo) : undefined;
