@@ -6,9 +6,11 @@ Goal: make `pptvinstall/pptvinstall` the production source. Nothing below has be
 - [ ] Owner reviews and approves PR #2 content (RC import + legacy removal + docs).
 - [ ] Confirm in Render which commit is live and that it is still `ecb11f4`. If RC `main` advanced, re-sync: diff RC `main` against the import commit `0fd8aa1` and port the delta first.
 - [ ] Decide the two PII questions in `REPOSITORY_INVENTORY.md` (`server/data/bookings.json`, legacy `bookings.db`).
-- [ ] Fix or remove `verify-production-readiness.js` (missing `node-fetch`).
-- [ ] Add a real automated test suite for pricing, booking-token, consent and admin auth (currently only the smoke script exists).
-- [ ] Run the full flow against a staging Render service + staging Neon branch: quote, booking, confirmation email, calendar download with token, manage booking, admin, SMS consent/STOP, push.
+- [x] `verify-production-readiness.js` hardened upstream (no admin password fallback, modern fetch).
+- [x] Automated suites exist: `npm run test:pricing` (65) and `npm run test:jobos` (52, incl. Postgres lifecycle and admin-auth/token tests); run in CI.
+- [ ] Owner decisions: labor value, MPG/vehicle cost, tax rule, margins, minimum ticket, enabling `dynamic` pricing, photo-intake provider.
+- [ ] Production needs `JOB_OS_ENABLED=true` and `drizzle-kit push` of the 13 additive Job OS tables (after backup/branch); see `docs/STAGING.md`.
+- [ ] Run the full flow against a staging (see `docs/STAGING.md`) Render service + staging Neon branch: quote, booking, confirmation email, calendar download with token, manage booking, admin, SMS consent/STOP, push.
 
 ## Database
 - Production schema is expected to already match RC (RC is live). Compare `drizzle-kit` introspection of production against `shared/schema.ts`; they should be identical because the schema file is unchanged from RC.
