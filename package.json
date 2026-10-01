@@ -11,7 +11,9 @@
     "db:push": "drizzle-kit push",
     "optimize-images": "node scripts/optimize-images.js",
     "smoke": "node scripts/smoke-check.js",
-    "test:pricing": "tsx --test tests/pricing/*.test.ts"
+    "test:pricing": "tsx --test tests/pricing/*.test.ts",
+    "test:jobos": "tsx --test tests/jobos/*.test.ts",
+    "test": "npm run test:pricing && npm run test:jobos"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
