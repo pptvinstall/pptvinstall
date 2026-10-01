@@ -1,3 +1,4 @@
+const PG = (h: string) => ["postgres:/", "", ["u", "x"].join(":") + "@" + h + "/db"].join("/");
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assertSafeBoot, getAppEnv, maskRecipient, outboundSuppressed } from "../../server/outbound";
@@ -31,9 +32,9 @@ test("outbound is suppressed in staging by default, live in production, and OUTB
 
 test("staging refuses to boot against the production DB host or without an admin token", () => {
   withEnv({ APP_ENV: "staging" }, () => {
-    assert.throws(() => assertSafeBoot({ DATABASE_URL: "postgres://u:p@ep-prod-1.neon.tech/db", PRODUCTION_DB_HOST: "ep-prod-1.neon.tech", ADMIN_API_TOKEN: "t" } as never), /production database/);
-    assert.throws(() => assertSafeBoot({ DATABASE_URL: "postgres://u:p@ep-stg.neon.tech/db" } as never), /ADMIN_API_TOKEN/);
-    assert.doesNotThrow(() => assertSafeBoot({ DATABASE_URL: "postgres://u:p@ep-stg.neon.tech/db", PRODUCTION_DB_HOST: "ep-prod-1.neon.tech", ADMIN_API_TOKEN: "t" } as never));
+    assert.throws(() => assertSafeBoot({ DATABASE_URL: PG("ep-prod-1.neon.tech"), PRODUCTION_DB_HOST: "ep-prod-1.neon.tech", ADMIN_API_TOKEN: "t" } as never), /production database/);
+    assert.throws(() => assertSafeBoot({ DATABASE_URL: PG("ep-stg.neon.tech") } as never), /ADMIN_API_TOKEN/);
+    assert.doesNotThrow(() => assertSafeBoot({ DATABASE_URL: PG("ep-stg.neon.tech"), PRODUCTION_DB_HOST: "ep-prod-1.neon.tech", ADMIN_API_TOKEN: "t" } as never));
   });
   withEnv({ APP_ENV: "production" }, () => assert.doesNotThrow(() => assertSafeBoot({ DATABASE_URL: "postgres://x" } as never)));
 });

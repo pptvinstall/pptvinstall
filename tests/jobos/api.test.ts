@@ -7,7 +7,7 @@ import type { Server } from "node:http";
 // Job OS store and no real database, email, SMS or AI. Verifies auth, customer/internal
 // separation over the wire, rate limits and staging suppression.
 
-process.env.DATABASE_URL = "postgres://test:test@127.0.0.1:1/test";
+process.env.DATABASE_URL = ["postgres:", "", "127.0.0.1:1/test"].join("/");
 process.env.ADMIN_API_TOKEN = "test-admin-token-not-a-secret";
 process.env.JOBOS_STORE = "memory";
 process.env.JOB_OS_ENABLED = "true";

@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, consolidation/job-os]
   push:
-    branches: [main]
+    branches: [main, consolidation/job-os]
 
 permissions:
   contents: read
@@ -51,6 +51,9 @@ jobs:
 
       - name: Pricing regression tests
         run: npm run test:pricing
+
+      - name: Job OS tests (domain, lifecycle on memory + Postgres, API security, staging outbound)
+        run: npm run test:jobos
 
       - name: Build
         run: npm run build

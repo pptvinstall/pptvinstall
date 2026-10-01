@@ -1,27 +1,33 @@
-# Job OS and Dynamic Pricing Architecture (design only, nothing implemented)
+# Job OS and Pricing Engine V2 (implemented, staging-ready)
 
-Flow: `lead -> scope -> quote -> schedule -> job -> invoice -> payment -> actuals -> pricing intelligence`.
+Lifecycle: `lead -> scope -> quote -> schedule -> job -> invoice -> payment -> actuals -> pricing intelligence`.
+See `docs/JOB_OS.md` for the walkthrough, `docs/AI_INTAKE.md`, `docs/STAGING.md`, `docs/SECURITY_REVIEW.md`.
 
-## Compatibility with today's model
-`bookings` stays the system of record. New entities are additive and link to it (`booking_id` nullable both ways), so existing rows, IDs, tokens, consent and pricing breakdowns are untouched. A booking is treated as an implicit Job + Quote v1 via a read-only adapter until backfilled.
+Principle: **AI is not the calculator.** All money math is deterministic TypeScript in integer cents (`shared/pricing`, `shared/jobos`). AI only turns messy text into a validated, owner-confirmed scope.
 
-## Entities (additive tables)
-`leads`, `jobs` (links customer/crm_contact + optional booking), `scope_items` (job_id, kind, qty, attributes jsonb: tv_size, wall_type, mount_type, mount_source, concealment, outlet, access...), `quotes`, `quote_versions` (immutable snapshots: scope hash, engine version, inputs, line items, internal floor/recommended/ceiling, customer total, discount reason), `travel_estimates`, `material_estimates`, `invoices`, `payments`, `job_actuals` (actual minutes, miles, drive time, materials, helper time, expenses, collected amount, exceptions).
+## Code map
+- `shared/pricing/`: pure `priceScope(scope, context, config)`; economics config + validation + diff; travel/schedule/materials/labor models; `legacy.ts` adapter to the untouched catalog calculator; `quote.ts` (immutable quote snapshots, owner adjustment); `customerView.ts` (whitelist + runtime leak guard); `packages.ts` (Essential/Clean/Complete); `formState.ts` (public quote form bridge).
+- `shared/jobos/`: actuals/profitability, invoice + payment rules, pricing intelligence, AI intake contract.
+- `shared/jobos-schema.ts`: 13 additive tables, no foreign keys into existing tables.
+- `server/jobos/`: store interface (memory + Drizzle/Postgres), service, routes, rate limits.
+- `server/outbound.ts`: staging-safe outbound suppression.
+- `client/src/pages/jobos/*`, `client/src/pages/CustomerQuote.tsx`: owner mobile tools and customer quote page.
 
-## Pricing engine (deterministic TypeScript, no LLM arithmetic)
-`price(scope, context, config) -> breakdown`, a pure function in `shared/` so client preview and server agree.
-1. Compatibility mode: reproduce today's `quote-calculator.ts` + `travel-pricing.ts` outputs exactly (golden tests from current behavior). Historical baseline ($100 drywall install, +$100 outlet, +$100 fireplace, +$50 brick/stone, +$25 high-rise/steel, $50 unmount/remount) is reference data, not code constants.
-2. Dynamic mode behind a flag: labor minutes by task + setup/cleanup/helper; materials list with costs; travel = miles x (fuel price / MPG + operating cost) + drive time x opportunity rate, origin and appointment window configurable; business overhead and minimum trip economics.
-3. Efficiency, not blanket discounts: `standalone sum - shared travel/setup saved - owner-approved courtesy = quote`; each term is recorded and explainable.
-4. Outputs: cost to serve, floor, recommended, premium ceiling, est. time, gross hourly return. Floor/margin are internal only.
-5. Packages (Essential / Clean / Complete) are different scope sets run through the same engine; no fabricated strike-through prices.
-6. Config table (`pricing_config`): vehicle MPG (starting point: 2021 VW Atlas SE, ~20 MPG), fuel price, origins, labor value, margin. No claim of live traffic/fuel data unless a provider is configured.
+## Pricing modes
+- `legacy` (default): the customer sees today's catalog price. Engine output is shown to the owner only (floor, recommended, margin, warnings).
+- `dynamic`: the customer sees the engine recommendation. Off until the owner approves and calibrates config.
+- Historical baseline ($100 install, +$100 outlet, +$100 fireplace, +$50 brick/stone, +$25 high-rise/steel, $50 unmount/remount) stays reference data; golden tests still pass untouched.
 
-## AI usage
-Optional natural-language/photo -> structured scope, validated by Zod against the scope schema, results cached by input hash. The manual scope UI must work with AI disabled. Hidden wall conditions remain "unverified until inspection".
+## Engine model
+cost to serve = owner labor + helper + materials + travel (fuel + vehicle + owner time) + overhead + schedule cost.
+Floor = max(minimum ticket, cost / (1 - min margin), out-of-pocket + minimum trip economics). Recommended targets desired margin and is never below floor. Banding/rounding/stabilization keep quotes from jittering. All config defaults are labeled `uncalibrated-default`.
 
-## Pricing intelligence
-Estimates vs `job_actuals` per task -> medians and percentiles, comparable-job lookups, later simple regression. Calibration proposals are shown to the owner; they never change prices automatically.
+## Data model (additive)
+pricing_configs, pricing_config_events, jobs, scope_items, quotes, quote_versions, travel_estimates, material_estimates, invoice_counters, invoices, payments, job_actuals, ai_intake_cache. Applied with `drizzle-kit push` (additive only; no drops/alters of existing tables).
 
-## Suggested sequence
-(1) tests + golden pricing fixtures, (2) additive schema + adapter, (3) engine in compatibility mode, (4) dynamic mode behind flag, (5) smart intake, (6) invoices/payments/actuals, (7) calibration.
+## Integrity rules
+- Quote versions are immutable snapshots (scope, config version, engine version, hash); only `accepted_at` changes.
+- Customer responses are built by whitelist; floor, margin, cost, recommended, reasons never leave the server.
+- Discounts and overrides cannot stack; below-floor prices are flagged, deep discounts need acknowledgement.
+- Payments cannot exceed balance or hit void/draft invoices. Invoice numbers are `INV-YYYY-NNNN` from a counter.
+- Intelligence suggestions are advisory and never applied automatically; synthetic rows are excluded by default; minimum sample 5.
