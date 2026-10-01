@@ -3,3 +3,4 @@ export * from "./invoice";
 export * from "./intelligence";
 export * from "./intake";
 export * from "./types";
+export * from "./workIntake";

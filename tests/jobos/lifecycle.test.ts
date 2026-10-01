@@ -124,7 +124,7 @@ for (const [name, makeStore] of impls) {
     const svc = fresh();
     const job = await svc.createJob({ title: "Empty (synthetic)" });
     assert.equal(job.status, "lead");
-    await assert.rejects(() => svc.createQuoteVersion(job.id, {}), /at least one TV/);
+    await assert.rejects(() => svc.createQuoteVersion(job.id, {}), /at least one item/);
   });
 
   t("customer quote: draft is invisible, sent is visible and customer-safe, accept locks, reopen revises", async () => {

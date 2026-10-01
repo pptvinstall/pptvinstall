@@ -171,7 +171,7 @@ export class JobOsService {
       scope,
       context,
       notes: data.notes ?? null,
-      status: scope.tvs.length || scope.extras.length ? "scoped" : "lead",
+      status: scope.tvs.length || scope.extras.length || scope.items.length ? "scoped" : "lead",
     });
     await this.syncScopeItems(job.id, scope);
     return job;
@@ -227,7 +227,7 @@ export class JobOsService {
     const job = await this.requireJob(jobId);
     if (["invoiced", "paid", "cancelled"].includes(job.status)) throw new ConflictError(`Job is ${job.status}; quoting is closed`, "JOB_LOCKED");
     const parsedScope = parseJobScope(job.scope);
-    if (!parsedScope.tvs.length && !parsedScope.extras.length) throw new ConflictError("Add at least one TV or extra before quoting", "EMPTY_SCOPE");
+    if (!parsedScope.tvs.length && !parsedScope.extras.length && !parsedScope.items.length) throw new ConflictError("Add at least one item before quoting", "EMPTY_SCOPE");
 
     const stored = await this.getActiveConfig();
     const snapshot = snapshotQuote({ scope: parsedScope, context: job.context, config: stored.config, adjustment });

@@ -437,7 +437,7 @@ function Builder() {
                 <Button className="h-14 w-full text-base" disabled={saving || adjustmentInvalid || p.empty} onClick={save}>
                   {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save job & create quote"}
                 </Button>
-                {p.empty ? <p className="text-center text-xs text-slate-500">Add at least one TV or extra to quote.</p> : null}
+                {p.empty ? <p className="text-center text-xs text-slate-500">Add at least one item to quote.</p> : null}
               </>
             )}
           </div>
