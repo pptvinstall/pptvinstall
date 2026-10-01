@@ -76,3 +76,6 @@ vite.config.ts.*
 
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md
+
+# Local booking fallback data (may contain customer PII)
+server/data/bookings.json
