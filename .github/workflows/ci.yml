@@ -49,5 +49,8 @@ jobs:
       - name: Type-check
         run: npm run check
 
+      - name: Pricing regression tests
+        run: npm run test:pricing
+
       - name: Build
         run: npm run build
