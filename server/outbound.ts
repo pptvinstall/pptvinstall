@@ -22,7 +22,7 @@ export function getAppEnv(): AppEnv {
 export function outboundSuppressed(): boolean {
   const mode = (process.env.OUTBOUND_MODE || "").trim().toLowerCase();
   if (mode === "suppress") return true;
-  if (mode === "live") return getAppEnv() !== "staging" || process.env.STAGING_ALLOW_LIVE_OUTBOUND === "true";
+  if (mode === "live") return getAppEnv() === "staging" && process.env.STAGING_ALLOW_LIVE_OUTBOUND !== "true";
   return getAppEnv() === "staging";
 }
 
