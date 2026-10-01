@@ -211,7 +211,13 @@ for (const [name, makeStore] of impls) {
     await assert.rejects(() => svc.createQuoteVersion(ceiling.id, {}), (e: unknown) => e instanceof QuotePolicyError && e.code === "MANUAL_REVIEW_REQUIRED");
     const ok = await svc.createQuoteVersion(ceiling.id, { adjustment: { type: "override", amountCents: 45_000, reason: "other", note: "Reviewed on site" } });
     assert.equal(ok.version.customerAmountCents, 45_000);
-    await assert.rejects(() => svc.previewPrice({ items: [{ id: "g", action: "install", category: "custom", riskFlags: ["gas_line"] }] }, nearby), (e: unknown) => e instanceof QuotePolicyError && /gas line/.test(e.message), "the preview explains why");
+    const preview = await svc.previewPrice({ items: [{ id: "g", action: "install", category: "custom", riskFlags: ["gas_line"] }] }, nearby);
+    assert.equal(preview.composition, null);
+    assert.equal(preview.gate?.code, "NOT_SUPPORTED");
+    assert.equal(preview.pricing.status, "not_supported", "the owner preview explains why instead of failing");
+    const review = await svc.previewPrice({ items: [{ id: "p", action: "mount", category: "projector", environment: { surface: "ceiling" } }] }, nearby);
+    assert.equal(review.gate?.code, "MANUAL_REVIEW_REQUIRED");
+    assert.ok(review.pricing.recommendedCents > 0, "the owner still sees a recommendation to start from");
   });
 
   t("owner templates and categories are config: audited, validated, versioned, no code or migration", async () => {

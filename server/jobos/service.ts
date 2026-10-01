@@ -150,8 +150,16 @@ export class JobOsService {
     const cfg = (await this.getActiveConfig()).config;
     const s = parseJobScope(scope);
     const c = parseJobContext(context);
-    const composition = composeQuote({ scope: s, context: c, config: cfg });
-    return { composition, packages: buildPackages(s) as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
+    // Review states must stay visible to the owner: the preview explains a gated scope instead of failing.
+    // Saving a quote is still blocked by composeQuote (NOT_SUPPORTED always; MANUAL_REVIEW_REQUIRED unless overridden).
+    try {
+      const composition = composeQuote({ scope: s, context: c, config: cfg });
+      return { composition, gate: null, pricing: composition.pricing, packages: buildPackages(s) as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
+    } catch (e) {
+      if (!(e instanceof QuotePolicyError) || (e.code !== "NOT_SUPPORTED" && e.code !== "MANUAL_REVIEW_REQUIRED")) throw e;
+      const pricing = priceScope(s, c, cfg);
+      return { composition: null, gate: { code: e.code, message: e.message }, pricing, packages: [] as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
+    }
   }
 
   // ---------------------------------------------------------------- jobs

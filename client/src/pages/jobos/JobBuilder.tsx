@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Minus, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, Toggle, inputClass } from "@/components/jobos/controls";
+import ItemsStep, { itemPayload, newItemFrom, type ItemDraft, type WorkCfg } from "./ItemsStep";
 import { Button } from "@/components/ui/button";
 import { adminFetch, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
 
-// Owner Job Builder: Customer → Location → TVs → Mount → Wall → Wires → Power → Extras →
-// Schedule → Recommendation. Designed for one-handed iPhone use: one decision per screen,
+// Owner Job Builder: Customer → Location → Items → (TV Mount → Wall → Wires → Power, only when TVs are
+// on the job) → Access → Schedule → Recommendation. Any ordinary item is action + item + quantity. Designed for one-handed iPhone use: one decision per screen,
 // 44px targets, a sticky price bar. All pricing comes from the server engine; nothing here
 // does money math. Internal numbers (floor, margin, cost) are visible ONLY on this owner page.
 
 type Tv = {
   id: string;
+  site: number;
   sizeBand: "32-55" | "56+";
   location: "standard" | "fireplace" | "high_wall";
   wall: "drywall" | "brick" | "stone" | "steel" | "unknown";
@@ -31,6 +33,8 @@ type Draft = {
   customerLabel: string;
   zip: string;
   tvs: Tv[];
+  items: ItemDraft[];
+  secondStop: { enabled: boolean; legMiles: string; legMinutes: string };
   extras: Extra[];
   access: { level: "normal" | "difficult"; furnitureMovement: boolean; ladderHeight: boolean; helper: boolean };
   cleanup: "standard" | "patching" | "haul_away";
@@ -38,7 +42,8 @@ type Draft = {
   schedule: { appointmentTime: string; weekday: string; sameDay: boolean; awkwardGap: boolean };
 };
 
-const STEPS = ["Customer", "Location", "TVs", "Mount", "Wall", "Wires", "Power", "Extras", "Schedule", "Recommendation"] as const;
+const TV_STEPS = ["Mount", "Wall", "Wires", "Power"] as const;
+const ALL_STEPS = ["Customer", "Location", "Items", ...TV_STEPS, "Access", "Schedule", "Recommendation"] as const;
 const EXTRA_OPTIONS = [
   { value: "soundbar", label: "Soundbar" },
   { value: "shelf", label: "Shelf" },
@@ -58,12 +63,15 @@ const ADJUST_REASONS = [
   { value: "other", label: "Other" },
 ];
 
-const newTv = (n: number): Tv => ({ id: `tv-${n}`, sizeBand: "56+", location: "standard", wall: "drywall", mountSource: "customer", mountType: null, wire: "visible", power: "existing", removal: { tvRemoval: false, mountRemoval: false, remount: false } });
+const newItemDefaults = () => newItemFrom(null, { action: "mount", quantity: 1 });
+const newTv = (n: number): Tv => ({ id: `tv-${n}`, site: 0, sizeBand: "56+", location: "standard", wall: "drywall", mountSource: "customer", mountType: null, wire: "visible", power: "existing", removal: { tvRemoval: false, mountRemoval: false, remount: false } });
 const initialDraft = (): Draft => ({
   title: "",
   customerLabel: "",
   zip: "",
-  tvs: [newTv(1)],
+  tvs: [],
+  items: [],
+  secondStop: { enabled: false, legMiles: "", legMinutes: "" },
   extras: [],
   access: { level: "normal", furnitureMovement: false, ladderHeight: false, helper: false },
   cleanup: "standard",
@@ -75,7 +83,8 @@ function toPayload(d: Draft) {
   const num = (s: string) => (s.trim() === "" || Number.isNaN(Number(s)) ? undefined : Number(s));
   return {
     scope: {
-      tvs: d.tvs.map((t) => ({ ...t, mountType: t.mountSource === "pptv" ? t.mountType ?? "fixed" : null })),
+      tvs: d.tvs.map((t) => ({ ...t, site: d.secondStop.enabled ? t.site : 0, mountType: t.mountSource === "pptv" ? t.mountType ?? "fixed" : null })),
+      items: d.items.map((i) => itemPayload(i, d.secondStop.enabled)),
       extras: d.extras,
       access: d.access,
       cleanup: d.cleanup,
@@ -84,6 +93,7 @@ function toPayload(d: Draft) {
       ...(/^\d{5}$/.test(d.zip) ? { zip: d.zip } : {}),
       oneWayMiles: num(d.route.oneWayMiles),
       oneWayDriveMinutes: num(d.route.oneWayDriveMinutes),
+      ...(d.secondStop.enabled ? { extraStops: [{ label: "Second address", legMiles: num(d.secondStop.legMiles), legMinutes: num(d.secondStop.legMinutes) }] } : {}),
       trafficMultiplier: num(d.route.trafficMultiplier),
       appointmentTime: /^\d{2}:\d{2}$/.test(d.schedule.appointmentTime) ? d.schedule.appointmentTime : undefined,
       weekday: d.schedule.weekday === "" ? undefined : Number(d.schedule.weekday),
@@ -93,7 +103,11 @@ function toPayload(d: Draft) {
   };
 }
 
+type Reason = { code: string; severity: "confirm" | "manual_review" | "not_supported"; message: string; itemId?: string };
+type WorkItemRow = { itemId: string; customerText: string; label: string; action: string; quantity: number; minutes: number; helperMinutes: number; materialsCostCents: number; bandLabel: string; status: string; reasons: Reason[] };
+const STATUS_LABEL: Record<string, string> = { priced: "PRICED", estimate_with_confirmation: "ESTIMATE WITH CONFIRMATION", manual_review_required: "MANUAL REVIEW REQUIRED", not_supported: "NOT SUPPORTED" };
 type Preview = {
+  gate: { code: "NOT_SUPPORTED" | "MANUAL_REVIEW_REQUIRED"; message: string } | null;
   composition: {
     customerTotalCents: number;
     requiresReview: boolean;
@@ -101,20 +115,26 @@ type Preview = {
     internalFlags: string[];
     customerLines: Array<{ label: string; detail?: string; amountCents: number | null }>;
     economics: { marginCents: number; marginPct: number; effectiveGrossPerHourCents: number };
-    pricing: {
-      floorCents: number;
-      recommendedCents: number;
-      premiumCents: number;
-      costToServeCents: number;
-      totalOwnerMinutes: number;
-      labor: { minutes: number; ownerCostCents: number; helperCostCents: number };
-      materials: { costCents: number; chargeCents: number };
-      travel: { roundTripMiles: number; roundTripDriveMinutes: number; fuelCents: number; vehicleCents: number; timeCents: number; source: string };
-      uncertainties: string[];
-      flags: string[];
-      why: string[];
-      empty: boolean;
-    };
+  } | null;
+  pricing: {
+    status: string;
+    statusReasons: Reason[];
+    questions: Array<{ itemId?: string; field: string; question: string }>;
+    exclusions: string[];
+    siteCount: number;
+    floorCents: number;
+    recommendedCents: number;
+    premiumCents: number;
+    costToServeCents: number;
+    totalOwnerMinutes: number;
+    labor: { minutes: number; ownerCostCents: number; helperCostCents: number; helperMinutes: number };
+    materials: { costCents: number; chargeCents: number };
+    travel: { roundTripMiles: number; roundTripDriveMinutes: number; fuelCents: number; vehicleCents: number; timeCents: number; source: string };
+    uncertainties: string[];
+    flags: string[];
+    why: string[];
+    empty: boolean;
+    work: { items: WorkItemRow[] };
   };
   configVersion: number;
   pricingMode: string;
@@ -132,6 +152,7 @@ export default function JobBuilderPage() {
 function Builder() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(initialDraft);
+  const [workCfg, setWorkCfg] = useState<WorkCfg | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewError, setPreviewError] = useState("");
   const [previewing, setPreviewing] = useState(false);
@@ -152,10 +173,17 @@ function Builder() {
   const [aiAvailable, setAiAvailable] = useState(false);
   const reqSeq = useRef(0);
 
-  useEffect(() => {
-    adminFetch<{ config: { business: { minimumMeaningfulAdjustmentCents: number } } }>("/config").then((c) => setMinAdjust(c.config.business.minimumMeaningfulAdjustmentCents)).catch(() => undefined);
-    adminFetch<{ aiEnabled: boolean }>("/intake/status").then((s) => setAiAvailable(s.aiEnabled)).catch(() => undefined);
+  const loadConfig = useCallback(() => {
+    adminFetch<{ config: { business: { minimumMeaningfulAdjustmentCents: number }; work: WorkCfg } }>("/config").then((c) => { setMinAdjust(c.config.business.minimumMeaningfulAdjustmentCents); setWorkCfg(c.config.work); }).catch(() => undefined);
   }, []);
+  useEffect(() => {
+    loadConfig();
+    adminFetch<{ aiEnabled: boolean }>("/intake/status").then((s) => setAiAvailable(s.aiEnabled)).catch(() => undefined);
+  }, [loadConfig]);
+
+  // TV detail steps exist only when the job has TVs.
+  const hasTvs = draft.tvs.length > 0;
+  const STEPS = useMemo(() => ALL_STEPS.filter((x) => hasTvs || !(TV_STEPS as readonly string[]).includes(x)), [hasTvs]);
 
   const payload = useMemo(() => toPayload(draft), [draft]);
   const payloadKey = JSON.stringify(payload);
@@ -171,7 +199,7 @@ function Builder() {
         setPreview(res);
         setPreviewError("");
         // Price stability: ignore sub-threshold wobble in the shown recommendation.
-        setStableRec((prev) => (prev === null || Math.abs(res.composition.pricing.recommendedCents - prev) >= minAdjust ? res.composition.pricing.recommendedCents : prev));
+        setStableRec((prev) => (prev === null || Math.abs(res.pricing.recommendedCents - prev) >= minAdjust ? res.pricing.recommendedCents : prev));
       } catch (e) {
         if (seq === reqSeq.current) setPreviewError(describeError(e));
       } finally {
@@ -183,7 +211,9 @@ function Builder() {
   }, [payloadKey, minAdjust]);
 
   const patchTv = useCallback((i: number, patch: Partial<Tv>) => setDraft((d) => ({ ...d, tvs: d.tvs.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) })), []);
-  const setTvCount = (n: number) => setDraft((d) => ({ ...d, tvs: Array.from({ length: n }, (_, i) => d.tvs[i] ?? { ...newTv(i + 1), ...(d.tvs[0] ? { sizeBand: d.tvs[0].sizeBand, wall: d.tvs[0].wall } : {}) }) }));
+  const addTv = () => setDraft((d) => ({ ...d, tvs: [...d.tvs, { ...newTv(d.tvs.length + 1), id: `tv-${Date.now().toString(36)}-${d.tvs.length}`, ...(d.tvs[0] ? { sizeBand: d.tvs[0].sizeBand, wall: d.tvs[0].wall } : {}) }] }));
+  const removeTv = (id: string) => setDraft((d) => ({ ...d, tvs: d.tvs.filter((t) => t.id !== id) }));
+  const setItems = useCallback((fn: (prev: ItemDraft[]) => ItemDraft[]) => setDraft((d) => ({ ...d, items: fn(d.items) })), []);
   const toggleExtra = (kind: string) => setDraft((d) => ({ ...d, extras: d.extras.some((e) => e.kind === kind) ? d.extras.filter((e) => e.kind !== kind) : [...d.extras, { kind, qty: 1 }] }));
 
   async function runIntake(useAi: boolean) {
@@ -194,9 +224,11 @@ function Builder() {
     setIntakeBusy(true);
     setIntakeMsg(null);
     try {
-      const res = await adminFetch<{ draft: { scope: { tvs: Tv[]; extras: Extra[]; access?: Draft["access"]; cleanup?: Draft["cleanup"] }; unresolved: Array<{ question: string }> }; aiUsed: boolean }>("/intake/parse", { method: "POST", body: { message: intakeText, useAi } });
+      const res = await adminFetch<{ draft: { scope: { tvs: Tv[]; items?: ItemDraft[]; extras: Extra[]; access?: Draft["access"]; cleanup?: Draft["cleanup"] }; unresolved: Array<{ question: string }> }; aiUsed: boolean }>("/intake/parse", { method: "POST", body: { message: intakeText, useAi } });
       const s = res.draft.scope;
-      setDraft((d) => ({ ...d, tvs: s.tvs.length ? s.tvs : d.tvs, extras: s.extras ?? [], access: s.access ?? d.access, cleanup: s.cleanup ?? d.cleanup }));
+      const items = (s.items ?? []).map((i, n) => ({ ...newItemDefaults(), ...i, id: i.id || `ai-${n}`, environment: { ...newItemDefaults().environment, ...(i.environment ?? {}) } }));
+      const secondSite = [...s.tvs, ...items].some((x) => (x.site ?? 0) > 0);
+      setDraft((d) => ({ ...d, tvs: s.tvs.map((t) => ({ ...newTv(1), ...t })), items, secondStop: secondSite ? { ...d.secondStop, enabled: true } : d.secondStop, extras: s.extras ?? [], access: s.access ?? d.access, cleanup: s.cleanup ?? d.cleanup }));
       const questions = Array.from(new Set(res.draft.unresolved.map((u) => u.question)));
       setIntakeMsg({ tone: questions.length ? "warn" : "info", text: `${res.aiUsed ? "AI-assisted" : "Keyword"} draft applied. Only details the customer stated are trusted; the rest are defaults to confirm.`, questions });
     } catch (e) {
@@ -219,7 +251,8 @@ function Builder() {
     setSaving(true);
     setSaveError("");
     try {
-      const title = draft.title.trim() || `${draft.tvs.length} TV install`;
+      const count = draft.items.reduce((n, i) => n + i.quantity, 0) + draft.tvs.length;
+      const title = draft.title.trim() || `${count} item job`;
       const job = await adminFetch<{ id: string }>("/jobs", { method: "POST", body: { title, customerLabel: draft.customerLabel.trim() || null, zip: /^\d{5}$/.test(draft.zip) ? draft.zip : null, source: "manual", scope: payload.scope, context: payload.context } });
       const q = await adminFetch<{ quote: { id: string; shareToken: string }; version: { version: number } }>(`/jobs/${job.id}/quote`, { method: "POST", body: { adjustment: adjustmentPayload() } });
       setSaved({ jobId: job.id, quoteId: q.quote.id, shareToken: q.quote.shareToken, version: q.version.version });
@@ -248,10 +281,13 @@ function Builder() {
     }
   }
 
-  const p = preview?.composition.pricing;
-  const comp = preview?.composition;
-  const last = step === STEPS.length - 1;
-  const stepName = STEPS[step]!;
+  const p = preview?.pricing;
+  const comp = preview?.composition ?? null;
+  const gate = preview?.gate ?? null;
+  const needsPrice = gate?.code === "MANUAL_REVIEW_REQUIRED";
+  const stepIdx = Math.min(step, STEPS.length - 1);
+  const last = stepIdx === STEPS.length - 1;
+  const stepName = STEPS[stepIdx]!;
 
   if (saved) {
     return (
@@ -273,10 +309,10 @@ function Builder() {
   return (
     <main className="mx-auto max-w-lg px-4 pb-44 pt-4">
       <header className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Step {step + 1} of {STEPS.length}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Step {stepIdx + 1} of {STEPS.length}</p>
         <h1 className="text-2xl font-extrabold text-slate-900">{stepName}</h1>
         <div className="mt-2 flex gap-1" aria-hidden>
-          {STEPS.map((s, i) => <span key={s} className={cn("h-1.5 flex-1 rounded-full", i <= step ? "bg-blue-600" : "bg-slate-200")} />)}
+          {STEPS.map((s, i) => <span key={s} className={cn("h-1.5 flex-1 rounded-full", i <= stepIdx ? "bg-blue-600" : "bg-slate-200")} />)}
         </div>
       </header>
 
@@ -308,27 +344,38 @@ function Builder() {
               <Field label="One-way minutes" htmlFor="jb-min"><input id="jb-min" inputMode="numeric" className={inputClass} value={draft.route.oneWayDriveMinutes} onChange={(e) => setDraft({ ...draft, route: { ...draft.route, oneWayDriveMinutes: e.target.value } })} /></Field>
             </div>
             <Field label="Traffic multiplier (optional)" htmlFor="jb-traffic" hint="1 = normal. Clamped by your economics settings."><input id="jb-traffic" inputMode="decimal" className={inputClass} value={draft.route.trafficMultiplier} onChange={(e) => setDraft({ ...draft, route: { ...draft.route, trafficMultiplier: e.target.value } })} /></Field>
+            <Toggle label="Work at a second address" hint="e.g. take down at the old place, set up at the new one" checked={draft.secondStop.enabled} onChange={(v) => setDraft({ ...draft, secondStop: { ...draft.secondStop, enabled: v } })} />
+            {draft.secondStop.enabled ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Address 1 → 2 miles" htmlFor="jb-s2mi"><input id="jb-s2mi" inputMode="decimal" className={inputClass} value={draft.secondStop.legMiles} onChange={(e) => setDraft({ ...draft, secondStop: { ...draft.secondStop, legMiles: e.target.value } })} /></Field>
+                <Field label="Address 1 → 2 minutes" htmlFor="jb-s2min"><input id="jb-s2min" inputMode="numeric" className={inputClass} value={draft.secondStop.legMinutes} onChange={(e) => setDraft({ ...draft, secondStop: { ...draft.secondStop, legMinutes: e.target.value } })} /></Field>
+              </div>
+            ) : null}
             {draft.route.oneWayMiles === "" && draft.route.oneWayDriveMinutes === "" ? <Notice tone="warn">Route unknown: the engine assumes a typical drive and flags it. Enter miles and minutes from your maps app for a firm number. No live traffic or fuel data is used.</Notice> : null}
           </>
         ) : null}
 
-        {stepName === "TVs" ? (
-          <>
-            <Field label="How many TVs?">
-              <div className="flex items-center gap-3">
-                <Button type="button" variant="outline" size="icon" aria-label="Fewer TVs" disabled={draft.tvs.length <= 1} onClick={() => setTvCount(draft.tvs.length - 1)}><Minus /></Button>
-                <span className="w-10 text-center text-2xl font-extrabold" aria-live="polite">{draft.tvs.length}</span>
-                <Button type="button" variant="outline" size="icon" aria-label="More TVs" disabled={draft.tvs.length >= 8} onClick={() => setTvCount(draft.tvs.length + 1)}><Plus /></Button>
-              </div>
-            </Field>
-            {draft.tvs.map((tv, i) => (
-              <div key={tv.id} className="space-y-3 rounded-2xl border border-slate-200 p-3">
-                <p className="text-sm font-bold text-slate-900">TV {i + 1}</p>
+        {stepName === "Items" ? (
+          <ItemsStep
+            cfg={workCfg}
+            items={draft.items}
+            setItems={setItems}
+            tvCount={draft.tvs.length}
+            addTv={addTv}
+            hasSecondSite={draft.secondStop.enabled}
+            onTemplatesChanged={loadConfig}
+            tvList={draft.tvs.map((tv, i) => (
+              <div key={tv.id} className="space-y-3 rounded-2xl border border-slate-200 p-3" data-testid="tv-card">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-slate-900">TV {i + 1}{draft.secondStop.enabled && tv.site > 0 ? " · address 2" : ""}</p>
+                  <Button type="button" variant="ghost" size="icon" aria-label={`Remove TV ${i + 1}`} onClick={() => removeTv(tv.id)}><Trash2 /></Button>
+                </div>
                 <Segmented label={`TV ${i + 1} size`} value={tv.sizeBand} onChange={(v) => patchTv(i, { sizeBand: v })} options={[{ value: "32-55", label: '32"–55"' }, { value: "56+", label: '56"+' }]} />
                 <Segmented label={`TV ${i + 1} location`} columns={3} value={tv.location} onChange={(v) => patchTv(i, { location: v })} options={[{ value: "standard", label: "Standard" }, { value: "fireplace", label: "Fireplace" }, { value: "high_wall", label: "High wall" }]} />
+                {draft.secondStop.enabled ? <Segmented label={`TV ${i + 1} address`} value={String(tv.site)} onChange={(v) => patchTv(i, { site: Number(v) })} options={[{ value: "0", label: "Address 1" }, { value: "1", label: "Address 2" }]} /> : null}
               </div>
             ))}
-          </>
+          />
         ) : null}
 
         {stepName === "Mount" ? draft.tvs.map((tv, i) => (
@@ -364,7 +411,7 @@ function Builder() {
           </div>
         )) : null}
 
-        {stepName === "Extras" ? (
+        {stepName === "Access" ? (
           <>
             <div className="grid grid-cols-2 gap-2">
               {EXTRA_OPTIONS.map((o) => <Toggle key={o.value} label={o.label} checked={draft.extras.some((e) => e.kind === o.value)} onChange={() => toggleExtra(o.value)} />)}
@@ -403,40 +450,73 @@ function Builder() {
             {previewError ? <Notice tone="error">{previewError}</Notice> : null}
             {!p ? <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Calculating…</div> : (
               <>
-                <div className="grid grid-cols-2 gap-2">
-                  <Stat label="Customer quote" value={money(comp!.customerTotalCents)} sub={preview!.pricingMode === "legacy" ? "Current catalog price" : "Engine recommendation"} />
-                  <Stat label="Recommended" value={money(stableRec ?? p.recommendedCents)} sub="Internal" />
-                  <Stat label="Floor" value={money(p.floorCents)} tone={comp!.belowFloor ? "warn" : "default"} sub={comp!.belowFloor ? "Quote is below floor" : "Internal minimum"} />
-                  <Stat label="Premium ref." value={money(p.premiumCents)} tone="muted" sub="Internal" />
-                  <Stat label="Est. time" value={`${Math.floor(p.totalOwnerMinutes / 60)}h ${p.totalOwnerMinutes % 60}m`} sub={`${p.labor.minutes} min on site`} />
-                  <Stat label="Materials" value={money(p.materials.costCents)} sub={`charge ${money(p.materials.chargeCents)}`} />
-                  <Stat label="Travel cost" value={money(p.travel.fuelCents + p.travel.vehicleCents + p.travel.timeCents)} sub={`${p.travel.roundTripMiles} mi · ${p.travel.roundTripDriveMinutes} min`} />
-                  <Stat label="Margin at quote" value={`${(comp!.economics.marginPct * 100).toFixed(0)}%`} tone={comp!.economics.marginPct < 0.12 ? "warn" : "good"} sub={`${money(comp!.economics.effectiveGrossPerHourCents)}/hr gross · estimate`} />
+                <div className={cn("rounded-2xl border p-3", p.status === "priced" ? "border-green-200 bg-green-50" : p.status === "estimate_with_confirmation" ? "border-amber-300 bg-amber-50" : "border-red-300 bg-red-50")} data-testid="work-status">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-700">{STATUS_LABEL[p.status] ?? p.status}</p>
+                  {p.status === "estimate_with_confirmation" ? <p className="mt-1 text-sm text-slate-700">Quotable as an estimate. Confirm the open questions before the customer accepts.</p> : null}
+                  {gate?.code === "MANUAL_REVIEW_REQUIRED" ? <p className="mt-1 text-sm text-slate-700">Review the work, then set the price yourself below. The recommendation is a starting point only.</p> : null}
+                  {gate?.code === "NOT_SUPPORTED" ? <p className="mt-1 text-sm text-slate-700">PPTV does not do this work, so a quote can't be created. Remove the item or the flag.</p> : null}
+                  {p.statusReasons.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-slate-700">{Array.from(new Set(p.statusReasons.filter((r) => r.severity !== "confirm").map((r) => r.message))).slice(0, 8).map((m) => <li key={m}>{m}</li>)}</ul> : null}
                 </div>
-                {[...comp!.internalFlags, ...p.uncertainties].length ? (
-                  <div className="space-y-1.5">{Array.from(new Set([...comp!.internalFlags, ...p.uncertainties])).map((f) => <Notice key={f} tone="warn">{f}</Notice>)}</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Stat label="Customer quote" value={comp ? money(comp.customerTotalCents) : "—"} sub={!comp ? "Set after review" : preview!.pricingMode === "legacy" ? "Current catalog price" : "Engine recommendation"} />
+                  <Stat label="Recommended" value={money(stableRec ?? p.recommendedCents)} sub="Internal" />
+                  <Stat label="Floor" value={money(p.floorCents)} tone={comp?.belowFloor ? "warn" : "default"} sub={comp?.belowFloor ? "Quote is below floor" : "Internal minimum"} />
+                  <Stat label="Premium ref." value={money(p.premiumCents)} tone="muted" sub="Internal" />
+                  <Stat label="Est. time" value={`${Math.floor(p.totalOwnerMinutes / 60)}h ${p.totalOwnerMinutes % 60}m`} sub={`${p.labor.minutes} min on site${p.labor.helperMinutes ? ` · helper ${p.labor.helperMinutes} min` : ""}`} />
+                  <Stat label="Materials" value={money(p.materials.costCents)} sub={`charge ${money(p.materials.chargeCents)}`} />
+                  <Stat label="Travel cost" value={money(p.travel.fuelCents + p.travel.vehicleCents + p.travel.timeCents)} sub={`${p.travel.roundTripMiles} mi · ${p.travel.roundTripDriveMinutes} min${p.siteCount > 1 ? ` · ${p.siteCount} addresses` : ""}`} />
+                  <Stat label="Margin at quote" value={comp ? `${(comp.economics.marginPct * 100).toFixed(0)}%` : "—"} tone={comp && comp.economics.marginPct < 0.12 ? "warn" : "good"} sub={comp ? `${money(comp.economics.effectiveGrossPerHourCents)}/hr gross · estimate` : "after you set a price"} />
+                </div>
+                {p.questions.length ? (
+                  <details className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm" open={p.questions.length <= 4}>
+                    <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Questions to confirm ({p.questions.length})</summary>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-700">{p.questions.slice(0, 20).map((q, i) => <li key={`${q.itemId}-${q.field}-${i}`}>{q.question}</li>)}</ul>
+                  </details>
                 ) : null}
+                {p.work.items.length ? (
+                  <details className="rounded-2xl border border-slate-200 p-3 text-sm" data-testid="item-breakdown">
+                    <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Per-item breakdown ({p.work.items.length})</summary>
+                    <ul className="mt-1 divide-y divide-slate-100">
+                      {p.work.items.map((w) => (
+                        <li key={w.itemId} className="py-2">
+                          <p className="font-semibold text-slate-900">{w.customerText}</p>
+                          <p className="text-xs text-slate-600">{w.minutes} min{w.helperMinutes ? ` + helper ${w.helperMinutes}` : ""} · materials {money(w.materialsCostCents)} · {w.bandLabel} · {STATUS_LABEL[w.status] ?? w.status}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                {[...(comp?.internalFlags ?? []), ...p.uncertainties].length ? (
+                  <div className="space-y-1.5">{Array.from(new Set([...(comp?.internalFlags ?? []), ...p.uncertainties])).slice(0, 12).map((f) => <Notice key={f} tone="warn">{f}</Notice>)}</div>
+                ) : null}
+                {p.exclusions.length ? <p className="text-xs text-slate-600">Not included: {p.exclusions.join(" ")}</p> : null}
                 <details className="rounded-2xl border border-slate-200 p-3 text-sm">
                   <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Why this price</summary>
                   <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">{p.why.map((w) => <li key={w}>{w}</li>)}</ul>
                 </details>
-                <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
-                  <p className="text-sm font-bold text-slate-900">Owner adjustment</p>
-                  <Segmented label="Adjustment type" columns={3} value={adjType} onChange={setAdjType} options={[{ value: "none", label: "None" }, { value: "discount", label: "Discount" }, { value: "override", label: "Set price" }]} />
-                  {adjType !== "none" ? (
-                    <>
-                      <Field label={adjType === "discount" ? "Discount ($)" : "Customer price ($)"} htmlFor="jb-adj"><input id="jb-adj" inputMode="decimal" className={inputClass} value={adjDollars} onChange={(e) => setAdjDollars(e.target.value)} /></Field>
-                      <Field label="Reason (internal)"><Segmented label="Adjustment reason" columns={3} value={adjReason} onChange={setAdjReason} options={ADJUST_REASONS} /></Field>
-                      {adjReason === "other" ? <Field label="Note (work-related only)" htmlFor="jb-note"><input id="jb-note" className={inputClass} value={adjNote} onChange={(e) => setAdjNote(e.target.value)} maxLength={200} /></Field> : null}
-                      {adjType === "override" ? <Toggle label="Allow a deep discount" hint="Required if this is far below the catalog price" checked={deep} onChange={setDeep} /> : null}
-                      <p className="text-xs text-slate-500">Reasons are internal and never shown to the customer. Only one adjustment applies; they do not stack.</p>
-                    </>
-                  ) : null}
-                </div>
+                {gate?.code !== "NOT_SUPPORTED" ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+                    <p className="text-sm font-bold text-slate-900">Owner adjustment</p>
+                    <Segmented label="Adjustment type" columns={3} value={adjType} onChange={setAdjType} options={[{ value: "none", label: "None" }, { value: "discount", label: "Discount" }, { value: "override", label: "Set price" }]} />
+                    {needsPrice || comp?.customerLines.some((l) => l.amountCents === null) ? (
+                      <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setAdjType("override"); setAdjDollars(((stableRec ?? p.recommendedCents) / 100).toFixed(2)); setAdjReason("scope_uncertainty"); }}>Use recommended {money(stableRec ?? p.recommendedCents)} as my price</Button>
+                    ) : null}
+                    {adjType !== "none" ? (
+                      <>
+                        <Field label={adjType === "discount" ? "Discount ($)" : "Customer price ($)"} htmlFor="jb-adj"><input id="jb-adj" inputMode="decimal" className={inputClass} value={adjDollars} onChange={(e) => setAdjDollars(e.target.value)} /></Field>
+                        <Field label="Reason (internal)"><Segmented label="Adjustment reason" columns={3} value={adjReason} onChange={setAdjReason} options={ADJUST_REASONS} /></Field>
+                        {adjReason === "other" ? <Field label="Note (work-related only)" htmlFor="jb-note"><input id="jb-note" className={inputClass} value={adjNote} onChange={(e) => setAdjNote(e.target.value)} maxLength={200} /></Field> : null}
+                        {adjType === "override" ? <Toggle label="Allow a deep discount" hint="Required if this is far below the catalog price" checked={deep} onChange={setDeep} /> : null}
+                        <p className="text-xs text-slate-500">Reasons are internal and never shown to the customer. Only one adjustment applies; they do not stack.</p>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 {saveError ? <Notice tone="error">{saveError}</Notice> : null}
-                <Button className="h-14 w-full text-base" disabled={saving || adjustmentInvalid || p.empty} onClick={save}>
+                <Button className="h-14 w-full text-base" disabled={saving || adjustmentInvalid || p.empty || gate?.code === "NOT_SUPPORTED" || (needsPrice && adjType !== "override")} onClick={save}>
                   {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save job & create quote"}
                 </Button>
+                {needsPrice && adjType !== "override" ? <p className="text-center text-xs text-slate-500">Manual review: set your own price to continue.</p> : null}
                 {p.empty ? <p className="text-center text-xs text-slate-500">Add at least one item to quote.</p> : null}
               </>
             )}
@@ -448,14 +528,14 @@ function Builder() {
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
         <div className="mx-auto max-w-lg">
           <div className="mb-2 flex items-center justify-between text-sm" aria-live="polite">
-            <span className="text-slate-500">Quote <strong className="text-slate-900">{p ? money(comp!.customerTotalCents) : "—"}</strong></span>
+            <span className="text-slate-500">Quote <strong className="text-slate-900">{comp ? money(comp.customerTotalCents) : "—"}</strong></span>
             <span className="text-slate-500">Rec. <strong className="text-slate-900">{p ? money(stableRec ?? p.recommendedCents) : "—"}</strong></span>
             <span className={cn("text-slate-500", comp?.belowFloor && "text-amber-700")}>Floor <strong>{p ? money(p.floorCents) : "—"}</strong></span>
             {previewing ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Updating" /> : null}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-12" disabled={step === 0} onClick={() => setStep(step - 1)}><ArrowLeft className="h-4 w-4" /> Back</Button>
-            <Button className="h-12" disabled={last} onClick={() => setStep(step + 1)}>Next <ArrowRight className="h-4 w-4" /></Button>
+            <Button variant="outline" className="h-12" disabled={stepIdx === 0} onClick={() => setStep(stepIdx - 1)}><ArrowLeft className="h-4 w-4" /> Back</Button>
+            <Button className="h-12" disabled={last} onClick={() => setStep(stepIdx + 1)}>Next <ArrowRight className="h-4 w-4" /></Button>
           </div>
         </div>
       </div>
