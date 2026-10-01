@@ -7,3 +7,7 @@
 - Hidden wall conditions stay "unverified until inspection".
 - AI is disabled when outbound is suppressed (staging default) or no key is set; manual builder is unaffected.
 - **Photo intake:** schema and interface only. `POST /api/admin/job-os/intake/photos` returns 501 `not_configured`. Owner decision: pick a vision provider and a photo storage/retention policy.
+
+## Multi-item intake
+The intake schema also returns `items` (action, category, quantity, address index and per-field status). Protected facts
+(weight, dimensions, surface, attachment, hardware supplier, assembly state) survive only when stated with matching evidence.

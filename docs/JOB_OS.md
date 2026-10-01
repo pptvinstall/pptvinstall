@@ -14,3 +14,8 @@ API: all `/api/admin/job-os/*` routes sit behind the existing `x-admin-token` mi
 Flags: `JOB_OS_ENABLED` (default on outside production, must be `true` in production), `JOBOS_STORE=memory` for a no-DB demo.
 
 Calibration: the owner records actuals per job; `/intelligence` shows medians/percentiles per comparable scope and suggests config changes the owner must apply by hand.
+
+## Universal items (mount, assemble, remove, relocate anything)
+The Job Builder's **Items** step has `+ TV`, `+ Mount item`, `+ Assemble item`, `+ Remove item`, `+ Custom`: pick an
+action, an item or template and a quantity; open **Details** only when surface, weight, helper, disposal, second address
+or risk flags matter. See `docs/UNIVERSAL_WORK_MODEL.md`.

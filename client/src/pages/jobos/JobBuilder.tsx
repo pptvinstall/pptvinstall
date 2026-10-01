@@ -226,9 +226,12 @@ function Builder() {
     try {
       const res = await adminFetch<{ draft: { scope: { tvs: Tv[]; items?: ItemDraft[]; extras: Extra[]; access?: Draft["access"]; cleanup?: Draft["cleanup"] }; unresolved: Array<{ question: string }> }; aiUsed: boolean }>("/intake/parse", { method: "POST", body: { message: intakeText, useAi } });
       const s = res.draft.scope;
-      const items = (s.items ?? []).map((i, n) => ({ ...newItemDefaults(), ...i, id: i.id || `ai-${n}`, environment: { ...newItemDefaults().environment, ...(i.environment ?? {}) } }));
-      const secondSite = [...s.tvs, ...items].some((x) => (x.site ?? 0) > 0);
-      setDraft((d) => ({ ...d, tvs: s.tvs.map((t) => ({ ...newTv(1), ...t })), items, secondStop: secondSite ? { ...d.secondStop, enabled: true } : d.secondStop, extras: s.extras ?? [], access: s.access ?? d.access, cleanup: s.cleanup ?? d.cleanup }));
+      // A fresh TV mount (e.g. at the second address) belongs on the TV path so size, wall, wires and power can be set.
+      const isTvMount = (i: ItemDraft) => i.category === "tv" && (i.action === "mount" || i.action === "install") && !i.thenAction;
+      const foldedTvs: Tv[] = (s.items ?? []).filter(isTvMount).flatMap((i, n) => Array.from({ length: i.quantity || 1 }, (_, k) => ({ ...newTv(1), ...((i as { tv?: Partial<Tv> }).tv ?? {}), id: `tv-ai-${n}-${k}`, site: i.site ?? 0 } as Tv)));
+      const items = (s.items ?? []).filter((i) => !isTvMount(i)).map((i, n) => ({ ...newItemDefaults(), ...i, id: i.id || `ai-${n}`, environment: { ...newItemDefaults().environment, ...(i.environment ?? {}) } }));
+      const secondSite = [...s.tvs, ...foldedTvs, ...items].some((x) => (x.site ?? 0) > 0);
+      setDraft((d) => ({ ...d, tvs: [...s.tvs.map((t) => ({ ...newTv(1), ...t })), ...foldedTvs], items, secondStop: secondSite ? { ...d.secondStop, enabled: true } : d.secondStop, extras: s.extras ?? [], access: s.access ?? d.access, cleanup: s.cleanup ?? d.cleanup }));
       const questions = Array.from(new Set(res.draft.unresolved.map((u) => u.question)));
       setIntakeMsg({ tone: questions.length ? "warn" : "info", text: `${res.aiUsed ? "AI-assisted" : "Keyword"} draft applied. Only details the customer stated are trusted; the rest are defaults to confirm.`, questions });
     } catch (e) {
@@ -284,7 +287,9 @@ function Builder() {
   const p = preview?.pricing;
   const comp = preview?.composition ?? null;
   const gate = preview?.gate ?? null;
-  const needsPrice = gate?.code === "MANUAL_REVIEW_REQUIRED";
+  // Work the catalog cannot price (null-amount lines) or work in manual review needs the owner's own price before saving.
+  const unpricedLines = Boolean(comp?.customerLines.some((l) => l.amountCents === null));
+  const needsPrice = gate?.code === "MANUAL_REVIEW_REQUIRED" || unpricedLines;
   const stepIdx = Math.min(step, STEPS.length - 1);
   const last = stepIdx === STEPS.length - 1;
   const stepName = STEPS[stepIdx]!;
@@ -498,7 +503,7 @@ function Builder() {
                   <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
                     <p className="text-sm font-bold text-slate-900">Owner adjustment</p>
                     <Segmented label="Adjustment type" columns={3} value={adjType} onChange={setAdjType} options={[{ value: "none", label: "None" }, { value: "discount", label: "Discount" }, { value: "override", label: "Set price" }]} />
-                    {needsPrice || comp?.customerLines.some((l) => l.amountCents === null) ? (
+                    {needsPrice ? (
                       <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { setAdjType("override"); setAdjDollars(((stableRec ?? p.recommendedCents) / 100).toFixed(2)); setAdjReason("scope_uncertainty"); }}>Use recommended {money(stableRec ?? p.recommendedCents)} as my price</Button>
                     ) : null}
                     {adjType !== "none" ? (
@@ -516,7 +521,7 @@ function Builder() {
                 <Button className="h-14 w-full text-base" disabled={saving || adjustmentInvalid || p.empty || gate?.code === "NOT_SUPPORTED" || (needsPrice && adjType !== "override")} onClick={save}>
                   {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save job & create quote"}
                 </Button>
-                {needsPrice && adjType !== "override" ? <p className="text-center text-xs text-slate-500">Manual review: set your own price to continue.</p> : null}
+                {needsPrice && adjType !== "override" ? <p className="text-center text-xs text-slate-500">Part of this work has no catalog price: set your own price to continue.</p> : null}
                 {p.empty ? <p className="text-center text-xs text-slate-500">Add at least one item to quote.</p> : null}
               </>
             )}

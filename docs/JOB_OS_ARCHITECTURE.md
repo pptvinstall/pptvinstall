@@ -31,3 +31,8 @@ pricing_configs, pricing_config_events, jobs, scope_items, quotes, quote_version
 - Discounts and overrides cannot stack; below-floor prices are flagged, deep discounts need acknowledgement.
 - Payments cannot exceed balance or hit void/draft invoices. Invoice numbers are `INV-YYYY-NNNN` from a counter.
 - Intelligence suggestions are advisory and never applied automatically; synthetic rows are excluded by default; minimum sample 5.
+
+## Universal work model
+Scope now carries `items` (see `docs/UNIVERSAL_WORK_MODEL.md`). `normalizeScope` folds fresh TV mounts into the
+specialised TV engine; everything else is priced by `computeWork`. No schema migration: items are stored in the existing
+scope JSON and synced to `scope_items` with kind `item`.
