@@ -270,11 +270,20 @@ export function heuristicIntake(text: string): AiScopeIntake {
   addExtra("floodlight", /flood ?light/);
   addExtra("shelf", /shelf|shelves/);
 
-  const tvs = hasTvWord || countMatch ? Array.from({ length: count }, () => tv()) : [];
+  // With several TVs we cannot tell which TV a keyword belongs to, so per-TV details are never
+  // marked KNOWN: values are dropped to unknown/needs_confirmation and the owner is asked.
+  const demote = (t: TvIntake): TvIntake => {
+    const out: Record<string, unknown> = {};
+    for (const [key, f] of Object.entries(t) as Array<[string, { value: unknown; status: FieldStatus; evidence?: string }]>) {
+      out[key] = f.status === "unknown" ? f : { value: null, status: "needs_confirmation" as FieldStatus, evidence: f.evidence };
+    }
+    return out as unknown as TvIntake;
+  };
+  const tvs = hasTvWord || countMatch ? Array.from({ length: count }, () => (count > 1 ? demote(tv()) : tv())) : [];
   return {
     tvs,
     extras,
     summary: tvs.length ? `${tvs.length} TV(s) mentioned; keyword-based extraction (no AI).` : "No TV mentioned; nothing extracted.",
-    openQuestions: tvs.length ? ["Confirm wall type, power situation and mount ownership for each TV."] : ["What work is needed?"],
+    openQuestions: tvs.length ? [tvs.length > 1 ? "Which TV has which wall type, location (e.g. fireplace), mount and outlet situation?" : "Confirm wall type, power situation and mount ownership."] : ["What work is needed?"],
   };
 }

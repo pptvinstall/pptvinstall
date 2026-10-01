@@ -135,3 +135,30 @@ test("config diff is key-order independent (jsonb round trips reorder keys)", ()
   assert.deepEqual(diffConfigs(a, b), []);
   assert.deepEqual(diffConfigs(a, { recipes: { x: { lines: [{ label: "a", qty: 2, unitCostCents: 5 }] } } }), ["recipes.x.lines"]);
 });
+
+import { applyPackageToFormState, formStateToScope, legacyTotalCentsForFormState, packagesForFormState } from "../../shared/pricing";
+import { calculateQuote, createDefaultQuoteFormState } from "../../client/src/lib/quote-calculator";
+
+test("form state bridge: packages for the public QuoteTool match what the calculator charges after applying them", () => {
+  const state = createDefaultQuoteFormState();
+  state.tvs[0] = { ...state.tvs[0]!, hasMount: false, mountType: "tilting" };
+  const pkgs = packagesForFormState(state);
+  assert.ok(pkgs.length >= 2);
+  for (const p of pkgs) {
+    const applied = applyPackageToFormState(state, p.id);
+    assert.equal(legacyTotalCentsForFormState(applied), p.totalCents, `${p.id} total must equal the real calculator total`);
+  }
+  assert.deepEqual(findInternalKeys(pkgs), []);
+});
+
+test("form state bridge: scope mapping preserves wall, fireplace, mount and extras", () => {
+  const state = createDefaultQuoteFormState();
+  state.tvs[0] = { ...state.tvs[0]!, wallType: "highrise", location: "fireplace", unmounting: true };
+  state.soundbar = true;
+  const scoped = formStateToScope(state);
+  assert.equal(scoped.tvs[0]!.wall, "steel");
+  assert.equal(scoped.tvs[0]!.location, "fireplace");
+  assert.equal(scoped.tvs[0]!.removal.tvRemoval, true);
+  assert.deepEqual(scoped.extras.map((e) => e.kind), ["soundbar"]);
+  assert.equal(calculateQuote(state).total >= 0, true);
+});

@@ -30,6 +30,10 @@ const QuotePage = lazy(() => import("@/pages/quote"));
 const Confirmation = lazy(() => import("@/pages/Confirmation"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const AdminBookings = lazy(() => import("@/pages/admin-bookings"));
+const JobBuilder = lazy(() => import("@/pages/jobos/JobBuilder"));
+const JobsPage = lazy(() => import("@/pages/jobos/JobsPage"));
+const PricingConfigPage = lazy(() => import("@/pages/jobos/PricingConfigPage"));
+const CustomerQuotePage = lazy(() => import("@/pages/CustomerQuote"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
 // City SEO pages — lazy loaded, share a single CityPage component
@@ -77,6 +81,14 @@ function Router() {
         {/* Admin — password-protected, not linked in nav */}
         <Route path="/admin" component={AdminBookings} />
 
+        {/* Job OS owner tools (admin-token gated; not linked in nav) */}
+        <Route path="/admin/job-builder" component={JobBuilder} />
+        <Route path="/admin/jobs" component={JobsPage} />
+        <Route path="/admin/pricing-config" component={PricingConfigPage} />
+
+        {/* Customer quote link (token addressed, customer-safe data only) */}
+        <Route path="/q/:token" component={CustomerQuotePage} />
+
         {/* City SEO landing pages */}
         <Route path="/areas/:slug">
           {(params) => {
@@ -95,21 +107,44 @@ function Router() {
   );
 }
 
+// Owner tools get a clean full-screen shell: no marketing nav, footer or call button
+// (the floating call button would sit on top of the sticky price bar).
+function isOwnerToolPath(path: string) {
+  return path.startsWith("/admin/job-builder") || path.startsWith("/admin/jobs") || path.startsWith("/admin/pricing-config");
+}
+
+function Shell() {
+  const [location] = useLocation();
+  const owner = isOwnerToolPath(location);
+  return (
+    <>
+      {owner ? null : (
+        <>
+          <SeasonalBanner />
+          <EnvironmentIndicator />
+          <PromotionBanner />
+          <Nav />
+        </>
+      )}
+      <main>
+        <Router />
+      </main>
+      {owner ? null : (
+        <>
+          <Footer />
+          <MobileFAB />
+        </>
+      )}
+      <Toaster />
+    </>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SeasonalBanner />
-        <EnvironmentIndicator />
-        <PromotionBanner />
-
-        <Nav />
-        <main>
-          <Router />
-        </main>
-        <Footer />
-        <MobileFAB />
-        <Toaster />
+        <Shell />
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>

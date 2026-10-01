@@ -233,10 +233,18 @@ test("AI intake: prompt forbids prices and treats the message as data", () => {
 test("heuristic intake works offline, marks only literal keywords as known, never invents", () => {
   const i = heuristicIntake("Need two TVs mounted, one above the fireplace on a brick wall, 65 inch. I already have a mount.");
   assert.equal(i.tvs.length, 2);
-  assert.equal(i.tvs[0]!.wall.status, "known");
-  assert.equal(i.tvs[0]!.wall.value, "brick");
-  assert.equal(i.tvs[0]!.power.status, "unknown");
-  assert.equal(i.tvs[0]!.mountSource.value, "customer");
+  // Several TVs: a keyword cannot be attributed to one TV, so nothing is "known" per TV.
+  for (const t of i.tvs) {
+    assert.notEqual(t.wall.status, "known");
+    assert.equal(t.wall.value, null);
+    assert.notEqual(t.location.status, "known");
+  }
+  assert.ok(i.openQuestions.some((q) => /Which TV/.test(q)));
+  const single = heuristicIntake("One TV on a brick wall, 65 inch. I already have a mount.");
+  assert.equal(single.tvs[0]!.wall.status, "known");
+  assert.equal(single.tvs[0]!.wall.value, "brick");
+  assert.equal(single.tvs[0]!.power.status, "unknown");
+  assert.equal(single.tvs[0]!.mountSource.value, "customer");
   assert.equal(heuristicIntake("hello there").tvs.length, 0);
   const draft = intakeToScopeDraft(i, "heuristic");
   assert.equal(draft.source, "heuristic");

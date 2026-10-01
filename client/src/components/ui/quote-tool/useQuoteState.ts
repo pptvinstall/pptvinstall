@@ -32,6 +32,7 @@ import {
   type QuoteSourceMode,
   type StandaloneServices,
 } from "@/components/ui/quote-tool/shared";
+import { applyPackageToFormState } from "@shared/pricing/formState";
 import {
   calculateQuote,
   createDefaultQuoteFormState,
@@ -557,6 +558,14 @@ export function useQuoteState() {
     setStep("contact");
   }
 
+  /** Re-prices the review with a package's real components applied to the customer's TVs. */
+  function applyPackage(id: "essential" | "clean" | "complete") {
+    const nextState = applyPackageToFormState(formState, id);
+    const nextQuote = buildAugmentedQuote(calculateQuote(nextState), standaloneServices);
+    setFormState(nextState);
+    setQuote(normalizeQuoteForDisplayTotals({ ...nextQuote, summary: buildLocalQuoteSummary(nextQuote, nextState, standaloneServices) }));
+  }
+
   function handleEditQuote() {
     setQuoteRequestError("");
     setQuoteRequestStatus("idle");
@@ -848,6 +857,7 @@ export function useQuoteState() {
     handleDescribeItQuote,
     handleReviewApproval,
     handleEditQuote,
+    applyPackage,
     handleScheduleNow,
     handleFollowUpRequest,
     copyPhoneNumber,

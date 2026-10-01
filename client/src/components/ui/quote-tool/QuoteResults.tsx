@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/quote-tool/shared";
 import { SelectorButton } from "@/components/ui/quote-tool/QuoteComponents";
 import { useQuoteContext } from "@/components/ui/quote-tool/useQuoteState";
+import QuotePackages from "@/components/ui/quote-tool/QuotePackages";
 
 export default function QuoteResults() {
   const {
@@ -122,6 +123,8 @@ export default function QuoteResults() {
           <p className="mt-2 leading-6">{formState.notes}</p>
         </div>
       ) : null}
+
+      <QuotePackages />
 
       <div className="space-y-4">
         {reviewGroups.map((group) => (
