@@ -1,5 +1,7 @@
 import { logger } from './services/loggingService';
 import { storage } from './storage';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 export interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -50,19 +52,19 @@ export class MonitoringService {
   async getSystemHealth(): Promise<SystemHealth> {
     const startTime = Date.now();
     
-    // Test database connectivity
+    // Test database connectivity with a lightweight round-trip query
     let databaseHealthy = false;
     try {
-      await storage.getSystemSettings();
+      await db.execute(sql`SELECT 1`);
       databaseHealthy = true;
     } catch (error) {
       logger.error('Database health check failed:', error as Error);
     }
 
-    // Test email service
+    // Test email service — project uses Gmail SMTP, not SendGrid
     let emailHealthy = false;
     try {
-      emailHealthy = !!(process.env.SENDGRID_API_KEY && process.env.EMAIL_FROM);
+      emailHealthy = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
     } catch (error) {
       logger.error('Email service health check failed:', error as Error);
     }
@@ -155,7 +157,7 @@ export class MonitoringService {
       system: 'Picture Perfect TV Install'
     };
 
-    logger.error(`🚨 ${level} ALERT: ${message}`, alert);
+    logger.error(`🚨 ${level} ALERT: ${message}`, new Error(JSON.stringify(alert)));
 
     // In production, this would send to external monitoring services
     // For now, we log extensively for admin visibility

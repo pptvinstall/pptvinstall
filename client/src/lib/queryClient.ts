@@ -2,6 +2,25 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    const contentType = res.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      try {
+        const payload = (await res.json()) as {
+          message?: string;
+          error?: {
+            message?: string;
+          };
+        };
+        const message = payload.error?.message || payload.message || res.statusText;
+        throw new Error(`${res.status}: ${message}`);
+      } catch (jsonError) {
+        if (jsonError instanceof Error && /^\d+: /.test(jsonError.message)) {
+          throw jsonError;
+        }
+      }
+    }
+
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -68,6 +87,19 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Parse the HTTP status code from error messages formatted as "STATUS: message"
+// by throwIfResNotOk. Returns null if the error is not an HTTP error.
+function parseHttpStatus(error: unknown): number | null {
+  if (!(error instanceof Error)) return null;
+  const match = error.message.match(/^(\d{3}):/);
+  if (!match) return null;
+  const code = parseInt(match[1], 10);
+  return Number.isInteger(code) ? code : null;
+}
+
+// Status codes that should never be retried — the server gave a definitive answer
+const NO_RETRY_CODES = new Set([400, 401, 403, 404, 405, 409, 410, 422, 429]);
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -76,27 +108,24 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: (failureCount, error: unknown) => {
-        // Don't retry on 4xx errors except 408 (timeout)
-        if (error instanceof Error && error.message.includes('4')) {
-          const statusCode = parseInt(error.message.split(':')[0]);
-          if (statusCode >= 400 && statusCode < 500 && statusCode !== 408) {
-            return false;
-          }
-        }
-        return failureCount < 2; // Max 2 retries
+        const status = parseHttpStatus(error);
+        // Known client error — never retry
+        if (status !== null && NO_RETRY_CODES.has(status)) return false;
+        // 408 Request Timeout and 5xx are retriable
+        return failureCount < 2;
       },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     },
     mutations: {
       retry: (failureCount, error: unknown) => {
-        // Only retry mutations on network errors or 5xx errors
-        if (error instanceof Error) {
-          const isNetworkError = error.message.includes('Failed to fetch') || 
-                                error.message.includes('NetworkError');
-          const is5xxError = error.message.match(/^5\d\d:/) !== null;
-          return (isNetworkError || is5xxError) && failureCount < 1;
-        }
-        return false;
+        if (!(error instanceof Error)) return false;
+        const status = parseHttpStatus(error);
+        // Retry on network errors (no status) or 5xx server errors only
+        const isNetworkError =
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('NetworkError');
+        const is5xx = status !== null && status >= 500;
+        return (isNetworkError || is5xx) && failureCount < 1;
       },
     },
   },

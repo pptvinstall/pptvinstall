@@ -28,9 +28,25 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
     },
   },
+  envDir: __dirname,
   root: path.resolve(__dirname, "client"),
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+          'radix-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+          ],
+          'data-vendor': ['@tanstack/react-query', 'drizzle-orm'],
+          'chart-vendor': ['recharts'],
+        },
+      },
+    },
   },
 });

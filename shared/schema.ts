@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pgTable, serial, text, varchar, timestamp, boolean, integer, jsonb, uniqueIndex, json } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, integer, jsonb, uniqueIndex, json, uuid } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { relations } from 'drizzle-orm';
 
@@ -33,6 +33,13 @@ export const bookingSchema = z.object({
   status: z.enum(['active', 'cancelled', 'completed', 'scheduled']).optional().default('active'),
   pricingTotal: z.union([z.string(), z.number()]).optional(),
   pricingBreakdown: z.any().optional(),
+  birthday: z.string().optional(),
+  emailMarketingOptIn: z.boolean().optional(),
+  transactionalSmsOptIn: z.boolean().optional(),
+  transactionalSmsConsentSource: z.string().optional(),
+  smsMarketingOptIn: z.boolean().optional(),
+  birthdayPromoOptIn: z.boolean().optional(),
+  consentSource: z.string().optional(),
   // Additional fields that we use in the admin panel
   tvSize: z.string().optional(),
   mountType: z.string().optional(),
@@ -75,9 +82,13 @@ export const bookings = pgTable('bookings', {
   mountType: varchar('mount_type', { length: 50 }),
   wallMaterial: varchar('wall_material', { length: 50 }),
   specialInstructions: text('special_instructions'),
+  managementToken: uuid("management_token").defaultRandom().notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   // Consent to receiving notifications
   consentToContact: boolean('consent_to_contact').default(false),
+  transactionalSmsOptIn: boolean('transactional_sms_opt_in').default(false),
+  transactionalSmsConsentAt: timestamp('transactional_sms_consent_at'),
+  transactionalSmsConsentSource: varchar('transactional_sms_consent_source', { length: 50 }),
   // Field for cancellation reason
   cancellationReason: text('cancellation_reason')
 });
@@ -142,6 +153,7 @@ export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 
 export type Booking = z.infer<typeof bookingSchema> & {
   id?: string;
+  managementToken?: string;
   createdAt?: string;
   cancellationReason?: string;
 };
@@ -227,6 +239,72 @@ export const customers = pgTable('customers', {
   return {
     emailIdx: uniqueIndex('customers_email_idx').on(table.email)
   }
+});
+
+export const crmContacts = pgTable('crm_contacts', {
+  id: serial('id').primaryKey(),
+  fullName: varchar('full_name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  normalizedEmail: varchar('normalized_email', { length: 255 }),
+  phone: varchar('phone', { length: 20 }),
+  normalizedPhone: varchar('normalized_phone', { length: 20 }),
+  birthday: varchar('birthday', { length: 10 }),
+  cityArea: varchar('city_area', { length: 100 }),
+  emailMarketingOptIn: boolean('email_marketing_opt_in').default(false),
+  transactionalSmsOptIn: boolean('transactional_sms_opt_in').default(false),
+  smsMarketingOptIn: boolean('sms_marketing_opt_in').default(false),
+  transactionalSmsOptOutAt: timestamp('transactional_sms_opt_out_at'),
+  smsReachableStatus: varchar('sms_reachable_status', { length: 30 }).default('unknown'),
+  birthdayPromoOptIn: boolean('birthday_promo_opt_in').default(false),
+  marketingConsentAt: timestamp('marketing_consent_at'),
+  marketingConsentSource: varchar('marketing_consent_source', { length: 50 }),
+  consentIpAddress: varchar('consent_ip_address', { length: 64 }),
+  lastBookingId: integer('last_booking_id'),
+  latestServiceSummary: text('latest_service_summary'),
+  latestBookingDate: timestamp('latest_booking_date'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => {
+  return {
+    normalizedEmailIdx: uniqueIndex('crm_contacts_normalized_email_idx').on(table.normalizedEmail),
+    normalizedPhoneIdx: uniqueIndex('crm_contacts_normalized_phone_idx').on(table.normalizedPhone)
+  };
+});
+
+export const smsOptOuts = pgTable('sms_opt_outs', {
+  id: serial('id').primaryKey(),
+  normalizedPhone: varchar('normalized_phone', { length: 20 }).notNull(),
+  optedOutAt: timestamp('opted_out_at').defaultNow(),
+  source: varchar('source', { length: 50 }),
+  provider: varchar('provider', { length: 30 }),
+  rawMessage: text('raw_message'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => {
+  return {
+    normalizedPhoneIdx: uniqueIndex('sms_opt_outs_normalized_phone_idx').on(table.normalizedPhone)
+  };
+});
+
+export const smsMessages = pgTable('sms_messages', {
+  id: serial('id').primaryKey(),
+  bookingId: integer('booking_id'),
+  crmContactId: integer('crm_contact_id'),
+  messageType: varchar('message_type', { length: 50 }).notNull(),
+  toPhone: varchar('to_phone', { length: 20 }).notNull(),
+  normalizedPhone: varchar('normalized_phone', { length: 20 }).notNull(),
+  provider: varchar('provider', { length: 30 }).notNull(),
+  providerMessageId: varchar('provider_message_id', { length: 100 }),
+  status: varchar('status', { length: 30 }).notNull().default('queued'),
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at'),
+  deliveredAt: timestamp('delivered_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => {
+  return {
+    bookingMessageTypeIdx: uniqueIndex('sms_messages_booking_message_type_idx').on(table.bookingId, table.messageType)
+  };
 });
 
 // Add customerId to bookings table
@@ -330,6 +408,12 @@ export type BusinessHoursSelect = typeof businessHours.$inferSelect;
 export type BusinessHoursInsert = typeof businessHours.$inferInsert;
 export type CustomerSelect = typeof customers.$inferSelect;
 export type CustomerInsert = typeof customers.$inferInsert;
+export type CrmContactSelect = typeof crmContacts.$inferSelect;
+export type CrmContactInsert = typeof crmContacts.$inferInsert;
+export type SmsOptOutSelect = typeof smsOptOuts.$inferSelect;
+export type SmsOptOutInsert = typeof smsOptOuts.$inferInsert;
+export type SmsMessageSelect = typeof smsMessages.$inferSelect;
+export type SmsMessageInsert = typeof smsMessages.$inferInsert;
 
 // System settings schema
 export const systemSettingsSchema = z.object({

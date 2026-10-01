@@ -47,7 +47,7 @@ export const siteConfig: SiteConfig = {
   features: {
     showPromotions: true,
     showTestimonials: true,
-    showPWAInstall: true,
+    showPWAInstall: false,
     enableBookingReminders: true
   }
 };

@@ -1,295 +1,91 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useState } from "react";
+import { Link } from "wouter";
+import { AnimatePresence, motion } from "framer-motion";
+import { CalendarDays, Menu, Phone, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { 
-  PhoneCall, 
-  Menu, 
-  X, 
-  Home, 
-  Calendar, 
-  MessagesSquare, 
-  HelpCircle,
-  MonitorSmartphone,
-  ChevronDown,
-  LucideIcon,
-  User,
-  Layout
-} from "lucide-react";
-import { cn } from '@/lib/utils';
-import { Logo } from '@/components/logo';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Logo } from "@/components/logo";
 
-interface NavLink {
-  href: string;
-  name: string;
-  icon: LucideIcon;
-  badge?: string;
-  children?: Array<{
-    href: string;
-    name: string;
-  }>;
-}
+const navLinks = [
+  { label: "Services", href: "/services" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Contact", href: "/contact" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Get a Quote", href: "/quote" },
+];
 
-// Main navigation component
 export default function Nav() {
-  const [location] = useLocation();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [showFloatingButton, setShowFloatingButton] = useState(false);
-  
-  // Memoized handlers for better performance
-  const toggleMenu = useCallback(() => setIsOpen(prev => !prev), []);
-  const openMenu = useCallback(() => setIsOpen(true), []);
-  const closeMenu = useCallback(() => setIsOpen(false), []);
-  
-  // Phone call handler
-  const handlePhoneCall = useCallback(() => {
-    window.location.href = "tel:404-702-4748";
-    closeMenu();
-  }, [closeMenu]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Navigation links with icons
-  const navigationLinks: NavLink[] = [
-    { href: '/', name: 'Home', icon: Home },
-    { 
-      href: '/services', 
-      name: 'Services', 
-      icon: MonitorSmartphone,
-      children: [
-        { href: '/services#tv-mounting', name: 'TV Mounting' },
-        { href: '/services#smart-home', name: 'Smart Home' },
-        { href: '/services#commercial', name: 'Commercial' },
-      ]
-    },
-
-    { href: '/booking', name: 'Book Now', icon: Calendar, badge: 'Best Value' },
-    { href: '/contact', name: 'Contact', icon: MessagesSquare },
-    { href: '/faq', name: 'FAQ', icon: HelpCircle },
-    { href: '/customer-login', name: 'Customer Portal', icon: User }
-  ];
-
-  // Memoize scroll handler to prevent unnecessary rerenders
-  const handleScroll = useCallback(() => {
-    const scrollPosition = window.scrollY;
-    setIsScrolled(scrollPosition > 10);
-    setShowFloatingButton(scrollPosition > 300);
-  }, []);
-  
-  // Handle scroll effects with throttling for better performance
-  useEffect(() => {
-    // Initial check
-    handleScroll();
-    
-    // Throttled scroll event to improve performance
-    let ticking = false;
-    const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-    
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [handleScroll]);
-
-  // Memoized function to check if a link is active
-  const isActive = useCallback((href: string) => {
-    if (href === '/') return location === '/';
-    return location.startsWith(href);
-  }, [location]);
+  const closeMenu = () => setMobileMenuOpen(false);
 
   return (
     <>
-      {/* Main navigation bar */}
-      <nav className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-300",
-        isScrolled ? "bg-background/95 backdrop-blur shadow-sm" : "bg-background"
-      )}>
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between relative">
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <Logo size="md" />
-          </Link>
+      <nav className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200 bg-white/95 py-3 shadow-sm backdrop-blur">
+        <div className="container mx-auto flex items-center justify-between px-4">
+          <Logo variant="dark" />
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navigationLinks.map((link) => (
-              <div key={link.href}>
-                {!link.children ? (
-                  <Link href={link.href}>
-                    <Button 
-                      variant={isActive(link.href) ? "default" : "ghost"} 
-                      size="sm"
-                      className="relative"
-                    >
-                      <link.icon className="h-4 w-4 mr-1" />
-                      {link.name}
-                      {link.badge && (
-                        <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                          {link.badge}
-                        </span>
-                      )}
-                    </Button>
-                  </Link>
-                ) : (
-                  <div className="relative group">
-                    <Button 
-                      variant={isActive(link.href) ? "default" : "ghost"} 
-                      size="sm"
-                      className="group"
-                    >
-                      <link.icon className="h-4 w-4 mr-1" />
-                      {link.name}
-                      <ChevronDown className="h-4 w-4 ml-1 transition-transform group-hover:rotate-180" />
-                    </Button>
-                    
-                    {/* Dropdown */}
-                    <div className="absolute left-0 mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="py-1">
-                        {link.children.map((child) => (
-                          <a
-                            key={child.href}
-                            href={child.href}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            {child.name}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+          <div className="hidden items-center gap-6 md:flex">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href}>
+                <span className="cursor-pointer text-sm font-bold text-slate-900 transition-colors hover:text-blue-600">
+                  {link.label}
+                </span>
+              </Link>
             ))}
+            <Link href="/booking">
+              <Button className="rounded-2xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-500">
+                <CalendarDays className="h-4 w-4" />
+                Book Now
+              </Button>
+            </Link>
+            <a href="tel:4047024748" className="inline-flex items-center">
+              <Button variant="outline" className="rounded-2xl border-slate-300 px-5 text-sm font-bold text-slate-900 hover:bg-slate-50">
+                <Phone className="h-4 w-4" />
+                Call
+              </Button>
+            </a>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="default" 
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 mr-2"
-              onClick={handlePhoneCall}
-            >
-              <PhoneCall className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Call</span>
-              <span className="sm:hidden">Call</span>
-            </Button>
-            
-            {/* Mobile menu button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden"
-              onClick={toggleMenu}
-              aria-label="Toggle menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+          <div className="flex items-center gap-2 md:hidden">
+            <a href="tel:4047024748" className="inline-flex items-center">
+              <Button variant="outline" size="icon" className="rounded-2xl border-slate-300">
+                <Phone className="h-5 w-5" />
+              </Button>
+            </a>
+            <button type="button" onClick={() => setMobileMenuOpen((current) => !current)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-900">
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
       </nav>
-      
-      {/* Mobile menu dropdown */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden bg-black/50" onClick={closeMenu}>
-          <div className="fixed inset-y-0 right-0 w-[85vw] sm:w-[350px] z-50 bg-background shadow-xl p-0 overflow-hidden" 
-               onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col h-full">
-              <div className="p-4 border-b flex items-center justify-between">
-                <div className="flex items-center">
-                  <Logo size="sm" withText={false} />
-                  <span className="ml-2 text-lg font-bold">Picture Perfect</span>
-                </div>
-                <Button variant="ghost" size="icon" onClick={closeMenu} aria-label="Close menu">
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto py-4 px-2">
-                {navigationLinks.map((link) => (
-                  <div key={link.href}>
-                    {!link.children ? (
-                      <Link href={link.href} onClick={closeMenu}>
-                        <Button 
-                          variant={isActive(link.href) ? "default" : "ghost"} 
-                          size="sm"
-                          className="w-full justify-start mb-1 relative"
-                        >
-                          <link.icon className="h-4 w-4 mr-2" />
-                          {link.name}
-                          {link.badge && (
-                            <span className="absolute top-0 right-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                              {link.badge}
-                            </span>
-                          )}
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value={link.name} className="border-none">
-                          <AccordionTrigger className={cn(
-                            "p-2 rounded-md hover:bg-accent hover:no-underline flex items-center",
-                            isActive(link.href) && "bg-accent/50"
-                          )}>
-                            <div className="flex items-center">
-                              <link.icon className="h-4 w-4 mr-2" />
-                              {link.name}
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="flex flex-col space-y-1 pl-6 pt-1">
-                              {link.children.map((child) => (
-                                <a
-                                  key={child.href}
-                                  href={child.href}
-                                  className="p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                                  onClick={closeMenu}
-                                >
-                                  {child.name}
-                                </a>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    )}
-                  </div>
+
+      <AnimatePresence>
+        {mobileMenuOpen ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur md:hidden">
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 260, damping: 28 }}
+              className="ml-auto flex h-full w-full max-w-sm flex-col bg-white pt-24 shadow-2xl"
+            >
+              <div className="flex-1 overflow-y-auto px-4 pb-6">
+                {navLinks.map((link) => (
+                  <Link key={link.href} href={link.href}>
+                    <button type="button" onClick={closeMenu} className={`flex min-h-[56px] w-full items-center border-b border-slate-100 text-left text-lg font-bold ${link.href === "/quote" ? "text-blue-600" : "text-slate-900"}`}>
+                      {link.label}
+                    </button>
+                  </Link>
                 ))}
+                <a href="tel:4047024748" onClick={closeMenu} className="flex min-h-[56px] w-full items-center border-b border-slate-100 text-left text-lg font-bold text-slate-900">
+                  Call Us
+                </a>
               </div>
-              
-              <div className="mt-auto p-4 border-t">
-                <Button 
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={handlePhoneCall}
-                >
-                  <PhoneCall className="mr-2 h-4 w-4" />
-                  Call 404-702-4748
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Floating menu button - appears when scrolling down on mobile */}
-      {showFloatingButton && (
-        <div className="fixed bottom-6 right-6 z-40 lg:hidden animate-in fade-in duration-300">
-          <Button
-            variant="default"
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 transition-transform hover:scale-110"
-            onClick={openMenu}
-            aria-label="Open menu"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }

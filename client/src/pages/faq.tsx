@@ -1,107 +1,121 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Link } from "wouter";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown, HelpCircle, MessageCircle } from "lucide-react";
 
-const faqs = {
-  "Installation Process": [
-    {
-      question: "How long does TV mounting typically take?",
-      answer: "Most standard TV mounting jobs take 1-2 hours to complete. This includes proper mounting, leveling, and basic cable management. More complex installations with in-wall wiring may take 2-3 hours."
-    },
-    {
-      question: "What wall types can you mount TVs on?",
-      answer: "We can mount TVs on drywall, plaster, concrete, and brick walls. Our technicians will ensure proper mounting hardware is used for your specific wall type to guarantee a secure installation."
-    },
-    {
-      question: "Do you provide the mounting bracket?",
-      answer: "Yes, our basic and premium installation packages include a standard mounting bracket. If you have a specific bracket or need a specialized mount (like full-motion or ceiling mount), we can accommodate that as well."
-    }
-  ],
-  "Preparation & Requirements": [
-    {
-      question: "What do I need to have ready before installation?",
-      answer: "Please ensure your TV is unpacked, you have all cables you want connected (HDMI, power, etc.), and the mounting area is clear of furniture. Also, having your TV's manual handy can be helpful."
-    },
-    {
-      question: "Can you mount above a fireplace?",
-      answer: "Yes, we specialize in above-fireplace mounting. We'll assess the heat exposure and recommend appropriate solutions for both the mount and cable management to ensure safe installation."
-    },
-    {
-      question: "Do I need to be home during installation?",
-      answer: "Yes, we require an adult (18+) to be present during the entire installation process to confirm TV placement and ensure satisfaction with the final result."
-    }
-  ],
-  "Services & Pricing": [
-    {
-      question: "What's included in the basic mounting service?",
-      answer: "Basic mounting includes the bracket, professional mounting, basic cable management (outside the wall), and TV leveling. We'll also help you connect your devices and test everything before we leave."
-    },
-    {
-      question: "Do you offer in-wall cable concealment?",
-      answer: "Yes, our premium installation package includes in-wall cable concealment. This provides a clean, professional look with no visible wires. We'll install a power bridge system to safely route power and AV cables."
-    },
-    {
-      question: "What is your service area?",
-      answer: "We service the greater metropolitan area. Contact us with your location, and we'll confirm if you're within our service range."
-    }
-  ],
-  "After Installation": [
-    {
-      question: "Do you offer a warranty on installation?",
-      answer: "Yes, all our installations come with a 1-year warranty on workmanship. This covers any issues related to the mounting installation itself. Manufacturer warranties cover the hardware we provide."
-    },
-    {
-      question: "What if I need to relocate my mounted TV?",
-      answer: "We offer TV relocation services for TVs we've mounted or ones mounted by others. Contact us for a quote on safely moving your TV to a new location."
-    },
-    {
-      question: "Can I adjust the TV after installation?",
-      answer: "If you have a tilting or full-motion mount, we'll show you how to safely adjust your TV. For fixed mounts, please contact us for any needed adjustments to ensure safety."
-    }
-  ]
-};
+import { Button } from "@/components/ui/button";
+
+const faqs = [
+  {
+    category: "Booking & Payments",
+    items: [
+      { q: "How much does it cost to mount a TV in Atlanta?", a: "Standard TV mounting starts at $100 with your mount. Fireplace mounting starts at $200, and wire concealment or specialty walls can change the final estimate. Our quote tool gives the fastest exact pricing for Atlanta-area installs." },
+      { q: "How far in advance do I need to book?", a: "Same-day booking is available with 2 hours notice. We recommend 1-2 days ahead for best slot selection." },
+      { q: "Do I need to pay a deposit?", a: "No. There is no payment required until after the job is complete." },
+      { q: "What payment methods do you accept?", a: "Cash, Zelle, Cash App, Venmo, and all major credit cards. Payment due after job is complete." },
+    ],
+  },
+  {
+    category: "Service Area & Prep",
+    items: [
+      { q: "Do you serve my area?", a: "We serve greater Atlanta metro including Buckhead, Decatur, Marietta, Alpharetta, Roswell, Lawrenceville and more. Enter your zip in our quote tool for exact travel fee info." },
+      { q: "Do I need to provide anything?", a: "Just the TV and access to your space. We bring all tools. We can provide a mount if needed (see pricing)." },
+      { q: "How long does a typical install take?", a: "Single TV mount takes 45-90 minutes. Multiple TVs or wire concealment may take 2-4 hours." },
+    ],
+  },
+  {
+    category: "Installation Details",
+    items: [
+      { q: "Do I need to buy my own mount?", a: "No. You can bring your own mount or we can supply one. Fixed mounts are the most affordable, tilting mounts help with glare, and full-motion mounts are great when you need more flexibility." },
+      { q: "Do you hide the wires?", a: "Yes. We offer wire concealment and can quote it instantly in our quote tool for most standard installs." },
+      { q: "Can you hide wires behind the wall?", a: "Yes, in many standard drywall installs we can conceal wires cleanly. Some setups require a nearby outlet, and fireplace or custom paths may need a quick photo review before we confirm final pricing." },
+      { q: "How long does TV mounting take?", a: "Most single TV mounts take 30-90 minutes. Fireplace installs, brick walls, multiple TVs, or wire concealment can take longer." },
+      { q: "Can you mount over a fireplace?", a: "Yes. Fireplace installs are one of our specialties, including drywall, brick, and stone surfaces." },
+      { q: "Do you install on brick or concrete?", a: "Yes. We mount on brick, stone, and other masonry surfaces with the right hardware and tools." },
+    ],
+  },
+  {
+    category: "AV Help & Troubleshooting",
+    items: [
+      { q: "Do you help with TVs that are already mounted but having issues?", a: "Yes! We offer AV troubleshooting starting at $100/hr. Whether it's remote issues, HDMI problems, sound not working, or streaming setup, we can come diagnose and fix your existing setup." },
+      { q: "Can you just remove/unmount my TV without reinstalling it?", a: "Absolutely. TV unmounting is $50 per TV. We'll safely remove it from the wall. We can also patch the mount holes — just mention it when you book." },
+      { q: "Do you set up new smart TVs or streaming devices?", a: "Yes — device setup and configuration is $75 flat. That covers smart TV initial setup, streaming apps, Alexa/Google Home linking, and network config." },
+      { q: "What if I just need someone to figure out why my sound isn't working?", a: "That falls under our AV troubleshooting service ($100/hr). Most sound issues take 30-60 minutes to diagnose and fix." },
+    ],
+  },
+];
+
+function AccordionItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border-b border-slate-100 last:border-0">
+      <button type="button" onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between py-4 text-left">
+        <span className={`text-sm font-bold md:text-lg ${open ? "text-blue-600" : "text-slate-900"}`}>{question}</span>
+        <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${open ? "rotate-180 text-blue-600" : ""}`} />
+      </button>
+      <AnimatePresence>
+        {open ? (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <p className="pb-4 text-sm leading-relaxed text-slate-600">{answer}</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function FAQ() {
   return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">Frequently Asked Questions</h1>
-            <p className="text-xl text-gray-600">
-              Find answers to common questions about our TV mounting services
-            </p>
-          </div>
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <section className="relative overflow-hidden bg-slate-900 pb-24 pt-32 text-white">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute bottom-[20%] left-[10%] h-[500px] w-[500px] rounded-full bg-indigo-600 blur-[100px]" />
+        </div>
+        <div className="container relative z-10 mx-auto px-4 text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl space-y-6">
+            <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+              Frequently Asked <span className="text-blue-500">Questions</span>
+            </h1>
+            <p className="text-lg text-slate-300">Everything you need to know before you book.</p>
+          </motion.div>
+        </div>
+      </section>
 
-          <div className="space-y-6">
-            {Object.entries(faqs).map(([category, questions]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle>{category}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible className="w-full">
-                    {questions.map((faq, index) => (
-                      <AccordionItem key={index} value={`item-${index}`}>
-                        <AccordionTrigger className="text-left">
-                          {faq.question}
-                        </AccordionTrigger>
-                        <AccordionContent className="text-gray-600">
-                          {faq.answer}
-                        </AccordionContent>
-                      </AccordionItem>
+      <section className="relative z-20 -mt-10 py-20">
+        <div className="container mx-auto max-w-4xl px-4">
+          <div className="space-y-8">
+            {faqs.map((category) => (
+              <motion.div key={category.category} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+                    <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-slate-500">
+                      <HelpCircle className="h-4 w-4" />
+                      {category.category}
+                    </h2>
+                  </div>
+                  <div className="p-6 md:p-8">
+                    {category.items.map((item) => (
+                      <AccordionItem key={item.q} question={item.q} answer={item.a} />
                     ))}
-                  </Accordion>
-                </CardContent>
-              </Card>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
+
+          <div className="mt-16 text-center">
+            <h3 className="mb-4 text-2xl font-bold text-slate-900">Still have questions?</h3>
+            <p className="mb-8 text-slate-500">Reach out and we&apos;ll help you figure out the best setup.</p>
+            <Link href="/contact">
+              <Button className="rounded-2xl bg-blue-600 px-8 text-white hover:bg-blue-500">
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Contact Us
+              </Button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

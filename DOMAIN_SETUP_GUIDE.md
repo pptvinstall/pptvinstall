@@ -1,113 +1,39 @@
 # Domain Setup Guide - pptvinstall.com
 
-## DNS Configuration for Replit Deployment
+## Domain Basics
 
-### Step 1: Point Domain to Replit
-Add these DNS records in your domain registrar's control panel:
+- Primary domain: `pptvinstall.com`
+- Canonical URL: `https://pptvinstall.com`
+- Booking page: `https://pptvinstall.com/booking`
+- Health endpoints:
+  - `https://pptvinstall.com/api/health`
+  - `https://pptvinstall.com/api/ready`
 
-```
-Type: A Record
-Name: @ (root domain)
-Value: [Your Replit deployment IP - found in deployment dashboard]
-TTL: 300 seconds
-
-Type: A Record  
-Name: www
-Value: [Your Replit deployment IP]
-TTL: 300 seconds
-
-Type: CNAME Record
-Name: www
-Value: pptvinstall.com
-TTL: 300 seconds (Alternative to A record)
-```
-
-### Step 2: SSL Certificate Configuration
-Replit automatically provisions SSL certificates. Verify after DNS propagation:
+## Production Environment Variables
 
 ```bash
-# Test HTTPS access
-curl -I https://pptvinstall.com/api/health
-# Should return: HTTP/2 200 with valid SSL certificate
-
-# Test redirect
-curl -I http://pptvinstall.com
-# Should redirect to HTTPS version
-```
-
-### Step 3: Domain Verification in Replit
-1. Navigate to your Replit deployment dashboard
-2. Add custom domain: pptvinstall.com
-3. Verify DNS propagation (usually 5-60 minutes)
-4. Enable automatic HTTPS redirect
-
-## Post-Deployment Verification Checklist
-
-### Essential Endpoints to Test
-```bash
-# Health monitoring
-https://pptvinstall.com/api/health
-Expected: {"status":"healthy"}
-
-# Main application
-https://pptvinstall.com/
-Expected: Full website loads correctly
-
-# Booking system
-https://pptvinstall.com/booking
-Expected: Booking form accessible
-
-# Admin dashboard
-https://pptvinstall.com/admin
-Expected: Login prompt appears
-```
-
-### Email Delivery Verification
-```bash
-# Test email system
-curl -X POST https://pptvinstall.com/api/email/test-send \
-  -H "Content-Type: application/json" \
-  -d '{"email":"your-test@email.com","emailType":"booking_confirmation"}'
-
-Expected: Email delivered successfully
-```
-
-### Performance Testing
-```bash
-# Response time check
-time curl -s https://pptvinstall.com/api/health
-Expected: <2 seconds response time
-
-# Load test main page
-time curl -s https://pptvinstall.com/
-Expected: <3 seconds full page load
-```
-
-## Environment Variables for Production Domain
-
-Update these in your Replit deployment:
-
-```bash
-# Domain Configuration
 DOMAIN=pptvinstall.com
 NODE_ENV=production
+DATABASE_URL=postgresql://...
 
-# CORS Configuration
-ALLOWED_ORIGINS=https://pptvinstall.com,https://www.pptvinstall.com
-
-# Cookie Configuration  
-COOKIE_DOMAIN=.pptvinstall.com
-SECURE_COOKIES=true
-
-# Email Configuration (Update with domain)
-EMAIL_FROM=noreply@pptvinstall.com
-ADMIN_EMAIL=admin@pptvinstall.com
-
-# Launch Mode (Keep Active)
-LAUNCH_MODE=true
-ENABLE_ALERTS=true
-REAL_TIME_MONITORING=true
+EMAIL_USER=pptvinstall@gmail.com
+EMAIL_PASS=your_gmail_app_password
+EMAIL_FROM="Picture Perfect TV Install <pptvinstall@gmail.com>"
+ADMIN_EMAIL=pptvinstall@gmail.com
 ```
+
+## Verification Checklist
+
+```bash
+curl -I https://pptvinstall.com/api/health
+curl -I https://pptvinstall.com/api/ready
+curl -I https://pptvinstall.com/
+```
+
+## Email Delivery
+
+Email delivery is handled by Gmail SMTP from `server/email.ts`.
+No SendGrid webhook is used in the current production setup.
 
 ## SEO & Analytics Setup
 
