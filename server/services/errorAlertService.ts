@@ -1,6 +1,6 @@
-import nodemailer from "nodemailer";
+import { createGuardedTransport } from "../outbound";
 
-const transporter = nodemailer.createTransport({
+const transporter = createGuardedTransport({
   service: "gmail",
   auth: {
     user: process.env.GMAIL_USER,

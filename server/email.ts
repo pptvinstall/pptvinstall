@@ -1,9 +1,9 @@
-import nodemailer from "nodemailer";
+import { createGuardedTransport } from "./outbound";
 import { format } from "date-fns";
 import { addHours, formatICSDate, parseBookingDateTime } from "./services/calendarService";
 import type { InsertContactMessage } from "@shared/schema";
 
-const transporter = nodemailer.createTransport({
+const transporter = createGuardedTransport({
   service: "gmail",
   auth: {
     user: process.env.GMAIL_USER,

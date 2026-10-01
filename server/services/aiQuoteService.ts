@@ -1,5 +1,6 @@
 import "../env";
 import { pricingData } from "../../client/src/data/pricing-data";
+import { outboundSuppressed } from "../outbound";
 
 type RateLimitEntry = {
   count: number;
@@ -39,7 +40,8 @@ export function getAiQuoteProtectionConfig() {
 
   return {
     siteKey,
-    enabled: Boolean(anthropicApiKey),
+    // AI is never reachable while outbound is suppressed (staging test mode).
+    enabled: Boolean(anthropicApiKey) && !outboundSuppressed(),
     turnstileRequired,
     requireTurnstile: turnstileRequired,
   };
@@ -158,6 +160,14 @@ export async function verifyTurnstileToken(token: string, ipAddress: string) {
 }
 
 export async function requestAnthropicQuote(message: string) {
+  return requestAnthropicText("Return only valid JSON for a full structured quote.", buildAiQuotePrompt(message), 1400);
+}
+
+/** Generic single-turn text request used by the quote assistant and the Job OS scope intake. */
+export async function requestAnthropicText(system: string, prompt: string, maxTokens: number) {
+  if (outboundSuppressed()) {
+    throw new Error("AI requests are suppressed in this environment (staging test mode).");
+  }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not configured.");
@@ -172,9 +182,9 @@ export async function requestAnthropicQuote(message: string) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1400,
-      system: "Return only valid JSON for a full structured quote.",
-      messages: [{ role: "user", content: buildAiQuotePrompt(message) }],
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: "user", content: prompt }],
     }),
   });
 

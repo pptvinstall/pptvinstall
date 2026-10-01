@@ -496,3 +496,6 @@ export type Promotion = z.infer<typeof promotionSchema> & {
 export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
 export type PromotionSelect = typeof promotions.$inferSelect;
 export type PromotionInsert = typeof promotions.$inferInsert;
+
+// Job OS (additive tables; see shared/jobos-schema.ts)
+export * from "./jobos-schema";

@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import twilio from "twilio";
+import { outboundSuppressed, recordSuppressed } from "../outbound";
 
 export type SmsProviderName = "twilio";
 export type SmsSendStatus = "queued" | "sent" | "delivered" | "failed" | "undelivered" | "skipped";
@@ -69,6 +70,10 @@ function getTwilioClient() {
 }
 
 export async function sendSmsMessage(request: SmsSendRequest): Promise<SmsSendResult> {
+  if (outboundSuppressed()) {
+    recordSuppressed("sms", request.to, `sms:${request.messageType ?? "message"}`);
+    return { provider: "twilio", providerMessageId: `suppressed-${Date.now()}`, status: "queued" };
+  }
   const { client, config } = getTwilioClient();
   const response = await client.messages.create({
     body: request.body,

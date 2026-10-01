@@ -1,7 +1,7 @@
 import type { Express, NextFunction, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { timingSafeEqual } from "crypto";
-import nodemailer from "nodemailer";
+import { createGuardedTransport, describeOutboundState } from "./outbound";
 import { storage } from "./storage";
 import { sendBookingEmails, sendCancellationEmail, sendContactMessageEmail, sendRescheduleEmail } from "./email";
 import { crmContacts, insertBookingSchema, insertContactMessageSchema, promotions, smsMessages, smsOptOuts } from "@shared/schema";
@@ -14,10 +14,15 @@ import {
   checkAiQuoteRateLimit,
   getAiQuoteProtectionConfig,
   requestAnthropicQuote,
+  requestAnthropicText,
   verifyTurnstileToken,
 } from "./services/aiQuoteService";
 import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { ZodError } from "zod";
+import { registerJobOsRoutes } from "./jobos/routes";
+import { JobOsService, type IntakeProvider } from "./jobos/service";
+import { DbJobOsStore } from "./jobos/dbStore";
+import { MemoryJobOsStore } from "./jobos/memoryStore";
 
 function getAdminToken() {
   const configuredToken = process.env.ADMIN_API_TOKEN?.trim() || process.env.ADMIN_PASSWORD?.trim();
@@ -549,7 +554,7 @@ export function registerRoutes(app: Express): Server {
       // Phase 2A SMS foundation only: quote request SMS is intentionally disabled
       // until outbound SMS sends are added with consent checks and message logging.
       try {
-        const transporter = nodemailer.createTransport({
+        const transporter = createGuardedTransport({
           service: "gmail",
           auth: {
             user: process.env.GMAIL_USER,
@@ -765,11 +770,28 @@ export function registerRoutes(app: Express): Server {
     res.json(updated);
   });
 
+  // --- JOB OS (owner pricing/job/invoice tools; admin-token protected, see docs/JOB_OS.md) ---
+  const intakeProvider: IntakeProvider = {
+    name: "anthropic",
+    enabled: () => getAiQuoteProtectionConfig().enabled,
+    complete: (prompt) => requestAnthropicText("Return only valid JSON matching the requested schema.", prompt, 1800),
+  };
+  const jobOsStore = process.env.JOBOS_STORE === "memory" ? new MemoryJobOsStore() : new DbJobOsStore(db);
+  registerJobOsRoutes(app, {
+    service: new JobOsService(jobOsStore, { intakeProvider, configCacheMs: 5_000 }),
+    getClientIp: (req) => getClientIpAddress(req),
+    lookupBooking: async (id) => {
+      const booking = await storage.getBookingById(id);
+      return booking ? { id: Number(booking.id ?? id), name: booking.name, zipCode: booking.zipCode, serviceType: booking.serviceType } : undefined;
+    },
+    aiEnabled: () => getAiQuoteProtectionConfig().enabled,
+  });
+
   app.get("/api/health", async (_req, res) => {
     try {
       const health = await monitoring.getSystemHealth();
       const statusCode = health.status === "unhealthy" ? 503 : 200;
-      res.status(statusCode).json(health);
+      res.status(statusCode).json({ ...health, ...describeOutboundState() });
     } catch (error) {
       console.error("Health route error:", error);
       res.status(503).json({

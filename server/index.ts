@@ -7,6 +7,10 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { alertOnError } from "./services/errorAlertService";
 import { startScheduler } from "./services/schedulerService";
+import { assertSafeBoot } from "./outbound";
+
+// Staging safety: refuse to boot against the production DB or without admin auth.
+assertSafeBoot();
 
 const app = express();
 

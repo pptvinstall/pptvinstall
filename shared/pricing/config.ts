@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stableStringify } from "./hash";
 import { MOUNT_TYPES, SCHEDULE_MODIFIERS, SIZE_BANDS, EXTRA_KINDS } from "./scope";
 
 // Economics configuration. Everything the engine "believes" about cost lives here,
@@ -319,6 +320,7 @@ export function diffConfigs(before: unknown, after: unknown, prefix = ""): strin
     }
     return out;
   }
-  if (JSON.stringify(before) !== JSON.stringify(after)) out.push(prefix);
+  // stableStringify: Postgres jsonb does not preserve key order, so compare canonically.
+  if (stableStringify(before) !== stableStringify(after)) out.push(prefix);
   return out;
 }

@@ -128,3 +128,10 @@ test("requiresReview is set for unknown walls and custom-quote items", () => {
   assert.equal(compose(undefined, scope([tv()], { extras: [{ kind: "soundbar", qty: 1 }] })).requiresReview, true);
   assert.equal(compose().requiresReview, false, "a fully specified standard job needs no review");
 });
+
+test("config diff is key-order independent (jsonb round trips reorder keys)", () => {
+  const a = { recipes: { x: { lines: [{ label: "a", qty: 1, unitCostCents: 5 }] } } };
+  const b = { recipes: { x: { lines: [{ unitCostCents: 5, qty: 1, label: "a" }] } } };
+  assert.deepEqual(diffConfigs(a, b), []);
+  assert.deepEqual(diffConfigs(a, { recipes: { x: { lines: [{ label: "a", qty: 2, unitCostCents: 5 }] } } }), ["recipes.x.lines"]);
+});
