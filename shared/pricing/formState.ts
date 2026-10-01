@@ -10,6 +10,7 @@ import { parseJobScope, type JobScope } from "./scope";
 function mapTv(tv: TVConfig): JobScope["tvs"][number] {
   return {
     id: tv.id,
+    site: 0,
     sizeBand: tv.size,
     wall: tv.wallType === "highrise" ? "steel" : tv.wallType,
     location: tv.location,

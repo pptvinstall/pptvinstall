@@ -48,6 +48,13 @@ export function assertCustomerSafe<T>(value: T): T {
   return value;
 }
 
+function customerNotes(c: QuoteComposition): string[] {
+  const notes = c.pricing.legacy.customerFlags.slice();
+  if (c.pricing.status !== "priced") notes.push("This is an estimate. We will confirm the final price once a few details are verified.");
+  for (const e of c.pricing.exclusions) if (!notes.includes(e)) notes.push(e);
+  return notes;
+}
+
 export function toCustomerView(composition: QuoteComposition, meta: { version: number; createdAt: string; packageName?: string }): CustomerQuoteView {
   const view: CustomerQuoteView = {
     version: meta.version,
@@ -59,7 +66,7 @@ export function toCustomerView(composition: QuoteComposition, meta: { version: n
     })),
     subtotalCents: composition.customerLines.reduce((s, l) => s + (l.amountCents ?? 0), 0),
     totalCents: composition.customerTotalCents,
-    notes: composition.pricing.legacy.customerFlags.slice(),
+    notes: customerNotes(composition),
     requiresReview: composition.requiresReview,
     createdAt: meta.createdAt,
   };

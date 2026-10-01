@@ -1,6 +1,9 @@
 import { calculateQuote, type QuoteFormState, type TVConfig, type CameraConfig } from "../../client/src/lib/quote-calculator";
 import { pricingData } from "../../client/src/data/pricing-data";
 import type { JobScope, TvScope } from "./scope";
+import type { EconomicsConfig } from "./config";
+import type { WorkComputation } from "./workEngine";
+import { phasesOf } from "./work";
 import { toCents, type Cents } from "./money";
 
 // Adapter from the structured scope to the CURRENT customer-facing catalog.
@@ -67,7 +70,7 @@ export function scopeToLegacyState(scope: JobScope, notes: string[] = []): Quote
   };
 }
 
-export function computeLegacyPrice(scope: JobScope): LegacyPrice {
+export function computeLegacyPrice(scope: JobScope, work?: WorkComputation, _cfg?: EconomicsConfig): LegacyPrice {
   const mappingNotes: string[] = [];
   const state = scopeToLegacyState(scope, mappingNotes);
   const quote = calculateQuote(state);
@@ -98,6 +101,38 @@ export function computeLegacyPrice(scope: JobScope): LegacyPrice {
   }
   for (const extra of scope.extras) {
     if (["shelf", "artwork", "custom"].includes(extra.kind)) customQuoteItems.push(`${extra.label ?? extra.kind} — custom quote`);
+  }
+
+  // Universal work items: an owner-defined template price is the only "catalog" price. TV take-down / remount
+  // use the existing catalog. Everything else has no catalog price and is a custom-quote line the owner must price.
+  if (work) {
+    const lines: Array<{ name: string; lineTotalCents: Cents }> = [];
+    scope.items.forEach((item, i) => {
+      const r = work.items[i];
+      if (!r) return;
+      if (r.templatePriceCents !== null) {
+        totalCents += r.templatePriceCents;
+        lines.push({ name: r.customerText, lineTotalCents: r.templatePriceCents });
+        return;
+      }
+      if (item.category === "tv") {
+        const phases = phasesOf(item);
+        const down = phases.some((a) => a === "unmount" || a === "dismount" || a === "remove" || a === "relocate");
+        const up = phases.some((a) => a === "remount" || a === "relocate");
+        const placeOnly = phases.every((a) => a === "unmount" || a === "dismount" || a === "remove" || a === "remount" || a === "relocate");
+        if (placeOnly && (down || up)) {
+          let each = 0;
+          if (down) each += toCents(pricingData.tvMounting.unmount.price);
+          if (up) each += toCents(pricingData.tvMounting.remount.price);
+          const cents = each * item.quantity;
+          totalCents += cents;
+          lines.push({ name: r.customerText, lineTotalCents: cents });
+          return;
+        }
+      }
+      customQuoteItems.push(r.customerText);
+    });
+    if (lines.length) groups.push({ title: "Additional work", subtitle: undefined, items: lines });
   }
 
   return { totalCents, groups, customQuoteItems, customerFlags: quote.flags, mappingNotes };

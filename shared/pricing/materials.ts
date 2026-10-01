@@ -1,6 +1,7 @@
 import type { EconomicsConfig } from "./config";
 import type { JobScope } from "./scope";
 import { safeCents, type Cents } from "./money";
+import type { WorkComputation } from "./workEngine";
 
 export interface MaterialLine {
   recipe: string;
@@ -10,6 +11,10 @@ export interface MaterialLine {
   costCents: Cents;
   /** Where this line came from, for the audit trail. */
   basis: string;
+  /** Who supplies it. Customer-supplied lines are tracked at zero cost to PPTV. Defaults to PPTV. */
+  supplier?: "pptv" | "customer";
+  /** Work item this line belongs to, when it came from the universal work model. */
+  itemId?: string;
 }
 
 export interface MaterialBreakdown {
@@ -36,7 +41,7 @@ function addRecipe(lines: MaterialLine[], cfg: EconomicsConfig, recipeId: string
 }
 
 /** Choose and cost material recipes from scope. Selection is code; quantities and costs are config. */
-export function computeMaterials(scope: JobScope, cfg: EconomicsConfig): MaterialBreakdown {
+export function computeMaterials(scope: JobScope, cfg: EconomicsConfig, work?: WorkComputation): MaterialBreakdown {
   const lines: MaterialLine[] = [];
   let drywallLike = 0;
   let masonry = 0;
@@ -90,6 +95,8 @@ export function computeMaterials(scope: JobScope, cfg: EconomicsConfig): Materia
       });
     }
   }
+
+  if (work) lines.push(...work.materialLines);
 
   const costCents = lines.reduce((sum, l) => sum + l.costCents, 0);
   const markupCents = safeCents(costCents * cfg.business.materialMarkupPct);

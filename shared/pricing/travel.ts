@@ -78,8 +78,30 @@ export function computeTravel(context: JobContext, cfg: EconomicsConfig, extraDr
 
   const bandedOneWayMiles = bandUp(oneWayMiles ?? 0, t.mileageBandMiles);
   const trafficMinutes = bandUp((oneWayMinutes ?? 0) * trafficMultiplier, t.driveMinuteBand);
-  const roundTripMiles = bandedOneWayMiles * 2;
-  const roundTripDriveMinutes = trafficMinutes * 2 + Math.max(0, extraDriveMinutes);
+
+  // Multi-stop routes (e.g. a move: old address then new address) use the same banding and cost model:
+  // home -> stop 1, each leg between stops, then the return from the last stop (default: same as outbound).
+  const stops = context.extraStops ?? [];
+  let routeMiles = bandedOneWayMiles * 2;
+  let routeMinutes = trafficMinutes * 2;
+  if (stops.length) {
+    const resolveLeg = (miles: number | undefined, mins: number | undefined, what: string): { miles: number; minutes: number } => {
+      if (miles === undefined && mins === undefined) {
+        uncertainties.push(`${what} not entered: assuming ${t.unknownRouteOneWayMiles} mi / ${t.unknownRouteOneWayMinutes} min.`);
+        return { miles: t.unknownRouteOneWayMiles, minutes: t.unknownRouteOneWayMinutes };
+      }
+      if (miles === undefined) return { miles: Math.round((mins ?? 0) * 0.5), minutes: mins ?? 0 };
+      if (mins === undefined) return { miles, minutes: Math.round(miles * 2) };
+      return { miles, minutes: mins };
+    };
+    const legs = stops.map((s, i) => resolveLeg(s.legMiles, s.legMinutes, `Distance to stop ${i + 2}`));
+    const last = stops[stops.length - 1]!;
+    const ret = last.returnMiles === undefined && last.returnMinutes === undefined ? { miles: oneWayMiles ?? 0, minutes: oneWayMinutes ?? 0 } : resolveLeg(last.returnMiles, last.returnMinutes, "Return drive");
+    routeMiles = bandedOneWayMiles + legs.reduce((s, l) => s + bandUp(l.miles, t.mileageBandMiles), 0) + bandUp(ret.miles, t.mileageBandMiles);
+    routeMinutes = trafficMinutes + legs.reduce((s, l) => s + bandUp(l.minutes * trafficMultiplier, t.driveMinuteBand), 0) + bandUp(ret.minutes * trafficMultiplier, t.driveMinuteBand);
+  }
+  const roundTripMiles = routeMiles;
+  const roundTripDriveMinutes = routeMinutes + Math.max(0, extraDriveMinutes);
 
   const fuelCents = safeCents((roundTripMiles / t.mpg) * t.fuelPricePerGalCents);
   const vehicleCents = safeCents(roundTripMiles * t.vehicleCostPerMileCents);

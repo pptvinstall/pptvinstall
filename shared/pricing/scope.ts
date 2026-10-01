@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workItemSchema } from "./work";
 
 // Structured job scope. This is the ONLY input the pricing engine accepts.
 // Free text, photos and AI output must be reduced to this shape (and validated)
@@ -39,6 +40,8 @@ export type ExtraKind = (typeof EXTRA_KINDS)[number];
 export const tvScopeSchema = z
   .object({
     id: z.string().min(1).max(64).default("tv-1"),
+    /** 0 = first address; 1.. = extra stops (see JobContext.extraStops). */
+    site: z.number().int().min(0).max(4).default(0),
     sizeBand: z.enum(SIZE_BANDS).default("56+"),
     /** Exact diagonal, optional. When present it must agree with the size band. */
     inches: z.number().int().min(19).max(120).optional(),
@@ -87,12 +90,22 @@ export const accessScopeSchema = z
   })
   .default({ level: "normal", furnitureMovement: false, ladderHeight: false, helper: false });
 
-export const jobScopeSchema = z.object({
-  tvs: z.array(tvScopeSchema).max(12).default([]),
-  extras: z.array(extraScopeSchema).max(20).default([]),
-  access: accessScopeSchema,
-  cleanup: z.enum(CLEANUP_LEVELS).default("standard"),
-});
+export const jobScopeSchema = z
+  .object({
+    tvs: z.array(tvScopeSchema).max(12).default([]),
+    extras: z.array(extraScopeSchema).max(20).default([]),
+    /** Universal work items (any mount/install/assemble/remove/disassemble work). TVs may also appear here via the tv extension. */
+    items: z.array(workItemSchema).max(60).default([]),
+    access: accessScopeSchema,
+    cleanup: z.enum(CLEANUP_LEVELS).default("standard"),
+  })
+  .superRefine((scope, ctx) => {
+    const seen = new Set<string>();
+    scope.items.forEach((item, i) => {
+      if (seen.has(item.id)) ctx.addIssue({ code: "custom", path: ["items", i, "id"], message: `duplicate item id "${item.id}"` });
+      seen.add(item.id);
+    });
+  });
 
 export type TvScope = z.infer<typeof tvScopeSchema>;
 export type ExtraScope = z.infer<typeof extraScopeSchema>;
@@ -120,6 +133,23 @@ export const jobContextSchema = z.object({
   awkwardGap: z.boolean().default(false),
   /** Manual traffic multiplier supplied by owner or a provider. Clamped by config. */
   trafficMultiplier: z.number().min(0.5).max(5).optional(),
+  /**
+   * Additional work sites after the first (e.g. the new address of a move). Items reference them by
+   * `site` (1-based). legMiles/legMinutes: drive from the previous site. returnMiles/returnMinutes:
+   * drive home from the LAST stop (defaults to the first site's one-way distance).
+   */
+  extraStops: z
+    .array(
+      z.object({
+        label: z.string().max(80).optional(),
+        legMiles: z.number().min(0).max(500).optional(),
+        legMinutes: z.number().min(0).max(600).optional(),
+        returnMiles: z.number().min(0).max(500).optional(),
+        returnMinutes: z.number().min(0).max(600).optional(),
+      }),
+    )
+    .max(4)
+    .default([]),
 });
 
 export type JobContext = z.infer<typeof jobContextSchema>;

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { stableStringify } from "./hash";
+import { DEFAULT_WORK_CONFIG, workConfigSchema } from "./workConfig";
 import { MOUNT_TYPES, SCHEDULE_MODIFIERS, SIZE_BANDS, EXTRA_KINDS } from "./scope";
 
 // Economics configuration. Everything the engine "believes" about cost lives here,
@@ -126,6 +127,8 @@ export const economicsConfigSchema = z
     recipes: z.record(z.string().min(1).max(40), recipeSchema),
     /** Cost (not sell price) of PPTV-supplied mounts, keyed "type:band". */
     mountCostsCents: z.record(mountCostKey, cents),
+    /** Universal work model: taxonomy, templates, bands, recipes, limits. Optional in stored configs (defaults fill in). */
+    work: workConfigSchema.default(DEFAULT_WORK_CONFIG),
     /** Fixed catalog sell prices for PPTV mounts are NOT here; they stay in the legacy catalog. */
   })
   .strict()
@@ -277,6 +280,7 @@ export const DEFAULT_ECONOMICS_CONFIG: EconomicsConfig = {
     "full_motion:32-55": 3_800,
     "full_motion:56+": 5_200,
   },
+  work: DEFAULT_WORK_CONFIG,
 };
 
 export class ConfigValidationError extends Error {

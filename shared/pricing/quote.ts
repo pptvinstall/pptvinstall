@@ -67,15 +67,23 @@ function allocateDynamicLines(pricing: PricingResult, totalCents: Cents): Custom
   const groups = new Map<string, { label: string; weight: number }>();
   for (const task of pricing.labor.tasks) {
     const m = /^(tv\d+)\./.exec(task.key);
-    const key = m ? m[1]! : task.key.startsWith("extra") ? task.key : "visit";
-    const label = m ? `TV ${m[1]!.slice(2)} installation` : key === "visit" ? "Visit, setup and cleanup" : task.label;
+    const w = /^(item\d+)\./.exec(task.key);
+    const key = m ? m[1]! : w ? w[1]! : task.key.startsWith("extra") ? task.key : "visit";
+    const label = m
+      ? `TV ${m[1]!.slice(2)} installation`
+      : w
+        ? pricing.work.items[Number(w[1]!.slice(4)) - 1]?.customerText ?? task.label
+        : key === "visit"
+          ? "Visit, setup and cleanup"
+          : task.label;
     const entry = groups.get(key) ?? { label, weight: 0 };
     entry.weight += task.minutes * 100;
     groups.set(key, entry);
   }
   for (const line of pricing.materials.lines) {
-    const key = groups.has("tv1") ? "tv1" : "visit";
-    const entry = groups.get(key);
+    const idx = line.itemId ? pricing.work.items.findIndex((i) => i.itemId === line.itemId) : -1;
+    const key = idx >= 0 && groups.has(`item${idx + 1}`) ? `item${idx + 1}` : groups.has("tv1") ? "tv1" : "visit";
+    const entry = groups.get(key) ?? groups.get("visit");
     if (entry) entry.weight += line.costCents;
   }
   const entries = Array.from(groups.values());
@@ -98,6 +106,16 @@ export function composeQuote(args: {
   const pricing = priceScope(args.scope, args.context, config);
   const adjustment = args.adjustment ? ownerAdjustmentSchema.parse(args.adjustment) : null;
   const internalFlags = [...pricing.flags];
+
+  // Review gates. Regulated, structural or oversized work must never be quoted like ordinary mounting.
+  if (pricing.status === "not_supported") {
+    const why = pricing.statusReasons.filter((r) => r.severity === "not_supported").map((r) => r.message).join("; ");
+    throw new QuotePolicyError(`This scope includes work PPTV does not do: ${why}`, "NOT_SUPPORTED");
+  }
+  if (pricing.status === "manual_review_required" && adjustment?.type !== "override") {
+    const why = pricing.statusReasons.filter((r) => r.severity === "manual_review").map((r) => r.message).join("; ");
+    throw new QuotePolicyError(`Manual review required before quoting: ${why}. After review, set the price with an owner override.`, "MANUAL_REVIEW_REQUIRED");
+  }
 
   const dynamic = config.pricingMode === "dynamic";
   const baseSource = dynamic ? "engine_recommended" : "legacy_catalog";
@@ -142,7 +160,7 @@ export function composeQuote(args: {
       customerTotalCents = adjustment.amountCents;
       discountAppliedCents = Math.max(0, subtotalCents - adjustment.amountCents);
       const delta = adjustment.amountCents - subtotalCents;
-      if (delta !== 0) customerLines.push({ label: "Adjustment", amountCents: delta });
+      if (delta !== 0) customerLines.push({ label: pricing.legacy.customQuoteItems.length > 0 && delta > 0 ? "Work priced after review" : "Adjustment", amountCents: delta });
     }
   }
 
@@ -152,6 +170,7 @@ export function composeQuote(args: {
 
   const requiresReview =
     pricing.empty ||
+    pricing.status !== "priced" ||
     pricing.legacy.customQuoteItems.length > 0 ||
     pricing.uncertainties.some((u) => /unknown|not verified|unverified/i.test(u));
 
