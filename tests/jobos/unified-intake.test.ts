@@ -10,6 +10,7 @@ import {
   parseImageAnalysis,
   proposalToScope,
   sizeFromModelNumber,
+  shouldEscalateHeuristicIntake,
   verifyEvidence,
   type ImageAnalysisResult,
 } from "../../shared/jobos";
@@ -39,6 +40,17 @@ test("vision contract: strict schema, prices rejected, malformed rejected, unkno
   assert.throws(() => parseImageAnalysis(total, ["m1"]), ImageAnalysisValidationError);
   const badConfidence = JSON.stringify({ images: [img("m1", "tv", { tvs: [{ ref: "tv-a", wall: { value: "brick", confidence: 7 } }] })] });
   assert.throws(() => parseImageAnalysis(badConfidence, ["m1"]), ImageAnalysisValidationError);
+});
+
+test("text AI cost gate: ordinary quotes stay deterministic and only unrecognized work escalates", () => {
+  const ordinary = heuristicIntake("2 TVs, one 75 over fireplace and one 55 in bedroom, need outlets behind both", W);
+  assert.equal(shouldEscalateHeuristicIntake(ordinary, "2 TVs, one 75 over fireplace and one 55 in bedroom, need outlets behind both"), false);
+
+  const simple = heuristicIntake("Mount my 65 inch TV on drywall, I already have the mount.", W);
+  assert.equal(shouldEscalateHeuristicIntake(simple, "Mount my 65 inch TV on drywall, I already have the mount."), false);
+
+  const unknown = heuristicIntake("Can you handle my weird setup tomorrow? I need help with it.", W);
+  assert.equal(shouldEscalateHeuristicIntake(unknown, "Can you handle my weird setup tomorrow? I need help with it."), true);
 });
 
 test("TV model numbers give a size deterministically, or nothing", () => {

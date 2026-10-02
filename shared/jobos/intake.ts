@@ -266,6 +266,21 @@ export function buildIntakePrompt(message: string, work: WorkConfig = DEFAULT_WO
   ].join("\n");
 }
 
+/**
+ * Cost gate for text AI. The deterministic parser gets first shot; paid AI is only useful when it
+ * could materially identify the work itself. Missing wall/power/mount facts are questions for a
+ * person, not a reason to spend another model call guessing at facts the customer never stated.
+ */
+export function shouldEscalateHeuristicIntake(intake: AiScopeIntake, text: string): boolean {
+  const recognizedWork = intake.tvs.length + intake.items.length + intake.extras.length;
+  if (recognizedWork === 0) return text.trim().length >= 5;
+
+  // A clearly mentioned item that only mapped to "custom" may benefit from one AI taxonomy pass.
+  if (intake.items.some((item) => item.category.status !== "unknown" && item.category.value === "custom")) return true;
+
+  return false;
+}
+
 // Photo intake: interface and schema only. Photo output is advisory and always requires
 // on-site verification. No provider is wired; see docs/AI_INTAKE.md.
 export const photoSuggestionSchema = z

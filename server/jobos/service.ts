@@ -48,6 +48,7 @@ import {
   parseIntakeResponse,
   paymentInputSchema,
   scopeSignature,
+  shouldEscalateHeuristicIntake,
   verifyEvidence,
   type CompletedItemRecord,
   type CompletedJobRecord,
@@ -696,18 +697,24 @@ export class JobOsService {
     const aiUsable = opts.allowAi && !!provider && provider.enabled();
     const active = await this.getActiveConfig();
     const work = active.config.work;
+
+    // Rules first. Unknown facts are intentionally left for confirmation; they are not a reason
+    // to pay a model to guess. Escalate only when the rules could not identify the work (or only
+    // found a custom taxonomy item that AI may be able to map safely).
+    let intake = heuristicIntake(clean, work);
+    const aiEscalated = aiUsable && shouldEscalateHeuristicIntake(intake, clean);
     // The taxonomy (category keywords) is config, so the cache key includes the config version.
-    const hash = hashObject({ m: normalized, mode: aiUsable ? "ai" : "heuristic", v: active.version });
+    // Version the gate mode so older "AI always" cache entries cannot force a paid-AI result.
+    const hash = hashObject({ m: normalized, mode: aiEscalated ? "ai-fallback-v1" : "heuristic-v2", v: active.version });
 
     const cached = await this.store.getIntakeCache(hash);
     if (cached) {
-      const intake = parseIntakeResponse(JSON.stringify(cached.intake));
-      return { intake, draft: intakeToScopeDraft(intake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
+      const cachedIntake = parseIntakeResponse(JSON.stringify(cached.intake));
+      return { intake: cachedIntake, draft: intakeToScopeDraft(cachedIntake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
     }
 
     let source: "ai" | "heuristic" = "heuristic";
-    let intake = heuristicIntake(clean, work);
-    if (aiUsable && provider) {
+    if (aiEscalated && provider) {
       try {
         intake = parseIntakeResponse(await provider.complete(buildIntakePrompt(clean, work)));
         source = "ai";
