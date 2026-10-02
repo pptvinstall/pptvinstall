@@ -130,3 +130,46 @@ export interface IntakeCacheRecord {
   createdAt: string;
   hits: number;
 }
+
+/** Owner-only summary of one shadow-priced public quote. */
+export interface ShadowSampleSummary {
+  shownSource: "catalog" | "engine";
+  catalogHasCustomQuoteLines: boolean;
+  premiumCents: number;
+  confidence: "high" | "medium" | "low";
+  complexity: "standard" | "moderate" | "complex";
+  premiumPct: number;
+  premiumFactors: string[];
+  onsiteMinutes: number;
+  totalOwnerMinutes: number;
+  helperMinutes: number;
+  materialsCostCents: number;
+  travelCostCents: number;
+  travelSource: string;
+  overheadCents: number;
+  atShown: { helperCostCents: number; costToServeCents: number; ownerNetCents: number; marginPct: number; effectivePerHourCents: number };
+  atRecommended: { helperCostCents: number; costToServeCents: number; ownerNetCents: number; marginPct: number; effectivePerHourCents: number };
+  flags: string[];
+  questions: string[];
+  why: string[];
+  engineVersion: string;
+}
+
+export interface ShadowSampleRecord {
+  id: string;
+  day: string;
+  sampleKey: string;
+  source: "public_quote";
+  zip: string | null;
+  configVersion: number;
+  pricingMode: string;
+  shownCents: number;
+  recommendedCents: number;
+  floorCents: number;
+  status: string;
+  scope: unknown;
+  context: unknown;
+  summary: ShadowSampleSummary;
+  jobId: string | null;
+  createdAt: string;
+}

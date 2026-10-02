@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, StoredConfig } from "@shared/jobos/types";
+import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
 import { deriveInvoiceStatus, formatInvoiceNumber } from "@shared/jobos/invoice";
 import { NotFoundError, type JobOsStore, type NewInvoice, type NewJob, type NewPayment, type NewQuoteVersion, type JobPatch } from "./store";
 
@@ -19,6 +19,7 @@ export class MemoryJobOsStore implements JobOsStore {
   private counters = new Map<number, number>();
   private actuals = new Map<string, JobActualsRecord>();
   private intake = new Map<string, IntakeCacheRecord>();
+  private shadow: ShadowSampleRecord[] = [];
   private eventSeq = 0;
   private configSeq = 0;
 
@@ -240,5 +241,25 @@ export class MemoryJobOsStore implements JobOsStore {
   }
   async putIntakeCache(rec: { inputHash: string; source: "ai" | "heuristic"; intake: unknown }) {
     this.intake.set(rec.inputHash, { ...clone(rec), createdAt: now(), hits: 0 });
+  }
+
+  async recordShadowSample(rec: Omit<ShadowSampleRecord, "id" | "createdAt" | "jobId">) {
+    if (this.shadow.some((x) => x.day === rec.day && x.sampleKey === rec.sampleKey)) return null;
+    const row: ShadowSampleRecord = { ...clone(rec), id: randomUUID(), createdAt: now(), jobId: null };
+    this.shadow.push(row);
+    return clone(row);
+  }
+  async listShadowSamples(limit: number) {
+    return clone([...this.shadow].reverse().slice(0, limit));
+  }
+  async getShadowSample(id: string) {
+    const row = this.shadow.find((x) => x.id === id);
+    return row ? clone(row) : null;
+  }
+  async linkShadowSampleJob(id: string, jobId: string) {
+    const row = this.shadow.find((x) => x.id === id);
+    if (!row) throw new NotFoundError("Shadow sample");
+    row.jobId = jobId;
+    return clone(row);
   }
 }

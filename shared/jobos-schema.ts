@@ -185,3 +185,31 @@ export const aiIntakeCache = pgTable("ai_intake_cache", {
   hits: integer("hits").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Shadow pricing samples: one row per distinct public quote per day (deduped by sample_key). The customer was shown
+ * the catalog (or, in dynamic mode, the engine) price; the engine's full economics are stored for the owner only.
+ * No contact details are stored: only ZIP and the structured scope the customer selected.
+ */
+export const pricingShadowSamples = pgTable(
+  "pricing_shadow_samples",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    day: varchar("day", { length: 10 }).notNull(),
+    sampleKey: varchar("sample_key", { length: 64 }).notNull(),
+    source: varchar("source", { length: 20 }).notNull(),
+    zip: varchar("zip", { length: 5 }),
+    configVersion: integer("config_version").notNull(),
+    pricingMode: varchar("pricing_mode", { length: 12 }).notNull(),
+    shownCents: integer("shown_cents").notNull(),
+    recommendedCents: integer("recommended_cents").notNull(),
+    floorCents: integer("floor_cents").notNull(),
+    status: varchar("status", { length: 32 }).notNull(),
+    scope: jsonb("scope").notNull(),
+    context: jsonb("context").notNull(),
+    summary: jsonb("summary").notNull(),
+    jobId: uuid("job_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ dayKeyIdx: uniqueIndex("pricing_shadow_samples_day_key_idx").on(t.day, t.sampleKey), createdIdx: index("pricing_shadow_samples_created_idx").on(t.createdAt) }),
+);

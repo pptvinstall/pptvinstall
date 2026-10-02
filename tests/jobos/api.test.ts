@@ -78,6 +78,11 @@ test("every admin Job OS endpoint rejects missing and wrong tokens", async () =>
     ["POST", "/api/admin/job-os/intake/parse"],
     ["POST", "/api/admin/job-os/intake/photos"],
     ["GET", "/api/admin/job-os/outbox"],
+    ["GET", "/api/admin/job-os/shadow-samples"],
+    ["POST", `/api/admin/job-os/shadow-samples/${id}/job`],
+    ["PUT", `/api/admin/job-os/work-templates/x`],
+    ["DELETE", `/api/admin/job-os/work-templates/x`],
+    ["PUT", `/api/admin/job-os/work-categories/x`],
   ];
   for (const [method, path] of endpoints) {
     const none = await call(method, path, method === "GET" ? undefined : {}, { "content-type": "application/json" });
@@ -222,4 +227,77 @@ test("health reports environment and suppression without exposing secrets", asyn
   assert.equal(r.json.appEnv, "staging");
   assert.equal(r.json.outboundSuppressed, true);
   assert.ok(!r.text.includes(process.env.ADMIN_API_TOKEN!));
+});
+
+test("public /quote pricing: legacy shows the catalog, shadow stores owner-only economics, dynamic needs explicit confirmation", async () => {
+  const { calculateQuote } = await import("../../client/src/lib/quote-calculator");
+  const form = {
+    tvs: [{ id: "browser-uuid-1", size: "56+", wallType: "brick", location: "standard", hasMount: false, mountType: "tilting", wireConcealment: true, outletDistance: null, unmounting: false }],
+    cameras: [],
+    doorbell: false,
+    doorbellBrand: "Ring",
+    soundbar: false,
+    surroundSound: false,
+    floodlight: false,
+    handymanMinutes: 0,
+    zipCode: "30030",
+  };
+  const catalogCents = Math.round(calculateQuote({ ...form, notes: "" } as never).total * 100);
+  const pub = (body: unknown) => call("POST", "/api/quote/price", body, { "content-type": "application/json" });
+  const banned = ["floor", "margin", "recommend", "premium", "helper", "overhead", "costToServe", "labor", "calibrat", "risk", "profit", "/hr"];
+
+  // Legacy: catalog price, nothing stored.
+  assert.equal((await call("GET", "/api/quote/price-source", undefined, {})).json.source, "catalog");
+  const legacy = await pub({ form, stage: "review" });
+  assert.equal(legacy.status, 200);
+  assert.deepEqual(legacy.json, { source: "catalog", totalCents: catalogCents });
+  assert.equal((await call("GET", "/api/admin/job-os/shadow-samples")).json.stats.count, 0);
+  // Free-text notes are refused, never stored.
+  assert.equal((await pub({ form: { ...form, notes: "call me at 555-1234" }, stage: "review" })).json.totalCents, catalogCents);
+  assert.equal((await pub({ form, stage: "review", name: "x" })).status, 400);
+
+  // Shadow: customer sees the identical catalog price; the owner gets the engine comparison.
+  const cfg = (await call("GET", "/api/admin/job-os/config")).json.config;
+  assert.equal((await call("PUT", "/api/admin/job-os/config", { config: { ...cfg, pricingMode: "shadow" }, reason: "start shadow pricing" })).status, 200);
+  const shadow = await pub({ form, stage: "review" });
+  assert.deepEqual(shadow.json, { source: "catalog", totalCents: catalogCents });
+  await pub({ form: { ...form, tvs: [{ ...form.tvs[0], id: "another-browser-uuid" }] }, stage: "review" }); // same choices, same day: deduped
+  await pub({ form, stage: "live" }); // live typing is never stored
+  const report = (await call("GET", "/api/admin/job-os/shadow-samples")).json;
+  assert.equal(report.stats.count, 1);
+  const sample = report.samples[0];
+  assert.equal(sample.shownCents, catalogCents);
+  assert.equal(sample.zip, "30030");
+  assert.ok(sample.recommendedCents >= sample.floorCents && sample.floorCents >= 10_000);
+  assert.ok(sample.summary.atShown.effectivePerHourCents > 0 && sample.summary.premiumFactors.includes("Masonry / stone"));
+  assert.equal(sample.context.routeSource, "reference_table", "route came from the ZIP reference table, with its revision");
+  assert.ok(!JSON.stringify(sample).includes("browser-uuid"), "no browser ids stored");
+
+  // Quote -> job.
+  const job = await call("POST", `/api/admin/job-os/shadow-samples/${sample.id}/job`, {});
+  assert.equal(job.status, 201);
+  assert.equal(job.json.source, "quote_tool");
+  assert.equal((await call("POST", `/api/admin/job-os/shadow-samples/${sample.id}/job`, {})).status, 409);
+
+  // Dynamic requires the explicit owner confirmation, server-side.
+  const blocked = await call("PUT", "/api/admin/job-os/config", { config: { ...cfg, pricingMode: "dynamic" }, reason: "go dynamic" });
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.json.code, "DYNAMIC_CONFIRMATION_REQUIRED");
+  assert.equal((await call("GET", "/api/quote/price-source", undefined, {})).json.source, "catalog");
+  const ok = await call("PUT", "/api/admin/job-os/config", { config: { ...cfg, pricingMode: "dynamic" }, reason: "go dynamic", confirmDynamic: "change customer prices" });
+  assert.equal(ok.status, 200);
+  assert.equal((await call("GET", "/api/quote/price-source", undefined, {})).json.source, "engine");
+  const dyn = await pub({ form, stage: "review" });
+  assert.equal(dyn.json.source, "engine");
+  assert.ok(dyn.json.totalCents >= 10_000);
+  assert.equal(dyn.json.lines.reduce((s: number, l: { amountCents: number }) => s + l.amountCents, 0), dyn.json.totalCents);
+  assert.ok(["firm", "estimate"].includes(dyn.json.status));
+  for (const res of [legacy, shadow, dyn]) for (const word of banned) assert.ok(!res.text.toLowerCase().includes(word.toLowerCase()), `public payload leaked "${word}"`);
+
+  // Rolling back to the dynamic version later also needs the confirmation; leaving dynamic does not.
+  const dynamicVersion = ok.json.version;
+  const back = await call("PUT", "/api/admin/job-os/config", { config: { ...cfg, pricingMode: "legacy" }, reason: "back to catalog" });
+  assert.equal(back.status, 200);
+  assert.equal((await call("POST", "/api/admin/job-os/config/rollback", { version: dynamicVersion })).status, 409);
+  assert.equal((await call("GET", "/api/quote/price-source", undefined, {})).json.source, "catalog");
 });

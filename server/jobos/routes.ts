@@ -50,10 +50,12 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   const publicLimiter = createRateLimiter({ max: 60, windowMs: 60_000 });
   const acceptLimiter = createRateLimiter({ max: 10, windowMs: 60_000 });
   const intakeLimiter = createRateLimiter({ max: 30, windowMs: 60 * 60_000 });
+  const priceLimiter = createRateLimiter({ max: 90, windowMs: 60_000 });
   const actor = "owner";
 
   if (!jobOsEnabled()) {
-    app.use(["/api/admin/job-os", "/api/quotes"], (_req, res) => res.status(404).json({ message: "Not found" }));
+    // Public /quote falls back to the browser's catalog calculator when these return 404.
+    app.use(["/api/admin/job-os", "/api/quotes", "/api/quote/price", "/api/quote/price-source"], (_req, res) => res.status(404).json({ message: "Not found" }));
     return;
   }
 
@@ -73,8 +75,8 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   app.get(`${A}/config/events`, wrap(async (_req, res) => res.json(await service.listConfigEventsForAdmin())));
   app.put(`${A}/config`, wrap(async (req, res) => res.json(await service.updateConfig(req.body, actor))));
   app.post(`${A}/config/rollback`, wrap(async (req, res) => {
-    const { version } = z.object({ version: z.number().int().min(1) }).parse(req.body);
-    res.json(await service.rollbackConfig(version, actor));
+    const { version, confirmDynamic } = z.object({ version: z.number().int().min(1), confirmDynamic: z.string().max(60).optional() }).parse(req.body);
+    res.json(await service.rollbackConfig(version, actor, confirmDynamic));
   }));
 
   // ---- stateless pricing preview (owner)
@@ -154,6 +156,23 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
 
   // ---- staging inspection: what outbound traffic was suppressed
   app.get(`${A}/outbox`, wrap(async (_req, res) => res.json({ ...describeOutboundState(), entries: getOutbox() })));
+
+  // ---- shadow pricing (owner only)
+  app.get(`${A}/shadow-samples`, wrap(async (req, res) => {
+    const limit = typeof req.query.limit === "string" ? z.coerce.number().int().min(1).max(500).parse(req.query.limit) : 100;
+    res.json(await service.shadowReport(limit));
+  }));
+  app.post(`${A}/shadow-samples/:id/job`, wrap(async (req, res) => res.status(201).json(await service.createJobFromShadowSample(idParam(req)))));
+
+  // ---- public /quote tool pricing (customer-safe only; the browser falls back to its catalog calculator on any error)
+  app.get("/api/quote/price-source", wrap(async (_req, res) => {
+    res.set("Cache-Control", "no-store").json(await service.publicPriceSource());
+  }));
+  app.post("/api/quote/price", wrap(async (req, res) => {
+    const limit = priceLimiter.check(deps.getClientIp(req));
+    if (!limit.allowed) return res.status(429).set("Retry-After", String(limit.retryAfterSeconds)).json({ message: "Too many requests" });
+    res.set("Cache-Control", "no-store").json(await service.publicPrice(req.body));
+  }));
 
   // ---- public customer quote (token addressed, customer-safe only)
   app.get("/api/quotes/:token", wrap(async (req, res) => {

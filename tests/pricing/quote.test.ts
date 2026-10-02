@@ -162,3 +162,33 @@ test("form state bridge: scope mapping preserves wall, fireplace, mount and extr
   assert.deepEqual(scoped.extras.map((e) => e.kind), ["soundbar"]);
   assert.equal(calculateQuote(state).total >= 0, true);
 });
+
+import { catalogPublicQuote, publicQuoteRequestSchema, publicRequestToScope, priceScope as priceForPublic, composeQuote as composeForPublic, toCustomerView as viewForPublic } from "../../shared/pricing";
+import { buildAugmentedQuote } from "../../client/src/components/ui/quote-tool/shared";
+
+test("public /quote: catalog price equals the browser calculator; every form maps to a valid engine scope", () => {
+  let seed = 4242;
+  const r = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 0x100000000);
+  const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)]!;
+  for (let i = 0; i < 250; i++) {
+    const tvs = Array.from({ length: Math.floor(r() * 5) }, (_, k) => {
+      const hasMount = r() > 0.5;
+      return { id: `t${k}`, size: pick(["32-55", "56+"] as const), wallType: pick(["drywall", "brick", "highrise"] as const), location: pick(["standard", "fireplace"] as const), hasMount, mountType: hasMount ? null : pick(["fixed", "tilting", "fullMotion"] as const), wireConcealment: r() > 0.5, outletDistance: pick([null, "near", "far"] as const), unmounting: r() > 0.7 };
+    });
+    const req = publicQuoteRequestSchema.parse({
+      form: { tvs, cameras: Array.from({ length: Math.floor(r() * 3) }, (_, k) => ({ id: `c${k}`, brand: "ring", type: "wired_smart", location: "outdoor" })), doorbell: r() > 0.7, doorbellBrand: "Ring", soundbar: r() > 0.7, surroundSound: r() > 0.9, floodlight: r() > 0.8, handymanMinutes: r() > 0.8 ? 60 : 0, zipCode: pick(["", "30030", "30332", "99999"]) },
+      standalone: { removalCount: Math.floor(r() * 3), troubleshootingMinutes: r() > 0.8 ? 90 : 0, wireManagementLocations: Math.floor(r() * 2), deviceSetup: r() > 0.8, sharedUnmountCount: Math.floor(r() * 2) },
+      stage: "review",
+    });
+    const browser = buildAugmentedQuote(calculateQuote({ ...req.form, notes: "" }), req.standalone);
+    assert.equal(catalogPublicQuote(req).totalCents, Math.round(browser.total * 100), `catalog parity case ${i}`);
+    const s = publicRequestToScope(req);
+    const p = priceForPublic(s, req.form.zipCode ? { zip: req.form.zipCode, oneWayMiles: 10, oneWayDriveMinutes: 20 } : {}, DEFAULT_ECONOMICS_CONFIG);
+    if (!p.empty) {
+      assert.ok(p.recommendedCents >= DEFAULT_ECONOMICS_CONFIG.business.minimumTicketCents, `no $0 work case ${i}`);
+      assert.notEqual(p.status, "not_supported", "nothing the public form offers is out of scope");
+      const dyn = composeForPublic({ scope: s, context: {}, config: { ...DEFAULT_ECONOMICS_CONFIG, pricingMode: "dynamic" } });
+      assert.deepEqual(findInternalKeys(viewForPublic(dyn, { version: 0, createdAt: "2026-10-02T00:00:00.000Z" })), []);
+    }
+  }
+});

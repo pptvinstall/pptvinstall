@@ -33,6 +33,7 @@ import {
   type StandaloneServices,
 } from "@/components/ui/quote-tool/shared";
 import { applyPackageToFormState } from "@shared/pricing/formState";
+import { engineDisplayQuote, fetchPriceSource, requestEnginePrice, type PriceSource } from "@/lib/engine-quote";
 import {
   calculateQuote,
   createDefaultQuoteFormState,
@@ -75,6 +76,9 @@ export function useQuoteState() {
   // ── Quote ─────────────────────────────────────────────────────────────────
   const [quote, setQuote] = useState<DisplayQuote | null>(null);
   const [error, setError] = useState("");
+  // Who decides the customer price: the browser catalog (legacy/shadow) or the server engine (dynamic, owner-enabled).
+  const [priceSource, setPriceSource] = useState<PriceSource>("catalog");
+  const [engineLive, setEngineLive] = useState<{ key: string; totalCents: number } | null>(null);
 
   // ── Text / describe-it mode ───────────────────────────────────────────────
   const [textInput, setTextInput] = useState("");
@@ -144,9 +148,15 @@ export function useQuoteState() {
     return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
   }, []);
 
-  const liveQuote = useMemo(
+  const catalogLiveQuote = useMemo(
     () => buildAugmentedQuote(calculateQuote(formState), standaloneServices),
     [formState, standaloneServices],
+  );
+  const pricingKey = useMemo(() => JSON.stringify({ ...formState, notes: "", standaloneServices }), [formState, standaloneServices]);
+  // Catalog mode: exactly today's local price. Engine mode: the server's price once it arrives for these choices.
+  const liveQuote = useMemo(
+    () => (priceSource === "engine" && engineLive?.key === pricingKey ? { ...catalogLiveQuote, total: engineLive.totalCents / 100 } : catalogLiveQuote),
+    [catalogLiveQuote, engineLive, priceSource, pricingKey],
   );
   const cleanedTextInput = useMemo(() => cleanDescribeText(textInput), [textInput]);
   const describeCharacterCount = textInput.length;
@@ -389,6 +399,43 @@ export function useQuoteState() {
     return data.content;
   }
 
+  // ── Server pricing (fails safe to the catalog price) ─────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPriceSource().then((source) => {
+      if (!cancelled) setPriceSource(source);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (priceSource !== "engine" || !/^\d{5}$/.test(formState.zipCode)) return;
+    let cancelled = false;
+    const key = pricingKey;
+    const timer = window.setTimeout(() => {
+      void requestEnginePrice(formState, standaloneServices, "live").then((res) => {
+        if (!cancelled && res?.source === "engine" && res.totalCents !== null) setEngineLive({ key, totalCents: res.totalCents });
+      });
+    }, 450);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricingKey, priceSource]);
+
+  /** Review-stage pricing. Catalog mode: the shown price never waits on the network (the call only feeds the owner's shadow comparison). */
+  async function priceForReview(state: QuoteFormState, local: DisplayQuote): Promise<DisplayQuote> {
+    if (priceSource !== "engine") {
+      void requestEnginePrice(state, standaloneServices, "review");
+      return local;
+    }
+    const res = await requestEnginePrice(state, standaloneServices, "review");
+    return engineDisplayQuote(local, res);
+  }
+
   // ── Quote handlers ────────────────────────────────────────────────────────
 
   async function handleFormQuote() {
@@ -403,12 +450,11 @@ export function useQuoteState() {
     setNextStepIntent(null);
     setStep("loading");
     try {
-      setQuote(
-        normalizeQuoteForDisplayTotals({
-          ...liveQuote,
-          summary: buildLocalQuoteSummary(liveQuote, formState, standaloneServices),
-        }),
-      );
+      const local = normalizeQuoteForDisplayTotals({
+        ...catalogLiveQuote,
+        summary: buildLocalQuoteSummary(catalogLiveQuote, formState, standaloneServices),
+      });
+      setQuote(await priceForReview(formState, local));
       setQuoteSourceMode("form");
       setDescribeOutletAnswer(null);
       setPromoCodeInput(seasonalTheme.promoCode ?? "");
@@ -563,7 +609,9 @@ export function useQuoteState() {
     const nextState = applyPackageToFormState(formState, id);
     const nextQuote = buildAugmentedQuote(calculateQuote(nextState), standaloneServices);
     setFormState(nextState);
-    setQuote(normalizeQuoteForDisplayTotals({ ...nextQuote, summary: buildLocalQuoteSummary(nextQuote, nextState, standaloneServices) }));
+    const local = normalizeQuoteForDisplayTotals({ ...nextQuote, summary: buildLocalQuoteSummary(nextQuote, nextState, standaloneServices) });
+    setQuote(local);
+    if (priceSource === "engine") void priceForReview(nextState, local).then(setQuote);
   }
 
   function handleEditQuote() {
@@ -835,6 +883,7 @@ export function useQuoteState() {
     seasonalTheme,
     // computed
     liveQuote,
+    priceSource,
     cleanedTextInput,
     describeCharacterCount,
     describeUsageRatio,

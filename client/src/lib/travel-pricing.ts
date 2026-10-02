@@ -141,6 +141,16 @@ export function getTravelDayLabel(dayType: DayType): string {
   return dayType === "weekday" ? "weekdays" : "weekends";
 }
 
+/**
+ * Clock-free route reference for the pricing engine: the tier table above, read for a given day type.
+ * Returns the tier's representative one-way miles, or null when the ZIP is not in the table.
+ */
+export function getZipReferenceRoute(zip: string, dayType: DayType): { tier: 0 | 1 | 2 | 3 | 4; oneWayMiles: number } | null {
+  const tier = (dayType === "weekday" ? WEEKDAY_TIERS : WEEKEND_TIERS)[zip];
+  if (tier === undefined || tier === "out_of_range") return null;
+  return { tier, oneWayMiles: ONE_WAY_MILES_ESTIMATE[tier] };
+}
+
 export function getTravelTier(zip: string): TravelTier {
   const tiers = getDayType() === "weekday" ? WEEKDAY_TIERS : WEEKEND_TIERS;
   return tiers[zip] ?? "out_of_range";

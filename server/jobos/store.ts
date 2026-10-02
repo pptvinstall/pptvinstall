@@ -9,6 +9,7 @@ import type {
   QuoteRecord,
   QuoteStatus,
   QuoteVersionRecord,
+  ShadowSampleRecord,
   StoredConfig,
 } from "@shared/jobos/types";
 import type { EconomicsConfig } from "@shared/pricing/config";
@@ -97,6 +98,12 @@ export interface JobOsStore {
   upsertActuals(args: { jobId: string; quoteVersionId: string | null; actuals: JobActualsRecord["actuals"]; profitability: JobActualsRecord["profitability"]; configVersion: number | null }): Promise<JobActualsRecord>;
   getActuals(jobId: string): Promise<JobActualsRecord | null>;
   listActuals(): Promise<JobActualsRecord[]>;
+
+  // shadow pricing samples (owner-only). Returns null when the same sample was already stored today.
+  recordShadowSample(rec: Omit<ShadowSampleRecord, "id" | "createdAt" | "jobId">): Promise<ShadowSampleRecord | null>;
+  listShadowSamples(limit: number): Promise<ShadowSampleRecord[]>;
+  getShadowSample(id: string): Promise<ShadowSampleRecord | null>;
+  linkShadowSampleJob(id: string, jobId: string): Promise<ShadowSampleRecord>;
 
   // AI intake cache
   getIntakeCache(hash: string): Promise<IntakeCacheRecord | null>;

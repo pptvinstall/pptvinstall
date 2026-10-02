@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as s from "@shared/jobos-schema";
-import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, StoredConfig } from "@shared/jobos/types";
+import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
 import { deriveInvoiceStatus, formatInvoiceNumber } from "@shared/jobos/invoice";
 import { NotFoundError, type JobOsStore, type JobPatch, type NewInvoice, type NewJob, type NewPayment, type NewQuoteVersion } from "./store";
 
@@ -11,6 +11,25 @@ import { NotFoundError, type JobOsStore, type JobPatch, type NewInvoice, type Ne
 type Db = PgDatabase<PgQueryResultHKT, any>;
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
+
+const toShadow = (r: typeof s.pricingShadowSamples.$inferSelect): ShadowSampleRecord => ({
+  id: r.id,
+  day: r.day,
+  sampleKey: r.sampleKey,
+  source: r.source as ShadowSampleRecord["source"],
+  zip: r.zip,
+  configVersion: r.configVersion,
+  pricingMode: r.pricingMode,
+  shownCents: r.shownCents,
+  recommendedCents: r.recommendedCents,
+  floorCents: r.floorCents,
+  status: r.status,
+  scope: r.scope,
+  context: r.context,
+  summary: r.summary as ShadowSampleRecord["summary"],
+  jobId: r.jobId,
+  createdAt: r.createdAt.toISOString(),
+});
 
 const toJob = (r: typeof s.jobs.$inferSelect): JobRecord => ({
   id: r.id,
@@ -345,5 +364,23 @@ export class DbJobOsStore implements JobOsStore {
   }
   async putIntakeCache(rec: { inputHash: string; source: "ai" | "heuristic"; intake: unknown }) {
     await this.db.insert(s.aiIntakeCache).values(rec).onConflictDoNothing();
+  }
+
+  async recordShadowSample(rec: Omit<ShadowSampleRecord, "id" | "createdAt" | "jobId">) {
+    const [row] = await this.db.insert(s.pricingShadowSamples).values(rec).onConflictDoNothing().returning();
+    return row ? toShadow(row) : null;
+  }
+  async listShadowSamples(limit: number) {
+    const rows = await this.db.select().from(s.pricingShadowSamples).orderBy(desc(s.pricingShadowSamples.createdAt)).limit(limit);
+    return rows.map(toShadow);
+  }
+  async getShadowSample(id: string) {
+    const [row] = await this.db.select().from(s.pricingShadowSamples).where(eq(s.pricingShadowSamples.id, id));
+    return row ? toShadow(row) : null;
+  }
+  async linkShadowSampleJob(id: string, jobId: string) {
+    const [row] = await this.db.update(s.pricingShadowSamples).set({ jobId }).where(eq(s.pricingShadowSamples.id, id)).returning();
+    if (!row) throw new NotFoundError("Shadow sample");
+    return toShadow(row);
   }
 }

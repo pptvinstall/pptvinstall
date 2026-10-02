@@ -12,6 +12,14 @@ import {
   parseJobContext,
   parseJobScope,
   priceScope,
+  resolveRouteContext,
+  catalogPublicQuote,
+  economicsAtPrice,
+  publicQuoteRequestSchema,
+  publicRequestToScope,
+  stableStringify,
+  type PricingResult,
+  type RouteProvider,
   snapshotQuote,
   toCustomerView,
   validateEconomicsConfig,
@@ -46,7 +54,7 @@ import {
   type ScopeDraft,
 } from "@shared/jobos";
 import { hashObject } from "@shared/pricing/hash";
-import type { InvoiceRecord, JobRecord, QuoteRecord, QuoteVersionRecord, StoredConfig } from "@shared/jobos/types";
+import type { InvoiceRecord, JobRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, ShadowSampleSummary, StoredConfig } from "@shared/jobos/types";
 import { NotFoundError, type JobOsStore } from "./store";
 
 export class ConflictError extends Error {
@@ -92,14 +100,24 @@ export const configUpdateSchema = z.object({
   config: z.unknown(),
   reason: z.string().min(3).max(300),
   name: z.string().min(1).max(80).optional(),
+  /** Must be exactly DYNAMIC_CONFIRMATION to switch customer pricing to the engine. */
+  confirmDynamic: z.string().max(60).optional(),
 });
+
+/** Typed by the owner to move customers onto engine (dynamic) pricing. Checked server-side, not just in the UI. */
+export const DYNAMIC_CONFIRMATION = "change customer prices";
+function assertDynamicConfirmed(fromMode: string, toMode: string, confirm: string | undefined) {
+  if (toMode === "dynamic" && fromMode !== "dynamic" && (confirm ?? "").trim().toLowerCase() !== DYNAMIC_CONFIRMATION) {
+    throw new ConflictError(`Switching customers to dynamic (engine) pricing changes what they are quoted. Confirm by sending confirmDynamic: "${DYNAMIC_CONFIRMATION}".`, "DYNAMIC_CONFIRMATION_REQUIRED");
+  }
+}
 
 export class JobOsService {
   private configCache: { at: number; value: StoredConfig } | null = null;
 
   constructor(
     private readonly store: JobOsStore,
-    private readonly opts: { intakeProvider?: IntakeProvider | null; now?: () => Date; configCacheMs?: number } = {},
+    private readonly opts: { intakeProvider?: IntakeProvider | null; now?: () => Date; configCacheMs?: number; routeProviders?: RouteProvider[] } = {},
   ) {}
 
   private now() {
@@ -115,14 +133,24 @@ export class JobOsService {
       // First boot: seed the uncalibrated defaults as version 1 (additive, audited).
       active = await this.store.saveConfigVersion({ config: DEFAULT_ECONOMICS_CONFIG, name: "Uncalibrated defaults", actor: "system", reason: "initial seed", changedPaths: [], activate: true });
     }
+    // Stored configs are raw JSON written by older versions: re-validate so missing (newer) fields get their
+    // backward-compatible defaults instead of crashing the engine.
+    active = { ...active, config: validateEconomicsConfig(active.config) };
     if (ttl > 0) this.configCache = { at: Date.now(), value: active };
     return active;
   }
 
+  /** Fill route facts (owner input > live provider > ZIP reference table > flagged unknown). Never throws. */
+  async resolveContext(context: unknown): Promise<JobContextInput> {
+    const parsed = parseJobContext(context ?? {});
+    return resolveRouteContext(parsed, { providers: this.opts.routeProviders ?? [], now: () => this.now() });
+  }
+
   async updateConfig(input: unknown, actor: string): Promise<StoredConfig> {
-    const { config, reason, name } = configUpdateSchema.parse(input);
+    const { config, reason, name, confirmDynamic } = configUpdateSchema.parse(input);
     const current = await this.getActiveConfig();
     const validated = validateEconomicsConfig({ ...(config as object), version: current.version + 1 });
+    assertDynamicConfirmed(current.config.pricingMode, validated.pricingMode, confirmDynamic);
     const next: EconomicsConfig = { ...validated, calibration: validated.calibration === "uncalibrated-default" ? "owner-edited" : validated.calibration };
     const changedPaths = diffConfigs(current.config, next).filter((p) => p !== "version" && p !== "calibration" && p !== "name");
     if (!changedPaths.length) throw new ConflictError("No configuration values changed", "NO_CHANGE");
@@ -139,7 +167,10 @@ export class JobOsService {
     return this.store.listConfigEvents(100);
   }
 
-  async rollbackConfig(version: number, actor: string): Promise<StoredConfig> {
+  async rollbackConfig(version: number, actor: string, confirmDynamic?: string): Promise<StoredConfig> {
+    const current = await this.getActiveConfig();
+    const target = (await this.store.listConfigVersions()).find((v) => v.version === version);
+    if (target) assertDynamicConfirmed(current.config.pricingMode, (target.config as { pricingMode?: string }).pricingMode ?? "legacy", confirmDynamic);
     const saved = await this.store.activateConfigVersion(version, actor);
     this.configCache = null;
     return saved;
@@ -149,7 +180,7 @@ export class JobOsService {
   async previewPrice(scope: unknown, context: unknown) {
     const cfg = (await this.getActiveConfig()).config;
     const s = parseJobScope(scope);
-    const c = parseJobContext(context);
+    const c = parseJobContext(await this.resolveContext(context));
     // Review states must stay visible to the owner: the preview explains a gated scope instead of failing.
     // Saving a quote is still blocked by composeQuote (NOT_SUPPORTED always; MANUAL_REVIEW_REQUIRED unless overridden).
     try {
@@ -238,7 +269,8 @@ export class JobOsService {
     if (!parsedScope.tvs.length && !parsedScope.extras.length && !parsedScope.items.length) throw new ConflictError("Add at least one item before quoting", "EMPTY_SCOPE");
 
     const stored = await this.getActiveConfig();
-    const snapshot = snapshotQuote({ scope: parsedScope, context: job.context, config: stored.config, adjustment });
+    const context = await this.resolveContext(job.context);
+    const snapshot = snapshotQuote({ scope: parsedScope, context, config: stored.config, adjustment });
     const createdAt = this.now().toISOString();
 
     let quote = job.currentQuoteId ? await this.store.getQuote(job.currentQuoteId) : null;
@@ -500,6 +532,147 @@ export class JobOsService {
     return { report, comparable, itemReport };
   }
 
+  // ---------------------------------------------------------------- public /quote pricing + shadow mode
+  /**
+   * Price the public QuoteTool request. Customer-safe output only.
+   *  - legacy / shadow: the customer price is exactly the existing catalog total (same as the browser calculator).
+   *  - dynamic: the customer price is the engine recommendation (or "we'll review" when review is required).
+   * In shadow and dynamic mode a "review"-stage request also stores an owner-only comparison sample.
+   */
+  async publicPrice(input: unknown): Promise<PublicPriceResponse> {
+    const req = publicQuoteRequestSchema.parse(input);
+    const stored = await this.getActiveConfig();
+    const cfg = stored.config;
+    const catalog = catalogPublicQuote(req);
+    const scope = publicRequestToScope(req);
+    const context = await this.resolveContext(req.form.zipCode ? { zip: req.form.zipCode } : {});
+
+    let composition: ReturnType<typeof composeQuote> | null = null;
+    let gate: "NOT_SUPPORTED" | "MANUAL_REVIEW_REQUIRED" | null = null;
+    try {
+      composition = composeQuote({ scope, context, config: cfg });
+    } catch (e) {
+      if (!(e instanceof QuotePolicyError) || (e.code !== "NOT_SUPPORTED" && e.code !== "MANUAL_REVIEW_REQUIRED")) throw e;
+      gate = e.code;
+    }
+    const pricing: PricingResult = composition?.pricing ?? priceScope(scope, context, cfg);
+
+    let response: PublicPriceResponse;
+    if (cfg.pricingMode !== "dynamic") {
+      response = { source: "catalog", totalCents: catalog.totalCents };
+    } else if (!composition || pricing.empty) {
+      response = {
+        source: "engine",
+        totalCents: null,
+        status: "review",
+        lines: [],
+        notes: [gate === "NOT_SUPPORTED" ? "Part of this request is outside the work we install. We'll follow up with options." : "We need to review a few details before we can confirm a price."],
+      };
+    } else {
+      const view = toCustomerView(composition, { version: 0, createdAt: this.now().toISOString() });
+      response = { source: "engine", totalCents: view.totalCents, status: pricing.status === "priced" ? "firm" : "estimate", lines: view.lines, notes: view.notes };
+    }
+    assertCustomerSafe(response);
+
+    if (req.stage === "review" && cfg.pricingMode !== "legacy" && !pricing.empty) {
+      const shownCents = response.totalCents ?? catalog.totalCents;
+      const at = (p: number) => {
+        const e = economicsAtPrice(pricing, p);
+        return { helperCostCents: e.helperCostCents, costToServeCents: e.costToServeCents, ownerNetCents: e.ownerNetCents, marginPct: Number(e.marginPct.toFixed(4)), effectivePerHourCents: e.effectiveGrossPerHourCents };
+      };
+      const summary: ShadowSampleSummary = {
+        shownSource: response.source,
+        catalogHasCustomQuoteLines: catalog.hasCustomQuoteLines,
+        premiumCents: pricing.premiumCents,
+        confidence: pricing.confidence,
+        complexity: pricing.premium.complexity,
+        premiumPct: pricing.premium.pct,
+        premiumFactors: pricing.premium.factors.map((f) => f.label),
+        onsiteMinutes: pricing.labor.minutes,
+        totalOwnerMinutes: pricing.totalOwnerMinutes,
+        helperMinutes: pricing.labor.helperMinutes,
+        materialsCostCents: pricing.materials.costCents,
+        travelCostCents: pricing.travel.costCents,
+        travelSource: pricing.travel.source,
+        overheadCents: pricing.overheadCents,
+        atShown: at(shownCents),
+        atRecommended: at(pricing.recommendedCents),
+        flags: pricing.flags.slice(0, 30),
+        questions: pricing.questions.map((q) => q.question).slice(0, 30),
+        why: pricing.why.slice(0, 30),
+        engineVersion: pricing.engineVersion,
+      };
+      // Same choices on the same day = one sample (TV ids are random per browser session, so they are not hashed).
+      const canonical = { ...scope, tvs: scope.tvs.map((t, i) => ({ ...t, id: `tv-${i + 1}` })) };
+      await this.store.recordShadowSample({
+        day: this.now().toISOString().slice(0, 10),
+        sampleKey: hashObject({ scope: stableStringify(canonical), zip: req.form.zipCode, config: cfg.version, mode: cfg.pricingMode }),
+        source: "public_quote",
+        zip: req.form.zipCode || null,
+        configVersion: cfg.version,
+        pricingMode: cfg.pricingMode,
+        shownCents,
+        recommendedCents: pricing.recommendedCents,
+        floorCents: pricing.floorCents,
+        status: pricing.status,
+        scope: canonical,
+        context,
+        summary,
+      });
+    }
+    return response;
+  }
+
+  async publicPriceSource(): Promise<{ source: "catalog" | "engine" }> {
+    const cfg = (await this.getActiveConfig()).config;
+    return { source: cfg.pricingMode === "dynamic" ? "engine" : "catalog" };
+  }
+
+  /** Owner-only: recent shadow samples plus a plain comparison of catalog vs engine. */
+  async shadowReport(limit = 100) {
+    const samples = await this.store.listShadowSamples(Math.min(500, Math.max(1, limit)));
+    const median = (xs: number[]) => {
+      if (!xs.length) return null;
+      const a = xs.slice().sort((x, y) => x - y);
+      const m = Math.floor(a.length / 2);
+      return a.length % 2 ? a[m]! : Math.round((a[m - 1]! + a[m]!) / 2);
+    };
+    const comparable = samples.filter((x) => !x.summary.catalogHasCustomQuoteLines);
+    const statusCounts: Record<string, number> = {};
+    for (const x of samples) statusCounts[x.status] = (statusCounts[x.status] ?? 0) + 1;
+    return {
+      samples,
+      stats: {
+        count: samples.length,
+        comparableCount: comparable.length,
+        shownBelowFloor: comparable.filter((x) => x.shownCents < x.floorCents).length,
+        shownBelowRecommended: comparable.filter((x) => x.shownCents < x.recommendedCents).length,
+        medianShownCents: median(comparable.map((x) => x.shownCents)),
+        medianRecommendedCents: median(comparable.map((x) => x.recommendedCents)),
+        medianGapCents: median(comparable.map((x) => x.recommendedCents - x.shownCents)),
+        medianEffectivePerHourAtShownCents: median(comparable.map((x) => x.summary.atShown.effectivePerHourCents)),
+        statusCounts,
+      },
+      note: "Advisory only. Samples with custom-quote lines are excluded from comparisons because the catalog total leaves that work unpriced.",
+    };
+  }
+
+  /** Owner-only: turn a public quote sample into a Job (the quote becomes a job; contact details stay with the booking/request). */
+  async createJobFromShadowSample(id: string): Promise<JobRecord> {
+    const sample = await this.store.getShadowSample(id);
+    if (!sample) throw new NotFoundError("Shadow sample");
+    if (sample.jobId) throw new ConflictError("A job was already created from this quote.", "ALREADY_CONVERTED");
+    const job = await this.createJob({
+      title: `Website quote ${sample.zip ?? ""} ${sample.day}`.replace(/\s+/g, " ").trim(),
+      zip: sample.zip,
+      source: "quote_tool",
+      scope: sample.scope,
+      context: sample.context,
+    });
+    await this.store.linkShadowSampleJob(id, job.id);
+    return job;
+  }
+
   // ---------------------------------------------------------------- AI intake
   async parseIntake(message: string, opts: { allowAi: boolean }): Promise<{ draft: ScopeDraft; cached: boolean; downgraded: string[]; aiUsed: boolean }> {
     const clean = z.string().min(5).max(4_000).parse(message);
@@ -533,6 +706,10 @@ export class JobOsService {
     return { draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
   }
 }
+
+export type PublicPriceResponse =
+  | { source: "catalog"; totalCents: number }
+  | { source: "engine"; totalCents: number | null; status: "firm" | "estimate" | "review"; lines: Array<{ label: string; detail?: string; amountCents: number | null }>; notes: string[] };
 
 export function hashMessage(message: string) {
   return createHash("sha256").update(message).digest("hex").slice(0, 16);

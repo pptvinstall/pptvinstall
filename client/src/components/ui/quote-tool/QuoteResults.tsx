@@ -30,6 +30,7 @@ export default function QuoteResults() {
     handleReviewApproval,
     handleEditQuote,
     step,
+    priceSource,
   } = useQuoteContext();
 
   if (step !== "review" || !quote) return null;
@@ -124,7 +125,7 @@ export default function QuoteResults() {
         </div>
       ) : null}
 
-      <QuotePackages />
+      {priceSource === "catalog" ? <QuotePackages /> : null}
 
       <div className="space-y-4">
         {reviewGroups.map((group) => (

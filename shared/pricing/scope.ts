@@ -131,6 +131,11 @@ export const jobContextSchema = z.object({
   weekday: z.number().int().min(0).max(6).optional(),
   sameDay: z.boolean().default(false),
   awkwardGap: z.boolean().default(false),
+  /** Where oneWayMiles/oneWayDriveMinutes came from. Absent = owner input. */
+  routeSource: z.enum(["owner_input", "provider", "reference_table"]).optional(),
+  /** Which provider / table supplied the route, and as of when (timestamps make cached data honest). */
+  routeProvider: z.string().max(40).optional(),
+  routeAsOf: z.string().max(40).optional(),
   /** Manual traffic multiplier supplied by owner or a provider. Clamped by config. */
   trafficMultiplier: z.number().min(0.5).max(5).optional(),
   /**

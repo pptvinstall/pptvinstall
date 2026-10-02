@@ -22,7 +22,7 @@ export interface FuelPriceProvider {
   getPricePerGalCents(): Promise<{ cents: Cents; asOf: string } | null>;
 }
 
-export type TravelEstimateSource = "owner_input" | "provider" | "assumed_unknown_route";
+export type TravelEstimateSource = "owner_input" | "provider" | "reference_table" | "assumed_unknown_route";
 
 export interface TravelBreakdown {
   source: TravelEstimateSource;
@@ -43,6 +43,9 @@ export interface TravelBreakdown {
   mpg: number;
   fuelPricePerGalCents: Cents;
   fuelPriceAsOf: string;
+  /** Route provider / table and timestamp when the route did not come from the owner. */
+  routeProvider: string | null;
+  routeAsOf: string | null;
   uncertainties: string[];
 }
 
@@ -55,7 +58,7 @@ export function computeTravel(context: JobContext, cfg: EconomicsConfig, extraDr
   const t = cfg.travel;
   const uncertainties: string[] = [];
 
-  let source: TravelEstimateSource = "owner_input";
+  let source: TravelEstimateSource = context.routeSource ?? "owner_input";
   let oneWayMiles = context.oneWayMiles;
   let oneWayMinutes = context.oneWayDriveMinutes;
 
@@ -71,6 +74,12 @@ export function computeTravel(context: JobContext, cfg: EconomicsConfig, extraDr
   } else if (oneWayMinutes === undefined) {
     oneWayMinutes = Math.round(oneWayMiles * 2);
     uncertainties.push("Drive minutes estimated from miles (30 mph assumption).");
+  }
+
+  if (source === "reference_table") {
+    uncertainties.push(`Route estimated from the ${context.routeProvider ?? "reference table"}${context.routeAsOf ? ` (${context.routeAsOf})` : ""}; confirm the exact address for a firm travel cost.`);
+  } else if (source === "provider" && context.routeAsOf) {
+    uncertainties.push(`Route from ${context.routeProvider ?? "route provider"} as of ${context.routeAsOf}.`);
   }
 
   const rawMultiplier = context.trafficMultiplier ?? t.defaultTrafficMultiplier;
@@ -130,6 +139,8 @@ export function computeTravel(context: JobContext, cfg: EconomicsConfig, extraDr
     mpg: t.mpg,
     fuelPricePerGalCents: t.fuelPricePerGalCents,
     fuelPriceAsOf: t.fuelPriceAsOf,
+    routeProvider: source === "owner_input" || source === "assumed_unknown_route" ? null : context.routeProvider ?? null,
+    routeAsOf: source === "owner_input" || source === "assumed_unknown_route" ? null : context.routeAsOf ?? null,
     uncertainties,
   };
 }
