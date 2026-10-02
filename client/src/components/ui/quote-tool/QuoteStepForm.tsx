@@ -426,7 +426,79 @@ export default function QuoteStepForm() {
 
               <section className="space-y-5 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
                 <div>
-                  <h4 className="text-xl font-bold text-slate-900">3. Shared add-ons</h4>
+                  <h4 className="text-xl font-bold text-slate-900">3. Moving / work at another address</h4>
+                  <p className="text-sm text-slate-500">Use this when we take things down at one home and install at another.</p>
+                </div>
+                <ToggleCard
+                  title="This project includes work at my previous home"
+                  active={formState.moveProject.enabled}
+                  onClick={() => setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, enabled: !current.moveProject.enabled } }))}
+                />
+                {formState.moveProject.enabled ? (
+                  <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-900">Previous-home ZIP (optional for estimate)</label>
+                      <Input
+                        value={formState.moveProject.previousZipCode}
+                        maxLength={5}
+                        inputMode="numeric"
+                        placeholder="30327"
+                        className="h-12 rounded-xl bg-white"
+                        onChange={(event) => {
+                          const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 5);
+                          setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, previousZipCode: digitsOnly } }));
+                        }}
+                      />
+                      {formState.moveProject.previousZipCode && !/^\d{5}$/.test(formState.moveProject.previousZipCode) ? <p className="text-xs text-amber-700">Enter 5 digits, or leave it blank and we&apos;ll confirm the route later.</p> : null}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">TVs to take down at the previous home</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatPrice(pricingData.tvMounting.unmount.price)} each.</p>
+                      <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
+                        {[0, 1, 2, 3, 4, 5, 6].map((count) => (
+                          <SelectorButton key={count} selected={formState.moveProject.oldHomeTvUnmountCount === count} onClick={() => setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, oldHomeTvUnmountCount: count } }))}>{count}</SelectorButton>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">TV already down — remove mount / wall hardware only</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatPrice(pricingData.moveProject.mountRemovalOnly.price)} each.</p>
+                      <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-7">
+                        {[0, 1, 2, 3, 4, 5, 6].map((count) => (
+                          <SelectorButton key={count} selected={formState.moveProject.oldHomeMountRemovalCount === count} onClick={() => setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, oldHomeMountRemovalCount: count } }))}>{count}</SelectorButton>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Wire-rack / shelving teardown</p>
+                      <p className="mt-1 text-xs text-slate-500">Pick the closest labor band; we can tighten it after photos.</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {([
+                          { value: "none", label: "None", detail: "No rack teardown" },
+                          { value: "small", label: "Light", detail: "~1 hr · $150" },
+                          { value: "medium", label: "Medium", detail: "~2 hr · $250" },
+                          { value: "large", label: "Large", detail: "~3 hr · $350" },
+                        ] as const).map((option) => (
+                          <SelectorButton key={option.value} selected={formState.moveProject.rackTeardownLevel === option.value} onClick={() => setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, rackTeardownLevel: option.value } }))} className="min-h-[72px] text-left">
+                            <div>{option.label}</div><div className="mt-1 text-xs font-medium opacity-70">{option.detail}</div>
+                          </SelectorButton>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                      Two-location coordination is {formatPrice(pricingData.moveProject.secondSiteCoordination.price)}. Move projects with at least {pricingData.moveProject.bundleDiscount.minimumNewTvInstalls} new TV installs automatically show {formatPrice(pricingData.moveProject.bundleDiscount.amount)} in bundle savings.
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="space-y-5 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
+                <div>
+                  <h4 className="text-xl font-bold text-slate-900">4. Shared add-ons</h4>
                   <p className="text-sm text-slate-500">Add the extras that apply to the whole job.</p>
                 </div>
 
@@ -516,7 +588,7 @@ export default function QuoteStepForm() {
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-semibold text-slate-900">Unmount existing TV(s) before new install</p>
-                  <p className="mt-1 text-sm text-slate-500">{formatPrice(pricingData.tvMounting.unmount.price)} each. Use this if you need extra removals outside the per-TV config above.</p>
+                  <p className="mt-1 text-sm text-slate-500">{formatPrice(pricingData.tvMounting.unmount.price)} each. Use this for extra removals at the current job site; use the move section above for a previous home.</p>
                   <div className="mt-3 grid grid-cols-5 gap-2">
                     {[0, 1, 2, 3, 4].map((count) => (
                       <SelectorButton key={count} selected={standaloneServices.sharedUnmountCount === count} onClick={() => setStandaloneServices((current) => ({ ...current, sharedUnmountCount: count }))}>
@@ -570,7 +642,7 @@ export default function QuoteStepForm() {
 
               <section className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
                 <div>
-                  <h4 className="text-xl font-bold text-slate-900">4. ZIP code and notes</h4>
+                  <h4 className="text-xl font-bold text-slate-900">5. ZIP code and notes</h4>
                   <p className="text-sm text-slate-500">We use your ZIP to confirm route fit and service coverage.</p>
                 </div>
 
