@@ -20,6 +20,7 @@ export default function CustomerQuotePage() {
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
+  const [paymentOptions, setPaymentOptions] = useState<{ labels: string[]; hostedCheckout: boolean }>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false });
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +36,17 @@ export default function CustomerQuotePage() {
       .catch(() => !cancelled && setState("error"));
     return () => { cancelled = true; };
   }, [token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/payment-options")
+      .then((res) => res.ok ? res.json() : null)
+      .then((options) => {
+        if (!cancelled && options?.labels) setPaymentOptions({ labels: options.labels, hostedCheckout: Boolean(options.hostedCheckout) });
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   async function accept() {
     setAccepting(true);
@@ -67,6 +79,11 @@ export default function CustomerQuotePage() {
             ))}
           </ul>
           <div className="flex items-center justify-between rounded-2xl bg-slate-900 p-4 text-white"><span className="font-semibold">Total</span><span className="text-3xl font-extrabold">{fmt(data.view.totalCents)}</span></div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-bold text-slate-900">Ways to pay</p>
+            <p className="mt-1 text-sm text-slate-700">{paymentOptions.labels.join(" · ")}</p>
+            <p className="mt-2 text-xs text-slate-500">{paymentOptions.hostedCheckout ? "Card and eligible Apple Pay payments use a secure hosted checkout link issued with your invoice." : "Cash, Zelle and Apple Pay are available. Card checkout is enabled once the secure payment provider is connected."}</p>
+          </div>
           {data.view.requiresReview ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Some details will be confirmed before work begins. Anything unusual is discussed with you first.</p> : null}
           {data.view.notes.map((n) => <p key={n} className="text-xs text-slate-500">{n}</p>)}
           <a href={`/api/quotes/${encodeURIComponent(token)}/estimate.pdf`} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 hover:bg-slate-50" data-testid="estimate-pdf-link">

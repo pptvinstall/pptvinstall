@@ -22,7 +22,7 @@ export const UNEXPECTED_CONDITIONS = [
   "structure_concern",
   "other",
 ] as const;
-export const PAYMENT_METHODS = ["cash", "zelle", "venmo", "apple_pay", "other"] as const;
+export const PAYMENT_METHODS = ["cash", "zelle", "venmo", "apple_pay", "card", "other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const iso = z.string().datetime({ offset: true });

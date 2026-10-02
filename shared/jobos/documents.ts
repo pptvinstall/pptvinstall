@@ -66,7 +66,7 @@ export interface CustomerDocument {
 }
 
 export const BUSINESS = { name: "Picture Perfect TV Install", phone: "404-702-4748", email: "PPTVInstall@gmail.com" } as const;
-const METHOD_LABEL: Record<string, string> = { cash: "Cash", zelle: "Zelle", venmo: "Venmo", apple_pay: "Apple Pay", other: "Other" };
+const METHOD_LABEL: Record<string, string> = { cash: "Cash", zelle: "Zelle", venmo: "Venmo", apple_pay: "Apple Pay", card: "Credit / debit card", other: "Other" };
 
 /** YYYY-MM-DD in Atlanta time (documents are dated where the business is), from an ISO timestamp. */
 export function localDate(iso: string): string {

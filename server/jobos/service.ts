@@ -16,6 +16,7 @@ import {
   catalogPublicQuote,
   economicsAtPrice,
   publicQuoteRequestSchema,
+  publicRequestToContext,
   publicRequestToScope,
   stableStringify,
   type PricingResult,
@@ -60,6 +61,7 @@ import { MEDIA_HINTS, type JobContact, type InvoiceRecord, type JobRecord, type 
 import { buildUnifiedProposal, combineIntakeText, proposalToScope, reviewDecisionsSchema, type ImageAnalysisResult, type ImageObservation, type UnifiedProposal } from "@shared/jobos/unifiedIntake";
 import type { AiScopeIntake } from "@shared/jobos/intake";
 import { randomUUID } from "node:crypto";
+import type { HostedCheckoutProvider } from "./payments";
 import type { MediaStorage } from "./media/storage";
 import { normalizeImage, visionCopy } from "./media/images";
 import { runVision, VISION_SCHEMA_VERSION, type VisionImage, type VisionProvider } from "./vision";
@@ -158,6 +160,7 @@ export class JobOsService {
       media?: MediaStorage;
       vision?: VisionProvider | null;
       ocr?: OcrProvider | null;
+      checkout?: HostedCheckoutProvider | null;
       /** Canonical customer details from the booking (owner-only use: documents). */
       lookupBookingContact?: (bookingId: number) => Promise<JobContact | undefined>;
     } = {},
@@ -467,6 +470,27 @@ export class JobOsService {
     return this.store.voidInvoice(invoiceId, this.now().toISOString());
   }
 
+  paymentOptions() {
+    const hostedCheckout = Boolean(this.opts.checkout?.enabled());
+    return {
+      methods: ["cash", "zelle", "apple_pay", ...(hostedCheckout ? ["card"] : [])],
+      labels: ["Cash", "Zelle", "Apple Pay", ...(hostedCheckout ? ["Credit / debit card"] : [])],
+      hostedCheckout,
+      provider: hostedCheckout ? this.opts.checkout!.name : null,
+    };
+  }
+
+  async createHostedPaymentLink(invoiceId: string) {
+    const invoice = await this.store.getInvoice(invoiceId);
+    if (!invoice) throw new NotFoundError("Invoice");
+    if (invoice.status === "void") throw new InvoicePolicyError("Invoice is void", "INVOICE_VOID");
+    const amountCents = Math.max(0, invoice.totalCents - invoice.paidCents);
+    if (amountCents <= 0) throw new InvoicePolicyError("Invoice is already paid", "INVOICE_PAID");
+    const checkout = this.opts.checkout;
+    if (!checkout?.enabled()) throw new ConflictError("Secure card checkout is not configured yet.", "CHECKOUT_NOT_CONFIGURED");
+    return checkout.createLink({ invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amountCents });
+  }
+
   async recordPayment(invoiceId: string, input: unknown) {
     const p = paymentInputSchema.parse(input);
     const inv = await this.store.getInvoice(invoiceId);
@@ -598,7 +622,7 @@ export class JobOsService {
     const cfg = stored.config;
     const catalog = catalogPublicQuote(req);
     const scope = publicRequestToScope(req);
-    const context = await this.resolveContext(req.form.zipCode ? { zip: req.form.zipCode } : {});
+    const context = await this.resolveContext(publicRequestToContext(req));
 
     let composition: ReturnType<typeof composeQuote> | null = null;
     let gate: "NOT_SUPPORTED" | "MANUAL_REVIEW_REQUIRED" | null = null;
@@ -659,7 +683,7 @@ export class JobOsService {
       const canonical = { ...scope, tvs: scope.tvs.map((t, i) => ({ ...t, id: `tv-${i + 1}` })) };
       await this.store.recordShadowSample({
         day: this.now().toISOString().slice(0, 10),
-        sampleKey: hashObject({ scope: stableStringify(canonical), zip: req.form.zipCode, config: cfg.version, mode: cfg.pricingMode }),
+        sampleKey: hashObject({ scope: stableStringify(canonical), context: stableStringify(context), config: cfg.version, mode: cfg.pricingMode }),
         source: "public_quote",
         zip: req.form.zipCode || null,
         configVersion: cfg.version,

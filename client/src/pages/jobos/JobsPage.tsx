@@ -418,7 +418,7 @@ function ActualsForm({ jobId, existing, disabled, onSaved }:{ jobId: string; exi
         {field("collected", "Collected ($)")}
         {field("tip", "Tip ($)", "Not counted as revenue")}
       </div>
-      <Field label="Payment method"><Segmented label="Payment method" columns={3} value={f.method} onChange={(v) => setF({ ...f, method: v })} options={[{ value: "cash", label: "Cash" }, { value: "zelle", label: "Zelle" }, { value: "venmo", label: "Venmo" }, { value: "apple_pay", label: "Apple Pay" }, { value: "other", label: "Other" }]} /></Field>
+      <Field label="Payment method"><Segmented label="Payment method" columns={3} value={f.method} onChange={(v) => setF({ ...f, method: v })} options={[{ value: "cash", label: "Cash" }, { value: "zelle", label: "Zelle" }, { value: "venmo", label: "Venmo" }, { value: "apple_pay", label: "Apple Pay" }, { value: "card", label: "Card" }, { value: "other", label: "Other" }]} /></Field>
       <Field label="Notes" htmlFor="act-notes"><textarea id="act-notes" className="min-h-[72px] w-full rounded-xl border border-slate-300 p-3 text-base" value={f.notes} maxLength={2000} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
       {msg ? <Notice tone={msg.tone}>{msg.text}</Notice> : null}
       <Button className="h-12 w-full" disabled={saving || invalid || disabled} onClick={save}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save actuals</Button>
@@ -570,6 +570,7 @@ function InvoiceCard({ invoice, payments, onChanged, onDownload, busyLabel }: { 
   const [tip, setTip] = useState("");
   const [method, setMethod] = useState("cash");
   const [busy, setBusy] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState("");
   const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const balance = invoice.totalCents - invoice.paidCents;
 
@@ -588,6 +589,21 @@ function InvoiceCard({ invoice, payments, onChanged, onDownload, busyLabel }: { 
       setBusy(false);
     }
   }
+  async function createCheckoutLink() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const link = await adminFetch<{ url: string; provider: string; amountCents: number }>(`/invoices/${invoice.id}/payment-link`, { method: "POST", body: {} });
+      setCheckoutUrl(link.url);
+      try { await navigator.clipboard.writeText(link.url); } catch { /* Clipboard can be blocked; the Open button remains. */ }
+      setMsg({ tone: "success", text: "Secure card / Apple Pay payment link ready. Link copied when your browser allows it." });
+    } catch (e) {
+      setMsg({ tone: "error", text: describeError(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const dollars = Number(amount);
   const amountOk = amount.trim() !== "" && dollars > 0 && Math.round(dollars * 100) <= balance;
 
@@ -621,7 +637,9 @@ function InvoiceCard({ invoice, payments, onChanged, onDownload, busyLabel }: { 
             <Field label="Payment ($)" htmlFor="pay-amt"><input id="pay-amt" inputMode="decimal" className={inputClass} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(balance / 100)} /></Field>
             <Field label="Tip ($)" htmlFor="pay-tip"><input id="pay-tip" inputMode="decimal" className={inputClass} value={tip} onChange={(e) => setTip(e.target.value)} /></Field>
           </div>
-          <Segmented label="Payment method" columns={3} value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "zelle", label: "Zelle" }, { value: "venmo", label: "Venmo" }, { value: "apple_pay", label: "Apple Pay" }, { value: "other", label: "Other" }]} />
+          <Segmented label="Payment method" columns={3} value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "zelle", label: "Zelle" }, { value: "venmo", label: "Venmo" }, { value: "apple_pay", label: "Apple Pay" }, { value: "card", label: "Card" }, { value: "other", label: "Other" }]} />
+          <Button type="button" variant="outline" className="h-12 w-full" disabled={busy || balance <= 0} onClick={createCheckoutLink}>Create secure card / Apple Pay link</Button>
+          {checkoutUrl ? <a className="flex h-11 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-800" href={checkoutUrl} target="_blank" rel="noreferrer">Open secure checkout</a> : null}
           {amount.trim() !== "" && !amountOk ? <Notice tone="warn">Enter an amount between $0.01 and the balance of {money(balance)}. Tips are entered separately.</Notice> : null}
           <Button className="h-12 w-full" disabled={busy || !amountOk} onClick={() => call(() => adminFetch(`/invoices/${invoice.id}/payments`, { method: "POST", body: { amountCents: Math.round(dollars * 100), method, tipCents: Math.round(Number(tip || 0) * 100) } }), "Payment recorded.")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Record payment</Button>
           {invoice.paidCents === 0 ? <Button variant="ghost" className="h-11 w-full text-red-700" disabled={busy} onClick={() => call(() => adminFetch(`/invoices/${invoice.id}/void`, { method: "POST", body: {} }), "Invoice voided.")}>Void invoice</Button> : null}

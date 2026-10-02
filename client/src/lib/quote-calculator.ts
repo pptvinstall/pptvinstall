@@ -4,6 +4,15 @@ import { getTravelContext, type TravelTier } from "@/lib/travel-pricing";
 export type MountType = "fixed" | "tilting" | "fullMotion";
 export type WallType = "drywall" | "brick" | "highrise";
 export type CameraType = "wireless_smart" | "wired_smart" | "wired_dvr";
+export type RackTeardownLevel = "none" | "small" | "medium" | "large";
+
+export type MoveProjectConfig = {
+  enabled: boolean;
+  previousZipCode: string;
+  oldHomeTvUnmountCount: number;
+  oldHomeMountRemovalCount: number;
+  rackTeardownLevel: RackTeardownLevel;
+};
 
 export type TVConfig = {
   id: string;
@@ -33,6 +42,7 @@ export type QuoteFormState = {
   surroundSound: boolean;
   floodlight: boolean;
   handymanMinutes: number;
+  moveProject: MoveProjectConfig;
   zipCode: string;
   notes: string;
 };
@@ -143,6 +153,16 @@ export function createDefaultCameraConfig(): CameraConfig {
   };
 }
 
+export function createDefaultMoveProjectConfig(): MoveProjectConfig {
+  return {
+    enabled: false,
+    previousZipCode: "",
+    oldHomeTvUnmountCount: 0,
+    oldHomeMountRemovalCount: 0,
+    rackTeardownLevel: "none",
+  };
+}
+
 export function createDefaultQuoteFormState(): QuoteFormState {
   return {
     tvs: [createDefaultTVConfig()],
@@ -153,6 +173,7 @@ export function createDefaultQuoteFormState(): QuoteFormState {
     surroundSound: false,
     floodlight: false,
     handymanMinutes: 0,
+    moveProject: createDefaultMoveProjectConfig(),
     zipCode: "",
     notes: "",
   };
@@ -183,6 +204,9 @@ export function calculateTroubleshootingTotal(minutes: number): number {
 }
 
 export function calculateQuote(state: QuoteFormState): QuoteResult {
+  // Historical/test callers may supply a pre-move QuoteFormState at runtime.
+  // Treat a missing moveProject as the disabled default instead of crashing.
+  const moveProject = state.moveProject ?? createDefaultMoveProjectConfig();
   const groups: QuoteGroup[] = [];
   const flags = new Set<string>();
   const travelContext =
@@ -385,7 +409,51 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
     });
   }
 
-  const bundleDiscount = 0;
+  let moveSubtotal = 0;
+  if (moveProject.enabled) {
+    const moveItems: QuoteLineItem[] = [];
+    const move = moveProject;
+
+    if (move.oldHomeTvUnmountCount > 0) {
+      const lineTotal = pricingData.tvMounting.unmount.price * move.oldHomeTvUnmountCount;
+      moveItems.push({ name: "Previous-home TV unmounting", price: pricingData.tvMounting.unmount.price, qty: move.oldHomeTvUnmountCount, lineTotal });
+      moveSubtotal += lineTotal;
+    }
+
+    if (move.oldHomeMountRemovalCount > 0) {
+      const lineTotal = pricingData.moveProject.mountRemovalOnly.price * move.oldHomeMountRemovalCount;
+      moveItems.push({ name: pricingData.moveProject.mountRemovalOnly.name, price: pricingData.moveProject.mountRemovalOnly.price, qty: move.oldHomeMountRemovalCount, lineTotal });
+      moveSubtotal += lineTotal;
+    }
+
+    if (move.rackTeardownLevel !== "none") {
+      const rack = pricingData.moveProject.rackTeardown[move.rackTeardownLevel];
+      moveItems.push({ name: `${rack.name} (~${rack.minutes / 60} hr)`, price: rack.price, qty: 1, lineTotal: rack.price });
+      moveSubtotal += rack.price;
+    }
+
+    const hasPreviousHomeWork = move.oldHomeTvUnmountCount > 0 || move.oldHomeMountRemovalCount > 0 || move.rackTeardownLevel !== "none";
+    if (hasPreviousHomeWork) {
+      moveItems.push({ name: pricingData.moveProject.secondSiteCoordination.name, price: pricingData.moveProject.secondSiteCoordination.price, qty: 1, lineTotal: pricingData.moveProject.secondSiteCoordination.price });
+      moveSubtotal += pricingData.moveProject.secondSiteCoordination.price;
+      positiveSubtotal += moveSubtotal;
+      groups.push({
+        title: "Previous Home / Move",
+        subtitle: move.previousZipCode ? `Previous home ZIP ${move.previousZipCode} · new home ZIP ${state.zipCode || "to confirm"}` : "Two-location project",
+        items: moveItems,
+        subtotal: moveSubtotal,
+      });
+      flags.add("Two-location pricing assumes ordinary access, no major wall repair, and no haul-away unless listed.");
+      if (!/^\d{5}$/.test(move.previousZipCode)) flags.add("Previous-home ZIP is not entered yet; route between homes will be confirmed before booking.");
+    }
+  }
+
+  const qualifiesMoveBundle =
+    moveProject.enabled &&
+    state.tvs.length >= pricingData.moveProject.bundleDiscount.minimumNewTvInstalls &&
+    moveSubtotal > 0;
+  const bundleDiscount = qualifiesMoveBundle ? pricingData.moveProject.bundleDiscount.amount : 0;
+  if (bundleDiscount > 0) flags.add("Two-home project bundle savings are already included in this estimate.");
 
   return {
     groups,

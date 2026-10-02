@@ -24,6 +24,7 @@ import { registerJobOsRoutes } from "./jobos/routes";
 import { JobOsService, type IntakeProvider } from "./jobos/service";
 import { createMediaStorage } from "./jobos/media/storage";
 import { LocalOcrProvider } from "./jobos/ocr";
+import { createHostedCheckoutProvider } from "./jobos/payments";
 import { createVisionProvider, type VisionProvider } from "./jobos/vision";
 import { DbJobOsStore } from "./jobos/dbStore";
 import { MemoryJobOsStore } from "./jobos/memoryStore";
@@ -805,6 +806,7 @@ export function registerRoutes(app: Express): Server {
       media: createMediaStorage(),
       vision: createVisionProvider({ anthropic: anthropicVision }),
       ocr: new LocalOcrProvider(process.env.OCR_ENABLED !== "false"),
+      checkout: createHostedCheckoutProvider(),
       // Documents read the booking (canonical customer record); nothing is copied into Job OS.
       lookupBookingContact: async (id) => {
         const b = await storage.getBookingById(id);

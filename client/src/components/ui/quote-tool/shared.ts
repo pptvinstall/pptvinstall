@@ -526,6 +526,7 @@ export function isValidOptionalEmail(value: string): boolean {
 }
 
 export function buildLocalQuoteSummary(quote: QuoteResult, state: QuoteFormState, standaloneServices: StandaloneServices): string {
+  const move = state.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" as const };
   const parts: string[] = [];
 
   if (state.tvs.length > 0) {
@@ -554,6 +555,12 @@ export function buildLocalQuoteSummary(quote: QuoteResult, state: QuoteFormState
 
   if (standaloneServices.removalCount > 0) {
     parts.push(`${standaloneServices.removalCount} TV ${standaloneServices.removalCount === 1 ? "removal" : "removals"}`);
+  }
+
+  if (move.enabled) {
+    const oldWork = move.oldHomeTvUnmountCount + move.oldHomeMountRemovalCount;
+    parts.push(`two-home move project${oldWork ? ` (${oldWork} previous-home removal${oldWork === 1 ? "" : "s"})` : ""}`);
+    if (move.rackTeardownLevel !== "none") parts.push(`${move.rackTeardownLevel} wire-rack teardown`);
   }
 
   if (standaloneServices.troubleshootingMinutes > 0) {

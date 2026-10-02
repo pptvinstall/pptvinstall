@@ -80,6 +80,9 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   };
   const idParam = (req: Request, name = "id") => uuid.parse(req.params[name]);
 
+  // ---- customer-safe payment capabilities
+  app.get("/api/payment-options", wrap(async (_req, res) => res.json(service.paymentOptions())));
+
   // ---- config (versioned + audited)
   app.get(`${A}/config`, wrap(async (_req, res) => res.json(await service.getActiveConfig())));
   app.get(`${A}/config/versions`, wrap(async (_req, res) => res.json(await service.listVersionsForAdmin())));
@@ -132,6 +135,7 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   app.post(`${A}/invoices/:id/send`, wrap(async (req, res) => res.json(await service.sendInvoice(idParam(req)))));
   app.post(`${A}/invoices/:id/void`, wrap(async (req, res) => res.json(await service.voidInvoice(idParam(req)))));
   app.post(`${A}/invoices/:id/payments`, wrap(async (req, res) => res.status(201).json(await service.recordPayment(idParam(req), req.body))));
+  app.post(`${A}/invoices/:id/payment-link`, wrap(async (req, res) => res.status(201).json(await service.createHostedPaymentLink(idParam(req)))));
 
   // ---- work templates and taxonomy (owner config; new item types need no code or migration)
   app.put(`${A}/work-templates/:id`, wrap(async (req, res) => {
