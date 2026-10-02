@@ -32,8 +32,47 @@ export function formStateToScope(state: QuoteFormState): JobScope {
   return parseJobScope({ tvs: state.tvs.map(mapTv), extras });
 }
 
+function moveAwarePackage(state: QuoteFormState, id: CustomerPackage["id"]): CustomerPackage {
+  const next = applyPackageToFormState(state, id);
+  const quote = calculateQuote(next);
+  const names = { essential: "Essential", clean: "Clean", complete: "Complete" } as const;
+  const summaries = {
+    essential: "Professional mounting. Cords stay visible.",
+    clean: "Mounting plus an outlet behind the TV so cords can run clean.",
+    complete: "Clean setup plus a full-motion mount supplied by us where you do not have one.",
+  } as const;
+
+  const components: CustomerPackage["components"] = [];
+  for (const group of quote.groups) {
+    for (const item of group.items) {
+      components.push({
+        label: group.title.startsWith("TV") ? `${group.title}: ${item.name}` : item.name,
+        amountCents: item.lineTotal === 0 ? null : toCents(item.lineTotal),
+      });
+    }
+  }
+  if (quote.discount > 0) {
+    components.push({ label: "Two-home project bundle", amountCents: -toCents(quote.discount) });
+  }
+
+  return {
+    id,
+    name: names[id],
+    summary: summaries[id],
+    components,
+    totalCents: toCents(quote.total),
+    requiresReview: quote.flags.length > 0 || components.some((component) => component.amountCents === null),
+  };
+}
+
 export function packagesForFormState(state: QuoteFormState): CustomerPackage[] {
-  return buildPackages(formStateToScope(state));
+  if (!state.moveProject?.enabled) return buildPackages(formStateToScope(state));
+
+  const ids: CustomerPackage["id"][] = ["essential", "clean"];
+  if (state.tvs.some((tv) => !tv.hasMount)) ids.push("complete");
+
+  const packages = ids.map((id) => moveAwarePackage(state, id));
+  return packages.filter((pkg, index) => index === 0 || pkg.totalCents !== packages[index - 1]!.totalCents);
 }
 
 /** Returns a new form state with the package's real components applied. */
