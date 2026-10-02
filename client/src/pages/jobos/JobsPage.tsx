@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Copy, Download, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, FileDown, Loader2, RefreshCw } from "lucide-react";
 
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, inputClass } from "@/components/jobos/controls";
 import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
 import { Button } from "@/components/ui/button";
-import { adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
+import { adminDownload, adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
+import { isComparableCatalogSample, SHADOW_FILTERS, shadowSampleMatches, type ShadowFilter } from "@shared/jobos/shadowFilters";
+import type { ShadowSampleRecord } from "@shared/jobos/types";
 
-type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string };
+type Contact = { name: string; phone?: string; email?: string; street?: string; city?: string; state?: string; zip?: string };
+type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string; contact?: Contact | null };
+type Media = { id: string; hint: string; width: number; height: number; analysisStatus: string; kind: string | null; summary: string | null; createdAt: string };
 type Version = {
   id: string;
   version: number;
@@ -23,15 +27,16 @@ type Version = {
   acceptedAt: string | null;
   snapshot?: { pricingMode?: string; composition?: { pricing?: PanelPricing; economics?: PanelEconomics } };
 };
-type Invoice = { id: string; invoiceNumber: string; status: string; totalCents: number; paidCents: number; taxCents: number; sentAt: string | null };
+type Invoice = { id: string; invoiceNumber: string; status: string; totalCents: number; paidCents: number; taxCents: number; sentAt: string | null; dueDate?: string | null; notes?: string | null };
 type Payment = { id: string; invoiceId: string; amountCents: number; method: string; tipCents: number; receivedAt: string };
 type Detail = {
   job: Job;
-  quote: { id: string; status: string; shareToken: string } | null;
+  quote: { id: string; status: string; shareToken: string; quoteNumber?: number | null } | null;
   versions: Version[];
   invoices: Invoice[];
   payments: Payment[];
   actuals: { actuals: Record<string, any>; profitability: Profit | null } | null;
+  media?: Media[];
 };
 type Profit = {
   note: string;
@@ -48,20 +53,6 @@ type Profit = {
   estimatedNetMarginPct: number;
   variances: Record<string, { estimate: number; actual: number; delta: number; ratio: number | null }>;
 };
-
-async function downloadAdminFile(path: string, filename: string) {
-  const url = await adminObjectUrl(path);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } finally {
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-}
 
 const STATUS_STYLE: Record<string, string> = {
   lead: "bg-slate-100 text-slate-700",
@@ -171,6 +162,18 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
     }, "Quote marked sent and customer link copied.");
   }
 
+  async function download(label: string, path: string, fallback: string) {
+    setBusy(label);
+    setNotice(null);
+    try {
+      await adminDownload(path, fallback);
+    } catch (e) {
+      setNotice({ tone: "error", text: describeError(e) });
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="h-4 w-4" /> Jobs</Button>
@@ -182,6 +185,9 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <p className="text-xs text-slate-500">{[job.customerLabel, job.zip, job.bookingId ? `Booking #${job.bookingId}` : null].filter(Boolean).join(" · ")}</p>
       </header>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
+
+      <CustomerSection job={job} onSaved={load} />
+      {detail.media?.length ? <JobPhotos media={detail.media} /> : null}
 
       <section aria-labelledby="quote-h" className="space-y-2">
         <h2 id="quote-h" className="text-lg font-bold">Quote</h2>
@@ -202,7 +208,11 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </details>
             ) : null}
             {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "send"} onClick={copyLink}>{busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} {quote.status === "draft" ? "Mark sent & copy customer link" : `Copy customer link (${quote.status})`}</Button> : null}
-            {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "estimate-pdf"} onClick={() => run("estimate-pdf", () => downloadAdminFile(`/quotes/${quote.id}/pdf`, `PPTVInstall-Estimate-${quote.id.slice(0, 8)}.pdf`), "Estimate PDF downloaded.")}>{busy === "estimate-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download estimate PDF</Button> : null}
+            {quote ? (
+              <Button variant="outline" className="h-12 w-full" data-testid="estimate-pdf" disabled={busy === "estimate-pdf"} onClick={() => download("estimate-pdf", `/quotes/${quote.id}/estimate.pdf`, "PPTVInstall-Estimate.pdf")}>
+                {busy === "estimate-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Estimate PDF{versions.length > 1 ? ` (${quote.status === "accepted" ? "accepted version" : `v${latest.version}`})` : ""}
+              </Button>
+            ) : null}
           </>
         )}
       </section>
@@ -212,11 +222,9 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
       <section aria-labelledby="inv-h" className="space-y-2">
         <h2 id="inv-h" className="text-lg font-bold">Invoice & payment</h2>
         {!invoice ? (
-          <Button className="h-12 w-full" disabled={!latest || busy === "invoice"} onClick={() => run("invoice", () => adminFetch(`/jobs/${id}/invoice`, { method: "POST", body: {} }), "Invoice created from the quote.")}>
-            {busy === "invoice" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create invoice from quote
-          </Button>
+          <NewInvoice disabled={!latest} busy={busy === "invoice"} onCreate={(body) => run("invoice", () => adminFetch(`/jobs/${id}/invoice`, { method: "POST", body }), "Invoice created from the quote.")} />
         ) : (
-          <InvoiceCard invoice={invoice} payments={payments.filter((p) => p.invoiceId === invoice.id)} onChanged={load} />
+          <InvoiceCard invoice={invoice} payments={payments.filter((p) => p.invoiceId === invoice.id)} onChanged={load} onDownload={download} busyLabel={busy} />
         )}
         <p className="text-xs text-slate-500">Records what you tell it. It does not verify Zelle, Venmo, Apple Pay or cash receipts, and applies tax only if you configure it.</p>
       </section>
@@ -224,7 +232,140 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
   );
 }
 
-function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; existing: Detail["actuals"]; disabled: boolean; onSaved: () => void }) {
+/** Name and service address printed on estimates and invoices. A linked booking's details take priority. */
+function CustomerSection({ job, onSaved }: { job: Job; onSaved: () => void }) {
+  const c = job.contact ?? null;
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ name: c?.name ?? job.customerLabel ?? "", phone: c?.phone ?? "", email: c?.email ?? "", street: c?.street ?? "", city: c?.city ?? "", state: c?.state ?? "GA", zip: c?.zip ?? job.zip ?? "" });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const emailOk = !f.email.trim() || /^\S+@\S+\.\S+$/.test(f.email.trim());
+  const zipOk = !f.zip.trim() || /^\d{5}$/.test(f.zip.trim());
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const body: Record<string, string> = { name: f.name.trim() };
+      for (const k of ["phone", "email", "street", "city", "state", "zip"] as const) if (f[k].trim()) body[k] = f[k].trim();
+      await adminFetch(`/jobs/${job.id}/contact`, { method: "PATCH", body });
+      setMsg({ tone: "success", text: "Customer details saved." });
+      setOpen(false);
+      onSaved();
+    } catch (e) {
+      setMsg({ tone: "error", text: describeError(e) });
+    } finally {
+      setSaving(false);
+    }
+  }
+  const summary = c ? [c.name, c.street, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") : null;
+  const input = (key: keyof typeof f, label: string, extra: Record<string, string> = {}) => (
+    <Field label={label} htmlFor={`ct-${key}`}><input id={`ct-${key}`} className={inputClass} value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} {...extra} /></Field>
+  );
+  return (
+    <section aria-labelledby="cust-h" className="space-y-2" data-testid="customer-section">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="cust-h" className="text-lg font-bold">Customer</h2>
+        {!open ? <Button variant="ghost" className="h-11" onClick={() => setOpen(true)}>{c ? "Edit" : "Add details"}</Button> : null}
+      </div>
+      {!open ? (
+        <p className="text-sm text-slate-600">{summary ?? "No name or address yet. Estimates and invoices will show the job label only."}</p>
+      ) : (
+        <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+          {job.bookingId ? <Notice tone="info">This job is linked to booking #{job.bookingId}. Documents use the booking's name and address when it has them.</Notice> : null}
+          {input("name", "Name", { autoComplete: "name" })}
+          <div className="grid grid-cols-2 gap-3">
+            {input("phone", "Phone", { inputMode: "tel", autoComplete: "tel" })}
+            {input("email", "Email", { inputMode: "email", autoComplete: "email" })}
+          </div>
+          {input("street", "Service address", { autoComplete: "street-address" })}
+          <div className="grid grid-cols-[1fr_4.5rem_6rem] gap-2">
+            {input("city", "City")}
+            {input("state", "State", { maxLength: "2" })}
+            {input("zip", "ZIP", { inputMode: "numeric", maxLength: "5" })}
+          </div>
+          {!emailOk || !zipOk ? <Notice tone="warn">{!emailOk ? "Check the email address. " : ""}{!zipOk ? "ZIP should be 5 digits." : ""}</Notice> : null}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="h-12" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button className="h-12" disabled={saving || !f.name.trim() || !emailOk || !zipOk} onClick={save}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save</Button>
+          </div>
+          <p className="text-xs text-slate-500">Phone and email appear on your copy of documents. The customer's share-link estimate never shows them.</p>
+        </div>
+      )}
+      {msg ? <Notice tone={msg.tone}>{msg.text}</Notice> : null}
+    </section>
+  );
+}
+
+/** Photos attached from intake. Loaded with the owner token; never a public URL. */
+function JobPhotos({ media }: { media: Media[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    const made: string[] = [];
+    Promise.all(
+      media.slice(0, 12).map(async (m) => {
+        try {
+          const u = await adminObjectUrl(`/media/${m.id}?variant=thumb`);
+          made.push(u);
+          return [m.id, u] as const;
+        } catch {
+          return null;
+        }
+      }),
+    ).then((pairs) => {
+      if (alive) setUrls(Object.fromEntries(pairs.filter((p): p is readonly [string, string] => p !== null)));
+    });
+    return () => {
+      alive = false;
+      made.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [media]);
+  async function openFull(id: string) {
+    try {
+      const u = await adminObjectUrl(`/media/${id}`);
+      window.open(u, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(u), 60_000);
+    } catch {
+      /* thumbnail stays */
+    }
+  }
+  return (
+    <section aria-labelledby="photos-h" className="space-y-2">
+      <h2 id="photos-h" className="text-lg font-bold">Photos</h2>
+      <ul className="grid grid-cols-4 gap-2" data-testid="job-photos">
+        {media.map((m) => (
+          <li key={m.id}>
+            <button type="button" onClick={() => openFull(m.id)} className="block aspect-square w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100" aria-label={m.summary ?? `Photo (${m.hint})`}>
+              {urls[m.id] ? <img src={urls[m.id]} alt="" className="h-full w-full object-cover" /> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-slate-500">Private to you. Stored without location or camera data.</p>
+    </section>
+  );
+}
+
+function NewInvoice({ disabled, busy, onCreate }: { disabled: boolean; busy: boolean; onCreate: (body: { dueDate?: string; notes?: string }) => void }) {
+  const [dueDate, setDueDate] = useState("");
+  const [notes, setNotes] = useState("");
+  return (
+    <div className="space-y-3">
+      <details className="rounded-2xl border border-slate-200 p-3">
+        <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold">Due date and note (optional)</summary>
+        <div className="mt-2 space-y-3">
+          <Field label="Due date" htmlFor="inv-due" hint="Blank = your default from Economics → Documents"><input id="inv-due" type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
+          <Field label="Note to the customer" htmlFor="inv-notes"><textarea id="inv-notes" className="min-h-[72px] w-full rounded-xl border border-slate-300 p-3 text-base" maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Thank you for your business!" /></Field>
+        </div>
+      </details>
+      <Button className="h-12 w-full" disabled={disabled || busy} onClick={() => onCreate({ ...(dueDate ? { dueDate } : {}), ...(notes.trim() ? { notes: notes.trim() } : {}) })}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create invoice from quote
+      </Button>
+    </div>
+  );
+}
+
+function ActualsForm({ jobId, existing, disabled, onSaved }:{ jobId: string; existing: Detail["actuals"]; disabled: boolean; onSaved: () => void }) {
   const a = existing?.actuals ?? {};
   const [f, setF] = useState({
     laborMinutes: String(a.laborMinutes ?? ""),
@@ -308,34 +449,7 @@ function fmtVar(key: string, v: number) {
   return Math.round(v * 10) / 10;
 }
 
-type ShadowSample = {
-  id: string;
-  day: string;
-  zip: string | null;
-  pricingMode: string;
-  shownCents: number;
-  recommendedCents: number;
-  floorCents: number;
-  status: string;
-  jobId: string | null;
-  createdAt: string;
-  summary: {
-    shownSource: string;
-    catalogHasCustomQuoteLines: boolean;
-    complexity: string;
-    confidence: string;
-    premiumFactors: string[];
-    onsiteMinutes: number;
-    totalOwnerMinutes: number;
-    helperMinutes: number;
-    atShown: { helperCostCents: number; costToServeCents: number; ownerNetCents: number; marginPct: number; effectivePerHourCents: number };
-    atRecommended: { marginPct: number; effectivePerHourCents: number };
-    flags: string[];
-    questions: string[];
-    why: string[];
-  };
-};
-type ShadowReport = { samples: ShadowSample[]; stats: { count: number; comparableCount: number; shownBelowFloor: number; shownBelowRecommended: number; medianShownCents: number | null; medianRecommendedCents: number | null; medianGapCents: number | null; medianEffectivePerHourAtShownCents: number | null; statusCounts: Record<string, number> }; note: string };
+type ShadowReport = { samples: ShadowSampleRecord[]; stats: { count: number; comparableCount: number; shownBelowFloor: number; shownBelowRecommended: number; medianShownCents: number | null; medianRecommendedCents: number | null; medianGapCents: number | null; medianEffectivePerHourAtShownCents: number | null; statusCounts: Record<string, number> }; note: string };
 
 const STATUS_SHORT: Record<string, string> = { priced: "Priced", estimate_with_confirmation: "Estimate", manual_review_required: "Review", not_supported: "Not supported" };
 
@@ -343,14 +457,17 @@ const STATUS_SHORT: Record<string, string> = { priced: "Priced", estimate_with_c
 function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   const [data, setData] = useState<ShadowReport | null>(null);
   const [mode, setMode] = useState("");
+  const [targetPerHourCents, setTargetPerHourCents] = useState(0);
+  const [filters, setFilters] = useState<ShadowFilter[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const load = useCallback(() => {
     setError("");
-    Promise.all([adminFetch<ShadowReport>("/shadow-samples?limit=100"), adminFetch<{ config: { pricingMode: string } }>("/config")])
+    Promise.all([adminFetch<ShadowReport>("/shadow-samples?limit=100"), adminFetch<{ config: { pricingMode: string; labor: { targetLaborPerHourCents: number } } }>("/config")])
       .then(([r, c]) => {
         setData(r);
         setMode(c.config.pricingMode);
+        setTargetPerHourCents(c.config.labor.targetLaborPerHourCents);
       })
       .catch((e) => setError(describeError(e)));
   }, []);
@@ -369,6 +486,8 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   if (error) return <div className="space-y-2"><Notice tone="error">{error}</Notice><Button variant="outline" onClick={load}><RefreshCw className="h-4 w-4" /> Retry</Button></div>;
   if (!data) return <div className="flex items-center gap-2 py-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
   const st = data.stats;
+  const filtered = data.samples.filter((sample) => shadowSampleMatches(sample, filters, targetPerHourCents));
+  const toggleFilter = (filter: ShadowFilter) => setFilters((selected) => selected.includes(filter) ? selected.filter((x) => x !== filter) : [...selected, filter]);
   return (
     <div className="space-y-3" data-testid="website-quotes">
       {mode === "legacy" ? <Notice tone="warn">Shadow comparison is off. Switch pricing mode to Shadow under Economics: customers keep seeing catalog prices and each website quote is priced by the engine here.</Notice> : <Notice tone="info">{mode === "shadow" ? "Shadow mode: customers see catalog prices. " : "Dynamic mode: customers see engine prices. "}{data.note}</Notice>}
@@ -380,21 +499,57 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
         <Stat label="Your $/hr at catalog" value={st.medianEffectivePerHourAtShownCents === null ? "—" : `${money(st.medianEffectivePerHourAtShownCents)}/hr`} sub="median, after cash costs" />
         <Stat label="Needs review" value={(st.statusCounts.manual_review_required ?? 0) + (st.statusCounts.estimate_with_confirmation ?? 0)} sub="estimate or review" />
       </div>
+      {data.samples.length ? <section className="space-y-2 rounded-2xl border border-slate-200 p-3" aria-label="Website quote filters">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{filtered.length} of {data.samples.length} recent quotes</p>
+          {filters.length ? <Button variant="ghost" className="h-11" onClick={() => setFilters([])}>Clear filters</Button> : null}
+        </div>
+        <p className="text-xs text-slate-500">Matches all selected filters. Rate target: {money(targetPerHourCents)}/hr from your current rules. Price filters exclude incomplete catalog totals and engine-priced samples.</p>
+        <div className="flex flex-wrap gap-2">
+          {SHADOW_FILTERS.map((filter) => <Button key={filter.id} variant={filters.includes(filter.id) ? "default" : "outline"} className="min-h-11 h-auto whitespace-normal px-3 py-2 text-left text-xs" aria-pressed={filters.includes(filter.id)} onClick={() => toggleFilter(filter.id)}>{filter.label} ({data.samples.filter((sample) => shadowSampleMatches(sample, [filter.id], targetPerHourCents)).length})</Button>)}
+        </div>
+      </section> : null}
       {!data.samples.length ? <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No website quotes recorded yet.</p> : null}
+      {data.samples.length && !filtered.length ? <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No quotes match these filters.</p> : null}
       <ul className="space-y-2">
-        {data.samples.map((x) => (
+        {filtered.map((x) => (
           <li key={x.id} className="rounded-2xl border border-slate-200 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-slate-900">{money(x.shownCents)} <span className="text-xs font-normal text-slate-500">shown · engine {money(x.recommendedCents)} · floor {money(x.floorCents)}</span></p>
-                <p className="text-xs text-slate-500">{[x.zip, x.day, STATUS_SHORT[x.status] ?? x.status, x.summary.complexity, x.summary.catalogHasCustomQuoteLines ? "has custom-quote lines" : null].filter(Boolean).join(" · ")}</p>
+                <p className="font-semibold text-slate-900">{money(x.shownCents)} <span className="text-xs font-normal text-slate-500">{x.summary.shownSource === "catalog" ? "catalog shown" : "engine shown"}</span></p>
+                <p className="text-xs text-slate-500">{[x.zip, x.day, STATUS_SHORT[x.status] ?? x.status, x.summary.complexity, `${x.summary.confidence} confidence`].filter(Boolean).join(" · ")}</p>
               </div>
-              <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", x.shownCents < x.floorCents ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>{x.shownCents < x.floorCents ? "under floor" : "ok"}</span>
+              <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", !isComparableCatalogSample(x) || x.shownCents < x.floorCents ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>{!isComparableCatalogSample(x) ? "not comparable" : x.shownCents < x.floorCents ? "under floor" : "above floor"}</span>
             </div>
-            <p className="mt-1 text-xs text-slate-600">At the shown price: net {money(x.summary.atShown.ownerNetCents)} · {money(x.summary.atShown.effectivePerHourCents)}/hr · margin {(x.summary.atShown.marginPct * 100).toFixed(0)}% · {Math.round(x.summary.totalOwnerMinutes)} min of your time{x.summary.helperMinutes ? ` · helper ${money(x.summary.atShown.helperCostCents)}` : ""}</p>
+            {x.summary.catalogHasCustomQuoteLines ? <p className="mt-2 text-xs font-semibold text-amber-800">Catalog leaves some work unpriced. The shown total is incomplete; confirm that scope before choosing a price.</p> : null}
+            <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-600">
+              <p>V2 floor<br /><strong>{money(x.floorCents)}</strong></p>
+              <p>Recommended<br /><strong>{money(x.recommendedCents)}</strong></p>
+              <p>Premium<br /><strong>{money(x.summary.premiumCents)}</strong></p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
+              <p>On-site: {Math.round(x.summary.onsiteMinutes)} min</p>
+              <p>Your total time: {Math.round(x.summary.totalOwnerMinutes)} min</p>
+              <p>Helper: {Math.round(x.summary.helperMinutes)} min</p>
+              <p>Materials at cost: {money(x.summary.materialsCostCents)}</p>
+              <p>Travel cost: {money(x.summary.travelCostCents)}</p>
+              <p>Travel: {x.summary.travelSource.replace(/_/g, " ")}</p>
+            </div>
+            <table className="mt-3 w-full text-xs text-slate-600">
+              <caption className="mb-1 text-left text-slate-500">Estimated economics. Net pays for your time; margin also deducts its configured value.</caption>
+              <thead><tr><th className="py-1 text-left font-normal">At price</th><th className="py-1 text-right">Shown</th><th className="py-1 text-right">Recommended</th></tr></thead>
+              <tbody>
+                <tr><th className="py-1 text-left font-normal">Cost to serve</th><td className="text-right">{money(x.summary.atShown.costToServeCents)}</td><td className="text-right">{money(x.summary.atRecommended.costToServeCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Owner net</th><td className="text-right">{money(x.summary.atShown.ownerNetCents)}</td><td className="text-right">{money(x.summary.atRecommended.ownerNetCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Owner $/hr</th><td className="text-right">{money(x.summary.atShown.effectivePerHourCents)}</td><td className="text-right">{money(x.summary.atRecommended.effectivePerHourCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Margin</th><td className="text-right">{(x.summary.atShown.marginPct * 100).toFixed(1)}%</td><td className="text-right">{(x.summary.atRecommended.marginPct * 100).toFixed(1)}%</td></tr>
+                <tr><th className="py-1 text-left font-normal">Helper pay</th><td className="text-right">{money(x.summary.atShown.helperCostCents)}</td><td className="text-right">{money(x.summary.atRecommended.helperCostCents)}</td></tr>
+              </tbody>
+            </table>
             {x.summary.premiumFactors.length ? <p className="text-xs text-slate-500">Factors: {x.summary.premiumFactors.join(", ")}</p> : null}
             <details className="mt-1 text-xs text-slate-600">
               <summary className="min-h-[44px] cursor-pointer py-2 font-semibold">Why and open questions</summary>
+              {x.summary.flags.length ? <ul className="mb-2 list-disc space-y-1 pl-5 text-amber-800">{x.summary.flags.map((flag) => <li key={flag}>{flag}</li>)}</ul> : null}
               <ul className="list-disc space-y-1 pl-5">{x.summary.why.map((w) => <li key={w}>{w}</li>)}</ul>
               {x.summary.questions.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">{x.summary.questions.map((q) => <li key={q}>{q}</li>)}</ul> : null}
             </details>
@@ -410,7 +565,7 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   );
 }
 
-function InvoiceCard({ invoice, payments, onChanged }: { invoice: Invoice; payments: Payment[]; onChanged: () => void }) {
+function InvoiceCard({ invoice, payments, onChanged, onDownload, busyLabel }: { invoice: Invoice; payments: Payment[]; onChanged: () => void; onDownload: (label: string, path: string, fallback: string) => void; busyLabel: string }) {
   const [amount, setAmount] = useState("");
   const [tip, setTip] = useState("");
   const [method, setMethod] = useState("cash");
@@ -447,11 +602,18 @@ function InvoiceCard({ invoice, payments, onChanged }: { invoice: Invoice; payme
         <Stat label="Paid" value={money(invoice.paidCents)} />
         <Stat label="Balance" value={money(balance)} tone={balance > 0 ? "warn" : "good"} />
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/pdf`, `PPTVInstall-Invoice-${invoice.invoiceNumber}.pdf`), "Invoice PDF downloaded.")}><Download className="h-4 w-4" /> Download invoice PDF</Button>
-        {invoice.status === "paid" ? <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/receipt.pdf`, `PPTVInstall-Receipt-${invoice.invoiceNumber}.pdf`), "Paid receipt PDF downloaded.")}><Download className="h-4 w-4" /> Download paid receipt</Button> : null}
-      </div>
+      {invoice.dueDate || invoice.notes ? <p className="text-xs text-slate-500">{[invoice.dueDate ? `Due ${invoice.dueDate}` : null, invoice.notes ? `Note: ${invoice.notes}` : null].filter(Boolean).join(" · ")}</p> : null}
       {payments.length ? <ul className="space-y-1 text-xs text-slate-600">{payments.map((p) => <li key={p.id} className="flex justify-between"><span>{new Date(p.receivedAt).toLocaleDateString()} · {p.method.replace("_", " ")}{p.tipCents ? ` · tip ${money(p.tipCents)}` : ""}</span><span>{money(p.amountCents)}</span></li>)}</ul> : null}
+      <div className={cn("grid gap-2", invoice.status === "paid" ? "grid-cols-2" : "grid-cols-1")}>
+        <Button variant="outline" className="h-11" data-testid="invoice-pdf" disabled={busyLabel === "invoice-pdf"} onClick={() => onDownload("invoice-pdf", `/invoices/${invoice.id}/invoice.pdf`, `PPTVInstall-Invoice.pdf`)}>
+          {busyLabel === "invoice-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Invoice PDF
+        </Button>
+        {invoice.status === "paid" ? (
+          <Button variant="outline" className="h-11" data-testid="receipt-pdf" disabled={busyLabel === "receipt-pdf"} onClick={() => onDownload("receipt-pdf", `/invoices/${invoice.id}/receipt.pdf`, `PPTVInstall-Receipt.pdf`)}>
+            {busyLabel === "receipt-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Paid receipt
+          </Button>
+        ) : null}
+      </div>
       {invoice.status !== "paid" && invoice.status !== "void" ? (
         <div className="space-y-2">
           {!invoice.sentAt ? <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => adminFetch(`/invoices/${invoice.id}/send`, { method: "POST", body: {} }), "Marked as sent (nothing was emailed).")}>Mark as sent</Button> : null}

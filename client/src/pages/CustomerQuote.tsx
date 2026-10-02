@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Check, Download, Loader2 } from "lucide-react";
+import { Check, FileDown, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { businessPhone, telHref } from "@/components/ui/quote-tool/useQuoteState";
@@ -67,9 +67,11 @@ export default function CustomerQuotePage() {
             ))}
           </ul>
           <div className="flex items-center justify-between rounded-2xl bg-slate-900 p-4 text-white"><span className="font-semibold">Total</span><span className="text-3xl font-extrabold">{fmt(data.view.totalCents)}</span></div>
-          <a href={`/api/quotes/${encodeURIComponent(token)}/pdf`} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"><Download className="h-4 w-4" /> Download estimate PDF</a>
           {data.view.requiresReview ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Some details will be confirmed before work begins. Anything unusual is discussed with you first.</p> : null}
           {data.view.notes.map((n) => <p key={n} className="text-xs text-slate-500">{n}</p>)}
+          <a href={`/api/quotes/${encodeURIComponent(token)}/estimate.pdf`} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 hover:bg-slate-50" data-testid="estimate-pdf-link">
+            <FileDown className="h-4 w-4" /> Download estimate (PDF)
+          </a>
           {data.status === "accepted" ? (
             <p role="status" className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 p-4 font-semibold text-green-800"><Check className="h-5 w-5" /> Thank you. This quote is accepted and we will be in touch to confirm your appointment.</p>
           ) : data.status === "sent" ? (

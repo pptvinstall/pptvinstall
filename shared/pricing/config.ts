@@ -60,6 +60,35 @@ export const riskPremiumSchema = z
   })
   .strict();
 export type RiskPremiumConfig = z.infer<typeof riskPremiumSchema>;
+
+/** Customer documents (estimate / invoice / receipt). Customer-facing text only; never economics. */
+export const documentSettingsSchema = z
+  .object({
+    estimateValidDays: z.number().int().min(1).max(365),
+    invoiceDueDays: z.number().int().min(0).max(120),
+    /** Deposit requested on estimates as a fraction of the total (0 = no deposit). */
+    depositPct: z.number().min(0).max(1),
+    website: z.string().max(80),
+    serviceArea: z.string().max(80),
+    schedulingNote: z.string().max(300),
+    terms: z.array(z.string().min(1).max(300)).max(10),
+  })
+  .strict();
+export type DocumentSettings = z.infer<typeof documentSettingsSchema>;
+export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
+  estimateValidDays: 30,
+  invoiceDueDays: 7,
+  depositPct: 0,
+  website: "pptvinstall.com",
+  serviceArea: "Metro Atlanta",
+  schedulingNote: "Appointment times are confirmed by text or phone. Weekday appointments start in the evening; weekends are available.",
+  terms: [
+    "Prices are for the work listed. Anything not listed, or conditions found on site that differ from what was described, are discussed and approved with you before any extra work.",
+    "Customer-supplied mounts and hardware must be rated for the TV or item. We may decline to install equipment we believe is unsafe.",
+    "Hidden conditions inside walls or ceilings (studs, joists, wiring, pipes) are verified on site before mounting.",
+    "Payment is due when the work is complete unless an invoice states otherwise. We accept the payment methods listed on your invoice.",
+  ],
+};
 const zeroFactors = Object.fromEntries(PREMIUM_FACTORS.map((k) => [k, 0])) as Record<PremiumFactor, number>;
 /** Configs saved before risk premiums existed keep their old recommendation (premiums off). */
 const LEGACY_RISK_PREMIUM: RiskPremiumConfig = { enabled: false, maxTotalPct: 0, factors: zeroFactors };
@@ -153,6 +182,9 @@ export const economicsConfigSchema = z
         tax: z.object({ enabled: z.boolean(), rateBps: z.number().int().min(0).max(2_500), label: z.string().max(40) }),
       })
       .strict(),
+
+    /** Customer document settings. Older stored configs get the defaults. */
+    documents: documentSettingsSchema.default(DEFAULT_DOCUMENT_SETTINGS),
 
     scheduleModifiers: z.record(
       z.enum(SCHEDULE_MODIFIERS),
@@ -284,6 +316,7 @@ export const DEFAULT_ECONOMICS_CONFIG: EconomicsConfig = {
     },
     tax: { enabled: false, rateBps: 0, label: "" },
   },
+  documents: DEFAULT_DOCUMENT_SETTINGS,
   scheduleModifiers: {
     rush_hour: { enabled: true, laborCostPct: 0, extraCostCents: 0, extraDriveMinutes: 15, customerFacing: false, customerSurchargeCents: 0 },
     same_day: { enabled: true, laborCostPct: 0.1, extraCostCents: 0, extraDriveMinutes: 0, customerFacing: false, customerSurchargeCents: 0 },

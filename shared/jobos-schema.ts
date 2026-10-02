@@ -48,6 +48,8 @@ export const jobs = pgTable(
     context: jsonb("context").notNull().default({}),
     currentQuoteId: uuid("current_quote_id"),
     notes: text("notes"),
+    /** Owner-entered customer details for documents, used only when no booking is linked (the booking is canonical). */
+    contact: jsonb("contact"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -75,6 +77,8 @@ export const quotes = pgTable(
     status: varchar("status", { length: 20 }).notNull().default("draft"),
     shareToken: uuid("share_token").notNull().defaultRandom(),
     acceptedVersionId: uuid("accepted_version_id"),
+    /** Customer-facing estimate number (EST-1001...), assigned when a document is first needed. */
+    quoteNumber: integer("quote_number"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tokenIdx: uniqueIndex("quotes_share_token_idx").on(t.shareToken), jobIdx: index("quotes_job_idx").on(t.jobId) }),
@@ -121,6 +125,12 @@ export const materialEstimates = pgTable("material_estimates", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Named sequences for customer documents (e.g. "estimate"). */
+export const documentCounters = pgTable("document_counters", {
+  name: varchar("name", { length: 20 }).primaryKey(),
+  lastSeq: integer("last_seq").notNull().default(0),
+});
+
 export const invoiceCounters = pgTable("invoice_counters", {
   year: integer("year").primaryKey(),
   lastSeq: integer("last_seq").notNull().default(0),
@@ -143,6 +153,9 @@ export const invoices = pgTable(
     taxConfigSnapshot: jsonb("tax_config_snapshot").notNull(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
+    dueDate: varchar("due_date", { length: 10 }),
+    /** Customer-visible invoice notes. */
+    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ numberIdx: uniqueIndex("invoices_number_idx").on(t.invoiceNumber), jobIdx: index("invoices_job_idx").on(t.jobId) }),

@@ -28,7 +28,7 @@ after(async () => {
   await pg.client.close();
 });
 
-test("upload validation: magic bytes decide the type; HEIC, SVG, HTML, PDF, scripts and empty files are refused", async () => {
+test("upload validation: magic bytes decide the type; GIF, HEIC, SVG, HTML, PDF, scripts and empty files are refused", async () => {
   assert.equal(sniffImageType(await photo("#123456")), "image/jpeg");
   assert.equal(sniffImageType(await sharp({ create: { width: 4, height: 4, channels: 3, background: "#fff" } }).png().toBuffer()), "image/png");
   const bad: Array<[string, Buffer, string]> = [
@@ -37,6 +37,7 @@ test("upload validation: magic bytes decide the type; HEIC, SVG, HTML, PDF, scri
     ["pdf", Buffer.from("%PDF-1.7\n1 0 obj"), "UNSUPPORTED_TYPE"],
     ["exe", Buffer.from("MZ\x90\x00\x03\x00\x00\x00", "latin1"), "UNSUPPORTED_TYPE"],
     ["heic", Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from("ftypheic"), Buffer.alloc(16)]), "HEIC_NOT_SUPPORTED"],
+    ["gif", Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"), "UNSUPPORTED_TYPE"],
     ["empty", Buffer.alloc(0), "EMPTY"],
     ["truncated jpeg", Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]), "UNDECODABLE"],
   ];
@@ -45,6 +46,17 @@ test("upload validation: magic bytes decide the type; HEIC, SVG, HTML, PDF, scri
   }
   const huge = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(MAX_UPLOAD_BYTES)]);
   await assert.rejects(() => normalizeImage(huge), (e: unknown) => e instanceof MediaValidationError && e.code === "TOO_LARGE", "size is checked before decoding");
+});
+
+test("GIF decoder remains blocked independently of the upload magic-byte gate", async () => {
+  const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+  assert.equal(sniffImageType(gif), "gif");
+  await assert.rejects(() => sharp(gif).metadata(), /blocked|unsupported image format/i);
+  for (const type of ["png", "webp"] as const) {
+    const input = await sharp({ create: { width: 4, height: 4, channels: 3, background: "#fff" } })[type]().toBuffer();
+    const normalized = await normalizeImage(input);
+    assert.equal((await sharp(normalized.data).metadata()).format, "jpeg", `${type} still normalizes`);
+  }
 });
 
 test("normalization strips EXIF/GPS, auto-sizes, and makes a thumbnail", async () => {

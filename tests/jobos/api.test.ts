@@ -77,6 +77,7 @@ test("every admin Job OS endpoint rejects missing and wrong tokens", async () =>
     ["POST", `/api/admin/job-os/invoices/${id}/payments`],
     ["GET", `/api/admin/job-os/invoices/${id}/pdf`],
     ["GET", `/api/admin/job-os/invoices/${id}/receipt.pdf`],
+    ["PATCH", `/api/admin/job-os/media/${id}/hint`],
     ["GET", "/api/admin/job-os/intelligence"],
     ["GET", "/api/admin/job-os/intake/status"],
     ["POST", "/api/admin/job-os/intake/parse"],
@@ -87,6 +88,10 @@ test("every admin Job OS endpoint rejects missing and wrong tokens", async () =>
     ["PUT", `/api/admin/job-os/work-templates/x`],
     ["DELETE", `/api/admin/job-os/work-templates/x`],
     ["PUT", `/api/admin/job-os/work-categories/x`],
+    ["PATCH", `/api/admin/job-os/jobs/${id}/contact`],
+    ["GET", `/api/admin/job-os/quotes/${id}/estimate.pdf`],
+    ["GET", `/api/admin/job-os/invoices/${id}/invoice.pdf`],
+    ["GET", `/api/admin/job-os/invoices/${id}/receipt.pdf`],
   ];
   for (const [method, path] of endpoints) {
     const none = await call(method, path, method === "GET" ? undefined : {}, { "content-type": "application/json" });
@@ -178,6 +183,63 @@ test("end to end over HTTP: job → quote → send → public customer view has 
   assert.equal(pay.json.invoice.status, "paid");
 });
 
+test("documents over HTTP: owner PDFs need the token; customer PDF only for sent quotes and without contact details", async () => {
+  const { extractPdfText } = await import("../../server/jobos/pdf/pdfWriter");
+  const pdfOf = async (path: string, headers: Record<string, string> = { "x-admin-token": H["x-admin-token"] }) => {
+    const res = await fetch(base + path, { headers });
+    return { res, buf: Buffer.from(await res.arrayBuffer()) };
+  };
+  const created = await call("POST", "/api/admin/job-os/jobs", { title: "PDF test job (synthetic)", scope, context: nearby });
+  const jobId = created.json.id as string;
+  const contact = await call("PATCH", `/api/admin/job-os/jobs/${jobId}/contact`, { name: "Pat Example", phone: "404-555-0111", email: "pat@example.com", street: "1 Main St", city: "Atlanta", state: "GA", zip: "30303" });
+  assert.equal(contact.status, 200);
+  assert.equal(contact.json.contact.name, "Pat Example");
+  assert.equal((await call("PATCH", `/api/admin/job-os/jobs/${jobId}/contact`, { name: "X", ssn: "1" })).status, 400, "unknown fields rejected");
+  assert.equal((await call("PATCH", `/api/admin/job-os/jobs/${jobId}/contact`, { name: "X", email: "nope" })).status, 400);
+
+  const { quote } = (await call("POST", `/api/admin/job-os/jobs/${jobId}/quote`, {})).json;
+
+  assert.equal((await pdfOf(`/api/admin/job-os/quotes/${quote.id}/estimate.pdf`, {})).res.status, 401);
+  const owner = await pdfOf(`/api/admin/job-os/quotes/${quote.id}/estimate.pdf`);
+  assert.equal(owner.res.status, 200);
+  assert.equal(owner.res.headers.get("content-type"), "application/pdf");
+  assert.match(owner.res.headers.get("content-disposition") ?? "", /^attachment; filename="PPTVInstall-Estimate-\d{4}\.pdf"$/);
+  assert.equal(owner.res.headers.get("cache-control"), "private, no-store");
+  assert.equal(owner.buf.subarray(0, 5).toString("latin1"), "%PDF-");
+  const ownerText = extractPdfText(owner.buf).join("\n");
+  assert.ok(ownerText.includes("Pat Example") && ownerText.includes("404-555-0111"));
+  assert.ok(!/margin|floor|recommended|overhead|helper/i.test(ownerText), "owner copy is still a customer document");
+  const inline = await pdfOf(`/api/admin/job-os/quotes/${quote.id}/estimate.pdf?inline=1`);
+  assert.match(inline.res.headers.get("content-disposition") ?? "", /^inline;/);
+  assert.equal((await pdfOf(`/api/admin/job-os/quotes/${quote.id}/estimate.pdf?version=0`)).res.status, 400);
+
+  // Customer share link: draft quotes are not available.
+  assert.equal((await pdfOf(`/api/quotes/${quote.shareToken}/estimate.pdf`, {})).res.status, 404);
+  await call("POST", `/api/admin/job-os/quotes/${quote.id}/send`, {});
+  const pub = await pdfOf(`/api/quotes/${quote.shareToken}/estimate.pdf`, {});
+  assert.equal(pub.res.status, 200);
+  const pubText = extractPdfText(pub.buf).join("\n");
+  assert.ok(pubText.includes("Pat Example"));
+  assert.ok(!pubText.includes("404-555-0111") && !pubText.includes("pat@example.com"), "no customer phone/email on the share-link PDF");
+  assert.equal((await pdfOf(`/api/quotes/not-a-uuid/estimate.pdf`, {})).res.status, 404);
+
+  const inv = (await call("POST", `/api/admin/job-os/jobs/${jobId}/invoice`, { dueDate: "2026-12-01", notes: "Thanks!" })).json;
+  assert.equal(inv.dueDate, "2026-12-01");
+  assert.equal((await call("POST", `/api/admin/job-os/jobs/${jobId}/invoice`, { dueDate: "12/01/2026" })).status, 400);
+  const invPdf = await pdfOf(`/api/admin/job-os/invoices/${inv.id}/invoice.pdf`);
+  assert.equal(invPdf.res.status, 200);
+  assert.match(invPdf.res.headers.get("content-disposition") ?? "", /PPTVInstall-Invoice-\d{4}-\d{4}\.pdf/);
+  const early = await call("GET", `/api/admin/job-os/invoices/${inv.id}/receipt.pdf`);
+  assert.equal(early.status, 409);
+  assert.equal(early.json.code, "NOT_PAID");
+  await call("POST", `/api/admin/job-os/invoices/${inv.id}/payments`, { amountCents: inv.totalCents, method: "cash" });
+  const rc = await pdfOf(`/api/admin/job-os/invoices/${inv.id}/receipt.pdf`);
+  assert.equal(rc.res.status, 200);
+  assert.match(rc.res.headers.get("content-disposition") ?? "", /PPTVInstall-Receipt-\d{4}-\d{4}\.pdf/);
+  assert.ok(extractPdfText(rc.buf).includes("PAID IN FULL"));
+  assert.equal((await call("GET", `/api/admin/job-os/invoices/00000000-0000-4000-8000-000000000000/invoice.pdf`)).status, 404);
+});
+
 test("invalid ids and bodies return 4xx without leaking internals", async () => {
   const r1 = await call("GET", "/api/admin/job-os/jobs/not-a-uuid");
   assert.equal(r1.status, 400);
@@ -202,10 +264,14 @@ test("config endpoint rejects secret-like keys and requires a reason", async () 
   assert.equal(ok.json.config.travel.mpg, 18);
 });
 
-test("AI intake: works without AI (heuristic), photo intake reports not_configured, staging disables AI", async () => {
+test("AI intake: works without AI (heuristic), reports storage/OCR status, staging disables AI", async () => {
   const status = await call("GET", "/api/admin/job-os/intake/status");
   assert.equal(status.json.aiEnabled, false);
-  assert.equal(status.json.photoIntake, "not_configured");
+  assert.equal(status.json.media.enabled, true);
+  assert.equal(status.json.media.durable, false);
+  assert.equal(status.json.ocrEnabled, true);
+  assert.equal(status.json.visionEnabled, false);
+  assert.equal(status.json.metrics.sampleCount, 0);
   assert.equal(status.json.outboundSuppressed, true);
   const parsed = await call("POST", "/api/admin/job-os/intake/parse", { message: "Two TVs, one over the fireplace on brick, 65 inch", useAi: true });
   assert.equal(parsed.status, 200);

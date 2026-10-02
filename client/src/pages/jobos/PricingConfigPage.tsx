@@ -190,6 +190,26 @@ function Inner() {
         ) : null}
       </section>
 
+      {draft.documents ? (
+        <section className="space-y-3" aria-labelledby="docs-h" data-testid="document-settings">
+          <h2 id="docs-h" className="text-lg font-bold">Estimates & invoices</h2>
+          <p className="text-xs text-slate-500">What customers see on PDF estimates, invoices and receipts. Your costs, margins and floor are never printed.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Estimate valid (days)" htmlFor="doc-valid"><input id="doc-valid" inputMode="numeric" className={inputClass} defaultValue={String(draft.documents.estimateValidDays)} key={`valid-${active.version}`} onBlur={(e) => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= 365) set(["documents", "estimateValidDays"], v); }} /></Field>
+            <Field label="Invoice due (days)" htmlFor="doc-due" hint="0 = due on receipt"><input id="doc-due" inputMode="numeric" className={inputClass} defaultValue={String(draft.documents.invoiceDueDays)} key={`due-${active.version}`} onBlur={(e) => { const v = Math.round(Number(e.target.value)); if (v >= 0 && v <= 120) set(["documents", "invoiceDueDays"], v); }} /></Field>
+          </div>
+          {plain("Deposit on estimates (%)", ["documents", "depositPct"], "0 = no deposit line. Rounded to whole dollars.", 100)}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Website" htmlFor="doc-web"><input id="doc-web" className={inputClass} maxLength={80} value={draft.documents.website} onChange={(e) => set(["documents", "website"], e.target.value)} /></Field>
+            <Field label="Service area" htmlFor="doc-area"><input id="doc-area" className={inputClass} maxLength={80} value={draft.documents.serviceArea} onChange={(e) => set(["documents", "serviceArea"], e.target.value)} /></Field>
+          </div>
+          <Field label="Scheduling note" htmlFor="doc-sched"><textarea id="doc-sched" className="min-h-[64px] w-full rounded-xl border border-slate-300 p-3 text-base" maxLength={300} value={draft.documents.schedulingNote} onChange={(e) => set(["documents", "schedulingNote"], e.target.value)} /></Field>
+          <Field label="Terms (one per line)" htmlFor="doc-terms" hint="Up to 10 lines, printed on estimates and invoices.">
+            <textarea id="doc-terms" className="min-h-[120px] w-full rounded-xl border border-slate-300 p-3 text-sm" defaultValue={draft.documents.terms.join("\n")} key={`terms-${active.version}`} onBlur={(e) => set(["documents", "terms"], e.target.value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 10).map((s) => s.slice(0, 300)))} />
+          </Field>
+        </section>
+      ) : null}
+
       <details className="rounded-2xl border border-slate-200 p-3">
         <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold">Advanced: labor minutes, material recipes, mount costs (JSON)</summary>
         <textarea aria-label="Advanced configuration JSON" className="mt-2 h-64 w-full rounded-xl border border-slate-300 p-2 font-mono text-xs" value={advanced} onChange={(e) => setAdvanced(e.target.value)} spellCheck={false} />

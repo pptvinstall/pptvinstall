@@ -23,6 +23,7 @@ import { ZodError } from "zod";
 import { registerJobOsRoutes } from "./jobos/routes";
 import { JobOsService, type IntakeProvider } from "./jobos/service";
 import { createMediaStorage } from "./jobos/media/storage";
+import { LocalOcrProvider } from "./jobos/ocr";
 import { createVisionProvider, type VisionProvider } from "./jobos/vision";
 import { DbJobOsStore } from "./jobos/dbStore";
 import { MemoryJobOsStore } from "./jobos/memoryStore";
@@ -786,6 +787,7 @@ export function registerRoutes(app: Express): Server {
   // --- JOB OS (owner pricing/job/invoice tools; admin-token protected, see docs/JOB_OS.md) ---
   const intakeProvider: IntakeProvider = {
     name: "anthropic",
+    model: "claude-sonnet-4-20250514",
     enabled: () => getAiQuoteProtectionConfig().enabled,
     complete: (prompt) => requestAnthropicText("Return only valid JSON matching the requested schema.", prompt, 1800),
   };
@@ -797,7 +799,18 @@ export function registerRoutes(app: Express): Server {
     analyze: (images, prompt) => requestAnthropicVision("Return only valid JSON matching the requested schema.", prompt, images, 3_000),
   };
   registerJobOsRoutes(app, {
-    service: new JobOsService(jobOsStore, { intakeProvider, configCacheMs: 5_000, media: createMediaStorage(), vision: createVisionProvider({ anthropic: anthropicVision }) }),
+    service: new JobOsService(jobOsStore, {
+      intakeProvider,
+      configCacheMs: 5_000,
+      media: createMediaStorage(),
+      vision: createVisionProvider({ anthropic: anthropicVision }),
+      ocr: new LocalOcrProvider(process.env.OCR_ENABLED !== "false"),
+      // Documents read the booking (canonical customer record); nothing is copied into Job OS.
+      lookupBookingContact: async (id) => {
+        const b = await storage.getBookingById(id);
+        return b ? { name: b.name, phone: b.phone, email: b.email, street: [b.streetAddress, b.addressLine2].filter(Boolean).join(", "), city: b.city, state: b.state, zip: b.zipCode } : undefined;
+      },
+    }),
     getClientIp: (req) => getClientIpAddress(req),
     lookupBooking: async (id) => {
       const booking = await storage.getBookingById(id);
@@ -810,7 +823,8 @@ export function registerRoutes(app: Express): Server {
     try {
       const health = await monitoring.getSystemHealth();
       const statusCode = health.status === "unhealthy" ? 503 : 200;
-      res.status(statusCode).json({ ...health, ...describeOutboundState() });
+      const commit = process.env.RENDER_GIT_COMMIT;
+      res.status(statusCode).json({ ...health, ...describeOutboundState(), deploymentSha: commit && /^[a-f0-9]{40}$/.test(commit) ? commit : null });
     } catch (error) {
       console.error("Health route error:", error);
       res.status(503).json({

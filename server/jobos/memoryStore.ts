@@ -80,6 +80,7 @@ export class MemoryJobOsStore implements JobOsStore {
       context: clone(job.context),
       currentQuoteId: null,
       notes: job.notes ?? null,
+      contact: null,
       createdAt: t,
       updatedAt: t,
     };
@@ -108,13 +109,20 @@ export class MemoryJobOsStore implements JobOsStore {
 
   async createQuote(jobId: string) {
     if (!this.jobs.has(jobId)) throw new NotFoundError("Job");
-    const q: QuoteRecord = { id: randomUUID(), jobId, status: "draft", shareToken: randomUUID(), acceptedVersionId: null, createdAt: now() };
+    const q: QuoteRecord = { id: randomUUID(), jobId, status: "draft", shareToken: randomUUID(), acceptedVersionId: null, quoteNumber: null, createdAt: now() };
     this.quotes.set(q.id, q);
     return clone(q);
   }
   async getQuote(id: string) {
     const q = this.quotes.get(id);
     return q ? clone(q) : null;
+  }
+  private estimateSeq = 0;
+  async assignQuoteNumber(quoteId: string) {
+    const q = this.quotes.get(quoteId);
+    if (!q) throw new NotFoundError("Quote");
+    if (!q.quoteNumber) q.quoteNumber = ++this.estimateSeq;
+    return q.quoteNumber;
   }
   async getQuoteByShareToken(token: string) {
     const q = Array.from(this.quotes.values()).find((x) => x.shareToken === token);
@@ -172,6 +180,8 @@ export class MemoryJobOsStore implements JobOsStore {
       taxConfigSnapshot: clone(inv.taxConfigSnapshot),
       sentAt: null,
       voidedAt: null,
+      dueDate: inv.dueDate ?? null,
+      notes: inv.notes ?? null,
       createdAt: now(),
     };
     this.invoices.set(rec.id, rec);
@@ -272,6 +282,10 @@ export class MemoryJobOsStore implements JobOsStore {
   }
   async getMedia(id: string) {
     const row = this.media.get(id);
+    return row ? clone(row) : null;
+  }
+  async findCachedMediaAnalysis(sha256: string, hint: string, schemaVersion: string) {
+    const row = Array.from(this.media.values()).find((m) => !m.deletedAt && m.sha256 === sha256 && m.hint === hint && m.schemaVersion === schemaVersion && m.analysisStatus === "analyzed");
     return row ? clone(row) : null;
   }
   async listMedia(filter: { intakeId?: string; jobId?: string }) {
