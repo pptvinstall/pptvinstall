@@ -6,3 +6,4 @@ export * from "./intake";
 export * from "./types";
 export * from "./workIntake";
 export * from "./unifiedIntake";
+export * from "./documents";

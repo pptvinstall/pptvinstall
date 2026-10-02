@@ -101,9 +101,42 @@ export function adminUpload<T>(path: string, file: Blob, onProgress?: (fraction:
   });
 }
 
+async function adminFile(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/job-os${path}`, { headers: { "x-admin-token": getAdminToken() } });
+  } catch {
+    throw new AdminApiError("Can't reach the server. Check your connection and try again.", 0);
+  }
+  if (!res.ok) {
+    let message = res.status === 401 ? "That access code was not accepted." : `Could not load the file (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.message && res.status !== 401) message = data.message;
+    } catch {
+      /* not JSON */
+    }
+    throw new AdminApiError(message, res.status);
+  }
+  const filename = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? null;
+  return { blob: await res.blob(), filename };
+}
+
 /** Fetch a private file (image or PDF) with the admin token and return a short-lived object URL. */
 export async function adminObjectUrl(path: string): Promise<string> {
-  const res = await fetch(`/api/admin/job-os${path}`, { headers: { "x-admin-token": getAdminToken() } });
-  if (!res.ok) throw new AdminApiError(res.status === 401 ? "That access code was not accepted." : `Could not load the file (${res.status})`, res.status);
-  return URL.createObjectURL(await res.blob());
+  return URL.createObjectURL((await adminFile(path)).blob);
+}
+
+/** Download a private PDF (estimate, invoice, receipt). The token travels in a header, never in the URL. */
+export async function adminDownload(path: string, fallbackName: string): Promise<void> {
+  const { blob, filename } = await adminFile(path);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename ?? fallbackName;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

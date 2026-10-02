@@ -1,6 +1,8 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import { MEDIA_HINTS } from "@shared/jobos/types";
 import { MAX_UPLOAD_BYTES, MediaValidationError } from "./media/images";
+import { DocumentNotAvailableError, type CustomerDocument } from "@shared/jobos/documents";
+import { documentFilename, renderDocumentPdf } from "./pdf/renderDocument";
 import { ZodError, z } from "zod";
 import { ConfigValidationError, InternalDataLeakError, QuotePolicyError } from "@shared/pricing";
 import { IntakeValidationError, InvoicePolicyError, JOB_STATUSES } from "@shared/jobos";
@@ -8,7 +10,6 @@ import { getOutbox, describeOutboundState } from "../outbound";
 import { createRateLimiter } from "./rateLimit";
 import { ConflictError, JobOsService } from "./service";
 import { NotFoundError } from "./store";
-import { renderCustomerDocumentPdf } from "./pdf";
 
 // Job OS HTTP API.
 //  - /api/admin/job-os/*  : owner only. The caller (routes.ts) mounts this AFTER the global
@@ -25,6 +26,7 @@ export function sendError(res: Response, err: unknown) {
   if (err instanceof QuotePolicyError) return res.status(422).json({ message: err.message, code: err.code });
   if (err instanceof ConfigValidationError) return res.status(422).json({ message: "Invalid pricing configuration", issues: err.issues });
   if (err instanceof IntakeValidationError) return res.status(422).json({ message: err.message, issues: err.issues });
+  if (err instanceof DocumentNotAvailableError) return res.status(409).json({ message: err.message, code: err.code });
   if (err instanceof MediaValidationError) return res.status(err.code === "TOO_LARGE" ? 413 : err.code === "UNSUPPORTED_TYPE" || err.code === "HEIC_NOT_SUPPORTED" ? 415 : 400).json({ message: err.message, code: err.code });
   if (err instanceof InternalDataLeakError) {
     console.error("[jobos] blocked internal data leak:", err.leakedKeys.join(","));
@@ -120,10 +122,6 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
     const quote = await service.markQuoteSent(idParam(req));
     res.json({ quote, customerPath: `/q/${quote.shareToken}` });
   }));
-  app.get(`${A}/quotes/:id/pdf`, wrap(async (req, res) => {
-    const { document, filename } = await service.getEstimateDocument(idParam(req));
-    res.status(200).set({ "Content-Type": "application/pdf", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": `attachment; filename="${filename}"` }).send(renderCustomerDocumentPdf(document));
-  }));
 
   // ---- actuals & profitability
   app.post(`${A}/jobs/:id/actuals`, wrap(async (req, res) => res.status(201).json(await service.recordActuals(idParam(req), req.body))));
@@ -134,14 +132,6 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   app.post(`${A}/invoices/:id/send`, wrap(async (req, res) => res.json(await service.sendInvoice(idParam(req)))));
   app.post(`${A}/invoices/:id/void`, wrap(async (req, res) => res.json(await service.voidInvoice(idParam(req)))));
   app.post(`${A}/invoices/:id/payments`, wrap(async (req, res) => res.status(201).json(await service.recordPayment(idParam(req), req.body))));
-  app.get(`${A}/invoices/:id/pdf`, wrap(async (req, res) => {
-    const { document, filename } = await service.getInvoiceDocument(idParam(req), false);
-    res.status(200).set({ "Content-Type": "application/pdf", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": `attachment; filename="${filename}"` }).send(renderCustomerDocumentPdf(document));
-  }));
-  app.get(`${A}/invoices/:id/receipt.pdf`, wrap(async (req, res) => {
-    const { document, filename } = await service.getInvoiceDocument(idParam(req), true);
-    res.status(200).set({ "Content-Type": "application/pdf", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": `attachment; filename="${filename}"` }).send(renderCustomerDocumentPdf(document));
-  }));
 
   // ---- work templates and taxonomy (owner config; new item types need no code or migration)
   app.put(`${A}/work-templates/:id`, wrap(async (req, res) => {
@@ -177,6 +167,30 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
 
   // ---- staging inspection: what outbound traffic was suppressed
   app.get(`${A}/outbox`, wrap(async (_req, res) => res.json({ ...describeOutboundState(), entries: getOutbox() })));
+
+  // ---- customer documents (PDF rendered server-side from the canonical document model)
+  const sendPdf = async (req: Request, res: Response, doc: CustomerDocument) => {
+    const pdf = await renderDocumentPdf(doc);
+    res
+      .status(200)
+      .set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `${req.query.inline === "1" ? "inline" : "attachment"}; filename="${documentFilename(doc)}"`,
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      })
+      .send(pdf);
+  };
+  app.patch(`${A}/jobs/:id/contact`, wrap(async (req, res) => res.json(await service.setJobContact(idParam(req), req.body))));
+  app.get(`${A}/quotes/:id/estimate.pdf`, wrap(async (req, res) => {
+    const version = typeof req.query.version === "string" ? z.coerce.number().int().min(1).parse(req.query.version) : undefined;
+    await sendPdf(req, res, await service.estimateDocument(idParam(req), { version }));
+  }));
+  app.get(`${A}/invoices/:id/invoice.pdf`, wrap(async (req, res) => sendPdf(req, res, await service.invoiceDocument(idParam(req)))));
+  // Short aliases kept for links already in use.
+  app.get(`${A}/quotes/:id/pdf`, wrap(async (req, res) => sendPdf(req, res, await service.estimateDocument(idParam(req)))));
+  app.get(`${A}/invoices/:id/pdf`, wrap(async (req, res) => sendPdf(req, res, await service.invoiceDocument(idParam(req)))));
+  app.get(`${A}/invoices/:id/receipt.pdf`, wrap(async (req, res) => sendPdf(req, res, await service.receiptDocument(idParam(req)))));
 
   // ---- private media + unified intake (owner only; images are never served from a public URL)
   app.post(
@@ -235,20 +249,19 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   }));
 
   // ---- public customer quote (token addressed, customer-safe only)
-  app.get("/api/quotes/:token/pdf", wrap(async (req, res) => {
-    const limit = publicLimiter.check(deps.getClientIp(req));
-    if (!limit.allowed) return res.status(429).set("Retry-After", String(limit.retryAfterSeconds)).json({ message: "Too many requests" });
-    const token = uuid.safeParse(req.params.token);
-    if (!token.success) throw new NotFoundError("Quote");
-    const { document, filename } = await service.getEstimateDocumentByToken(token.data);
-    res.status(200).set({ "Content-Type": "application/pdf", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": `attachment; filename="${filename}"` }).send(renderCustomerDocumentPdf(document));
-  }));
   app.get("/api/quotes/:token", wrap(async (req, res) => {
     const limit = publicLimiter.check(deps.getClientIp(req));
     if (!limit.allowed) return res.status(429).set("Retry-After", String(limit.retryAfterSeconds)).json({ message: "Too many requests" });
     const token = uuid.safeParse(req.params.token);
     if (!token.success) throw new NotFoundError("Quote");
     res.set("Cache-Control", "no-store").json(await service.getCustomerQuote(token.data));
+  }));
+  app.get(["/api/quotes/:token/estimate.pdf", "/api/quotes/:token/pdf"], wrap(async (req, res) => {
+    const limit = publicLimiter.check(deps.getClientIp(req));
+    if (!limit.allowed) return res.status(429).set("Retry-After", String(limit.retryAfterSeconds)).json({ message: "Too many requests" });
+    const token = uuid.safeParse(req.params.token);
+    if (!token.success) throw new NotFoundError("Quote");
+    await sendPdf(req, res, await service.customerEstimateDocument(token.data));
   }));
   app.post("/api/quotes/:token/accept", wrap(async (req, res) => {
     const limit = acceptLimiter.check(deps.getClientIp(req));

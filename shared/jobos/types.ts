@@ -51,8 +51,20 @@ export interface JobRecord {
   context: JobContextInput;
   currentQuoteId: string | null;
   notes: string | null;
+  /** Owner-entered customer details for documents when no booking is linked. */
+  contact: JobContact | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JobContact {
+  name: string;
+  phone?: string;
+  email?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
 }
 
 export interface QuoteRecord {
@@ -62,6 +74,7 @@ export interface QuoteRecord {
   /** Unguessable token for the public customer quote link. */
   shareToken: string;
   acceptedVersionId: string | null;
+  quoteNumber: number | null;
   createdAt: string;
 }
 
@@ -98,6 +111,8 @@ export interface InvoiceRecord {
   taxConfigSnapshot: EconomicsConfig["business"]["tax"];
   sentAt: string | null;
   voidedAt: string | null;
+  dueDate: string | null;
+  notes: string | null;
   createdAt: string;
 }
 

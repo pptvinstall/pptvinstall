@@ -797,7 +797,17 @@ export function registerRoutes(app: Express): Server {
     analyze: (images, prompt) => requestAnthropicVision("Return only valid JSON matching the requested schema.", prompt, images, 3_000),
   };
   registerJobOsRoutes(app, {
-    service: new JobOsService(jobOsStore, { intakeProvider, configCacheMs: 5_000, media: createMediaStorage(), vision: createVisionProvider({ anthropic: anthropicVision }) }),
+    service: new JobOsService(jobOsStore, {
+      intakeProvider,
+      configCacheMs: 5_000,
+      media: createMediaStorage(),
+      vision: createVisionProvider({ anthropic: anthropicVision }),
+      // Documents read the booking (canonical customer record); nothing is copied into Job OS.
+      lookupBookingContact: async (id) => {
+        const b = await storage.getBookingById(id);
+        return b ? { name: b.name, phone: b.phone, email: b.email, street: [b.streetAddress, b.addressLine2].filter(Boolean).join(", "), city: b.city, state: b.state, zip: b.zipCode } : undefined;
+      },
+    }),
     getClientIp: (req) => getClientIpAddress(req),
     lookupBooking: async (id) => {
       const booking = await storage.getBookingById(id);

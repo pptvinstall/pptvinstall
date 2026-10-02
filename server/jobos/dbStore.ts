@@ -82,6 +82,7 @@ const toJob = (r: typeof s.jobs.$inferSelect): JobRecord => ({
   context: r.context as JobRecord["context"],
   currentQuoteId: r.currentQuoteId,
   notes: r.notes,
+  contact: (r.contact as JobRecord["contact"]) ?? null,
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
 });
@@ -92,6 +93,7 @@ const toQuote = (r: typeof s.quotes.$inferSelect): QuoteRecord => ({
   status: r.status as QuoteRecord["status"],
   shareToken: r.shareToken,
   acceptedVersionId: r.acceptedVersionId,
+  quoteNumber: r.quoteNumber ?? null,
   createdAt: r.createdAt.toISOString(),
 });
 
@@ -128,6 +130,8 @@ const toInvoice = (r: typeof s.invoices.$inferSelect): InvoiceRecord => ({
   taxConfigSnapshot: r.taxConfigSnapshot as InvoiceRecord["taxConfigSnapshot"],
   sentAt: iso(r.sentAt),
   voidedAt: iso(r.voidedAt),
+  dueDate: r.dueDate ?? null,
+  notes: r.notes ?? null,
   createdAt: r.createdAt.toISOString(),
 });
 
@@ -268,6 +272,20 @@ export class DbJobOsStore implements JobOsStore {
     if (!row) throw new NotFoundError("Quote");
     return toQuote(row);
   }
+  async assignQuoteNumber(quoteId: string) {
+    return this.db.transaction(async (tx) => {
+      const [q] = await tx.select().from(s.quotes).where(eq(s.quotes.id, quoteId)).limit(1);
+      if (!q) throw new NotFoundError("Quote");
+      if (q.quoteNumber) return q.quoteNumber;
+      const [counter] = await tx
+        .insert(s.documentCounters)
+        .values({ name: "estimate", lastSeq: 1 })
+        .onConflictDoUpdate({ target: s.documentCounters.name, set: { lastSeq: sql`${s.documentCounters.lastSeq} + 1` } })
+        .returning();
+      const [row] = await tx.update(s.quotes).set({ quoteNumber: counter!.lastSeq }).where(eq(s.quotes.id, quoteId)).returning();
+      return row!.quoteNumber!;
+    });
+  }
   async addQuoteVersion(quoteId: string, v: NewQuoteVersion) {
     return this.db.transaction(async (tx) => {
       const [{ max }] = (await tx.select({ max: sql<number>`coalesce(max(${s.quoteVersions.version}), 0)` }).from(s.quoteVersions).where(eq(s.quoteVersions.quoteId, quoteId))) as Array<{ max: number }>;
@@ -330,6 +348,8 @@ export class DbJobOsStore implements JobOsStore {
           taxCents: inv.taxCents,
           totalCents: inv.totalCents,
           taxConfigSnapshot: inv.taxConfigSnapshot,
+          dueDate: inv.dueDate ?? null,
+          notes: inv.notes ?? null,
         })
         .returning();
       return toInvoice(row!);

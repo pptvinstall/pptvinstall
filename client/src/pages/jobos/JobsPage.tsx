@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Copy, Download, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, FileDown, Loader2, RefreshCw } from "lucide-react";
 
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, inputClass } from "@/components/jobos/controls";
 import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
 import { Button } from "@/components/ui/button";
-import { adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
+import { adminDownload, adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
 
-type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string };
+type Contact = { name: string; phone?: string; email?: string; street?: string; city?: string; state?: string; zip?: string };
+type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string; contact?: Contact | null };
+type Media = { id: string; hint: string; width: number; height: number; analysisStatus: string; kind: string | null; summary: string | null; createdAt: string };
 type Version = {
   id: string;
   version: number;
@@ -23,15 +25,16 @@ type Version = {
   acceptedAt: string | null;
   snapshot?: { pricingMode?: string; composition?: { pricing?: PanelPricing; economics?: PanelEconomics } };
 };
-type Invoice = { id: string; invoiceNumber: string; status: string; totalCents: number; paidCents: number; taxCents: number; sentAt: string | null };
+type Invoice = { id: string; invoiceNumber: string; status: string; totalCents: number; paidCents: number; taxCents: number; sentAt: string | null; dueDate?: string | null; notes?: string | null };
 type Payment = { id: string; invoiceId: string; amountCents: number; method: string; tipCents: number; receivedAt: string };
 type Detail = {
   job: Job;
-  quote: { id: string; status: string; shareToken: string } | null;
+  quote: { id: string; status: string; shareToken: string; quoteNumber?: number | null } | null;
   versions: Version[];
   invoices: Invoice[];
   payments: Payment[];
   actuals: { actuals: Record<string, any>; profitability: Profit | null } | null;
+  media?: Media[];
 };
 type Profit = {
   note: string;
@@ -48,20 +51,6 @@ type Profit = {
   estimatedNetMarginPct: number;
   variances: Record<string, { estimate: number; actual: number; delta: number; ratio: number | null }>;
 };
-
-async function downloadAdminFile(path: string, filename: string) {
-  const url = await adminObjectUrl(path);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } finally {
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-}
 
 const STATUS_STYLE: Record<string, string> = {
   lead: "bg-slate-100 text-slate-700",
@@ -171,6 +160,18 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
     }, "Quote marked sent and customer link copied.");
   }
 
+  async function download(label: string, path: string, fallback: string) {
+    setBusy(label);
+    setNotice(null);
+    try {
+      await adminDownload(path, fallback);
+    } catch (e) {
+      setNotice({ tone: "error", text: describeError(e) });
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <Button variant="ghost" onClick={onBack} className="-ml-2"><ArrowLeft className="h-4 w-4" /> Jobs</Button>
@@ -182,6 +183,9 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <p className="text-xs text-slate-500">{[job.customerLabel, job.zip, job.bookingId ? `Booking #${job.bookingId}` : null].filter(Boolean).join(" · ")}</p>
       </header>
       {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
+
+      <CustomerSection job={job} onSaved={load} />
+      {detail.media?.length ? <JobPhotos media={detail.media} /> : null}
 
       <section aria-labelledby="quote-h" className="space-y-2">
         <h2 id="quote-h" className="text-lg font-bold">Quote</h2>
@@ -202,7 +206,11 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </details>
             ) : null}
             {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "send"} onClick={copyLink}>{busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} {quote.status === "draft" ? "Mark sent & copy customer link" : `Copy customer link (${quote.status})`}</Button> : null}
-            {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "estimate-pdf"} onClick={() => run("estimate-pdf", () => downloadAdminFile(`/quotes/${quote.id}/pdf`, `PPTVInstall-Estimate-${quote.id.slice(0, 8)}.pdf`), "Estimate PDF downloaded.")}>{busy === "estimate-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download estimate PDF</Button> : null}
+            {quote ? (
+              <Button variant="outline" className="h-12 w-full" data-testid="estimate-pdf" disabled={busy === "estimate-pdf"} onClick={() => download("estimate-pdf", `/quotes/${quote.id}/estimate.pdf`, "PPTVInstall-Estimate.pdf")}>
+                {busy === "estimate-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Estimate PDF{versions.length > 1 ? ` (${quote.status === "accepted" ? "accepted version" : `v${latest.version}`})` : ""}
+              </Button>
+            ) : null}
           </>
         )}
       </section>
@@ -212,11 +220,9 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
       <section aria-labelledby="inv-h" className="space-y-2">
         <h2 id="inv-h" className="text-lg font-bold">Invoice & payment</h2>
         {!invoice ? (
-          <Button className="h-12 w-full" disabled={!latest || busy === "invoice"} onClick={() => run("invoice", () => adminFetch(`/jobs/${id}/invoice`, { method: "POST", body: {} }), "Invoice created from the quote.")}>
-            {busy === "invoice" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create invoice from quote
-          </Button>
+          <NewInvoice disabled={!latest} busy={busy === "invoice"} onCreate={(body) => run("invoice", () => adminFetch(`/jobs/${id}/invoice`, { method: "POST", body }), "Invoice created from the quote.")} />
         ) : (
-          <InvoiceCard invoice={invoice} payments={payments.filter((p) => p.invoiceId === invoice.id)} onChanged={load} />
+          <InvoiceCard invoice={invoice} payments={payments.filter((p) => p.invoiceId === invoice.id)} onChanged={load} onDownload={download} busyLabel={busy} />
         )}
         <p className="text-xs text-slate-500">Records what you tell it. It does not verify Zelle, Venmo, Apple Pay or cash receipts, and applies tax only if you configure it.</p>
       </section>
@@ -224,7 +230,140 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
   );
 }
 
-function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; existing: Detail["actuals"]; disabled: boolean; onSaved: () => void }) {
+/** Name and service address printed on estimates and invoices. A linked booking's details take priority. */
+function CustomerSection({ job, onSaved }: { job: Job; onSaved: () => void }) {
+  const c = job.contact ?? null;
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ name: c?.name ?? job.customerLabel ?? "", phone: c?.phone ?? "", email: c?.email ?? "", street: c?.street ?? "", city: c?.city ?? "", state: c?.state ?? "GA", zip: c?.zip ?? job.zip ?? "" });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const emailOk = !f.email.trim() || /^\S+@\S+\.\S+$/.test(f.email.trim());
+  const zipOk = !f.zip.trim() || /^\d{5}$/.test(f.zip.trim());
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const body: Record<string, string> = { name: f.name.trim() };
+      for (const k of ["phone", "email", "street", "city", "state", "zip"] as const) if (f[k].trim()) body[k] = f[k].trim();
+      await adminFetch(`/jobs/${job.id}/contact`, { method: "PATCH", body });
+      setMsg({ tone: "success", text: "Customer details saved." });
+      setOpen(false);
+      onSaved();
+    } catch (e) {
+      setMsg({ tone: "error", text: describeError(e) });
+    } finally {
+      setSaving(false);
+    }
+  }
+  const summary = c ? [c.name, c.street, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") : null;
+  const input = (key: keyof typeof f, label: string, extra: Record<string, string> = {}) => (
+    <Field label={label} htmlFor={`ct-${key}`}><input id={`ct-${key}`} className={inputClass} value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} {...extra} /></Field>
+  );
+  return (
+    <section aria-labelledby="cust-h" className="space-y-2" data-testid="customer-section">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="cust-h" className="text-lg font-bold">Customer</h2>
+        {!open ? <Button variant="ghost" className="h-11" onClick={() => setOpen(true)}>{c ? "Edit" : "Add details"}</Button> : null}
+      </div>
+      {!open ? (
+        <p className="text-sm text-slate-600">{summary ?? "No name or address yet. Estimates and invoices will show the job label only."}</p>
+      ) : (
+        <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+          {job.bookingId ? <Notice tone="info">This job is linked to booking #{job.bookingId}. Documents use the booking's name and address when it has them.</Notice> : null}
+          {input("name", "Name", { autoComplete: "name" })}
+          <div className="grid grid-cols-2 gap-3">
+            {input("phone", "Phone", { inputMode: "tel", autoComplete: "tel" })}
+            {input("email", "Email", { inputMode: "email", autoComplete: "email" })}
+          </div>
+          {input("street", "Service address", { autoComplete: "street-address" })}
+          <div className="grid grid-cols-[1fr_4.5rem_6rem] gap-2">
+            {input("city", "City")}
+            {input("state", "State", { maxLength: "2" })}
+            {input("zip", "ZIP", { inputMode: "numeric", maxLength: "5" })}
+          </div>
+          {!emailOk || !zipOk ? <Notice tone="warn">{!emailOk ? "Check the email address. " : ""}{!zipOk ? "ZIP should be 5 digits." : ""}</Notice> : null}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" className="h-12" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button className="h-12" disabled={saving || !f.name.trim() || !emailOk || !zipOk} onClick={save}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save</Button>
+          </div>
+          <p className="text-xs text-slate-500">Phone and email appear on your copy of documents. The customer's share-link estimate never shows them.</p>
+        </div>
+      )}
+      {msg ? <Notice tone={msg.tone}>{msg.text}</Notice> : null}
+    </section>
+  );
+}
+
+/** Photos attached from intake. Loaded with the owner token; never a public URL. */
+function JobPhotos({ media }: { media: Media[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    const made: string[] = [];
+    Promise.all(
+      media.slice(0, 12).map(async (m) => {
+        try {
+          const u = await adminObjectUrl(`/media/${m.id}?variant=thumb`);
+          made.push(u);
+          return [m.id, u] as const;
+        } catch {
+          return null;
+        }
+      }),
+    ).then((pairs) => {
+      if (alive) setUrls(Object.fromEntries(pairs.filter((p): p is readonly [string, string] => p !== null)));
+    });
+    return () => {
+      alive = false;
+      made.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [media]);
+  async function openFull(id: string) {
+    try {
+      const u = await adminObjectUrl(`/media/${id}`);
+      window.open(u, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(u), 60_000);
+    } catch {
+      /* thumbnail stays */
+    }
+  }
+  return (
+    <section aria-labelledby="photos-h" className="space-y-2">
+      <h2 id="photos-h" className="text-lg font-bold">Photos</h2>
+      <ul className="grid grid-cols-4 gap-2" data-testid="job-photos">
+        {media.map((m) => (
+          <li key={m.id}>
+            <button type="button" onClick={() => openFull(m.id)} className="block aspect-square w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100" aria-label={m.summary ?? `Photo (${m.hint})`}>
+              {urls[m.id] ? <img src={urls[m.id]} alt="" className="h-full w-full object-cover" /> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-slate-500">Private to you. Stored without location or camera data.</p>
+    </section>
+  );
+}
+
+function NewInvoice({ disabled, busy, onCreate }: { disabled: boolean; busy: boolean; onCreate: (body: { dueDate?: string; notes?: string }) => void }) {
+  const [dueDate, setDueDate] = useState("");
+  const [notes, setNotes] = useState("");
+  return (
+    <div className="space-y-3">
+      <details className="rounded-2xl border border-slate-200 p-3">
+        <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold">Due date and note (optional)</summary>
+        <div className="mt-2 space-y-3">
+          <Field label="Due date" htmlFor="inv-due" hint="Blank = your default from Economics → Documents"><input id="inv-due" type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></Field>
+          <Field label="Note to the customer" htmlFor="inv-notes"><textarea id="inv-notes" className="min-h-[72px] w-full rounded-xl border border-slate-300 p-3 text-base" maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Thank you for your business!" /></Field>
+        </div>
+      </details>
+      <Button className="h-12 w-full" disabled={disabled || busy} onClick={() => onCreate({ ...(dueDate ? { dueDate } : {}), ...(notes.trim() ? { notes: notes.trim() } : {}) })}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create invoice from quote
+      </Button>
+    </div>
+  );
+}
+
+function ActualsForm({ jobId, existing, disabled, onSaved }:{ jobId: string; existing: Detail["actuals"]; disabled: boolean; onSaved: () => void }) {
   const a = existing?.actuals ?? {};
   const [f, setF] = useState({
     laborMinutes: String(a.laborMinutes ?? ""),
@@ -410,7 +549,7 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   );
 }
 
-function InvoiceCard({ invoice, payments, onChanged }: { invoice: Invoice; payments: Payment[]; onChanged: () => void }) {
+function InvoiceCard({ invoice, payments, onChanged, onDownload, busyLabel }: { invoice: Invoice; payments: Payment[]; onChanged: () => void; onDownload: (label: string, path: string, fallback: string) => void; busyLabel: string }) {
   const [amount, setAmount] = useState("");
   const [tip, setTip] = useState("");
   const [method, setMethod] = useState("cash");
@@ -447,11 +586,18 @@ function InvoiceCard({ invoice, payments, onChanged }: { invoice: Invoice; payme
         <Stat label="Paid" value={money(invoice.paidCents)} />
         <Stat label="Balance" value={money(balance)} tone={balance > 0 ? "warn" : "good"} />
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/pdf`, `PPTVInstall-Invoice-${invoice.invoiceNumber}.pdf`), "Invoice PDF downloaded.")}><Download className="h-4 w-4" /> Download invoice PDF</Button>
-        {invoice.status === "paid" ? <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/receipt.pdf`, `PPTVInstall-Receipt-${invoice.invoiceNumber}.pdf`), "Paid receipt PDF downloaded.")}><Download className="h-4 w-4" /> Download paid receipt</Button> : null}
-      </div>
+      {invoice.dueDate || invoice.notes ? <p className="text-xs text-slate-500">{[invoice.dueDate ? `Due ${invoice.dueDate}` : null, invoice.notes ? `Note: ${invoice.notes}` : null].filter(Boolean).join(" · ")}</p> : null}
       {payments.length ? <ul className="space-y-1 text-xs text-slate-600">{payments.map((p) => <li key={p.id} className="flex justify-between"><span>{new Date(p.receivedAt).toLocaleDateString()} · {p.method.replace("_", " ")}{p.tipCents ? ` · tip ${money(p.tipCents)}` : ""}</span><span>{money(p.amountCents)}</span></li>)}</ul> : null}
+      <div className={cn("grid gap-2", invoice.status === "paid" ? "grid-cols-2" : "grid-cols-1")}>
+        <Button variant="outline" className="h-11" data-testid="invoice-pdf" disabled={busyLabel === "invoice-pdf"} onClick={() => onDownload("invoice-pdf", `/invoices/${invoice.id}/invoice.pdf`, `PPTVInstall-Invoice.pdf`)}>
+          {busyLabel === "invoice-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Invoice PDF
+        </Button>
+        {invoice.status === "paid" ? (
+          <Button variant="outline" className="h-11" data-testid="receipt-pdf" disabled={busyLabel === "receipt-pdf"} onClick={() => onDownload("receipt-pdf", `/invoices/${invoice.id}/receipt.pdf`, `PPTVInstall-Receipt.pdf`)}>
+            {busyLabel === "receipt-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Paid receipt
+          </Button>
+        ) : null}
+      </div>
       {invoice.status !== "paid" && invoice.status !== "void" ? (
         <div className="space-y-2">
           {!invoice.sentAt ? <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => adminFetch(`/invoices/${invoice.id}/send`, { method: "POST", body: {} }), "Marked as sent (nothing was emailed).")}>Mark as sent</Button> : null}

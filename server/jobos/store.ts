@@ -36,7 +36,7 @@ export type NewJob = {
   status?: JobStatus;
 };
 
-export type JobPatch = Partial<Pick<JobRecord, "status" | "title" | "customerLabel" | "zip" | "scheduledFor" | "scope" | "context" | "notes" | "currentQuoteId" | "bookingId" | "customerId" | "crmContactId">>;
+export type JobPatch = Partial<Pick<JobRecord, "status" | "title" | "customerLabel" | "zip" | "scheduledFor" | "scope" | "context" | "notes" | "currentQuoteId" | "bookingId" | "customerId" | "crmContactId" | "contact">>;
 
 export type NewQuoteVersion = Omit<QuoteVersionRecord, "id" | "createdAt" | "acceptedAt" | "version" | "quoteId">;
 
@@ -50,6 +50,8 @@ export interface NewInvoice {
   totalCents: number;
   taxConfigSnapshot: InvoiceRecord["taxConfigSnapshot"];
   year: number;
+  dueDate?: string | null;
+  notes?: string | null;
 }
 
 export interface NewPayment {
@@ -84,6 +86,8 @@ export interface JobOsStore {
   getQuoteVersion(id: string): Promise<QuoteVersionRecord | null>;
   listQuoteVersions(quoteId: string): Promise<QuoteVersionRecord[]>;
   markVersionAccepted(versionId: string, at: string): Promise<QuoteVersionRecord>;
+  /** Assigns the next estimate number once; returns the existing number on later calls. */
+  assignQuoteNumber(quoteId: string): Promise<number>;
   saveEstimates(args: { jobId: string; quoteVersionId: string; travel: unknown; travelSource: string; materialLines: unknown; materialCostCents: number; materialChargeCents: number }): Promise<void>;
 
   // invoices & payments

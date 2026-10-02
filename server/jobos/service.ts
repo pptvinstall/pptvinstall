@@ -35,8 +35,6 @@ import {
   InvoicePolicyError,
   assertPaymentAllowed,
   buildIntakePrompt,
-  buildEstimateDocument,
-  buildInvoiceDocument,
   buildIntelligence,
   buildItemIntelligence,
   itemComplexity,
@@ -57,7 +55,8 @@ import {
   type ScopeDraft,
 } from "@shared/jobos";
 import { hashObject } from "@shared/pricing/hash";
-import { MEDIA_HINTS, type InvoiceRecord, type JobRecord, type MediaRecord, type QuoteRecord, type QuoteVersionRecord, type ShadowSampleRecord, type ShadowSampleSummary, type StoredConfig } from "@shared/jobos/types";
+import { addDays, assertDocumentSafe, buildEstimateDocument, buildInvoiceDocument, buildReceiptDocument, localDate, type CustomerDocument } from "@shared/jobos/documents";
+import { MEDIA_HINTS, type JobContact, type InvoiceRecord, type JobRecord, type MediaRecord, type QuoteRecord, type QuoteVersionRecord, type ShadowSampleRecord, type ShadowSampleSummary, type StoredConfig } from "@shared/jobos/types";
 import { buildUnifiedProposal, combineIntakeText, proposalToScope, reviewDecisionsSchema, type ImageAnalysisResult, type ImageObservation, type UnifiedProposal } from "@shared/jobos/unifiedIntake";
 import type { AiScopeIntake } from "@shared/jobos/intake";
 import { randomUUID } from "node:crypto";
@@ -105,7 +104,23 @@ export const quoteRequestSchema = z.object({
 export const invoiceRequestSchema = z.object({
   lines: z.array(invoiceLineSchema).min(1).max(30).optional(),
   discountCents: z.number().int().min(0).max(10_000_000).default(0),
+  /** YYYY-MM-DD. Defaults to the invoice date plus the configured due days. */
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Shown to the customer on the invoice. */
+  notes: z.string().max(500).optional(),
 });
+
+export const jobContactSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    phone: z.string().trim().max(20).optional(),
+    email: z.string().trim().email().max(255).optional().or(z.literal("").transform(() => undefined)),
+    street: z.string().trim().max(255).optional(),
+    city: z.string().trim().max(100).optional(),
+    state: z.string().trim().max(2).optional(),
+    zip: z.string().trim().regex(/^\d{5}$/).optional().or(z.literal("").transform(() => undefined)),
+  })
+  .strict();
 
 export const configUpdateSchema = z.object({
   config: z.unknown(),
@@ -128,7 +143,16 @@ export class JobOsService {
 
   constructor(
     private readonly store: JobOsStore,
-    private readonly opts: { intakeProvider?: IntakeProvider | null; now?: () => Date; configCacheMs?: number; routeProviders?: RouteProvider[]; media?: MediaStorage; vision?: VisionProvider | null } = {},
+    private readonly opts: {
+      intakeProvider?: IntakeProvider | null;
+      now?: () => Date;
+      configCacheMs?: number;
+      routeProviders?: RouteProvider[];
+      media?: MediaStorage;
+      vision?: VisionProvider | null;
+      /** Canonical customer details from the booking (owner-only use: documents). */
+      lookupBookingContact?: (bookingId: number) => Promise<JobContact | undefined>;
+    } = {},
   ) {}
 
   private now() {
@@ -328,25 +352,6 @@ export class JobOsService {
     return this.store.setQuoteStatus(quoteId, "sent");
   }
 
-  async getEstimateDocument(quoteId: string) {
-    const quote = await this.store.getQuote(quoteId);
-    if (!quote) throw new NotFoundError("Quote");
-    const versions = await this.store.listQuoteVersions(quote.id);
-    const latest = quote.acceptedVersionId ? versions.find((v) => v.id === quote.acceptedVersionId) ?? versions[versions.length - 1] : versions[versions.length - 1];
-    if (!latest) throw new NotFoundError("Quote");
-    const job = await this.requireJob(quote.jobId);
-    return {
-      document: buildEstimateDocument({ job, quote, version: latest }),
-      filename: `PPTVInstall-Estimate-${quote.id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`,
-    };
-  }
-
-  async getEstimateDocumentByToken(shareToken: string) {
-    const quote = await this.store.getQuoteByShareToken(shareToken);
-    if (!quote || quote.status === "draft") throw new NotFoundError("Quote");
-    return this.getEstimateDocument(quote.id);
-  }
-
   /** Public, token-addressed, customer-safe view of the latest version. */
   async getCustomerQuote(shareToken: string): Promise<{ view: CustomerQuoteView; status: QuoteRecord["status"] }> {
     const quote = await this.store.getQuoteByShareToken(shareToken);
@@ -401,7 +406,7 @@ export class JobOsService {
   // ---------------------------------------------------------------- invoices
   async createInvoice(jobId: string, input: unknown): Promise<InvoiceRecord> {
     const job = await this.requireJob(jobId);
-    const { lines, discountCents } = invoiceRequestSchema.parse(input ?? {});
+    const { lines, discountCents, dueDate, notes } = invoiceRequestSchema.parse(input ?? {});
     const config = (await this.getActiveConfig()).config;
     let invoiceLines = lines;
     let quoteVersionId: string | null = null;
@@ -427,21 +432,11 @@ export class JobOsService {
       totalCents: totals.totalCents,
       taxConfigSnapshot: config.business.tax,
       year: this.now().getUTCFullYear(),
+      dueDate: dueDate ?? addDays(localDate(this.now().toISOString()), config.documents.invoiceDueDays),
+      notes: notes?.trim() || null,
     });
     await this.store.updateJob(jobId, { status: "invoiced" });
     return invoice;
-  }
-
-  async getInvoiceDocument(invoiceId: string, receipt = false) {
-    const invoice = await this.store.getInvoice(invoiceId);
-    if (!invoice) throw new NotFoundError("Invoice");
-    if (receipt && invoice.status !== "paid") throw new InvoicePolicyError("A paid receipt is available after the invoice is paid", "RECEIPT_NOT_PAID");
-    const job = await this.requireJob(invoice.jobId);
-    const payments = await this.store.listPayments(invoiceId);
-    return {
-      document: buildInvoiceDocument({ job, invoice, payments, receipt }),
-      filename: `PPTVInstall-${receipt ? "Receipt" : "Invoice"}-${invoice.invoiceNumber}.pdf`,
-    };
   }
 
   async sendInvoice(invoiceId: string) {
@@ -715,6 +710,64 @@ export class JobOsService {
     });
     await this.store.linkShadowSampleJob(id, job.id);
     return job;
+  }
+
+  // ---------------------------------------------------------------- customer documents
+  /** Booking details are canonical; the job's own contact is used only when no booking is linked. */
+  private async contactFor(job: JobRecord): Promise<JobContact | null> {
+    if (job.bookingId && this.opts.lookupBookingContact) {
+      const booking = await this.opts.lookupBookingContact(job.bookingId);
+      if (booking) return booking;
+    }
+    return job.contact ?? null;
+  }
+
+  async setJobContact(jobId: string, input: unknown): Promise<JobRecord> {
+    await this.requireJob(jobId);
+    const contact = jobContactSchema.parse(input);
+    return this.store.updateJob(jobId, { contact });
+  }
+
+  private async estimateFor(quote: QuoteRecord, opts: { version?: number; includeContact: boolean }): Promise<CustomerDocument> {
+    const versions = await this.store.listQuoteVersions(quote.id);
+    const version =
+      (opts.version !== undefined ? versions.find((v) => v.version === opts.version) : undefined) ??
+      (opts.version === undefined && quote.acceptedVersionId ? versions.find((v) => v.id === quote.acceptedVersionId) : undefined) ??
+      (opts.version === undefined ? versions[versions.length - 1] : undefined);
+    if (!version) throw new NotFoundError("Quote version");
+    const job = await this.requireJob(quote.jobId);
+    const quoteNumber = quote.quoteNumber ?? (await this.store.assignQuoteNumber(quote.id));
+    const config = (await this.getActiveConfig()).config;
+    return assertDocumentSafe(buildEstimateDocument({ quote: { ...quote, quoteNumber }, version, job, contact: await this.contactFor(job), config, includeContact: opts.includeContact }));
+  }
+
+  /** Owner: estimate document for a quote (latest or accepted version unless one is named). */
+  async estimateDocument(quoteId: string, opts: { version?: number } = {}): Promise<CustomerDocument> {
+    const quote = await this.store.getQuote(quoteId);
+    if (!quote) throw new NotFoundError("Quote");
+    return this.estimateFor(quote, { ...opts, includeContact: true });
+  }
+
+  /** Customer (share link): the version they can see, without phone/email. Drafts are never available. */
+  async customerEstimateDocument(shareToken: string): Promise<CustomerDocument> {
+    const quote = await this.store.getQuoteByShareToken(shareToken);
+    if (!quote || quote.status === "draft") throw new NotFoundError("Quote");
+    return this.estimateFor(quote, { includeContact: false });
+  }
+
+  private async invoiceArgs(invoiceId: string) {
+    const invoice = await this.store.getInvoice(invoiceId);
+    if (!invoice) throw new NotFoundError("Invoice");
+    const job = await this.requireJob(invoice.jobId);
+    return { invoice, payments: await this.store.listPayments(invoiceId), job, contact: await this.contactFor(job), config: (await this.getActiveConfig()).config, includeContact: true };
+  }
+
+  async invoiceDocument(invoiceId: string): Promise<CustomerDocument> {
+    return assertDocumentSafe(buildInvoiceDocument(await this.invoiceArgs(invoiceId)));
+  }
+
+  async receiptDocument(invoiceId: string): Promise<CustomerDocument> {
+    return assertDocumentSafe(buildReceiptDocument(await this.invoiceArgs(invoiceId)));
   }
 
   // ---------------------------------------------------------------- AI intake
