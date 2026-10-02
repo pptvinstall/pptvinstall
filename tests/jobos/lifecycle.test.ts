@@ -271,20 +271,24 @@ for (const [name, makeStore] of impls) {
     assert.equal(noAi.aiUsed, false);
     assert.equal(calls, 0, "normal UI path needs zero AI calls");
 
-    const ai = await svc.parseIntake("Please mount my 65 inch TV on the brick wall", { allowAi: true });
-    assert.equal(ai.aiUsed, true);
+    const deterministic = await svc.parseIntake("Please mount my 65 inch TV on the brick wall", { allowAi: true });
+    assert.equal(deterministic.aiUsed, false, "recognized ordinary work stays on the zero-cost parser even when AI is available");
+    assert.equal(calls, 0);
+
+    const ai = await svc.parseIntake("Please help with my 65 inch display on the brick wall", { allowAi: true });
+    assert.equal(ai.aiUsed, true, "unrecognized work gets one AI fallback");
     assert.equal(calls, 1);
     assert.equal(ai.draft.needsOwnerConfirmation, true);
-    const cached = await svc.parseIntake("Please mount my 65 inch TV on the brick wall", { allowAi: true });
+    const cached = await svc.parseIntake("Please help with my 65 inch display on the brick wall", { allowAi: true });
     assert.equal(cached.cached, true);
-    assert.equal(calls, 1, "parsed scope is cached");
+    assert.equal(calls, 1, "AI fallback result is cached");
 
     reply = good("fabricated phrase not in the message");
-    const fab = await svc.parseIntake("Put a 65 inch TV up somewhere for me", { allowAi: true });
+    const fab = await svc.parseIntake("Please help with my 65 inch display somewhere", { allowAi: true });
     assert.ok(fab.downgraded.includes("tvs[0].wall"));
 
     reply = "not json at all";
-    const bad = await svc.parseIntake("Hang two TVs in my living room tomorrow", { allowAi: true });
+    const bad = await svc.parseIntake("Can you help me with two displays in my living room tomorrow", { allowAi: true });
     assert.equal(bad.aiUsed, false, "invalid AI output falls back to the deterministic parser");
     await assert.rejects(() => svc.parseIntake("hi", { allowAi: false }));
   });
