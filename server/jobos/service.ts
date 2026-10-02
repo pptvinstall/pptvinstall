@@ -35,6 +35,8 @@ import {
   InvoicePolicyError,
   assertPaymentAllowed,
   buildIntakePrompt,
+  buildEstimateDocument,
+  buildInvoiceDocument,
   buildIntelligence,
   buildItemIntelligence,
   itemComplexity,
@@ -326,6 +328,25 @@ export class JobOsService {
     return this.store.setQuoteStatus(quoteId, "sent");
   }
 
+  async getEstimateDocument(quoteId: string) {
+    const quote = await this.store.getQuote(quoteId);
+    if (!quote) throw new NotFoundError("Quote");
+    const versions = await this.store.listQuoteVersions(quote.id);
+    const latest = quote.acceptedVersionId ? versions.find((v) => v.id === quote.acceptedVersionId) ?? versions[versions.length - 1] : versions[versions.length - 1];
+    if (!latest) throw new NotFoundError("Quote");
+    const job = await this.requireJob(quote.jobId);
+    return {
+      document: buildEstimateDocument({ job, quote, version: latest }),
+      filename: `PPTVInstall-Estimate-${quote.id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`,
+    };
+  }
+
+  async getEstimateDocumentByToken(shareToken: string) {
+    const quote = await this.store.getQuoteByShareToken(shareToken);
+    if (!quote || quote.status === "draft") throw new NotFoundError("Quote");
+    return this.getEstimateDocument(quote.id);
+  }
+
   /** Public, token-addressed, customer-safe view of the latest version. */
   async getCustomerQuote(shareToken: string): Promise<{ view: CustomerQuoteView; status: QuoteRecord["status"] }> {
     const quote = await this.store.getQuoteByShareToken(shareToken);
@@ -409,6 +430,18 @@ export class JobOsService {
     });
     await this.store.updateJob(jobId, { status: "invoiced" });
     return invoice;
+  }
+
+  async getInvoiceDocument(invoiceId: string, receipt = false) {
+    const invoice = await this.store.getInvoice(invoiceId);
+    if (!invoice) throw new NotFoundError("Invoice");
+    if (receipt && invoice.status !== "paid") throw new InvoicePolicyError("A paid receipt is available after the invoice is paid", "RECEIPT_NOT_PAID");
+    const job = await this.requireJob(invoice.jobId);
+    const payments = await this.store.listPayments(invoiceId);
+    return {
+      document: buildInvoiceDocument({ job, invoice, payments, receipt }),
+      filename: `PPTVInstall-${receipt ? "Receipt" : "Invoice"}-${invoice.invoiceNumber}.pdf`,
+    };
   }
 
   async sendInvoice(invoiceId: string) {

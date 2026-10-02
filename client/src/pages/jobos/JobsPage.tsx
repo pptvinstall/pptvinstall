@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Copy, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, Download, Loader2, RefreshCw } from "lucide-react";
 
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, inputClass } from "@/components/jobos/controls";
 import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
 import { Button } from "@/components/ui/button";
-import { adminFetch, describeError, money } from "@/lib/adminApi";
+import { adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
 
 type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string };
@@ -48,6 +48,20 @@ type Profit = {
   estimatedNetMarginPct: number;
   variances: Record<string, { estimate: number; actual: number; delta: number; ratio: number | null }>;
 };
+
+async function downloadAdminFile(path: string, filename: string) {
+  const url = await adminObjectUrl(path);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
 
 const STATUS_STYLE: Record<string, string> = {
   lead: "bg-slate-100 text-slate-700",
@@ -188,6 +202,7 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </details>
             ) : null}
             {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "send"} onClick={copyLink}>{busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} {quote.status === "draft" ? "Mark sent & copy customer link" : `Copy customer link (${quote.status})`}</Button> : null}
+            {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "estimate-pdf"} onClick={() => run("estimate-pdf", () => downloadAdminFile(`/quotes/${quote.id}/pdf`, `PPTVInstall-Estimate-${quote.id.slice(0, 8)}.pdf`), "Estimate PDF downloaded.")}>{busy === "estimate-pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download estimate PDF</Button> : null}
           </>
         )}
       </section>
@@ -431,6 +446,10 @@ function InvoiceCard({ invoice, payments, onChanged }: { invoice: Invoice; payme
         <Stat label="Total" value={money(invoice.totalCents)} sub={invoice.taxCents ? `incl. ${money(invoice.taxCents)} tax` : "no tax configured"} />
         <Stat label="Paid" value={money(invoice.paidCents)} />
         <Stat label="Balance" value={money(balance)} tone={balance > 0 ? "warn" : "good"} />
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/pdf`, `PPTVInstall-Invoice-${invoice.invoiceNumber}.pdf`), "Invoice PDF downloaded.")}><Download className="h-4 w-4" /> Download invoice PDF</Button>
+        {invoice.status === "paid" ? <Button variant="outline" className="h-11 w-full" disabled={busy} onClick={() => call(() => downloadAdminFile(`/invoices/${invoice.id}/receipt.pdf`, `PPTVInstall-Receipt-${invoice.invoiceNumber}.pdf`), "Paid receipt PDF downloaded.")}><Download className="h-4 w-4" /> Download paid receipt</Button> : null}
       </div>
       {payments.length ? <ul className="space-y-1 text-xs text-slate-600">{payments.map((p) => <li key={p.id} className="flex justify-between"><span>{new Date(p.receivedAt).toLocaleDateString()} · {p.method.replace("_", " ")}{p.tipCents ? ` · tip ${money(p.tipCents)}` : ""}</span><span>{money(p.amountCents)}</span></li>)}</ul> : null}
       {invoice.status !== "paid" && invoice.status !== "void" ? (
