@@ -15,12 +15,15 @@ import {
   getAiQuoteProtectionConfig,
   requestAnthropicQuote,
   requestAnthropicText,
+  requestAnthropicVision,
   verifyTurnstileToken,
 } from "./services/aiQuoteService";
 import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { ZodError } from "zod";
 import { registerJobOsRoutes } from "./jobos/routes";
 import { JobOsService, type IntakeProvider } from "./jobos/service";
+import { createMediaStorage } from "./jobos/media/storage";
+import { createVisionProvider, type VisionProvider } from "./jobos/vision";
 import { DbJobOsStore } from "./jobos/dbStore";
 import { MemoryJobOsStore } from "./jobos/memoryStore";
 
@@ -777,8 +780,14 @@ export function registerRoutes(app: Express): Server {
     complete: (prompt) => requestAnthropicText("Return only valid JSON matching the requested schema.", prompt, 1800),
   };
   const jobOsStore = process.env.JOBOS_STORE === "memory" ? new MemoryJobOsStore() : new DbJobOsStore(db);
+  const anthropicVision: VisionProvider = {
+    name: "anthropic",
+    model: process.env.ANTHROPIC_VISION_MODEL || "claude-sonnet-4-20250514",
+    enabled: () => getAiQuoteProtectionConfig().enabled,
+    analyze: (images, prompt) => requestAnthropicVision("Return only valid JSON matching the requested schema.", prompt, images, 3_000),
+  };
   registerJobOsRoutes(app, {
-    service: new JobOsService(jobOsStore, { intakeProvider, configCacheMs: 5_000 }),
+    service: new JobOsService(jobOsStore, { intakeProvider, configCacheMs: 5_000, media: createMediaStorage(), vision: createVisionProvider({ anthropic: anthropicVision }) }),
     getClientIp: (req) => getClientIpAddress(req),
     lookupBooking: async (id) => {
       const booking = await storage.getBookingById(id);

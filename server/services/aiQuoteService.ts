@@ -200,3 +200,38 @@ export async function requestAnthropicText(system: string, prompt: string, maxTo
 
   return content;
 }
+
+/** Single-turn multimodal request (images + instructions). Used only for Job OS scope/receipt extraction. */
+export async function requestAnthropicVision(system: string, prompt: string, images: Array<{ id: string; jpeg: Buffer }>, maxTokens: number, model = process.env.ANTHROPIC_VISION_MODEL || "claude-sonnet-4-20250514") {
+  if (outboundSuppressed()) {
+    throw new Error("AI requests are suppressed in this environment (staging test mode).");
+  }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not configured.");
+  }
+  const content = [
+    ...images.flatMap((img, i) => [
+      { type: "text", text: `Image ${i + 1} id=${img.id}` },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: img.jpeg.toString("base64") } },
+    ]),
+    { type: "text", text: prompt },
+  ];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content }] }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Anthropic vision request failed with status ${response.status}.`);
+    const data = (await response.json()) as { content?: Array<{ type?: string; text?: string }> };
+    const text = data.content?.find((block) => block.type === "text")?.text;
+    if (!text) throw new Error("The AI vision service returned an empty response.");
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+}

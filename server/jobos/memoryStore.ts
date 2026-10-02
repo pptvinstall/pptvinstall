@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
+import type { ConfigEvent, IntakeCacheRecord, IntakeSessionRecord, InvoiceRecord, JobActualsRecord, JobRecord, MediaRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
 import { deriveInvoiceStatus, formatInvoiceNumber } from "@shared/jobos/invoice";
 import { NotFoundError, type JobOsStore, type NewInvoice, type NewJob, type NewPayment, type NewQuoteVersion, type JobPatch } from "./store";
 
@@ -20,6 +20,8 @@ export class MemoryJobOsStore implements JobOsStore {
   private actuals = new Map<string, JobActualsRecord>();
   private intake = new Map<string, IntakeCacheRecord>();
   private shadow: ShadowSampleRecord[] = [];
+  private media = new Map<string, MediaRecord>();
+  private sessions = new Map<string, IntakeSessionRecord>();
   private eventSeq = 0;
   private configSeq = 0;
 
@@ -261,5 +263,47 @@ export class MemoryJobOsStore implements JobOsStore {
     if (!row) throw new NotFoundError("Shadow sample");
     row.jobId = jobId;
     return clone(row);
+  }
+
+  async createMedia(rec: Parameters<JobOsStore["createMedia"]>[0]) {
+    const row: MediaRecord = { ...clone(rec), createdAt: now(), deletedAt: null, analysisStatus: "pending", analysisError: null, analysis: null, provider: null, model: null, schemaVersion: null, analyzedAt: null };
+    this.media.set(row.id, row);
+    return clone(row);
+  }
+  async getMedia(id: string) {
+    const row = this.media.get(id);
+    return row ? clone(row) : null;
+  }
+  async listMedia(filter: { intakeId?: string; jobId?: string }) {
+    return clone(
+      Array.from(this.media.values())
+        .filter((m) => !m.deletedAt && (filter.intakeId ? m.intakeId === filter.intakeId : true) && (filter.jobId ? m.jobId === filter.jobId : true))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    );
+  }
+  async updateMedia(id: string, patch: Parameters<JobOsStore["updateMedia"]>[1]) {
+    const row = this.media.get(id);
+    if (!row) throw new NotFoundError("Media");
+    Object.assign(row, clone(patch));
+    return clone(row);
+  }
+  async createIntakeSession(rec: { source: IntakeSessionRecord["source"] }) {
+    const t = now();
+    const row: IntakeSessionRecord = { id: randomUUID(), source: rec.source, jobId: null, status: "open", proposal: null, review: null, messageChars: 0, createdAt: t, updatedAt: t };
+    this.sessions.set(row.id, row);
+    return clone(row);
+  }
+  async getIntakeSession(id: string) {
+    const row = this.sessions.get(id);
+    return row ? clone(row) : null;
+  }
+  async updateIntakeSession(id: string, patch: Parameters<JobOsStore["updateIntakeSession"]>[1]) {
+    const row = this.sessions.get(id);
+    if (!row) throw new NotFoundError("Intake");
+    Object.assign(row, clone(patch), { updatedAt: now() });
+    return clone(row);
+  }
+  async listIntakeSessions(limit: number) {
+    return clone(Array.from(this.sessions.values()).reverse().slice(0, limit));
   }
 }

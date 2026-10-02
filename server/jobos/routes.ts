@@ -1,4 +1,6 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import { MEDIA_HINTS } from "@shared/jobos/types";
+import { MAX_UPLOAD_BYTES, MediaValidationError } from "./media/images";
 import { ZodError, z } from "zod";
 import { ConfigValidationError, InternalDataLeakError, QuotePolicyError } from "@shared/pricing";
 import { IntakeValidationError, InvoicePolicyError, JOB_STATUSES } from "@shared/jobos";
@@ -22,6 +24,7 @@ export function sendError(res: Response, err: unknown) {
   if (err instanceof QuotePolicyError) return res.status(422).json({ message: err.message, code: err.code });
   if (err instanceof ConfigValidationError) return res.status(422).json({ message: "Invalid pricing configuration", issues: err.issues });
   if (err instanceof IntakeValidationError) return res.status(422).json({ message: err.message, issues: err.issues });
+  if (err instanceof MediaValidationError) return res.status(err.code === "TOO_LARGE" ? 413 : err.code === "UNSUPPORTED_TYPE" || err.code === "HEIC_NOT_SUPPORTED" ? 415 : 400).json({ message: err.message, code: err.code });
   if (err instanceof InternalDataLeakError) {
     console.error("[jobos] blocked internal data leak:", err.leakedKeys.join(","));
     return res.status(500).json({ message: "Quote unavailable" });
@@ -51,6 +54,11 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   const acceptLimiter = createRateLimiter({ max: 10, windowMs: 60_000 });
   const intakeLimiter = createRateLimiter({ max: 30, windowMs: 60 * 60_000 });
   const priceLimiter = createRateLimiter({ max: 90, windowMs: 60_000 });
+  const uploadLimiter = createRateLimiter({ max: 200, windowMs: 60 * 60_000 });
+  // Image bodies are raw bytes (no multipart parser needed). The limit is enforced before anything is decoded.
+  const rawImage = express.raw({ type: () => true, limit: MAX_UPLOAD_BYTES });
+  const rawImageErrors = (err: { status?: number; type?: string }, _req: Request, res: Response, _next: NextFunction) =>
+    res.status(err.status === 413 ? 413 : 400).json({ message: err.status === 413 ? `Images must be ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB or smaller.` : "Upload failed", code: err.status === 413 ? "TOO_LARGE" : "BAD_UPLOAD" });
   const actor = "owner";
 
   if (!jobOsEnabled()) {
@@ -156,6 +164,45 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
 
   // ---- staging inspection: what outbound traffic was suppressed
   app.get(`${A}/outbox`, wrap(async (_req, res) => res.json({ ...describeOutboundState(), entries: getOutbox() })));
+
+  // ---- private media + unified intake (owner only; images are never served from a public URL)
+  app.post(
+    `${A}/intake/media`,
+    (req: Request, res: Response, next: NextFunction) => {
+      const limit = uploadLimiter.check(deps.getClientIp(req));
+      if (!limit.allowed) return res.status(429).set("Retry-After", String(limit.retryAfterSeconds)).json({ message: "Too many uploads. Try again later." });
+      next();
+    },
+    rawImage,
+    wrap(async (req, res) => {
+      const q = z.object({ intakeId: uuid.optional(), jobId: uuid.optional(), hint: z.enum(MEDIA_HINTS).optional() }).parse(req.query);
+      if (!Buffer.isBuffer(req.body) || !req.body.length) throw new MediaValidationError("Send the image as the request body.", "EMPTY");
+      res.status(201).json(await service.uploadMedia({ ...q, data: req.body, source: "owner" }));
+    }),
+    rawImageErrors,
+  );
+  app.get(`${A}/media/:id`, wrap(async (req, res) => {
+    const variant = req.query.variant === "thumb" ? "thumb" : "full";
+    const bytes = await service.getMediaBytes(idParam(req), variant);
+    res
+      .status(200)
+      .set({ "Content-Type": "image/jpeg", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline" })
+      .send(bytes);
+  }));
+  app.delete(`${A}/media/:id`, wrap(async (req, res) => {
+    await service.deleteMedia(idParam(req));
+    res.status(204).end();
+  }));
+  app.get(`${A}/intake/:id/media`, wrap(async (req, res) => res.json(await service.listMediaFor({ intakeId: idParam(req) }))));
+  app.post(`${A}/intake/analyze`, wrap(async (req, res) => {
+    const body = z.object({ intakeId: uuid.nullable().optional(), message: z.string().max(4_000).optional(), useAi: z.boolean().default(false) }).parse(req.body);
+    if (body.useAi) {
+      const limit = intakeLimiter.check(deps.getClientIp(req));
+      if (!limit.allowed) return res.status(429).json({ message: "AI intake limit reached. Try again later or use manual entry.", retryAfterSeconds: limit.retryAfterSeconds });
+    }
+    res.json(await service.analyzeIntake({ intakeId: body.intakeId ?? null, message: body.message, allowAi: body.useAi && deps.aiEnabled(), source: "owner" }));
+  }));
+  app.post(`${A}/intake/:id/review`, wrap(async (req, res) => res.json(await service.reviewIntake(idParam(req), req.body, "owner"))));
 
   // ---- shadow pricing (owner only)
   app.get(`${A}/shadow-samples`, wrap(async (req, res) => {

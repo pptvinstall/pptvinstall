@@ -213,3 +213,44 @@ export const pricingShadowSamples = pgTable(
   },
   (t) => ({ dayKeyIdx: uniqueIndex("pricing_shadow_samples_day_key_idx").on(t.day, t.sampleKey), createdIdx: index("pricing_shadow_samples_created_idx").on(t.createdAt) }),
 );
+
+/** Private customer media metadata. Bytes are in object storage (storage_key), never in this table. */
+export const jobMedia = pgTable(
+  "job_media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    intakeId: uuid("intake_id"),
+    jobId: uuid("job_id"),
+    source: varchar("source", { length: 10 }).notNull(),
+    hint: varchar("hint", { length: 12 }).notNull(),
+    contentType: varchar("content_type", { length: 40 }).notNull(),
+    bytes: integer("bytes").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    storageKey: varchar("storage_key", { length: 200 }).notNull(),
+    thumbKey: varchar("thumb_key", { length: 200 }).notNull(),
+    analysisStatus: varchar("analysis_status", { length: 12 }).notNull().default("pending"),
+    analysisError: varchar("analysis_error", { length: 120 }),
+    analysis: jsonb("analysis"),
+    provider: varchar("provider", { length: 40 }),
+    model: varchar("model", { length: 80 }),
+    schemaVersion: varchar("schema_version", { length: 20 }),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => ({ intakeIdx: index("job_media_intake_idx").on(t.intakeId), jobIdx: index("job_media_job_idx").on(t.jobId) }),
+);
+
+export const intakeSessions = pgTable("intake_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  source: varchar("source", { length: 10 }).notNull(),
+  jobId: uuid("job_id"),
+  status: varchar("status", { length: 12 }).notNull().default("open"),
+  proposal: jsonb("proposal"),
+  review: jsonb("review"),
+  messageChars: integer("message_chars").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

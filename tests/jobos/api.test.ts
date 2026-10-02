@@ -301,3 +301,50 @@ test("public /quote pricing: legacy shows the catalog, shadow stores owner-only 
   assert.equal((await call("POST", "/api/admin/job-os/config/rollback", { version: dynamicVersion })).status, 409);
   assert.equal((await call("GET", "/api/quote/price-source", undefined, {})).json.source, "catalog");
 });
+
+test("private media over HTTP: auth required, type and size enforced, no public URL, analysis works without AI", async () => {
+  const sharp = (await import("sharp")).default;
+  const jpeg = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#556677" } }).jpeg().toBuffer();
+  const up = (body: Buffer, headers: Record<string, string> = { "x-admin-token": H["x-admin-token"] }, query = "?hint=photo") =>
+    fetch(`${base}/api/admin/job-os/intake/media${query}`, { method: "POST", headers: { "content-type": "application/octet-stream", ...headers }, body });
+
+  assert.equal((await up(jpeg, {})).status, 401, "no token");
+  assert.equal((await up(jpeg, { "x-admin-token": "wrong" })).status, 401, "wrong token");
+  const svg = await up(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'));
+  assert.equal(svg.status, 415);
+  const big = await up(Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(13 * 1024 * 1024)]));
+  assert.equal(big.status, 413);
+  const badHint = await up(jpeg, { "x-admin-token": H["x-admin-token"] }, "?hint=../../etc");
+  assert.equal(badHint.status, 400);
+
+  const ok = await up(jpeg);
+  assert.equal(ok.status, 201);
+  const { intakeId, media } = (await ok.json()) as { intakeId: string; media: { id: string } };
+  assert.ok(!JSON.stringify(media).includes("storage"), "storage location is never returned");
+
+  const get = await fetch(`${base}/api/admin/job-os/media/${media.id}?variant=thumb`, { headers: { "x-admin-token": H["x-admin-token"] } });
+  assert.equal(get.status, 200);
+  assert.equal(get.headers.get("content-type"), "image/jpeg");
+  assert.equal(get.headers.get("cache-control"), "private, no-store");
+  assert.equal(get.headers.get("x-content-type-options"), "nosniff");
+  assert.equal((await fetch(`${base}/api/admin/job-os/media/${media.id}`)).status, 401, "no token, no image");
+  assert.equal((await call("GET", "/api/admin/job-os/media/00000000-0000-4000-8000-000000000000")).status, 404);
+  assert.equal((await call("GET", "/api/admin/job-os/media/not-a-uuid")).status, 400);
+  for (const guess of [`/media/${media.id}`, `/uploads/${media.id}.jpg`, `/.media/owner/${media.id}.jpg`, `/api/quotes/${media.id}`]) {
+    const r = await fetch(base + guess);
+    const type = r.headers.get("content-type") ?? "";
+    assert.ok(!type.startsWith("image/"), `${guess} must not serve the image (status ${r.status}, ${type})`);
+  }
+
+  const analyzed = await call("POST", "/api/admin/job-os/intake/analyze", { intakeId, message: "Mount my 65 inch TV over the fireplace", useAi: false });
+  assert.equal(analyzed.status, 200);
+  assert.equal(analyzed.json.vision.available, false);
+  assert.equal(analyzed.json.images[0].analysisStatus, "skipped");
+  assert.equal(analyzed.json.proposal.tvs.length, 1);
+  const review = await call("POST", `/api/admin/job-os/intake/${intakeId}/review`, { decisions: {} });
+  assert.equal(review.status, 200);
+  assert.equal(review.json.scope.tvs[0].location, "fireplace");
+
+  assert.equal((await call("DELETE", `/api/admin/job-os/media/${media.id}`)).status, 204);
+  assert.equal((await call("GET", `/api/admin/job-os/media/${media.id}`)).status, 404);
+});

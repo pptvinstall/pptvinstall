@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as s from "@shared/jobos-schema";
-import type { ConfigEvent, IntakeCacheRecord, InvoiceRecord, JobActualsRecord, JobRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
+import type { ConfigEvent, IntakeCacheRecord, IntakeSessionRecord, InvoiceRecord, JobActualsRecord, JobRecord, MediaRecord, PaymentRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, StoredConfig } from "@shared/jobos/types";
 import { deriveInvoiceStatus, formatInvoiceNumber } from "@shared/jobos/invoice";
 import { NotFoundError, type JobOsStore, type JobPatch, type NewInvoice, type NewJob, type NewPayment, type NewQuoteVersion } from "./store";
 
@@ -11,6 +11,42 @@ import { NotFoundError, type JobOsStore, type JobPatch, type NewInvoice, type Ne
 type Db = PgDatabase<PgQueryResultHKT, any>;
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
+
+const toMedia = (r: typeof s.jobMedia.$inferSelect): MediaRecord => ({
+  id: r.id,
+  intakeId: r.intakeId,
+  jobId: r.jobId,
+  source: r.source as MediaRecord["source"],
+  hint: r.hint as MediaRecord["hint"],
+  contentType: "image/jpeg",
+  bytes: r.bytes,
+  width: r.width,
+  height: r.height,
+  sha256: r.sha256,
+  storageKey: r.storageKey,
+  thumbKey: r.thumbKey,
+  analysisStatus: r.analysisStatus as MediaRecord["analysisStatus"],
+  analysisError: r.analysisError,
+  analysis: r.analysis ?? null,
+  provider: r.provider,
+  model: r.model,
+  schemaVersion: r.schemaVersion,
+  analyzedAt: iso(r.analyzedAt),
+  createdAt: r.createdAt.toISOString(),
+  deletedAt: iso(r.deletedAt),
+});
+
+const toSession = (r: typeof s.intakeSessions.$inferSelect): IntakeSessionRecord => ({
+  id: r.id,
+  source: r.source as IntakeSessionRecord["source"],
+  jobId: r.jobId,
+  status: r.status as IntakeSessionRecord["status"],
+  proposal: r.proposal ?? null,
+  review: r.review ?? null,
+  messageChars: r.messageChars,
+  createdAt: r.createdAt.toISOString(),
+  updatedAt: r.updatedAt.toISOString(),
+});
 
 const toShadow = (r: typeof s.pricingShadowSamples.$inferSelect): ShadowSampleRecord => ({
   id: r.id,
@@ -382,5 +418,46 @@ export class DbJobOsStore implements JobOsStore {
     const [row] = await this.db.update(s.pricingShadowSamples).set({ jobId }).where(eq(s.pricingShadowSamples.id, id)).returning();
     if (!row) throw new NotFoundError("Shadow sample");
     return toShadow(row);
+  }
+
+  async createMedia(rec: Parameters<JobOsStore["createMedia"]>[0]) {
+    const [row] = await this.db.insert(s.jobMedia).values(rec).returning();
+    return toMedia(row!);
+  }
+  async getMedia(id: string) {
+    const [row] = await this.db.select().from(s.jobMedia).where(eq(s.jobMedia.id, id)).limit(1);
+    return row ? toMedia(row) : null;
+  }
+  async listMedia(filter: { intakeId?: string; jobId?: string }) {
+    const conds = [sql`${s.jobMedia.deletedAt} is null`];
+    if (filter.intakeId) conds.push(eq(s.jobMedia.intakeId, filter.intakeId));
+    if (filter.jobId) conds.push(eq(s.jobMedia.jobId, filter.jobId));
+    const rows = await this.db.select().from(s.jobMedia).where(and(...conds)).orderBy(s.jobMedia.createdAt);
+    return rows.map(toMedia);
+  }
+  async updateMedia(id: string, patch: Parameters<JobOsStore["updateMedia"]>[1]) {
+    const values: Record<string, unknown> = { ...patch };
+    if (patch.analyzedAt !== undefined) values.analyzedAt = patch.analyzedAt ? new Date(patch.analyzedAt) : null;
+    if (patch.deletedAt !== undefined) values.deletedAt = patch.deletedAt ? new Date(patch.deletedAt) : null;
+    const [row] = await this.db.update(s.jobMedia).set(values).where(eq(s.jobMedia.id, id)).returning();
+    if (!row) throw new NotFoundError("Media");
+    return toMedia(row);
+  }
+  async createIntakeSession(rec: { source: IntakeSessionRecord["source"] }) {
+    const [row] = await this.db.insert(s.intakeSessions).values({ source: rec.source }).returning();
+    return toSession(row!);
+  }
+  async getIntakeSession(id: string) {
+    const [row] = await this.db.select().from(s.intakeSessions).where(eq(s.intakeSessions.id, id)).limit(1);
+    return row ? toSession(row) : null;
+  }
+  async updateIntakeSession(id: string, patch: Parameters<JobOsStore["updateIntakeSession"]>[1]) {
+    const [row] = await this.db.update(s.intakeSessions).set({ ...patch, updatedAt: new Date() }).where(eq(s.intakeSessions.id, id)).returning();
+    if (!row) throw new NotFoundError("Intake");
+    return toSession(row);
+  }
+  async listIntakeSessions(limit: number) {
+    const rows = await this.db.select().from(s.intakeSessions).orderBy(desc(s.intakeSessions.createdAt)).limit(limit);
+    return rows.map(toSession);
   }
 }

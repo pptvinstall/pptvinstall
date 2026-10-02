@@ -173,3 +173,45 @@ export interface ShadowSampleRecord {
   jobId: string | null;
   createdAt: string;
 }
+
+export const MEDIA_HINTS = ["photo", "screenshot", "receipt", "label", "other"] as const;
+export type MediaHint = (typeof MEDIA_HINTS)[number];
+
+/** Metadata for a private customer image. Bytes live in MediaStorage, never in this record. */
+export interface MediaRecord {
+  id: string;
+  intakeId: string | null;
+  jobId: string | null;
+  source: "owner" | "customer";
+  hint: MediaHint;
+  contentType: "image/jpeg";
+  bytes: number;
+  width: number;
+  height: number;
+  sha256: string;
+  storageKey: string;
+  thumbKey: string;
+  analysisStatus: "pending" | "analyzed" | "failed" | "skipped";
+  analysisError: string | null;
+  /** This image's observations in the stable PPTV vision schema. */
+  analysis: unknown;
+  provider: string | null;
+  model: string | null;
+  schemaVersion: string | null;
+  analyzedAt: string | null;
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+/** One intake: the proposal built from text + images, and what the reviewer decided (for learning). No raw message text is stored. */
+export interface IntakeSessionRecord {
+  id: string;
+  source: "owner" | "customer";
+  jobId: string | null;
+  status: "open" | "reviewed" | "linked";
+  proposal: unknown;
+  review: unknown;
+  messageChars: number;
+  createdAt: string;
+  updatedAt: string;
+}

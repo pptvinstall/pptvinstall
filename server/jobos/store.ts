@@ -10,6 +10,8 @@ import type {
   QuoteStatus,
   QuoteVersionRecord,
   ShadowSampleRecord,
+  MediaRecord,
+  IntakeSessionRecord,
   StoredConfig,
 } from "@shared/jobos/types";
 import type { EconomicsConfig } from "@shared/pricing/config";
@@ -104,6 +106,18 @@ export interface JobOsStore {
   listShadowSamples(limit: number): Promise<ShadowSampleRecord[]>;
   getShadowSample(id: string): Promise<ShadowSampleRecord | null>;
   linkShadowSampleJob(id: string, jobId: string): Promise<ShadowSampleRecord>;
+
+  // private media (metadata only; bytes live in MediaStorage)
+  createMedia(rec: Omit<MediaRecord, "id" | "createdAt" | "deletedAt" | "analysisStatus" | "analysisError" | "analysis" | "provider" | "model" | "schemaVersion" | "analyzedAt"> & { id: string }): Promise<MediaRecord>;
+  getMedia(id: string): Promise<MediaRecord | null>;
+  listMedia(filter: { intakeId?: string; jobId?: string }): Promise<MediaRecord[]>;
+  updateMedia(id: string, patch: Partial<Pick<MediaRecord, "analysisStatus" | "analysisError" | "analysis" | "provider" | "model" | "schemaVersion" | "analyzedAt" | "jobId" | "deletedAt" | "hint">>): Promise<MediaRecord>;
+
+  // intake sessions
+  createIntakeSession(rec: { source: IntakeSessionRecord["source"] }): Promise<IntakeSessionRecord>;
+  getIntakeSession(id: string): Promise<IntakeSessionRecord | null>;
+  updateIntakeSession(id: string, patch: Partial<Pick<IntakeSessionRecord, "jobId" | "status" | "proposal" | "review" | "messageChars">>): Promise<IntakeSessionRecord>;
+  listIntakeSessions(limit: number): Promise<IntakeSessionRecord[]>;
 
   // AI intake cache
   getIntakeCache(hash: string): Promise<IntakeCacheRecord | null>;

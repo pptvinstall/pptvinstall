@@ -54,7 +54,13 @@ import {
   type ScopeDraft,
 } from "@shared/jobos";
 import { hashObject } from "@shared/pricing/hash";
-import type { InvoiceRecord, JobRecord, QuoteRecord, QuoteVersionRecord, ShadowSampleRecord, ShadowSampleSummary, StoredConfig } from "@shared/jobos/types";
+import { MEDIA_HINTS, type InvoiceRecord, type JobRecord, type MediaRecord, type QuoteRecord, type QuoteVersionRecord, type ShadowSampleRecord, type ShadowSampleSummary, type StoredConfig } from "@shared/jobos/types";
+import { buildUnifiedProposal, combineIntakeText, proposalToScope, reviewDecisionsSchema, type ImageAnalysisResult, type ImageObservation, type UnifiedProposal } from "@shared/jobos/unifiedIntake";
+import type { AiScopeIntake } from "@shared/jobos/intake";
+import { randomUUID } from "node:crypto";
+import type { MediaStorage } from "./media/storage";
+import { normalizeImage, visionCopy } from "./media/images";
+import { runVision, VISION_SCHEMA_VERSION, type VisionImage, type VisionProvider } from "./vision";
 import { NotFoundError, type JobOsStore } from "./store";
 
 export class ConflictError extends Error {
@@ -83,6 +89,8 @@ export const createJobSchema = z.object({
   scope: jobScopeSchema.optional(),
   context: jobContextSchema.optional(),
   notes: z.string().max(2_000).nullable().optional(),
+  /** Intake (photos/screenshots/message) this job came from; its images are attached to the job. */
+  intakeId: z.string().uuid().nullable().optional(),
 });
 
 export const quoteRequestSchema = z.object({
@@ -117,7 +125,7 @@ export class JobOsService {
 
   constructor(
     private readonly store: JobOsStore,
-    private readonly opts: { intakeProvider?: IntakeProvider | null; now?: () => Date; configCacheMs?: number; routeProviders?: RouteProvider[] } = {},
+    private readonly opts: { intakeProvider?: IntakeProvider | null; now?: () => Date; configCacheMs?: number; routeProviders?: RouteProvider[]; media?: MediaStorage; vision?: VisionProvider | null } = {},
   ) {}
 
   private now() {
@@ -213,6 +221,7 @@ export class JobOsService {
       status: scope.tvs.length || scope.extras.length || scope.items.length ? "scoped" : "lead",
     });
     await this.syncScopeItems(job.id, scope);
+    if (data.intakeId) await this.linkIntakeToJob(data.intakeId, job.id);
     return job;
   }
 
@@ -241,7 +250,8 @@ export class JobOsService {
     const invoices = await this.store.listInvoicesForJob(jobId);
     const payments = (await Promise.all(invoices.map((i) => this.store.listPayments(i.id)))).flat();
     const actuals = await this.store.getActuals(jobId);
-    return { job, quote, versions, invoices, payments, actuals };
+    const media = (await this.store.listMedia({ jobId })).map(mediaSummary);
+    return { job, quote, versions, invoices, payments, actuals, media };
   }
 
   private async requireJob(id: string): Promise<JobRecord> {
@@ -675,7 +685,12 @@ export class JobOsService {
 
   // ---------------------------------------------------------------- AI intake
   async parseIntake(message: string, opts: { allowAi: boolean }): Promise<{ draft: ScopeDraft; cached: boolean; downgraded: string[]; aiUsed: boolean }> {
-    const clean = z.string().min(5).max(4_000).parse(message);
+    const r = await this.textIntake(z.string().min(5).max(4_000).parse(message), opts);
+    return { draft: r.draft, cached: r.cached, downgraded: r.downgraded, aiUsed: r.aiUsed };
+  }
+
+  /** Text intake (heuristic, or AI when allowed). Returns the structured intake as well as its draft. */
+  private async textIntake(clean: string, opts: { allowAi: boolean }): Promise<{ intake: AiScopeIntake; draft: ScopeDraft; cached: boolean; downgraded: string[]; aiUsed: boolean }> {
     const normalized = clean.toLowerCase().replace(/\s+/g, " ").trim();
     const provider = this.opts.intakeProvider;
     const aiUsable = opts.allowAi && !!provider && provider.enabled();
@@ -687,7 +702,7 @@ export class JobOsService {
     const cached = await this.store.getIntakeCache(hash);
     if (cached) {
       const intake = parseIntakeResponse(JSON.stringify(cached.intake));
-      return { draft: intakeToScopeDraft(intake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
+      return { intake, draft: intakeToScopeDraft(intake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
     }
 
     let source: "ai" | "heuristic" = "heuristic";
@@ -703,8 +718,169 @@ export class JobOsService {
     }
     const verified = verifyEvidence(intake, clean);
     await this.store.putIntakeCache({ inputHash: hash, source, intake: verified.intake });
-    return { draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
+    return { intake: verified.intake, draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
   }
+
+  // ---------------------------------------------------------------- private media + unified intake
+  private media(): MediaStorage {
+    if (!this.opts.media) throw new ConflictError("Media storage is not configured in this environment.", "MEDIA_NOT_CONFIGURED");
+    return this.opts.media;
+  }
+
+  /** Store one image privately (validated, metadata stripped). Creates the intake on first upload. */
+  async uploadMedia(input: { intakeId?: string | null; jobId?: string | null; hint?: string; data: Buffer; source: "owner" | "customer" }): Promise<{ intakeId: string; media: MediaSummary }> {
+    const storage = this.media();
+    const hint = z.enum(MEDIA_HINTS).catch("other").parse(input.hint ?? "photo");
+    let session = input.intakeId ? await this.store.getIntakeSession(input.intakeId) : null;
+    if (input.intakeId && (!session || session.source !== input.source)) throw new NotFoundError("Intake");
+    if (input.jobId) await this.requireJob(input.jobId);
+    if (!session) session = await this.store.createIntakeSession({ source: input.source });
+    const existing = await this.store.listMedia({ intakeId: session.id });
+    const limit = input.source === "customer" ? MAX_CUSTOMER_IMAGES : MAX_OWNER_IMAGES;
+    if (existing.length >= limit) throw new ConflictError(`Up to ${limit} images per intake.`, "TOO_MANY_IMAGES");
+    const img = await normalizeImage(input.data);
+    const dup = existing.find((m) => m.sha256 === img.sha256);
+    if (dup) return { intakeId: session.id, media: mediaSummary(dup) };
+    const id = randomUUID();
+    const day = this.now().toISOString().slice(0, 7).replace("-", "/");
+    const storageKey = `${input.source}/${day}/${id}.jpg`;
+    const thumbKey = `${input.source}/${day}/${id}.t.jpg`;
+    await storage.put(storageKey, img.data, "image/jpeg");
+    await storage.put(thumbKey, img.thumb, "image/jpeg");
+    const rec = await this.store.createMedia({
+      id,
+      intakeId: session.id,
+      jobId: input.jobId ?? session.jobId ?? null,
+      source: input.source,
+      hint,
+      contentType: "image/jpeg",
+      bytes: img.data.length,
+      width: img.width,
+      height: img.height,
+      sha256: img.sha256,
+      storageKey,
+      thumbKey,
+    });
+    return { intakeId: session.id, media: mediaSummary(rec) };
+  }
+
+  /** Owner-only bytes. Customer uploads are never served back through a public URL. */
+  async getMediaBytes(id: string, variant: "full" | "thumb"): Promise<Buffer> {
+    const rec = await this.store.getMedia(id);
+    if (!rec || rec.deletedAt) throw new NotFoundError("Media");
+    const bytes = await this.media().get(variant === "thumb" ? rec.thumbKey : rec.storageKey);
+    if (!bytes) throw new NotFoundError("Media");
+    return bytes;
+  }
+
+  async deleteMedia(id: string): Promise<void> {
+    const rec = await this.store.getMedia(id);
+    if (!rec || rec.deletedAt) throw new NotFoundError("Media");
+    await this.media().delete(rec.storageKey);
+    await this.media().delete(rec.thumbKey);
+    await this.store.updateMedia(id, { deletedAt: this.now().toISOString(), analysis: null });
+  }
+
+  async listMediaFor(filter: { intakeId?: string; jobId?: string }): Promise<MediaSummary[]> {
+    return (await this.store.listMedia(filter)).map(mediaSummary);
+  }
+
+  /**
+   * Analyze an intake: images through the vision provider (if configured), visible text plus the typed/pasted/voice
+   * message through the text intake, merged deterministically into one reviewable proposal. Never prices anything,
+   * never fails because vision is missing or broken: manual quoting always works.
+   */
+  async analyzeIntake(input: { intakeId?: string | null; message?: string; allowAi: boolean; source: "owner" | "customer" }) {
+    const active = await this.getActiveConfig();
+    const work = active.config.work;
+    let session = input.intakeId ? await this.store.getIntakeSession(input.intakeId) : null;
+    if (input.intakeId && (!session || session.source !== input.source)) throw new NotFoundError("Intake");
+    if (!session) session = await this.store.createIntakeSession({ source: input.source });
+    const message = (input.message ?? "").slice(0, 4_000);
+    const media = await this.store.listMedia({ intakeId: session.id });
+
+    // Vision: only images not analyzed yet. One provider call per batch of up to 8 images.
+    const vision = this.opts.vision ?? null;
+    const visionAvailable = !!vision && vision.enabled() && input.allowAi;
+    let visionError: string | null = null;
+    const todo = media.filter((m) => m.analysisStatus !== "analyzed");
+    for (let i = 0; i < todo.length; i += 8) {
+      const batch = todo.slice(i, i + 8);
+      const images: VisionImage[] = [];
+      for (const m of batch) {
+        const bytes = await this.media().get(m.storageKey);
+        if (bytes) images.push({ id: m.id, jpeg: await visionCopy(bytes), hint: m.hint });
+      }
+      const result = await runVision(visionAvailable ? vision : null, images, work);
+      const at = this.now().toISOString();
+      for (const m of batch) {
+        if (result.status === "analyzed") {
+          const obs = result.result.images.find((x) => x.imageId === m.id) ?? null;
+          await this.store.updateMedia(m.id, { analysisStatus: obs ? "analyzed" : "failed", analysisError: obs ? null : "no observations returned", analysis: obs, provider: vision!.name, model: vision!.model, schemaVersion: VISION_SCHEMA_VERSION, analyzedAt: at });
+        } else {
+          visionError = result.error;
+          await this.store.updateMedia(m.id, { analysisStatus: result.status, analysisError: result.error.slice(0, 120) });
+        }
+      }
+    }
+    const fresh = await this.store.listMedia({ intakeId: session.id });
+    const observations = fresh.filter((m) => m.analysisStatus === "analyzed" && m.analysis).map((m) => m.analysis as ImageObservation);
+    const images: ImageAnalysisResult | null = observations.length ? { images: observations, notes: [] } : null;
+
+    const { text, extractedText } = combineIntakeText(message, images);
+    const textSide = text.trim().length >= 5 ? await this.textIntake(text, { allowAi: input.allowAi }) : null;
+    const proposal = buildUnifiedProposal(
+      { textIntake: textSide?.intake ?? null, textDraft: textSide?.draft ?? null, textSource: "text", images, extractedText },
+      work,
+    );
+    await this.store.updateIntakeSession(session.id, { proposal, messageChars: message.length, status: session.status === "linked" ? "linked" : "open" });
+    return {
+      intakeId: session.id,
+      proposal,
+      images: fresh.map(mediaSummary),
+      vision: { available: visionAvailable, provider: visionAvailable ? vision!.name : null, error: visionError },
+      textUsedAi: textSide?.aiUsed ?? false,
+    };
+  }
+
+  /** Apply the reviewer's decisions: only confirmed facts become scope. Stores the decisions for learning. */
+  async reviewIntake(intakeId: string, input: unknown, source: "owner" | "customer" = "owner") {
+    const session = await this.store.getIntakeSession(intakeId);
+    if (!session || session.source !== source || !session.proposal) throw new NotFoundError("Intake");
+    const review = reviewDecisionsSchema.parse(input ?? {});
+    const result = proposalToScope(session.proposal as UnifiedProposal, review);
+    await this.store.updateIntakeSession(intakeId, { review: { ...review, applied: result.applied, pending: result.pending, at: this.now().toISOString() }, status: session.status === "linked" ? "linked" : "reviewed" });
+    return result;
+  }
+
+  /** Attach an intake's images (and the intake) to a job. */
+  async linkIntakeToJob(intakeId: string, jobId: string) {
+    const session = await this.store.getIntakeSession(intakeId);
+    if (!session) throw new NotFoundError("Intake");
+    await this.requireJob(jobId);
+    for (const m of await this.store.listMedia({ intakeId })) await this.store.updateMedia(m.id, { jobId });
+    await this.store.updateIntakeSession(intakeId, { jobId, status: "linked" });
+  }
+}
+
+export const MAX_OWNER_IMAGES = 12;
+export const MAX_CUSTOMER_IMAGES = 6;
+
+/** What callers may see about an image: never the storage key or the raw analysis provider payload. */
+export interface MediaSummary {
+  id: string;
+  hint: string;
+  width: number;
+  height: number;
+  bytes: number;
+  analysisStatus: string;
+  kind: string | null;
+  summary: string | null;
+  createdAt: string;
+}
+function mediaSummary(m: MediaRecord): MediaSummary {
+  const a = m.analysis as ImageObservation | null;
+  return { id: m.id, hint: m.hint, width: m.width, height: m.height, bytes: m.bytes, analysisStatus: m.analysisStatus, kind: a?.kind ?? null, summary: a?.summary ?? null, createdAt: m.createdAt };
 }
 
 export type PublicPriceResponse =

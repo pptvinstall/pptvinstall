@@ -79,3 +79,4 @@ vite.config.ts.*
 
 # Local booking fallback data (may contain customer PII)
 server/data/bookings.json
+.media/
