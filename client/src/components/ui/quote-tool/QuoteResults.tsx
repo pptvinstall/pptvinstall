@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowRight } from "lucide-react";
 
@@ -14,6 +15,18 @@ import { useQuoteContext } from "@/components/ui/quote-tool/useQuoteState";
 import QuotePackages from "@/components/ui/quote-tool/QuotePackages";
 
 export default function QuoteResults() {
+  const [paymentOptions, setPaymentOptions] = useState<{ labels: string[]; hostedCheckout: boolean }>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false });
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/payment-options")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!cancelled && data?.labels) setPaymentOptions({ labels: data.labels, hostedCheckout: Boolean(data.hostedCheckout) });
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
   const {
     quote,
     reviewGroups,
@@ -190,6 +203,12 @@ export default function QuoteResults() {
           Promo available this season: <strong>{seasonalTheme.promoCode}</strong>. We&apos;ll verify it during booking rather than auto-applying it here.
         </div>
       ) : null}
+
+      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm font-bold text-slate-900">Payment options</p>
+        <p className="mt-1 text-sm text-slate-700">{paymentOptions.labels.join(" · ")}</p>
+        <p className="mt-2 text-xs text-slate-500">{paymentOptions.hostedCheckout ? "Credit/debit card and eligible Apple Pay checkout use a secure hosted payment page; PPTVInstall never collects card numbers in this form." : "Cash, Zelle and Apple Pay are available. Secure card checkout will appear once the hosted payment provider is configured."}</p>
+      </div>
 
       <p className="text-xs font-medium text-slate-500">
         Final pricing may vary for complex installs. We confirm anything unusual before work begins.
