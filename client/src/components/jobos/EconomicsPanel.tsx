@@ -61,10 +61,9 @@ export default function EconomicsPanel({ pricing: p, economics: e, customerCents
         <Stat label="Effective rate" value={e ? `${money(e.effectiveGrossPerHourCents)}/hr` : "—"} sub="your net per hour" />
         <Stat label="Margin" value={e ? `${(e.marginPct * 100).toFixed(0)}%` : "—"} tone={e && e.marginPct < 0.12 ? "warn" : "good"} sub="after valuing your time" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Stat label="Complexity" value={p.premium?.complexity ?? "—"} />
-        <Stat label="Confidence" value={p.confidence} />
-        <Stat label="Status" value={STATUS_LABEL[p.status] ?? p.status} tone={p.status === "priced" ? "good" : "warn"} />
+        <Stat label="Confidence" value={p.confidence} tone={p.status === "priced" ? "default" : "warn"} sub={STATUS_LABEL[p.status] ?? p.status} />
       </div>
       {premiumFactors.length ? (
         <Notice tone="info">

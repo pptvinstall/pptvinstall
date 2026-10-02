@@ -160,7 +160,13 @@ export function composeQuote(args: {
       customerTotalCents = adjustment.amountCents;
       discountAppliedCents = Math.max(0, subtotalCents - adjustment.amountCents);
       const delta = adjustment.amountCents - subtotalCents;
-      if (delta !== 0) customerLines.push({ label: pricing.legacy.customQuoteItems.length > 0 && delta > 0 ? "Work priced after review" : "Adjustment", amountCents: delta });
+      const unpriced = customerLines.filter((l) => l.amountCents === null);
+      if (delta > 0 && unpriced.length === 1) {
+        // One catalog-unpriced item and the owner set the price after review: that item carries the difference.
+        unpriced[0]!.amountCents = delta;
+      } else if (delta !== 0) {
+        customerLines.push({ label: pricing.legacy.customQuoteItems.length > 0 && delta > 0 ? "Work priced after review" : "Adjustment", amountCents: delta });
+      }
     }
   }
 

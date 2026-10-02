@@ -9,6 +9,8 @@ Goal: make `pptvinstall/pptvinstall` the production source. Nothing below has be
 - [x] `verify-production-readiness.js` hardened upstream (no admin password fallback, modern fetch).
 - [x] Automated suites exist: `npm run test:pricing` (65) and `npm run test:jobos` (52, incl. Postgres lifecycle and admin-auth/token tests); run in CI.
 - [ ] Owner decisions: labor value, MPG/vehicle cost, tax rule, margins, minimum ticket, enabling `dynamic` pricing, photo-intake provider.
+- [ ] Run `npm run db:push` against the target database to create the additive `pricing_shadow_samples` table (no existing table changes).
+- [ ] Turn on `shadow` mode (Economics page) and compare catalog vs engine on real website quotes before any `dynamic` decision.
 - [ ] Production needs `JOB_OS_ENABLED=true` and `drizzle-kit push` of the 13 additive Job OS tables (after backup/branch); see `docs/STAGING.md`.
 - [ ] Run the full flow against a staging (see `docs/STAGING.md`) Render service + staging Neon branch: quote, booking, confirmation email, calendar download with token, manage booking, admin, SMS consent/STOP, push.
 

@@ -462,7 +462,12 @@ test("dynamic mode: customer lines use the item names and add up to the total", 
 
 test("legacy mode: items without a catalog or template price are explicit custom-priced lines, never invented numbers", () => {
   const q = composeQuote({ scope: { items: [tpl("desk_assembly", { id: "d", name: "Desk" })] } as never, context: nearby, config: C, adjustment: { type: "override", amountCents: 12_000, reason: "other", note: "Owner price" } });
-  assert.ok(q.customerLines.some((l) => l.amountCents === null && /Desk assembly/.test(l.label)));
+  // Without an owner price the catalog has nothing to say: an explicit unpriced line, not an invented number.
+  const unpriced = composeQuote({ scope: { items: [tpl("desk_assembly", { id: "d", name: "Desk" })] } as never, context: nearby, config: C });
+  assert.ok(unpriced.customerLines.some((l) => l.amountCents === null && /Desk assembly/.test(l.label)));
+  // With the owner's reviewed price, that single unpriced line carries the owner's amount.
+  assert.ok(q.customerLines.some((l) => l.amountCents === 12_000 && /Desk assembly/.test(l.label)));
+  assert.ok(!q.customerLines.some((l) => l.amountCents === null));
   assert.equal(q.customerTotalCents, 12_000);
   assert.equal(q.baseSource, "legacy_catalog");
   assert.equal(q.baseCustomerCents, 0);

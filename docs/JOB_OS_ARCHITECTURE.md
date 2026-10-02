@@ -15,7 +15,8 @@ Principle: **AI is not the calculator.** All money math is deterministic TypeScr
 
 ## Pricing modes
 - `legacy` (default): the customer sees today's catalog price. Engine output is shown to the owner only (floor, recommended, margin, warnings).
-- `dynamic`: the customer sees the engine recommendation. Off until the owner approves and calibrates config.
+- `shadow`: the customer still sees the catalog price (byte-identical to the browser calculator). Every review-stage public quote is also priced by the engine and stored as an owner-only sample (`pricing_shadow_samples`, deduped per day; ZIP + structured scope only, never contact details or notes).
+- `dynamic`: the customer sees the engine recommendation. Switching to it (or re-activating a dynamic version) requires `confirmDynamic: "change customer prices"`, checked on the server. See `docs/PRICING_RULES.md`.
 - Historical baseline ($100 install, +$100 outlet, +$100 fireplace, +$50 brick/stone, +$25 high-rise/steel, $50 unmount/remount) stays reference data; golden tests still pass untouched.
 
 ## Engine model

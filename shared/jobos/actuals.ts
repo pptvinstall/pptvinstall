@@ -158,7 +158,9 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
   const estHelper = est.helperPay ? helperCostAt(est.helperPay, quoted) : est.labor.helperCostCents;
   const estOutOfPocket = est.outOfPocketExHelperCents !== undefined ? est.outOfPocketExHelperCents + estHelper : est.outOfPocketCents;
   const estEconomics = snapshot.composition.economics;
-  const outOfPocket = actuals.actualMaterialsCents + actuals.otherSpendCents + fuel + vehicle + helper;
+  // Overhead is not measured per job: the same per-job allocation as the estimate keeps the comparison like-for-like.
+  const overheadAllocation = est.overheadCents ?? 0;
+  const outOfPocket = actuals.actualMaterialsCents + actuals.otherSpendCents + fuel + vehicle + helper + overheadAllocation;
   const ownerMinutes = actuals.laborMinutes + actuals.travelMinutes;
   const ownerHours = ownerMinutes / 60;
 
@@ -185,7 +187,7 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
 
   return {
     estimate: true,
-    note: "Estimates only: fuel, vehicle and owner-time values come from the configured assumptions, not receipts.",
+    note: "Estimates only: fuel, vehicle, overhead allocation and owner-time values come from the configured assumptions, not receipts.",
     quotedCents: args.customerQuotedCents,
     collectedCents: actuals.collectedCents,
     tipCents: actuals.tipCents,

@@ -519,7 +519,7 @@ function Builder() {
       {/* Sticky price bar + navigation */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
         <div className="mx-auto max-w-lg">
-          <div className="mb-2 flex items-center justify-between text-sm" aria-live="polite">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm" aria-live="polite">
             <span className="text-slate-500">Quote <strong className="text-slate-900">{comp ? money(comp.customerTotalCents) : "—"}</strong></span>
             <span className="text-slate-500">Rec. <strong className="text-slate-900">{p ? money(stableRec ?? p.recommendedCents) : "—"}</strong></span>
             <span className={cn("text-slate-500", comp?.belowFloor && "text-amber-700")}>Floor <strong>{p ? money(p.floorCents) : "—"}</strong></span>
