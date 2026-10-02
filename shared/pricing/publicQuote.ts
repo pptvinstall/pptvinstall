@@ -2,7 +2,7 @@ import { z } from "zod";
 import { calculateQuote, type QuoteFormState } from "../../client/src/lib/quote-calculator";
 import { buildAugmentedQuote, type StandaloneServices } from "../../client/src/components/ui/quote-tool/shared";
 import { toCents, type Cents } from "./money";
-import { parseJobScope, type JobScope } from "./scope";
+import { parseJobScope, type JobContextInput, type JobScope } from "./scope";
 import type { WorkItemInput } from "./work";
 
 // The public /quote tool's inputs, validated, and the two prices that can be shown for them:
@@ -24,6 +24,14 @@ const tvSchema = z
   })
   .strip();
 
+const moveProjectSchema = z.object({
+  enabled: z.boolean().default(false),
+  previousZipCode: z.string().regex(/^(\d{5})?$/).default(""),
+  oldHomeTvUnmountCount: z.number().int().min(0).max(20).default(0),
+  oldHomeMountRemovalCount: z.number().int().min(0).max(20).default(0),
+  rackTeardownLevel: z.enum(["none", "small", "medium", "large"]).default("none"),
+});
+
 const cameraSchema = z
   .object({
     id: z.string().min(1).max(80),
@@ -43,6 +51,7 @@ export const publicQuoteFormSchema = z
     surroundSound: z.boolean(),
     floodlight: z.boolean(),
     handymanMinutes: z.number().int().min(0).max(600),
+    moveProject: moveProjectSchema.default({ enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" }),
     zipCode: z.string().regex(/^(\d{5})?$/),
   })
   .strip();
@@ -81,9 +90,10 @@ export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "stand
 /** The same public request as structured scope for the engine. Only facts the customer chose; nothing invented. */
 export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "standalone">): JobScope {
   const { form, standalone } = req;
+  const newHomeSite = form.moveProject.enabled ? 1 : 0;
   const tvs: JobScope["tvs"] = form.tvs.map((tv) => ({
     id: tv.id.slice(0, 64),
-    site: 0,
+    site: newHomeSite,
     sizeBand: tv.size,
     wall: tv.wallType === "highrise" ? "steel" : tv.wallType,
     location: tv.location,
@@ -107,7 +117,31 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
   }
   const items: WorkItemInput[] = [];
   const takeDowns = standalone.removalCount + standalone.sharedUnmountCount;
-  if (takeDowns > 0) items.push({ id: "public-unmount", action: "unmount", category: "tv", quantity: Math.min(50, takeDowns), name: "TV" });
-  if (form.surroundSound) items.push({ id: "public-surround", action: "install", category: "speaker", name: "Surround sound", quantity: 1 });
+  if (takeDowns > 0) items.push({ id: "public-unmount", action: "unmount", category: "tv", quantity: Math.min(50, takeDowns), name: "TV", site: newHomeSite, ownerMinutesPerUnit: 15, weightLb: 20 });
+
+  if (form.moveProject.enabled) {
+    if (form.moveProject.oldHomeTvUnmountCount > 0) {
+      items.push({ id: "move-old-tv-unmount", action: "unmount", category: "tv", quantity: form.moveProject.oldHomeTvUnmountCount, name: "Previous-home TV", site: 0, ownerMinutesPerUnit: 15, weightLb: 20 });
+    }
+    if (form.moveProject.oldHomeMountRemovalCount > 0) {
+      items.push({ id: "move-old-mount-removal", action: "remove", category: "tv", quantity: form.moveProject.oldHomeMountRemovalCount, name: "Existing TV mount / wall hardware", site: 0, ownerMinutesPerUnit: 20, weightLb: 10 });
+    }
+    if (form.moveProject.rackTeardownLevel !== "none") {
+      const minutes = { small: 60, medium: 120, large: 180 }[form.moveProject.rackTeardownLevel];
+      items.push({ id: "move-rack-teardown", action: "teardown", category: "wall_shelving", quantity: 1, name: "Wire-rack shelving", site: 0, ownerMinutesPerUnit: minutes, weightLb: 10 });
+    }
+  }
+
+  if (form.surroundSound) items.push({ id: "public-surround", action: "install", category: "speaker", name: "Surround sound", quantity: 1, site: newHomeSite });
   return parseJobScope({ tvs, extras, items });
+}
+
+export function publicRequestToContext(req: Pick<PublicQuoteRequest, "form">): JobContextInput {
+  const move = req.form.moveProject;
+  if (!move.enabled) return req.form.zipCode ? { zip: req.form.zipCode } : {};
+  const baseZip = move.previousZipCode || req.form.zipCode;
+  return {
+    ...(baseZip ? { zip: baseZip } : {}),
+    extraStops: [{ label: req.form.zipCode ? `New home ${req.form.zipCode}` : "New home" }],
+  };
 }
