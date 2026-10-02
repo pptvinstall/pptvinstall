@@ -1,254 +1,299 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import { Link } from "wouter";
-import { Monitor, Cable, Tv, Package, Wrench, DoorClosed, Camera, Lightbulb, Check } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
+import { Check, Flame, Settings, Shield, Star, Tv, Video, Wrench, XCircle, Zap } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const tvServices = [
   {
-    title: "Basic TV Mounting",
+    title: "Basic Mounting",
     price: "$100",
-    isMostPopular: true,
-    description: "Professional TV mounting with your own mount",
-    features: [
-      "Customer-provided mount",
-      "32\"-55\" or 56\"+ TVs",
-      "Level installation",
-      "Basic cable management",
-      "Hardware included",
-      "+$50 for non-drywall surfaces (brick/concrete/stone)",
-      "+$100 for outlet relocation"
-    ],
-    icon: Monitor
+    description: "Customer provides the TV and mount.",
+    features: ["Level, secure installation", "TV size and wall conditions reviewed for safe mounting", "Basic cable cleanup"],
+    mostPopular: true,
   },
   {
-    title: "Standard TV Mounting",
-    price: "From $150",
-    description: "Professional TV mounting with mount provided by us",
-    features: [
-      "We provide the mount",
-      "32\"-55\" or 56\"+ TVs",
-      "Level installation",
-      "Basic cable management",
-      "Hardware included",
-      "+$50 for non-drywall surfaces (brick/concrete/stone)",
-      "+$100 for outlet relocation"
-    ],
-    icon: Monitor
+    title: "Hardware Bundle",
+    price: "$130+",
+    description: "We provide the mount and install it.",
+    features: ["PPTV-supplied mount available", "Fixed, tilt, or full motion options", "Mount add-on varies by TV size and style"],
+    mostPopular: false,
   },
   {
-    title: "Above Fireplace",
-    price: "From $200",
-    description: "Specialized mounting above fireplaces with proper heat protection",
-    features: [
-      "Heat-safe installation",
-      "Cable concealment",
-      "All mount types available",
-      "Hardware included",
-      "Proper angle optimization",
-      "+$50 for masonry walls",
-      "Contact for outlet options"
-    ],
-    icon: Tv
+    title: "Fireplace Mounting",
+    price: "$200+",
+    description: "Specialized over-fireplace setups.",
+    features: ["Drywall or masonry", "Placement and wall conditions reviewed", "Fireplace wire concealment requires assessment"],
+    mostPopular: false,
   },
-  {
-    title: "Ceiling Mount",
-    price: "From $175",
-    description: "Custom ceiling mounting solutions",
-    features: [
-      "Secure ceiling installation",
-      "All TV sizes supported",
-      "Tilt/swivel options",
-      "Cable management",
-      "Perfect for corners",
-      "+$50 for masonry surfaces",
-      "+$100 for outlet relocation"
-    ],
-    icon: Cable
-  }
 ];
 
 const smartHomeServices = [
   {
     title: "Smart Doorbell",
-    price: "$85",
-    description: "Professional smart doorbell installation",
-    features: [
-      "Proper wiring setup",
-      "Brick installation (+$10)",
-      "WiFi connection",
-      "Testing & setup",
-      "Sync with existing chime"
-    ],
-    icon: DoorClosed
+    price: "Custom quote",
+    description: "Device-specific installation and setup after we review the exact model and wiring.",
+    features: ["Existing setup reviewed", "Device-specific installation scope", "App setup when applicable"],
   },
   {
-    title: "Smart Camera",
-    price: "From $75",
-    description: "Security camera installation at any height",
-    features: [
-      "Secure mounting",
-      "Power connection",
-      "Custom height options",
-      "+$25 per 4ft above 8ft",
-      "WiFi setup & testing"
-    ],
-    icon: Camera
+    title: "Security Camera",
+    price: "Custom quote",
+    description: "Selective camera installation after device, wiring, location, and access review.",
+    features: ["Mounting location reviewed", "Power/wiring needs reviewed", "Device setup when applicable"],
   },
   {
-    title: "Floodlight",
-    price: "$125",
-    description: "Smart floodlight camera installation",
+    title: "Floodlight Cam",
+    price: "Custom quote",
+    description: "Outdoor smart-floodlight installation after device and existing-wiring review.",
+    features: ["Outdoor location reviewed", "Existing wiring required for standard scope", "Device setup when applicable"],
+  },
+];
+
+const troubleshootingServices = [
+  {
+    title: "AV Troubleshooting",
+    price: "Custom quote",
+    description: "Remote issues, input problems, sound not working, TV won't connect. We diagnose and fix your existing setup.",
+    icon: Wrench,
     features: [
-      "Professional wiring",
-      "Weatherproof installation",
-      "Motion sensor setup",
-      "App configuration",
-      "Lighting optimization"
+      "Remote and input configuration",
+      "Sound system sync",
+      "Network and streaming issues",
+      "HDMI and cable troubleshooting",
     ],
-    icon: Lightbulb
-  }
+    quoteOnly: true,
+  },
+  {
+    title: "Device & Smart Home Setup",
+    price: "Custom quote",
+    description: "Streaming-device, cable-box, or smart-TV setup priced after we review the exact scope.",
+    icon: Settings,
+    features: [
+      "Smart TV initial setup",
+      "Streaming app configuration",
+      "Alexa / Google Home linking",
+      "WiFi and network setup",
+    ],
+    quoteOnly: true,
+  },
+  {
+    title: "TV Removal / Unmounting",
+    price: "$50 per TV",
+    description: "Moving or redecorating? We'll safely remove your wall-mounted TV and prep the space for storage or a future install.",
+    icon: XCircle,
+    features: [
+      "Safe TV removal",
+      "Mount hardware removed",
+      "Mount removal and area left ready for your next step",
+      "Prep for new install or storage",
+    ],
+    quoteOnly: false,
+  },
 ];
 
 export default function Services() {
+  useEffect(() => {
+    document.title = "TV Mounting Services in Atlanta | Picture Perfect TV Install";
+  }, []);
+
   return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Our Services</h1>
-          <p className="text-xl text-gray-600">
-            Professional TV mounting, unmounting, and smart home installation solutions
-          </p>
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <section className="relative overflow-hidden bg-slate-900 pb-24 pt-32 text-white">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute left-[10%] top-[10%] h-[600px] w-[600px] rounded-full bg-blue-600 blur-[100px]" />
+          <div className="absolute bottom-[10%] right-[10%] h-[500px] w-[500px] rounded-full bg-indigo-600 blur-[100px]" />
         </div>
 
-        <div className="mb-12 max-w-3xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-semibold">TV Unmounting Service</h2>
-            <p className="text-gray-600">Need to remove a mounted TV? Our professionals will handle it safely.</p>
+        <div className="container relative z-10 mx-auto px-4 text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl space-y-6">
+            <h1 className="text-4xl font-extrabold tracking-tight md:text-6xl">
+              Expert <span className="text-blue-500">Solutions</span> for Every Screen
+            </h1>
+            <p className="text-lg text-slate-300">
+              TV mounting services in Atlanta, wire concealment, fireplace installs, smart home setup, and troubleshooting across Midtown, Buckhead, Decatur, Marietta, Alpharetta, Roswell, Lawrenceville, and more.
+            </p>
+            <p className="text-sm text-slate-400">
+              Need help fast? <a href="tel:14047024748" className="font-semibold text-white hover:underline">Call 404-702-4748</a> for Metro Atlanta TV installation support.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* TV MOUNTING — hero from my-work/ (used ONLY here; homepage + gallery use different files) */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="mb-10 flex items-center gap-3">
+            <div className="rounded-xl bg-blue-100 p-3 text-blue-600"><Tv className="h-6 w-6" /></div>
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">TV Mounting</h2>
+              <p className="text-slate-500">Secure, level, and clean installations.</p>
+            </div>
           </div>
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-md">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-blue-700">
-                  <Package className="h-6 w-6 text-blue-500" />
-                  Professional TV Unmounting
-                </CardTitle>
-                <div className="flex items-center">
-                  <div className="bg-blue-100 p-1 px-2 rounded mr-2">
-                    <p className="text-xl font-bold text-blue-700">$50</p>
-                  </div>
-                  <Link href="/booking">
-                    <Button className="bg-blue-600 hover:bg-blue-700">Book Now</Button>
-                  </Link>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 mb-4">Complete TV removal and wall restoration service</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
-                    <span className="font-medium">Safe TV and mount removal</span>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
-                    <span className="font-medium">Basic wall repair included</span>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
-                    <span className="font-medium">Cable organization</span>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
-                    <span className="font-medium">All TV sizes supported</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="space-y-12">
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">TV Mounting Services</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {tvServices.map((service) => (
-                <Card key={service.title} className={`relative ${service.isMostPopular ? 'border-2 border-blue-500 shadow-lg' : ''}`}>
-                  {service.isMostPopular && (
-                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg font-medium text-sm">
-                      Most Popular
+          <div className="mb-8 overflow-hidden rounded-2xl shadow-lg max-h-72">
+            <img
+              src="/images/my-work/01a47d71ff9be4d24847ffba6739e8968b87cd7b49.jpg"
+              alt="TV mounted on a high-rise condo column with stunning Atlanta city skyline views"
+              className="w-full h-72 object-cover"
+              loading="lazy"
+            />
+          </div>
+
+          <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
+            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            Available evenings &amp; weekends — same-day may be possible when a slot is open
+          </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {tvServices.map((service) => (
+              <Card key={service.title} className={`border-l-4 border-slate-200 shadow-sm card-elevated flex flex-col ${service.mostPopular ? "border-l-blue-600 ring-2 ring-blue-100" : "border-l-blue-500"}`}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <CardTitle className="text-xl font-bold text-slate-900">{service.title}</CardTitle>
+                      {service.mostPopular ? (
+                        <Badge className="border-blue-200 bg-blue-50 text-blue-700">
+                          <Star className="mr-1 h-3 w-3 fill-blue-600" />
+                          Most Popular
+                        </Badge>
+                      ) : null}
                     </div>
-                  )}
-                  <CardHeader>
-                    <service.icon className="h-12 w-12 text-brand-blue-500 mb-4" />
-                    <CardTitle className="text-2xl">{service.title}</CardTitle>
-                    <p className="text-xl font-bold text-brand-blue-500">{service.price}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4">{service.description}</p>
-                    <ul className="space-y-2">
-                      {service.features.map((feature) => (
-                        <li key={feature} className="flex items-center">
-                          <Package className="h-4 w-4 text-brand-blue-500 mr-2" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    {service.title === "Above Fireplace" && (
-                      <div className="mt-4 p-3 bg-brand-blue-50 rounded-lg text-sm text-gray-700">
-                        Note: For outlet relocation above fireplaces, please send photos of your fireplace and nearby outlets for a custom quote, or schedule an in-person estimate.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="text-2xl font-black text-blue-600 whitespace-nowrap">{service.price}</div>
+                  </div>
+                  <CardDescription className="text-slate-500">{service.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <ul className="space-y-3 text-sm text-slate-600">
+                    {service.features.map((feature) => (
+                      <li key={feature} className="flex gap-2">
+                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Link href="/booking" className="w-full">
+                    <Button className="w-full rounded-2xl bg-blue-600 text-white hover:bg-blue-500">Book This Service</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-20">
+        <div className="container mx-auto px-4">
+          <div className="mb-10 flex items-center gap-3">
+            <div className="rounded-xl bg-indigo-100 p-3 text-indigo-600"><Video className="h-6 w-6" /></div>
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">Smart Home</h2>
+              <p className="text-slate-500">Automation and security installs done cleanly.</p>
             </div>
           </div>
 
-          <Separator className="my-12" />
-
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Smart Home Installation</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {smartHomeServices.map((service) => (
-                <Card key={service.title}>
-                  <CardHeader>
-                    <service.icon className="h-12 w-12 text-brand-blue-500 mb-4" />
-                    <CardTitle className="text-2xl">{service.title}</CardTitle>
-                    <p className="text-xl font-bold text-brand-blue-500">{service.price}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4">{service.description}</p>
-                    <ul className="space-y-2">
-                      {service.features.map((feature) => (
-                        <li key={feature} className="flex items-center">
-                          <Package className="h-4 w-4 text-brand-blue-500 mr-2" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {smartHomeServices.map((service) => (
+              <Card key={service.title} className="border-l-4 border-l-purple-500 border-slate-200 shadow-sm card-elevated flex flex-col">
+                <CardContent className="flex flex-col flex-1 space-y-5 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">{service.title}</h3>
+                      <p className="mt-1 text-2xl font-black text-purple-600">{service.price}</p>
+                      <p className="mt-2 text-sm text-slate-500">{service.description}</p>
+                    </div>
+                    {service.title === "Smart Doorbell" ? <Video className="h-6 w-6 flex-shrink-0 text-purple-400" /> : service.title === "Security Camera" ? <Shield className="h-6 w-6 flex-shrink-0 text-purple-400" /> : <Zap className="h-6 w-6 flex-shrink-0 text-purple-400" />}
+                  </div>
+                  <ul className="flex-1 space-y-3 text-sm text-slate-600">
+                    {service.features.map((feature) => (
+                      <li key={feature} className="flex gap-2">
+                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/quote">
+                    <Button variant="outline" className="w-full rounded-2xl border-purple-200 text-purple-700 hover:bg-purple-50">Get Custom Quote</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
+      </section>
 
-        <div className="text-center mt-12">
-          <Link href="/booking">
-            <Button size="lg" className="px-8">
-              Book Your Installation
-            </Button>
-          </Link>
+      {/* AV HELP — hero from my-work/ (used ONLY here; homepage + gallery use different files) */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="mb-10 flex items-center gap-3">
+            <div className="rounded-xl bg-amber-100 p-3 text-amber-600"><Wrench className="h-6 w-6" /></div>
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">AV Help &amp; Troubleshooting</h2>
+              <p className="text-slate-500">Already have everything installed but something isn&apos;t working right?</p>
+            </div>
+          </div>
+
+          <div className="mb-8 overflow-hidden rounded-2xl shadow-lg max-h-72">
+            <img
+              src="/images/my-work/01d8ee3eb78977aec05311a317405928e4669999ce.jpg"
+              alt="TV mounted in a professional office conference room — commercial installation"
+              className="w-full h-72 object-cover"
+              loading="lazy"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {troubleshootingServices.map((service) => (
+              <Card key={service.title} className="border-l-4 border-l-amber-500 border-slate-200 shadow-sm card-elevated flex flex-col">
+                <CardContent className="flex flex-col flex-1 space-y-5 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">{service.title}</h3>
+                      <p className="mt-1 text-2xl font-black text-amber-600">{service.price}</p>
+                      <p className="mt-2 text-sm text-slate-600">{service.description}</p>
+                    </div>
+                    <service.icon className="h-6 w-6 flex-shrink-0 text-amber-500" />
+                  </div>
+                  <ul className="flex-1 space-y-3 text-sm text-slate-600">
+                    {service.features.map((feature) => (
+                      <li key={feature} className="flex gap-2">
+                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={service.quoteOnly ? "/quote" : "/booking"}>
+                    <Button variant="outline" className="w-full rounded-2xl border-amber-200 text-amber-700 hover:bg-amber-50">{service.quoteOnly ? "Get Custom Quote" : "Book This Service"}</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-start justify-between gap-8 rounded-3xl bg-slate-900 p-8 text-white md:flex-row md:items-center md:p-12">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-amber-400">
+                <Flame className="h-4 w-4" />
+                Specialty Installs
+              </div>
+              <h2 className="text-3xl font-bold">Need fireplace, brick, or wire concealment work?</h2>
+              <p className="max-w-xl text-slate-300">
+                Use the quote tool for the fastest exact pricing before you book.
+              </p>
+            </div>
+            <Link href="/quote">
+              <Button className="rounded-2xl bg-white px-8 text-slate-900 hover:bg-slate-100">Get a Quote</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

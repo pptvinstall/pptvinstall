@@ -42,8 +42,11 @@ git push -u origin main
 ### 3. Configure Environment Variables
 Set these in Render dashboard:
 ```
-GMAIL_APP_PASSWORD=xsjlfjpqderocpyh
-ADMIN_PASSWORD=PictureP3rfectTV2025
+EMAIL_USER=pptvinstall@gmail.com
+EMAIL_PASS=YOUR_GMAIL_APP_PASSWORD_HERE
+ADMIN_EMAIL=pptvinstall@gmail.com
+EMAIL_FROM="Picture Perfect TV Install <pptvinstall@gmail.com>"
+ADMIN_PASSWORD=REPLACE_WITH_A_LONG_RANDOM_SECRET
 ```
 
 ### 4. Database Setup

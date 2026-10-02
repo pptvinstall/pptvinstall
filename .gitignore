@@ -14,11 +14,14 @@ out
 .env.development.local
 .env.test.local
 .env.production.local
+env
 
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
+*.log
 
 # IDE/Editor files
 .idea
@@ -66,3 +69,14 @@ attached_assets/
 server/public
 vite.config.ts.*
 *.tar.gz
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
+
+# Local booking fallback data (may contain customer PII)
+server/data/bookings.json
+.media/

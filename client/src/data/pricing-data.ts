@@ -39,32 +39,32 @@ export const pricingData = {
   tvMounts: {
     fixedSmall: {
       name: "Fixed Mount (32\"-55\")",
-      price: 50,
+      price: 30,
       description: "Fixed position TV mount for TVs between 32\" and 55\"."
     },
     fixedBig: {
       name: "Fixed Mount (56\"+)",
-      price: 65,
+      price: 40,
       description: "Fixed position TV mount for TVs 56\" and larger."
     },
     tiltingSmall: {
       name: "Tilting Mount (32\"-55\")",
-      price: 65,
+      price: 40,
       description: "Tilting TV mount for TVs between 32\" and 55\"."
     },
     tiltingBig: {
       name: "Tilting Mount (56\"+)",
-      price: 80,
+      price: 50,
       description: "Tilting TV mount for TVs 56\" and larger."
     },
     fullMotionSmall: {
       name: "Full Motion Mount (32\"-55\")",
-      price: 90,
+      price: 60,
       description: "Full motion (articulating) TV mount for TVs between 32\" and 55\"."
     },
     fullMotionBig: {
       name: "Full Motion Mount (56\"+)",
-      price: 120,
+      price: 80,
       description: "Full motion (articulating) TV mount for TVs 56\" and larger."
     }
   },
@@ -72,13 +72,13 @@ export const pricingData = {
   // Wire Concealment & Outlet Installation
   wireConcealment: {
     standard: {
-      name: "Standard Wire Concealment (New Outlet Behind TV)",
+      name: "Outlet Behind TV / Clean-Cord Setup",
       price: 100,
-      description: "Installing a new outlet behind the TV with concealed wires."
+      description: "Installing an outlet behind the TV as the primary clean-cord solution."
     },
     additional: {
-      name: "Additional Outlet Installation (Same Visit)",
-      price: 90,
+      name: "Additional Outlet Behind TV (Same Visit)",
+      price: 100,
       description: "Each additional outlet installation at the same location."
     },
     fireplaceWarning: {
@@ -136,29 +136,57 @@ export const pricingData = {
   // Custom Services (Hourly Rate)
   customServices: {
     handyman: {
-      name: "General Handyman Work",
+      name: "Handyman / General Work",
       price: 100,
       hourly: true,
       minimum: 100,
       halfHourRate: 50,
-      description: "Shelves, Mirrors, Furniture Assembly. $50 for every additional 30 minutes."
+      description: "Shelves, mirrors, furniture assembly, and general home tasks. $100 for the first hour, $50 for each additional 30 minutes."
     }
   },
 
   // Discounts
   discounts: {
     multipleTvs: {
-      name: "$10 Off Per Additional TV",
-      amount: 10
+      name: "Multi-TV Discount (Owner Approved)",
+      amount: 0
     },
     multipleOutlets: {
-      name: "$10 Off Per Additional Outlet Install",
-      amount: 10
+      name: "Multi-Outlet Discount (Owner Approved)",
+      amount: 0
     },
     mountBundle: {
-      name: "$5 Off Per Additional Mount Purchased",
-      amount: 5
+      name: "Mount Bundle Discount (Owner Approved)",
+      amount: 0
     }
+  },
+
+  // Zero-TV standalone services
+  otherServices: {
+    tvUnmounting: {
+      name: "TV Unmounting / Removal",
+      price: 50,
+      description: "Safe removal of an existing wall-mounted TV. Per TV.",
+    },
+    avTroubleshooting: {
+      name: "AV Troubleshooting",
+      price: 100,
+      hourly: true,
+      halfHourRate: 50,
+      minimum: 100,
+      description: "Remote issues, HDMI problems, sound not working, streaming setup. $100 first hour, $50 per additional 30 min.",
+    },
+    wireManagementOnly: {
+      name: "Wire Management / Cable Tidy",
+      price: 75,
+      additionalLocationPrice: 50,
+      description: "Already mounted but wires are a mess? $75 for one TV location, +$50 per additional location.",
+    },
+    deviceSetup: {
+      name: "Device Setup & Configuration",
+      price: 75,
+      description: "Smart TV setup, streaming apps, Alexa/Google Home, WiFi config. $75 flat.",
+    },
   },
 
   // Travel fee

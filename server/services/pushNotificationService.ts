@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import { outboundSuppressed, recordSuppressed } from '../outbound';
 import { db } from '../db';
 import { customers } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
@@ -112,6 +113,11 @@ export class PushNotificationService {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png'
       });
+
+      if (outboundSuppressed()) {
+        recordSuppressed('push', `customer-${customerId}`, title);
+        return true;
+      }
 
       // Send the notification
       await webpush.sendNotification(

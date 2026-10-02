@@ -1,41 +1,38 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+import { Link } from "wouter";
 
-export interface LogoProps {
-  className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  withText?: boolean;
+interface LogoProps {
+  variant?: "light" | "dark";
 }
 
-export function Logo({ 
-  className, 
-  size = 'md', 
-  withText = true
-}: LogoProps) {
-  const sizeClasses = {
-    sm: 'h-8',
-    md: 'h-10',
-    lg: 'h-12',
-    xl: 'h-16',
-  };
-
+// Named export
+export function Logo({ variant = "dark" }: LogoProps) {
   return (
-    <div className={cn('flex items-center', className)}>
-      <img 
-        src="/images/logo.png" 
-        alt="Picture Perfect TV Logo" 
-        className={cn(
-          sizeClasses[size], 
-          'w-auto object-contain transition-transform hover:scale-105',
-          'rounded-full shadow-sm'
-        )} 
-      />
-      
-      {withText && (
-        <span className="ml-2 text-lg font-bold tracking-tight">
-          Picture Perfect TV Install
-        </span>
-      )}
-    </div>
+    <Link href="/">
+      <div className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity">
+        {/* Logo Image */}
+        <img 
+          src="/images/logo.png" 
+          alt="Picture Perfect TV Install" 
+          className="h-12 w-12 object-contain rounded-full bg-white border-2 border-white shadow-sm"
+        />
+
+        {/* Text Logo */}
+        <div className="flex flex-col leading-none justify-center">
+          {/* Top Line: Picture Perfect */}
+          <span className={`font-extrabold text-lg tracking-tight ${variant === 'light' ? 'text-white drop-shadow-md' : 'text-slate-900'}`}>
+            Picture Perfect
+          </span>
+          
+          {/* Bottom Line: TV (Red) Installation (Blue) */}
+          <div className="text-[11px] font-black tracking-widest uppercase flex gap-1 mt-0.5">
+             <span className="text-red-500 drop-shadow-sm">TV</span>
+             <span className="text-blue-500 drop-shadow-sm">INSTALL</span>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
+
+// Default export
+export default Logo;

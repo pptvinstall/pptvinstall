@@ -5,12 +5,13 @@
  * Tests all critical systems before domain deployment
  */
 
-import fetch from 'node-fetch';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
 
 const API_BASE = process.env.API_BASE || 'http://localhost:5000';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '9663';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(API_BASE);
+const ALLOW_REMOTE_MUTATIONS = process.env.ALLOW_REMOTE_READINESS_MUTATIONS === 'true';
 
 // Test results tracking
 const results = {
@@ -61,20 +62,25 @@ async function testHealthEndpoints() {
       return false;
     }
     
-    // Detailed health check
-    const detailedResponse = await fetch(`${API_BASE}/api/health/detailed?password=${ADMIN_PASSWORD}`);
-    const detailedData = await detailedResponse.json();
-    
-    if (detailedResponse.ok && detailedData.success) {
-      log('SUCCESS', 'Detailed health endpoint working', {
-        launchMode: detailedData.launchConfig?.isLaunchMode,
-        environment: detailedData.environment,
-        version: detailedData.version
-      });
-      results.passed++;
+    // Detailed health check (requires explicit admin credential)
+    if (ADMIN_PASSWORD) {
+      const detailedResponse = await fetch(`${API_BASE}/api/health/detailed?password=${encodeURIComponent(ADMIN_PASSWORD)}`);
+      const detailedData = await detailedResponse.json();
+
+      if (detailedResponse.ok && detailedData.success) {
+        log('SUCCESS', 'Detailed health endpoint working', {
+          launchMode: detailedData.launchConfig?.isLaunchMode,
+          environment: detailedData.environment,
+          version: detailedData.version
+        });
+        results.passed++;
+      } else {
+        log('ERROR', 'Detailed health endpoint failed');
+        results.failed++;
+      }
     } else {
-      log('ERROR', 'Detailed health endpoint failed');
-      results.failed++;
+      log('WARN', 'Skipping detailed health endpoint: ADMIN_PASSWORD is not set');
+      results.warnings++;
     }
     
     return true;
@@ -87,7 +93,13 @@ async function testHealthEndpoints() {
 
 async function testBookingFlow() {
   log('INFO', 'Testing complete booking flow...');
-  
+
+  if (!IS_LOCAL_API && !ALLOW_REMOTE_MUTATIONS) {
+    log('WARN', 'Skipping booking mutation tests against a non-local API. Set ALLOW_REMOTE_READINESS_MUTATIONS=true only for an isolated staging environment.');
+    results.warnings++;
+    return true;
+  }
+
   try {
     // Test live booking
     const liveBooking = {
