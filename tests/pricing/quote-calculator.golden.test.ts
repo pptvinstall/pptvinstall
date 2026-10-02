@@ -32,6 +32,7 @@ function state(tvs: TVConfig[], zipCode = ""): QuoteFormState {
     surroundSound: false,
     floodlight: false,
     handymanMinutes: 0,
+    moveProject: { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" },
     zipCode,
     notes: "",
   };
