@@ -77,6 +77,7 @@ test("every admin Job OS endpoint rejects missing and wrong tokens", async () =>
     ["POST", `/api/admin/job-os/invoices/${id}/payments`],
     ["GET", `/api/admin/job-os/invoices/${id}/pdf`],
     ["GET", `/api/admin/job-os/invoices/${id}/receipt.pdf`],
+    ["PATCH", `/api/admin/job-os/media/${id}/hint`],
     ["GET", "/api/admin/job-os/intelligence"],
     ["GET", "/api/admin/job-os/intake/status"],
     ["POST", "/api/admin/job-os/intake/parse"],
@@ -263,10 +264,14 @@ test("config endpoint rejects secret-like keys and requires a reason", async () 
   assert.equal(ok.json.config.travel.mpg, 18);
 });
 
-test("AI intake: works without AI (heuristic), photo intake reports not_configured, staging disables AI", async () => {
+test("AI intake: works without AI (heuristic), reports storage/OCR status, staging disables AI", async () => {
   const status = await call("GET", "/api/admin/job-os/intake/status");
   assert.equal(status.json.aiEnabled, false);
-  assert.equal(status.json.photoIntake, "not_configured");
+  assert.equal(status.json.media.enabled, true);
+  assert.equal(status.json.media.durable, false);
+  assert.equal(status.json.ocrEnabled, true);
+  assert.equal(status.json.visionEnabled, false);
+  assert.equal(status.json.metrics.sampleCount, 0);
   assert.equal(status.json.outboundSuppressed, true);
   const parsed = await call("POST", "/api/admin/job-os/intake/parse", { message: "Two TVs, one over the fireplace on brick, 65 inch", useAi: true });
   assert.equal(parsed.status, 200);

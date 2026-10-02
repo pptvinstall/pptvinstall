@@ -97,8 +97,10 @@ export async function renderDocumentPdf(input: CustomerDocument, opts: { logo?: 
   const leftStart = y;
   pdf.text(page, M, y, doc.kind === "estimate" ? "PREPARED FOR" : "BILL TO", { font: "B", size: 8, color: MUTED });
   y += 14;
-  pdf.text(page, M, y, doc.customer.name ?? "Customer", { font: "B", size: 11, color: NAVY });
-  y += 14;
+  for (const name of wrapText(doc.customer.name ?? "Customer", colW, "B", 11)) {
+    pdf.text(page, M, y, name, { font: "B", size: 11, color: NAVY });
+    y += 14;
+  }
   for (const l of [...doc.customer.addressLines, doc.customer.phone, doc.customer.email].filter((x): x is string => Boolean(x))) {
     for (const w of wrapText(l, colW, "R", 10)) {
       pdf.text(page, M, y, w, { size: 10, color: SLATE });
@@ -186,14 +188,24 @@ export async function renderDocumentPdf(input: CustomerDocument, opts: { logo?: 
 
   // ---- payments
   if (doc.payments.length) {
-    ensure(40 + doc.payments.length * 16);
-    pdf.text(page, M, y, "PAYMENTS RECEIVED", { font: "B", size: 9, color: MUTED });
-    y += 16;
-    for (const p of doc.payments) {
-      pdf.text(page, M, y, `${formatDate(p.date)} · ${p.method}${p.reference ? ` · ref ${p.reference}` : ""}`, { size: 10, color: NAVY });
-      pdf.textRight(page, cAmt - 8, y, formatMoney(p.amountCents), { font: "B", size: 10, color: NAVY });
+    const paymentHeader = () => {
+      pdf.text(page, M, y, "PAYMENTS RECEIVED", { font: "B", size: 9, color: MUTED });
       y += 16;
+    };
+    ensure(40);
+    paymentHeader();
+    for (const p of doc.payments) {
+      const paymentLines = wrapText(`${formatDate(p.date)} · ${p.method}${p.reference ? ` · ref ${p.reference}` : ""}`, W - 110, "R", 10);
+      const rowHeight = paymentLines.length * 13 + 5;
+      if (y + rowHeight > BOTTOM) {
+        newPage();
+        paymentHeader();
+      }
+      paymentLines.forEach((line, i) => pdf.text(page, M, y + i * 13, line, { size: 10, color: NAVY }));
+      pdf.textRight(page, cAmt - 8, y, formatMoney(p.amountCents), { font: "B", size: 10, color: NAVY });
+      y += rowHeight;
     }
+    ensure(20);
     pdf.text(page, M, y, "Payments are recorded by Picture Perfect TV Install as received; this is not a card processor statement.", { size: 8, color: MUTED });
     y += 20;
   }
@@ -201,13 +213,15 @@ export async function renderDocumentPdf(input: CustomerDocument, opts: { logo?: 
   // ---- text sections
   const section = (title: string, items: string[], bullet = true) => {
     if (!items.length) return;
-    ensure(34);
+    ensure(14 + Math.min(wrapText(items[0]!, W - 14, "R", 9.5).length * 12 + 4, 28));
     pdf.text(page, M, y, title.toUpperCase(), { font: "B", size: 9, color: MUTED });
     y += 14;
     for (const item of items) {
       const lines = wrapText(item, W - 14, "R", 9.5);
-      ensure(lines.length * 12 + 4);
+      // Split even a single long note across pages; one block can exceed a whole page.
+      ensure(Math.min(lines.length * 12 + 4, 28));
       lines.forEach((l, i) => {
+        ensure(12);
         if (i === 0 && bullet) pdf.text(page, M, y, "•", { size: 9.5, color: SLATE });
         pdf.text(page, M + (bullet ? 12 : 0), y, l, { size: 9.5, color: NAVY });
         y += 12;

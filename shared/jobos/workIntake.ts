@@ -146,6 +146,8 @@ function findVerbs(t: string): VerbMatch[] {
   for (const v of VERBS) {
     for (const m of Array.from(t.matchAll(v.re))) {
       const text = m[0];
+      // "I have a mount" names hardware, not another request to mount something.
+      if (text === "mount" && /\b(?:a|an|the|my|your|our|their|his|her|this|that)\s+(?:tv\s+)?$/.test(t.slice(0, m.index))) continue;
       all.push({
         index: m.index ?? 0,
         end: (m.index ?? 0) + text.length,
@@ -293,7 +295,10 @@ export function parseWorkText(text: string, W: WorkConfig): ParsedWork[] {
     }
     // A participle ("a 75 mounted ...") also owns the words before it, back to the previous verb.
     if (v.participle) regions.push({ vi: i, start: i > 0 ? verbs[i - 1]!.end : 0, end: v.index });
-    regions.push({ vi: i, start: v.end, end: nextStart });
+    // A requested action owns its object/list, not later sentences about existing equipment.
+    const tail = t.slice(v.end, nextStart);
+    const boundary = /\.(?!\d)|[!?;]|\b(?:i|we|they|he|she|customer)\s+(?:already\s+)?(?:have|has|own|bought|got)\b/.exec(tail);
+    regions.push({ vi: i, start: v.end, end: boundary ? v.end + boundary.index : nextStart });
   });
   // Process participle pre-regions first so they claim their nouns before an earlier verb's tail does.
   const ordered = regions.slice().sort((a, b) => (a.end <= verbs[a.vi]!.index ? 0 : 1) - (b.end <= verbs[b.vi]!.index ? 0 : 1) || a.start - b.start);
@@ -311,6 +316,8 @@ export function parseWorkText(text: string, W: WorkConfig): ParsedWork[] {
       }
     }
     for (const h of hits) {
+      // "a shelf under the TV" requests a shelf; the TV is a spatial reference.
+      if (/\b(?:behind|under|below|above|beside|next to|in front of)\s+(?:the|my|your|our|their|his|her|this|that)\s*$/.test(t.slice(r.start, h.index))) continue;
       claimed.push([h.index, h.end]);
       const site = siteAt(h.index);
       const pre = t.slice(Math.max(0, h.index - 14), h.index);

@@ -9,6 +9,8 @@ import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/compon
 import { Button } from "@/components/ui/button";
 import { adminDownload, adminFetch, adminObjectUrl, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
+import { isComparableCatalogSample, SHADOW_FILTERS, shadowSampleMatches, type ShadowFilter } from "@shared/jobos/shadowFilters";
+import type { ShadowSampleRecord } from "@shared/jobos/types";
 
 type Contact = { name: string; phone?: string; email?: string; street?: string; city?: string; state?: string; zip?: string };
 type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string; contact?: Contact | null };
@@ -447,34 +449,7 @@ function fmtVar(key: string, v: number) {
   return Math.round(v * 10) / 10;
 }
 
-type ShadowSample = {
-  id: string;
-  day: string;
-  zip: string | null;
-  pricingMode: string;
-  shownCents: number;
-  recommendedCents: number;
-  floorCents: number;
-  status: string;
-  jobId: string | null;
-  createdAt: string;
-  summary: {
-    shownSource: string;
-    catalogHasCustomQuoteLines: boolean;
-    complexity: string;
-    confidence: string;
-    premiumFactors: string[];
-    onsiteMinutes: number;
-    totalOwnerMinutes: number;
-    helperMinutes: number;
-    atShown: { helperCostCents: number; costToServeCents: number; ownerNetCents: number; marginPct: number; effectivePerHourCents: number };
-    atRecommended: { marginPct: number; effectivePerHourCents: number };
-    flags: string[];
-    questions: string[];
-    why: string[];
-  };
-};
-type ShadowReport = { samples: ShadowSample[]; stats: { count: number; comparableCount: number; shownBelowFloor: number; shownBelowRecommended: number; medianShownCents: number | null; medianRecommendedCents: number | null; medianGapCents: number | null; medianEffectivePerHourAtShownCents: number | null; statusCounts: Record<string, number> }; note: string };
+type ShadowReport = { samples: ShadowSampleRecord[]; stats: { count: number; comparableCount: number; shownBelowFloor: number; shownBelowRecommended: number; medianShownCents: number | null; medianRecommendedCents: number | null; medianGapCents: number | null; medianEffectivePerHourAtShownCents: number | null; statusCounts: Record<string, number> }; note: string };
 
 const STATUS_SHORT: Record<string, string> = { priced: "Priced", estimate_with_confirmation: "Estimate", manual_review_required: "Review", not_supported: "Not supported" };
 
@@ -482,14 +457,17 @@ const STATUS_SHORT: Record<string, string> = { priced: "Priced", estimate_with_c
 function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   const [data, setData] = useState<ShadowReport | null>(null);
   const [mode, setMode] = useState("");
+  const [targetPerHourCents, setTargetPerHourCents] = useState(0);
+  const [filters, setFilters] = useState<ShadowFilter[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const load = useCallback(() => {
     setError("");
-    Promise.all([adminFetch<ShadowReport>("/shadow-samples?limit=100"), adminFetch<{ config: { pricingMode: string } }>("/config")])
+    Promise.all([adminFetch<ShadowReport>("/shadow-samples?limit=100"), adminFetch<{ config: { pricingMode: string; labor: { targetLaborPerHourCents: number } } }>("/config")])
       .then(([r, c]) => {
         setData(r);
         setMode(c.config.pricingMode);
+        setTargetPerHourCents(c.config.labor.targetLaborPerHourCents);
       })
       .catch((e) => setError(describeError(e)));
   }, []);
@@ -508,6 +486,8 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
   if (error) return <div className="space-y-2"><Notice tone="error">{error}</Notice><Button variant="outline" onClick={load}><RefreshCw className="h-4 w-4" /> Retry</Button></div>;
   if (!data) return <div className="flex items-center gap-2 py-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
   const st = data.stats;
+  const filtered = data.samples.filter((sample) => shadowSampleMatches(sample, filters, targetPerHourCents));
+  const toggleFilter = (filter: ShadowFilter) => setFilters((selected) => selected.includes(filter) ? selected.filter((x) => x !== filter) : [...selected, filter]);
   return (
     <div className="space-y-3" data-testid="website-quotes">
       {mode === "legacy" ? <Notice tone="warn">Shadow comparison is off. Switch pricing mode to Shadow under Economics: customers keep seeing catalog prices and each website quote is priced by the engine here.</Notice> : <Notice tone="info">{mode === "shadow" ? "Shadow mode: customers see catalog prices. " : "Dynamic mode: customers see engine prices. "}{data.note}</Notice>}
@@ -519,21 +499,57 @@ function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
         <Stat label="Your $/hr at catalog" value={st.medianEffectivePerHourAtShownCents === null ? "—" : `${money(st.medianEffectivePerHourAtShownCents)}/hr`} sub="median, after cash costs" />
         <Stat label="Needs review" value={(st.statusCounts.manual_review_required ?? 0) + (st.statusCounts.estimate_with_confirmation ?? 0)} sub="estimate or review" />
       </div>
+      {data.samples.length ? <section className="space-y-2 rounded-2xl border border-slate-200 p-3" aria-label="Website quote filters">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{filtered.length} of {data.samples.length} recent quotes</p>
+          {filters.length ? <Button variant="ghost" className="h-11" onClick={() => setFilters([])}>Clear filters</Button> : null}
+        </div>
+        <p className="text-xs text-slate-500">Matches all selected filters. Rate target: {money(targetPerHourCents)}/hr from your current rules. Price filters exclude incomplete catalog totals and engine-priced samples.</p>
+        <div className="flex flex-wrap gap-2">
+          {SHADOW_FILTERS.map((filter) => <Button key={filter.id} variant={filters.includes(filter.id) ? "default" : "outline"} className="min-h-11 h-auto whitespace-normal px-3 py-2 text-left text-xs" aria-pressed={filters.includes(filter.id)} onClick={() => toggleFilter(filter.id)}>{filter.label} ({data.samples.filter((sample) => shadowSampleMatches(sample, [filter.id], targetPerHourCents)).length})</Button>)}
+        </div>
+      </section> : null}
       {!data.samples.length ? <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No website quotes recorded yet.</p> : null}
+      {data.samples.length && !filtered.length ? <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No quotes match these filters.</p> : null}
       <ul className="space-y-2">
-        {data.samples.map((x) => (
+        {filtered.map((x) => (
           <li key={x.id} className="rounded-2xl border border-slate-200 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-slate-900">{money(x.shownCents)} <span className="text-xs font-normal text-slate-500">shown · engine {money(x.recommendedCents)} · floor {money(x.floorCents)}</span></p>
-                <p className="text-xs text-slate-500">{[x.zip, x.day, STATUS_SHORT[x.status] ?? x.status, x.summary.complexity, x.summary.catalogHasCustomQuoteLines ? "has custom-quote lines" : null].filter(Boolean).join(" · ")}</p>
+                <p className="font-semibold text-slate-900">{money(x.shownCents)} <span className="text-xs font-normal text-slate-500">{x.summary.shownSource === "catalog" ? "catalog shown" : "engine shown"}</span></p>
+                <p className="text-xs text-slate-500">{[x.zip, x.day, STATUS_SHORT[x.status] ?? x.status, x.summary.complexity, `${x.summary.confidence} confidence`].filter(Boolean).join(" · ")}</p>
               </div>
-              <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", x.shownCents < x.floorCents ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>{x.shownCents < x.floorCents ? "under floor" : "ok"}</span>
+              <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", !isComparableCatalogSample(x) || x.shownCents < x.floorCents ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>{!isComparableCatalogSample(x) ? "not comparable" : x.shownCents < x.floorCents ? "under floor" : "above floor"}</span>
             </div>
-            <p className="mt-1 text-xs text-slate-600">At the shown price: net {money(x.summary.atShown.ownerNetCents)} · {money(x.summary.atShown.effectivePerHourCents)}/hr · margin {(x.summary.atShown.marginPct * 100).toFixed(0)}% · {Math.round(x.summary.totalOwnerMinutes)} min of your time{x.summary.helperMinutes ? ` · helper ${money(x.summary.atShown.helperCostCents)}` : ""}</p>
+            {x.summary.catalogHasCustomQuoteLines ? <p className="mt-2 text-xs font-semibold text-amber-800">Catalog leaves some work unpriced. The shown total is incomplete; confirm that scope before choosing a price.</p> : null}
+            <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-600">
+              <p>V2 floor<br /><strong>{money(x.floorCents)}</strong></p>
+              <p>Recommended<br /><strong>{money(x.recommendedCents)}</strong></p>
+              <p>Premium<br /><strong>{money(x.summary.premiumCents)}</strong></p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
+              <p>On-site: {Math.round(x.summary.onsiteMinutes)} min</p>
+              <p>Your total time: {Math.round(x.summary.totalOwnerMinutes)} min</p>
+              <p>Helper: {Math.round(x.summary.helperMinutes)} min</p>
+              <p>Materials at cost: {money(x.summary.materialsCostCents)}</p>
+              <p>Travel cost: {money(x.summary.travelCostCents)}</p>
+              <p>Travel: {x.summary.travelSource.replace(/_/g, " ")}</p>
+            </div>
+            <table className="mt-3 w-full text-xs text-slate-600">
+              <caption className="mb-1 text-left text-slate-500">Estimated economics. Net pays for your time; margin also deducts its configured value.</caption>
+              <thead><tr><th className="py-1 text-left font-normal">At price</th><th className="py-1 text-right">Shown</th><th className="py-1 text-right">Recommended</th></tr></thead>
+              <tbody>
+                <tr><th className="py-1 text-left font-normal">Cost to serve</th><td className="text-right">{money(x.summary.atShown.costToServeCents)}</td><td className="text-right">{money(x.summary.atRecommended.costToServeCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Owner net</th><td className="text-right">{money(x.summary.atShown.ownerNetCents)}</td><td className="text-right">{money(x.summary.atRecommended.ownerNetCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Owner $/hr</th><td className="text-right">{money(x.summary.atShown.effectivePerHourCents)}</td><td className="text-right">{money(x.summary.atRecommended.effectivePerHourCents)}</td></tr>
+                <tr><th className="py-1 text-left font-normal">Margin</th><td className="text-right">{(x.summary.atShown.marginPct * 100).toFixed(1)}%</td><td className="text-right">{(x.summary.atRecommended.marginPct * 100).toFixed(1)}%</td></tr>
+                <tr><th className="py-1 text-left font-normal">Helper pay</th><td className="text-right">{money(x.summary.atShown.helperCostCents)}</td><td className="text-right">{money(x.summary.atRecommended.helperCostCents)}</td></tr>
+              </tbody>
+            </table>
             {x.summary.premiumFactors.length ? <p className="text-xs text-slate-500">Factors: {x.summary.premiumFactors.join(", ")}</p> : null}
             <details className="mt-1 text-xs text-slate-600">
               <summary className="min-h-[44px] cursor-pointer py-2 font-semibold">Why and open questions</summary>
+              {x.summary.flags.length ? <ul className="mb-2 list-disc space-y-1 pl-5 text-amber-800">{x.summary.flags.map((flag) => <li key={flag}>{flag}</li>)}</ul> : null}
               <ul className="list-disc space-y-1 pl-5">{x.summary.why.map((w) => <li key={w}>{w}</li>)}</ul>
               {x.summary.questions.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">{x.summary.questions.map((q) => <li key={q}>{q}</li>)}</ul> : null}
             </details>

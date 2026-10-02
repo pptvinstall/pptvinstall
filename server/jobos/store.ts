@@ -114,6 +114,7 @@ export interface JobOsStore {
   // private media (metadata only; bytes live in MediaStorage)
   createMedia(rec: Omit<MediaRecord, "id" | "createdAt" | "deletedAt" | "analysisStatus" | "analysisError" | "analysis" | "provider" | "model" | "schemaVersion" | "analyzedAt"> & { id: string }): Promise<MediaRecord>;
   getMedia(id: string): Promise<MediaRecord | null>;
+  findCachedMediaAnalysis(sha256: string, hint: string, schemaVersion: string): Promise<MediaRecord | null>;
   listMedia(filter: { intakeId?: string; jobId?: string }): Promise<MediaRecord[]>;
   updateMedia(id: string, patch: Partial<Pick<MediaRecord, "analysisStatus" | "analysisError" | "analysis" | "provider" | "model" | "schemaVersion" | "analyzedAt" | "jobId" | "deletedAt" | "hint">>): Promise<MediaRecord>;
 

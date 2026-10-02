@@ -4,12 +4,13 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { inflateSync } from "node:zlib";
 import { DbJobOsStore } from "../../server/jobos/dbStore";
 import { MemoryJobOsStore } from "../../server/jobos/memoryStore";
 import { JobOsService } from "../../server/jobos/service";
 import { NotFoundError, type JobOsStore } from "../../server/jobos/store";
 import { documentFilename, formatMoney, renderDocumentPdf } from "../../server/jobos/pdf/renderDocument";
-import { extractPdfText, wrapText } from "../../server/jobos/pdf/pdfWriter";
+import { extractPdfText, textWidth, wrapText } from "../../server/jobos/pdf/pdfWriter";
 import { DEFAULT_ECONOMICS_CONFIG, InternalDataLeakError, findInternalKeys } from "../../shared/pricing";
 import { DocumentNotAvailableError, assertDocumentSafe, type CustomerDocument } from "../../shared/jobos/documents";
 import { createTestDb } from "./pg";
@@ -109,7 +110,18 @@ for (const [name, makeStore] of impls) {
     assert.equal(doc.discountCents, 2_000);
     const v1 = await svc.estimateDocument(quote.id, { version: 1 });
     assert.equal(v1.acceptance?.accepted, false, "an older version is not the accepted one");
+    assert.equal(v1.statusLabel, "Previous version", "an older estimate must not claim acceptance in its heading");
     assert.equal(v1.discountCents, 0);
+  });
+
+  t("concurrent first estimate downloads keep one stable number per quote", async () => {
+    const svc = fresh();
+    const { quote } = await quoted(svc);
+    const documents = await Promise.all(Array.from({ length: 8 }, () => svc.estimateDocument(quote.id)));
+    assert.deepEqual(new Set(documents.map((doc) => doc.number)), new Set(["EST-1001"]));
+    assert.equal((await svc.estimateDocument(quote.id)).number, "EST-1001");
+    const second = await quoted(svc);
+    assert.equal((await svc.estimateDocument(second.quote.id)).number, "EST-1002", "first quote advances the counter only once");
   });
 
   t("customer share link: drafts are unavailable; sent estimates carry no phone or email", async () => {
@@ -199,6 +211,38 @@ for (const [name, makeStore] of impls) {
     assert.ok(doc.taxCents > 0);
     assert.equal(doc.totalCents, version.customerAmountCents + doc.taxCents);
   });
+
+  t("saved estimate keeps its original tax, expiration, deposit and terms when config changes", async () => {
+    const svc = fresh();
+    const { quote } = await quoted(svc);
+    await svc.markQuoteSent(quote.id);
+    await svc.acceptCustomerQuote(quote.shareToken);
+    const before = await svc.estimateDocument(quote.id);
+    const config = structuredClone(DEFAULT_ECONOMICS_CONFIG);
+    config.business.tax = { enabled: true, rateBps: 890, label: "Sales tax" };
+    config.documents = { ...config.documents, estimateValidDays: 7, depositPct: 0.5, terms: ["New terms for future quotes."] };
+    await svc.updateConfig({ config, reason: "new settings for future quotes" }, "owner");
+    const after = await svc.estimateDocument(quote.id);
+    assert.deepEqual(after, before, "the accepted document does not acquire a new tax charge or terms");
+    const publicDoc = await svc.customerEstimateDocument(quote.shareToken);
+    assert.equal(publicDoc.totalCents, before.totalCents);
+    assert.equal(publicDoc.taxLabel, null);
+    const next = await quoted(svc);
+    const nextDoc = await svc.estimateDocument(next.quote.id);
+    assert.equal(nextDoc.taxLabel, "Sales tax");
+    assert.equal(nextDoc.expiresDate, "2026-10-09");
+    assert.ok(nextDoc.depositCents! > 0);
+    assert.deepEqual(nextDoc.terms, config.documents.terms);
+  });
+
+  t("invoice due date rejects impossible calendar dates", async () => {
+    const svc = fresh();
+    const { job } = await quoted(svc);
+    for (const dueDate of ["2026-02-30", "2026-13-01", "2026-00-10", "2026-01-00"]) {
+      await assert.rejects(() => svc.createInvoice(job.id, { dueDate }), /Due date must be a real calendar date/);
+    }
+    assert.equal((await svc.createInvoice(job.id, { dueDate: "2028-02-29" })).dueDate, "2028-02-29");
+  });
 }
 
 test("PDFs: expected customer fields, file names, US Letter, deterministic, valid structure", async () => {
@@ -264,6 +308,31 @@ test("long content paginates and every page has a footer", async () => {
   const text = pdfText(pdf);
   assert.ok(text.includes(`Page ${pages} of ${pages}`));
   assert.ok(text.includes("Line item number 60"));
+});
+
+test("long customer names, payment histories and notes stay inside printed page margins", async () => {
+  const svc = new JobOsService(new MemoryJobOsStore(), { now: () => NOW });
+  const job = await svc.createJob({ title: "Print layout (synthetic)", scope, context: nearby });
+  await svc.setJobContact(job.id, { ...contact, name: "Jordan Alexandra Marie Chamberlain Example Family Name" });
+  await svc.createQuoteVersion(job.id, {});
+  const invoice = await svc.createInvoice(job.id, { notes: "Thank you for choosing us. ".repeat(18) });
+  const doc = await svc.invoiceDocument(invoice.id);
+  doc.payments = Array.from({ length: 60 }, (_, i) => ({ date: "2026-10-02", method: "Zelle", amountCents: 100, reference: `TEST-${i + 1}-${"a".repeat(60)}` }));
+  const pdf = await renderDocumentPdf(doc, { logo: null });
+  const pages = (pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
+  assert.ok(pages >= 3, "a long payment history must continue onto new pages");
+  assert.ok(pdfText(pdf).includes("TEST-60-"), "last payment is retained");
+  const src = pdf.toString("latin1");
+  for (const match of src.matchAll(/<< \/Length (\d+) \/Filter \/FlateDecode >>\nstream\n/g)) {
+    const start = match.index! + match[0].length;
+    const stream = inflateSync(pdf.subarray(start, start + Number(match[1]))).toString("latin1");
+    for (const text of stream.matchAll(/BT \/F([12]) ([\d.]+) Tf [\d. ]+ rg ([\d.-]+) ([\d.-]+) Td \((.*)\) Tj ET/g)) {
+      const [, font, size, x, baseline, raw] = text;
+      const label = raw!.replace(/\\([0-7]{3}|.)/g, (_x, g: string) => g.length === 3 ? String.fromCharCode(parseInt(g, 8)) : g);
+      assert.ok(Number(x) >= 48 && Number(x) + textWidth(label, font === "2" ? "B" : "R", Number(size)) <= 564.1, `text fits horizontal print margins: ${label}`);
+      assert.ok(Number(baseline) === 30 || Number(baseline) >= 64, `body text stays above footer: ${label}`);
+    }
+  }
 });
 
 test("text helpers: wrapping keeps words and handles non-ASCII safely", () => {

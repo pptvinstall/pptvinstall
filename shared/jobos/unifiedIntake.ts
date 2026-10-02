@@ -266,6 +266,8 @@ export interface UnifiedProposal {
   images: Array<{ imageId: string; kind: ImageKind; summary: string }>;
   /** Text read from screenshots / notes that was fed into the text intake. */
   extractedText: string;
+  /** OCR-derived counts/actions and facts require an explicit full-scope review. */
+  requiresOcrConfirmation?: boolean;
 }
 
 const fact = <T,>(value: T, confidence: number, sources: SourceRef[], requiresConfirmation: boolean, observation?: string): Fact<T> => ({
@@ -612,6 +614,7 @@ export const reviewDecisionsSchema = z
     removed: z.array(z.string().max(40)).max(40).default([]),
     /** Owner-entered values for facts (e.g. tvs.0.inches = 65). Validated by the JobScope schema. */
     overrides: z.record(z.string().max(80), z.union([z.string().max(40), z.number(), z.boolean()])).default({}),
+    confirmExtractedText: z.boolean().default(false),
   })
   .strict();
 export type ReviewDecisions = z.infer<typeof reviewDecisionsSchema>;

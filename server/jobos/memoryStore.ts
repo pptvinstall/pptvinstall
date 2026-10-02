@@ -284,6 +284,10 @@ export class MemoryJobOsStore implements JobOsStore {
     const row = this.media.get(id);
     return row ? clone(row) : null;
   }
+  async findCachedMediaAnalysis(sha256: string, hint: string, schemaVersion: string) {
+    const row = Array.from(this.media.values()).find((m) => !m.deletedAt && m.sha256 === sha256 && m.hint === hint && m.schemaVersion === schemaVersion && m.analysisStatus === "analyzed");
+    return row ? clone(row) : null;
+  }
   async listMedia(filter: { intakeId?: string; jobId?: string }) {
     return clone(
       Array.from(this.media.values())

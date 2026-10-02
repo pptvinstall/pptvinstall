@@ -151,7 +151,7 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
   }));
 
   // ---- AI scope intake (optional; manual UI never needs it)
-  app.get(`${A}/intake/status`, wrap(async (_req, res) => res.json({ aiEnabled: deps.aiEnabled(), photoIntake: "not_configured", ...describeOutboundState() })));
+  app.get(`${A}/intake/status`, wrap(async (_req, res) => res.json({ aiEnabled: deps.aiEnabled(), ...service.intakeStatus(), metrics: await service.intakeMetrics(), ...describeOutboundState() })));
   app.post(`${A}/intake/parse`, wrap(async (req, res) => {
     const body = z.object({ message: z.string().min(5).max(4_000), useAi: z.boolean().default(false) }).parse(req.body);
     const ip = deps.getClientIp(req);
@@ -220,6 +220,7 @@ export function registerJobOsRoutes(app: Express, deps: JobOsRouteDeps) {
     await service.deleteMedia(idParam(req));
     res.status(204).end();
   }));
+  app.patch(`${A}/media/:id/hint`, wrap(async (req, res) => res.json(await service.setMediaHint(idParam(req), req.body?.hint))));
   app.get(`${A}/intake/:id/media`, wrap(async (req, res) => res.json(await service.listMediaFor({ intakeId: idParam(req) }))));
   app.post(`${A}/intake/analyze`, wrap(async (req, res) => {
     const body = z.object({ intakeId: uuid.nullable().optional(), message: z.string().max(4_000).optional(), useAi: z.boolean().default(false) }).parse(req.body);

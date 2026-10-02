@@ -63,6 +63,8 @@ import { randomUUID } from "node:crypto";
 import type { MediaStorage } from "./media/storage";
 import { normalizeImage, visionCopy } from "./media/images";
 import { runVision, VISION_SCHEMA_VERSION, type VisionImage, type VisionProvider } from "./vision";
+import { OCR_SCHEMA_VERSION, ocrObservation, textImageHint, type OcrProvider } from "./ocr";
+import type { IntakeMetrics } from "@shared/jobos/intakeMetrics";
 import { NotFoundError, type JobOsStore } from "./store";
 
 export class ConflictError extends Error {
@@ -75,6 +77,7 @@ export class ConflictError extends Error {
 /** Optional AI provider. Returns the raw model text for the intake prompt. */
 export interface IntakeProvider {
   name: string;
+  model?: string;
   enabled(): boolean;
   complete(prompt: string): Promise<string>;
 }
@@ -105,7 +108,10 @@ export const invoiceRequestSchema = z.object({
   lines: z.array(invoiceLineSchema).min(1).max(30).optional(),
   discountCents: z.number().int().min(0).max(10_000_000).default(0),
   /** YYYY-MM-DD. Defaults to the invoice date plus the configured due days. */
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((ymd) => {
+    const date = new Date(`${ymd}T12:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === ymd;
+  }, "Due date must be a real calendar date").optional(),
   /** Shown to the customer on the invoice. */
   notes: z.string().max(500).optional(),
 });
@@ -140,6 +146,7 @@ function assertDynamicConfirmed(fromMode: string, toMode: string, confirm: strin
 
 export class JobOsService {
   private configCache: { at: number; value: StoredConfig } | null = null;
+  private analyzing = new Set<string>();
 
   constructor(
     private readonly store: JobOsStore,
@@ -150,6 +157,7 @@ export class JobOsService {
       routeProviders?: RouteProvider[];
       media?: MediaStorage;
       vision?: VisionProvider | null;
+      ocr?: OcrProvider | null;
       /** Canonical customer details from the booking (owner-only use: documents). */
       lookupBookingContact?: (bookingId: number) => Promise<JobContact | undefined>;
     } = {},
@@ -231,6 +239,12 @@ export class JobOsService {
   // ---------------------------------------------------------------- jobs
   async createJob(input: unknown): Promise<JobRecord> {
     const data = createJobSchema.parse(input);
+    if (data.intakeId) {
+      const intake = await this.store.getIntakeSession(data.intakeId);
+      if (!intake || intake.source !== "owner") throw new NotFoundError("Intake");
+      if (this.analyzing.has(data.intakeId)) throw new ConflictError("This intake is being read. Review the new proposal first.", "INTAKE_BUSY");
+      if ((intake.proposal as UnifiedProposal | null)?.requiresOcrConfirmation && !(intake.review as { confirmExtractedText?: boolean } | null)?.confirmExtractedText) throw new ConflictError("Review the text read from images before creating the job.", "OCR_REVIEW_REQUIRED");
+    }
     const scope = data.scope ?? parseJobScope({});
     const context = data.context ?? parseJobContext({ ...(data.zip ? { zip: data.zip } : {}) });
     const job = await this.store.createJob({
@@ -737,7 +751,10 @@ export class JobOsService {
     if (!version) throw new NotFoundError("Quote version");
     const job = await this.requireJob(quote.jobId);
     const quoteNumber = quote.quoteNumber ?? (await this.store.assignQuoteNumber(quote.id));
-    const config = (await this.getActiveConfig()).config;
+    // A saved version keeps its tax, expiration, deposit and terms even after owner settings change.
+    const storedConfig = (await this.store.listConfigVersions()).find((c) => c.version === version.configVersion);
+    if (!storedConfig) throw new ConflictError("Estimate settings are unavailable. Please ask us to review this quote.", "DOCUMENT_CONFIG_UNAVAILABLE");
+    const config = validateEconomicsConfig(storedConfig.config);
     return assertDocumentSafe(buildEstimateDocument({ quote: { ...quote, quoteNumber }, version, job, contact: await this.contactFor(job), config, includeContact: opts.includeContact }));
   }
 
@@ -777,7 +794,7 @@ export class JobOsService {
   }
 
   /** Text intake (heuristic, or AI when allowed). Returns the structured intake as well as its draft. */
-  private async textIntake(clean: string, opts: { allowAi: boolean }): Promise<{ intake: AiScopeIntake; draft: ScopeDraft; cached: boolean; downgraded: string[]; aiUsed: boolean }> {
+  private async textIntake(clean: string, opts: { allowAi: boolean }): Promise<{ intake: AiScopeIntake; draft: ScopeDraft; cached: boolean; downgraded: string[]; aiUsed: boolean; calls: number; escalationReason: string | null }> {
     const normalized = clean.toLowerCase().replace(/\s+/g, " ").trim();
     const provider = this.opts.intakeProvider;
     const aiUsable = opts.allowAi && !!provider && provider.enabled();
@@ -796,7 +813,7 @@ export class JobOsService {
     const cached = await this.store.getIntakeCache(hash);
     if (cached) {
       const cachedIntake = parseIntakeResponse(JSON.stringify(cached.intake));
-      return { intake: cachedIntake, draft: intakeToScopeDraft(cachedIntake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai" };
+      return { intake: cachedIntake, draft: intakeToScopeDraft(cachedIntake, cached.source, work), cached: true, downgraded: [], aiUsed: cached.source === "ai", calls: 0, escalationReason: cached.source === "ai" ? "unrecognized work (cached)" : null };
     }
 
     let source: "ai" | "heuristic" = "heuristic";
@@ -811,13 +828,32 @@ export class JobOsService {
     }
     const verified = verifyEvidence(intake, clean);
     await this.store.putIntakeCache({ inputHash: hash, source, intake: verified.intake });
-    return { intake: verified.intake, draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai" };
+    return { intake: verified.intake, draft: intakeToScopeDraft(verified.intake, source, work), cached: false, downgraded: verified.downgraded, aiUsed: source === "ai", calls: aiEscalated ? 1 : 0, escalationReason: aiEscalated ? "unrecognized work" : null };
   }
 
   // ---------------------------------------------------------------- private media + unified intake
   private media(): MediaStorage {
-    if (!this.opts.media) throw new ConflictError("Media storage is not configured in this environment.", "MEDIA_NOT_CONFIGURED");
+    if (!this.opts.media?.enabled) throw new ConflictError("Photo storage is unavailable. Continue with text or manual entry.", "MEDIA_NOT_CONFIGURED");
     return this.opts.media;
+  }
+
+  intakeStatus() {
+    const m = this.opts.media;
+    return { media: { kind: m?.kind ?? "disabled", enabled: m?.enabled ?? false, durable: m?.durable ?? false, reason: m ? m.reason : "Photo storage is not configured." }, ocrEnabled: this.opts.ocr?.enabled() ?? false, visionEnabled: this.opts.vision?.enabled() ?? false };
+  }
+
+  async intakeMetrics() {
+    const sessions = await this.store.listIntakeSessions(100);
+    const metrics = sessions.map((s) => (s.proposal as { metrics?: IntakeMetrics } | null)?.metrics).filter((m): m is IntakeMetrics => !!m);
+    const ai = metrics.filter((m) => m.aiAssisted).length;
+    return { sampleCount: metrics.length, zeroAiPercent: metrics.length ? Math.round(100 * (metrics.length - ai) / metrics.length) : null, aiAssistedPercent: metrics.length ? Math.round(100 * ai / metrics.length) : null, calls: metrics.reduce((n, m) => n + m.totalTextCalls + m.totalVisionCalls, 0) };
+  }
+
+  /** Confirmations apply only to the image set and proposal that were actually reviewed. */
+  private async invalidateIntakeReview(intakeId: string | null) {
+    if (!intakeId) return;
+    const session = await this.store.getIntakeSession(intakeId);
+    if (session) await this.store.updateIntakeSession(intakeId, { review: null, status: session.status === "linked" ? "linked" : "open" });
   }
 
   /** Store one image privately (validated, metadata stripped). Creates the intake on first upload. */
@@ -826,6 +862,7 @@ export class JobOsService {
     const hint = z.enum(MEDIA_HINTS).catch("other").parse(input.hint ?? "photo");
     let session = input.intakeId ? await this.store.getIntakeSession(input.intakeId) : null;
     if (input.intakeId && (!session || session.source !== input.source)) throw new NotFoundError("Intake");
+    if (session && this.analyzing.has(session.id)) throw new ConflictError("This intake is being read.", "INTAKE_BUSY");
     if (input.jobId) await this.requireJob(input.jobId);
     if (!session) session = await this.store.createIntakeSession({ source: input.source });
     const existing = await this.store.listMedia({ intakeId: session.id });
@@ -854,6 +891,7 @@ export class JobOsService {
       storageKey,
       thumbKey,
     });
+    await this.invalidateIntakeReview(session.id);
     return { intakeId: session.id, media: mediaSummary(rec) };
   }
 
@@ -869,9 +907,22 @@ export class JobOsService {
   async deleteMedia(id: string): Promise<void> {
     const rec = await this.store.getMedia(id);
     if (!rec || rec.deletedAt) throw new NotFoundError("Media");
+    if (rec.intakeId && this.analyzing.has(rec.intakeId)) throw new ConflictError("This intake is being read.", "INTAKE_BUSY");
     await this.media().delete(rec.storageKey);
     await this.media().delete(rec.thumbKey);
     await this.store.updateMedia(id, { deletedAt: this.now().toISOString(), analysis: null });
+    await this.invalidateIntakeReview(rec.intakeId);
+  }
+
+  async setMediaHint(id: string, hint: unknown): Promise<MediaSummary> {
+    const rec = await this.store.getMedia(id);
+    if (!rec || rec.deletedAt || rec.source !== "owner") throw new NotFoundError("Media");
+    if (rec.intakeId && this.analyzing.has(rec.intakeId)) throw new ConflictError("This intake is being read.", "INTAKE_BUSY");
+    const next = z.enum(MEDIA_HINTS).parse(hint);
+    if (next === rec.hint) return mediaSummary(rec);
+    const updated = await this.store.updateMedia(id, { hint: next, analysisStatus: "pending", analysis: null, analysisError: null, provider: null, model: null, schemaVersion: null, analyzedAt: null });
+    await this.invalidateIntakeReview(rec.intakeId);
+    return mediaSummary(updated);
   }
 
   async listMediaFor(filter: { intakeId?: string; jobId?: string }): Promise<MediaSummary[]> {
@@ -892,30 +943,92 @@ export class JobOsService {
     const message = (input.message ?? "").slice(0, 4_000);
     const media = await this.store.listMedia({ intakeId: session.id });
 
-    // Vision: only images not analyzed yet. One provider call per batch of up to 8 images.
+    if (this.analyzing.has(session.id)) throw new ConflictError("This intake is being read. Try again shortly.", "INTAKE_BUSY");
+    this.analyzing.add(session.id);
+    try {
+    session = (await this.store.getIntakeSession(session.id))!;
+    const previous = (session.proposal as { metrics?: IntakeMetrics } | null)?.metrics;
+    const metrics: IntakeMetrics = { ocrImages: 0, cachedImages: media.filter((m) => m.analysisStatus === "analyzed").length, newImages: 0, textCached: false, textCalls: 0, visionCalls: 0, totalTextCalls: previous?.totalTextCalls ?? 0, totalVisionCalls: previous?.totalVisionCalls ?? (media.some((m) => m.provider && m.provider !== "tesseract") ? 1 : 0), aiAssisted: previous?.aiAssisted ?? false, provider: previous?.provider ?? null, model: previous?.model ?? null, escalationReason: null, estimatedCostUsd: null };
+    // OCR first for text-heavy images, cached by sanitized content hash and reader version.
+    const ocr = this.opts.ocr;
+    for (const m of media.filter((m) => m.analysisStatus !== "analyzed" && textImageHint(m.hint))) {
+      const cached = await this.store.findCachedMediaAnalysis(m.sha256, m.hint, OCR_SCHEMA_VERSION);
+      let obs: ImageObservation | null = cached?.analysis ? { ...(cached.analysis as ImageObservation), imageId: m.id } : null;
+      if (obs) metrics.cachedImages++;
+      else if (ocr?.enabled()) {
+        try {
+          const bytes = await this.media().get(m.storageKey);
+          if (bytes) obs = ocrObservation(m.id, m.hint, await ocr.read(bytes));
+        } catch { /* OCR failure leaves text/manual entry and the optional vision fallback available. */ }
+      }
+      if (obs) {
+        metrics.ocrImages++;
+        await this.store.updateMedia(m.id, { analysisStatus: "analyzed", analysisError: null, analysis: obs, provider: ocr?.name ?? "tesseract", model: ocr?.model ?? "eng-lstm-7", schemaVersion: OCR_SCHEMA_VERSION, analyzedAt: this.now().toISOString() });
+      }
+    }
+    // One paid vision batch per intake, including failed attempts. Re-reading does not spend again.
     const vision = this.opts.vision ?? null;
-    // Vision has its own availability (provider configured, outbound allowed); text AI is a separate owner choice.
     const visionAvailable = !!vision && vision.enabled();
+    // Reuse prior paid observations for identical sanitized content, provider/model and taxonomy.
+    const visionVersion = `v2-${hashObject({ schema: VISION_SCHEMA_VERSION, config: active.version, provider: vision?.name, model: vision?.model }).slice(0, 16)}`;
+    for (const m of (await this.store.listMedia({ intakeId: session.id })).filter((m) => m.analysisStatus !== "analyzed")) {
+      const cached = await this.store.findCachedMediaAnalysis(m.sha256, m.hint, visionVersion);
+      if (cached?.analysis) {
+        const obs = { ...(cached.analysis as ImageObservation), imageId: m.id };
+        metrics.cachedImages++;
+        metrics.aiAssisted = true;
+        metrics.provider = cached.provider;
+        metrics.model = cached.model;
+        await this.store.updateMedia(m.id, { analysisStatus: "analyzed", analysisError: null, analysis: obs, provider: cached.provider, model: cached.model, schemaVersion: visionVersion, analyzedAt: this.now().toISOString() });
+      }
+    }
     let visionError: string | null = null;
-    const todo = media.filter((m) => m.analysisStatus !== "analyzed");
-    for (let i = 0; i < todo.length; i += 8) {
-      const batch = todo.slice(i, i + 8);
+    const afterOcr = await this.store.listMedia({ intakeId: session.id });
+    const todo = afterOcr.filter((m) => m.analysisStatus !== "analyzed");
+    const mayUseVision = visionAvailable && input.allowAi && metrics.totalVisionCalls === 0;
+    if (todo.length && mayUseVision) {
+      const batch = todo.slice(0, 8);
       const images: VisionImage[] = [];
       for (const m of batch) {
-        const bytes = await this.media().get(m.storageKey);
-        if (bytes) images.push({ id: m.id, jpeg: await visionCopy(bytes), hint: m.hint });
+        try {
+          const bytes = await this.media().get(m.storageKey);
+          if (!bytes) throw new Error("MEDIA_BYTES_UNAVAILABLE");
+          images.push({ id: m.id, jpeg: await visionCopy(bytes), hint: m.hint });
+        } catch {
+          // Old ephemeral uploads or a provider outage must not prevent text/manual quoting or spend AI calls.
+          visionError = "Some images could not be read from storage. Continue with text or manual review.";
+          await this.store.updateMedia(m.id, { analysisStatus: "skipped", analysisError: visionError });
+        }
       }
-      const result = await runVision(visionAvailable ? vision : null, images, work);
+      if (images.length) {
+      metrics.visionCalls = 1;
+      metrics.totalVisionCalls++;
+      metrics.aiAssisted = true;
+      metrics.newImages = images.length;
+      metrics.provider = vision!.name;
+      metrics.model = vision!.model;
+      metrics.escalationReason = "room photo or OCR did not yield reliable text";
+      // Reserve before the network call so a failure/restart cannot silently repeat a paid request.
+      await this.store.updateIntakeSession(session.id, { proposal: { ...(session.proposal as object ?? {}), metrics } });
+      const result = await runVision(vision, images, work);
       const at = this.now().toISOString();
       for (const m of batch) {
         if (result.status === "analyzed") {
-          const obs = result.result.images.find((x) => x.imageId === m.id) ?? null;
-          await this.store.updateMedia(m.id, { analysisStatus: obs ? "analyzed" : "failed", analysisError: obs ? null : "no observations returned", analysis: obs, provider: vision!.name, model: vision!.model, schemaVersion: VISION_SCHEMA_VERSION, analyzedAt: at });
+          const raw = result.result.images.find((x) => x.imageId === m.id) ?? null;
+          // Namespaced refs preserve same-TV grouping within the original batch without merging unrelated cached batches.
+          const ref = (r: string) => createHash("sha256").update(`${session!.id}:${r}`).digest("hex").slice(0, 16);
+          const obs = raw ? { ...raw, tvs: raw.tvs.map((tv) => ({ ...tv, ref: ref(tv.ref) })), items: raw.items.map((item) => ({ ...item, ref: ref(item.ref) })) } : null;
+          await this.store.updateMedia(m.id, { analysisStatus: obs ? "analyzed" : "failed", analysisError: obs ? null : "no observations returned", analysis: obs, provider: vision!.name, model: vision!.model, schemaVersion: visionVersion, analyzedAt: at });
         } else {
           visionError = result.error;
           await this.store.updateMedia(m.id, { analysisStatus: result.status, analysisError: result.error.slice(0, 120) });
         }
       }
+      }
+      if (todo.length > 8) visionError = "One image-analysis batch was used. Review the remaining images manually.";
+    } else if (todo.length) {
+      visionError = metrics.totalVisionCalls ? "Image-analysis allowance was already used. Review remaining images manually." : "Paid image reading is off or unavailable. Use the message and manual review.";
+      for (const m of todo) await this.store.updateMedia(m.id, { analysisStatus: "skipped", analysisError: visionError });
     }
     const fresh = await this.store.listMedia({ intakeId: session.id });
     const observations = fresh.filter((m) => m.analysisStatus === "analyzed" && m.analysis).map((m) => m.analysis as ImageObservation);
@@ -923,25 +1036,55 @@ export class JobOsService {
 
     const { text, extractedText } = combineIntakeText(message, images);
     const textSide = text.trim().length >= 5 ? await this.textIntake(text, { allowAi: input.allowAi }) : null;
+    metrics.textCalls = textSide?.calls ?? 0;
+    metrics.totalTextCalls += metrics.textCalls;
+    metrics.textCached = textSide?.cached ?? false;
+    metrics.aiAssisted ||= !!textSide?.aiUsed || metrics.textCalls > 0;
+    if (metrics.textCalls || textSide?.aiUsed) {
+      metrics.provider = this.opts.intakeProvider?.name ?? metrics.provider;
+      metrics.model = this.opts.intakeProvider?.model ?? metrics.model;
+      metrics.escalationReason ??= textSide?.escalationReason ?? null;
+    }
+    metrics.estimatedCostUsd = metrics.aiAssisted ? null : 0;
     const proposal = buildUnifiedProposal(
       { textIntake: textSide?.intake ?? null, textDraft: textSide?.draft ?? null, textSource: "text", images, extractedText },
       work,
     );
-    await this.store.updateIntakeSession(session.id, { proposal, messageChars: message.length, status: session.status === "linked" ? "linked" : "open" });
+    if (metrics.ocrImages || fresh.some((m) => m.schemaVersion === OCR_SCHEMA_VERSION)) {
+      proposal.requiresOcrConfirmation = true;
+      // OCR is evidence to review, never a customer's confirmed statement.
+      proposal.tvs.forEach((tv, i) => { for (const [key, f] of Object.entries(tv.facts)) {
+        if (f && (!f.observation || !message.toLowerCase().includes(f.observation.replace(/[“”]/g, "").toLowerCase()))) {
+          f.requiresConfirmation = true;
+          const factKey = `tvs.${i}.${key}`;
+          if (!proposal.questions.some((q) => q.factKey === factKey)) proposal.questions.push({ factKey, owner: `Confirm TV ${i + 1} ${key} against the image.`, customer: `Please confirm TV ${i + 1} ${key}.` });
+        }
+      }
+      });
+      for (const f of Object.values(proposal.access)) if (f) f.requiresConfirmation = true;
+      // Receipts stay reference text; OCR never infers purchases or price arithmetic.
+      const referenceText = fresh.filter((m) => m.schemaVersion === OCR_SCHEMA_VERSION).map((m) => (m.analysis as ImageObservation)?.text).filter(Boolean).join("\n");
+      proposal.extractedText = referenceText.slice(0, 4000);
+    }
+    await this.store.updateIntakeSession(session.id, { proposal: { ...proposal, metrics }, review: null, messageChars: message.length, status: session.status === "linked" ? "linked" : "open" });
     return {
       intakeId: session.id,
       proposal,
       images: fresh.map(mediaSummary),
       vision: { available: visionAvailable, provider: visionAvailable ? vision!.name : null, error: visionError },
       textUsedAi: textSide?.aiUsed ?? false,
+      metrics,
     };
+    } finally { this.analyzing.delete(session.id); }
   }
 
   /** Apply the reviewer's decisions: only confirmed facts become scope. Stores the decisions for learning. */
   async reviewIntake(intakeId: string, input: unknown, source: "owner" | "customer" = "owner") {
     const session = await this.store.getIntakeSession(intakeId);
     if (!session || session.source !== source || !session.proposal) throw new NotFoundError("Intake");
+    if (this.analyzing.has(intakeId)) throw new ConflictError("This intake is being read. Review the new proposal first.", "INTAKE_BUSY");
     const review = reviewDecisionsSchema.parse(input ?? {});
+    if ((session.proposal as UnifiedProposal).requiresOcrConfirmation && !review.confirmExtractedText) throw new ConflictError("Check the extracted text, counts and actions against the images first.", "OCR_REVIEW_REQUIRED");
     const result = proposalToScope(session.proposal as UnifiedProposal, review);
     await this.store.updateIntakeSession(intakeId, { review: { ...review, applied: result.applied, pending: result.pending, at: this.now().toISOString() }, status: session.status === "linked" ? "linked" : "reviewed" });
     return result;

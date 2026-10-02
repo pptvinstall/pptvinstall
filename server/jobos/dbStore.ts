@@ -274,7 +274,8 @@ export class DbJobOsStore implements JobOsStore {
   }
   async assignQuoteNumber(quoteId: string) {
     return this.db.transaction(async (tx) => {
-      const [q] = await tx.select().from(s.quotes).where(eq(s.quotes.id, quoteId)).limit(1);
+      // Serialize first-time downloads for this quote before advancing the shared counter.
+      const [q] = await tx.select().from(s.quotes).where(eq(s.quotes.id, quoteId)).limit(1).for("update");
       if (!q) throw new NotFoundError("Quote");
       if (q.quoteNumber) return q.quoteNumber;
       const [counter] = await tx
@@ -446,6 +447,13 @@ export class DbJobOsStore implements JobOsStore {
   }
   async getMedia(id: string) {
     const [row] = await this.db.select().from(s.jobMedia).where(eq(s.jobMedia.id, id)).limit(1);
+    return row ? toMedia(row) : null;
+  }
+  async findCachedMediaAnalysis(sha256: string, hint: string, schemaVersion: string) {
+    const [row] = await this.db.select().from(s.jobMedia).where(and(
+      eq(s.jobMedia.sha256, sha256), eq(s.jobMedia.hint, hint), eq(s.jobMedia.schemaVersion, schemaVersion),
+      eq(s.jobMedia.analysisStatus, "analyzed"), sql`${s.jobMedia.deletedAt} is null`,
+    )).limit(1);
     return row ? toMedia(row) : null;
   }
   async listMedia(filter: { intakeId?: string; jobId?: string }) {

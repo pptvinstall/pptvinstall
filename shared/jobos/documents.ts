@@ -134,7 +134,7 @@ export function buildEstimateDocument(args: {
     jobTitle: job.title,
     issuedDate: issued,
     expiresDate: addDays(issued, settings.estimateValidDays),
-    statusLabel: accepted ? "Accepted" : QUOTE_STATUS[quote.status] ?? quote.status,
+    statusLabel: accepted ? "Accepted" : quote.status === "accepted" ? "Previous version" : QUOTE_STATUS[quote.status] ?? quote.status,
     business: business(settings),
     customer: party(args.contact, job.customerLabel, args.includeContact),
     lines,
