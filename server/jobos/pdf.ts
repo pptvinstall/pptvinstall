@@ -222,7 +222,7 @@ export function renderCustomerDocumentPdf(doc: CustomerDocumentModel): Buffer {
   objects.set(2, pdfObject(2, `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pages.length} >>`));
   objects.set(1, pdfObject(1, "<< /Type /Catalog /Pages 2 0 R >>"));
 
-  const maxObj = Math.max(...objects.keys());
+  const maxObj = Math.max(...Array.from(objects.keys()));
   let body = "%PDF-1.4\n%PPTV\n";
   const offsets = new Array<number>(maxObj + 1).fill(0);
   for (let i = 1; i <= maxObj; i++) {
