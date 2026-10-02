@@ -77,7 +77,11 @@ export const publicQuoteRequestSchema = z
 export type PublicQuoteRequest = z.infer<typeof publicQuoteRequestSchema>;
 
 function toFormState(form: PublicQuoteRequest["form"]): QuoteFormState {
-  return { ...form, notes: "" };
+  return {
+    ...form,
+    moveProject: form.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" },
+    notes: "",
+  };
 }
 
 /** Exactly what the browser calculator shows the customer today, in cents. */
@@ -90,7 +94,8 @@ export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "stand
 /** The same public request as structured scope for the engine. Only facts the customer chose; nothing invented. */
 export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "standalone">): JobScope {
   const { form, standalone } = req;
-  const newHomeSite = form.moveProject.enabled ? 1 : 0;
+  const move = form.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" as const };
+  const newHomeSite = move.enabled ? 1 : 0;
   const tvs: JobScope["tvs"] = form.tvs.map((tv) => ({
     id: tv.id.slice(0, 64),
     site: newHomeSite,
@@ -119,15 +124,15 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
   const takeDowns = standalone.removalCount + standalone.sharedUnmountCount;
   if (takeDowns > 0) items.push({ id: "public-unmount", action: "unmount", category: "tv", quantity: Math.min(50, takeDowns), name: "TV", site: newHomeSite, ownerMinutesPerUnit: 15, weightLb: 20 });
 
-  if (form.moveProject.enabled) {
-    if (form.moveProject.oldHomeTvUnmountCount > 0) {
-      items.push({ id: "move-old-tv-unmount", action: "unmount", category: "tv", quantity: form.moveProject.oldHomeTvUnmountCount, name: "Previous-home TV", site: 0, ownerMinutesPerUnit: 15, weightLb: 20 });
+  if (move.enabled) {
+    if (move.oldHomeTvUnmountCount > 0) {
+      items.push({ id: "move-old-tv-unmount", action: "unmount", category: "tv", quantity: move.oldHomeTvUnmountCount, name: "Previous-home TV", site: 0, ownerMinutesPerUnit: 15, weightLb: 20 });
     }
-    if (form.moveProject.oldHomeMountRemovalCount > 0) {
-      items.push({ id: "move-old-mount-removal", action: "remove", category: "tv", quantity: form.moveProject.oldHomeMountRemovalCount, name: "Existing TV mount / wall hardware", site: 0, ownerMinutesPerUnit: 20, weightLb: 10 });
+    if (move.oldHomeMountRemovalCount > 0) {
+      items.push({ id: "move-old-mount-removal", action: "remove", category: "tv", quantity: move.oldHomeMountRemovalCount, name: "Existing TV mount / wall hardware", site: 0, ownerMinutesPerUnit: 20, weightLb: 10 });
     }
-    if (form.moveProject.rackTeardownLevel !== "none") {
-      const minutes = { small: 60, medium: 120, large: 180 }[form.moveProject.rackTeardownLevel];
+    if (move.rackTeardownLevel !== "none") {
+      const minutes = { small: 60, medium: 120, large: 180 }[move.rackTeardownLevel];
       items.push({ id: "move-rack-teardown", action: "teardown", category: "wall_shelving", quantity: 1, name: "Wire-rack shelving", site: 0, ownerMinutesPerUnit: minutes, weightLb: 10 });
     }
   }
@@ -137,7 +142,7 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
 }
 
 export function publicRequestToContext(req: Pick<PublicQuoteRequest, "form">): JobContextInput {
-  const move = req.form.moveProject;
+  const move = req.form.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" as const };
   if (!move.enabled) return req.form.zipCode ? { zip: req.form.zipCode } : {};
   const baseZip = move.previousZipCode || req.form.zipCode;
   return {
