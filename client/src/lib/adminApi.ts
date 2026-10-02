@@ -74,3 +74,36 @@ export function describeError(err: unknown): string {
   }
   return err instanceof Error ? err.message : "Something went wrong.";
 }
+
+/** Upload raw bytes (an image) with progress. Uses XHR because fetch has no upload progress. */
+export function adminUpload<T>(path: string, file: Blob, onProgress?: (fraction: number) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/admin/job-os${path}`);
+    xhr.setRequestHeader("x-admin-token", getAdminToken());
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+    };
+    xhr.onerror = () => reject(new AdminApiError("Upload failed. Check your connection and try again.", 0));
+    xhr.onload = () => {
+      let data: any = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        /* non-JSON */
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
+      else if (xhr.status === 401) reject(new AdminApiError("That access code was not accepted.", 401));
+      else reject(new AdminApiError(data?.message ?? `Upload failed (${xhr.status})`, xhr.status));
+    };
+    xhr.send(file);
+  });
+}
+
+/** Fetch a private file (image or PDF) with the admin token and return a short-lived object URL. */
+export async function adminObjectUrl(path: string): Promise<string> {
+  const res = await fetch(`/api/admin/job-os${path}`, { headers: { "x-admin-token": getAdminToken() } });
+  if (!res.ok) throw new AdminApiError(res.status === 401 ? "That access code was not accepted." : `Could not load the file (${res.status})`, res.status);
+  return URL.createObjectURL(await res.blob());
+}

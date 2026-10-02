@@ -205,9 +205,16 @@ export function intakeToScopeDraft(intake: AiScopeIntake, source: "ai" | "heuris
     }
   });
   // An outlet mentioned alongside a TV that needs one is the TV's outlet (priced by the TV engine), not a second job.
-  const tvNeedsOutlet = tvs.some((t) => t.power === "outlet");
+  // With several TVs, an outlet mention is a question about which TV, not a separate outlet job.
+  const tvNeedsOutlet = tvs.some((t) => t.power === "outlet") || tvs.length > 0;
   const keptItems = tvNeedsOutlet ? workItems.filter((it) => it.category.value !== "receptacle") : workItems;
-  if (keptItems.length !== workItems.length) unresolved.push({ path: "tvs.power", status: "needs_confirmation", question: "Is the outlet the customer mentioned the one behind the TV (or a separate outlet elsewhere)?" });
+  if (keptItems.length !== workItems.length) {
+    unresolved.push({
+      path: "tvs.power",
+      status: "needs_confirmation",
+      question: tvs.length > 1 ? "The customer mentioned an outlet: which TV needs one (or is it a separate outlet elsewhere)?" : "Is the outlet the customer mentioned the one behind the TV (or a separate outlet elsewhere)?",
+    });
+  }
   const work = intakeItemsToWorkInputs(keptItems, workConfig);
   for (const issue of work.issues) unresolved.push(issue);
   for (const q of intake.openQuestions) unresolved.push({ path: "openQuestions", status: "needs_confirmation", question: q });

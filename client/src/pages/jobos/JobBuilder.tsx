@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Trash2 } from "lucide-react";
 
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, Toggle, inputClass } from "@/components/jobos/controls";
 import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
+import QuickIntake, { type ApplyMode } from "./QuickIntake";
 import ItemsStep, { itemPayload, newItemFrom, type ItemDraft, type WorkCfg } from "./ItemsStep";
 import { Button } from "@/components/ui/button";
 import { adminFetch, describeError, money } from "@/lib/adminApi";
@@ -41,6 +42,8 @@ type Draft = {
   cleanup: "standard" | "patching" | "haul_away";
   route: { oneWayMiles: string; oneWayDriveMinutes: string; trafficMultiplier: string };
   schedule: { appointmentTime: string; weekday: string; sameDay: boolean; awkwardGap: boolean };
+  /** Intake (message + photos) this job came from; its private images are attached on save. */
+  intakeId: string | null;
 };
 
 const TV_STEPS = ["Mount", "Wall", "Wires", "Power"] as const;
@@ -78,6 +81,7 @@ const initialDraft = (): Draft => ({
   cleanup: "standard",
   route: { oneWayMiles: "", oneWayDriveMinutes: "", trafficMultiplier: "" },
   schedule: { appointmentTime: "", weekday: "", sameDay: false, awkwardGap: false },
+  intakeId: null,
 });
 
 function toPayload(d: Draft) {
@@ -168,8 +172,6 @@ function Builder() {
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState<{ jobId: string; quoteId: string; shareToken: string; version: number } | null>(null);
   const [linkState, setLinkState] = useState<"idle" | "sending" | "copied" | "error">("idle");
-  const [intakeText, setIntakeText] = useState("");
-  const [intakeBusy, setIntakeBusy] = useState(false);
   const [intakeMsg, setIntakeMsg] = useState<{ tone: "info" | "error" | "warn"; text: string; questions?: string[] } | null>(null);
   const [aiAvailable, setAiAvailable] = useState(false);
   const reqSeq = useRef(0);
@@ -217,29 +219,24 @@ function Builder() {
   const setItems = useCallback((fn: (prev: ItemDraft[]) => ItemDraft[]) => setDraft((d) => ({ ...d, items: fn(d.items) })), []);
   const toggleExtra = (kind: string) => setDraft((d) => ({ ...d, extras: d.extras.some((e) => e.kind === kind) ? d.extras.filter((e) => e.kind !== kind) : [...d.extras, { kind, qty: 1 }] }));
 
-  async function runIntake(useAi: boolean) {
-    if (intakeText.trim().length < 5) {
-      setIntakeMsg({ tone: "error", text: "Paste at least a sentence from the customer." });
-      return;
-    }
-    setIntakeBusy(true);
-    setIntakeMsg(null);
-    try {
-      const res = await adminFetch<{ draft: { scope: { tvs: Tv[]; items?: ItemDraft[]; extras: Extra[]; access?: Draft["access"]; cleanup?: Draft["cleanup"] }; unresolved: Array<{ question: string }> }; aiUsed: boolean }>("/intake/parse", { method: "POST", body: { message: intakeText, useAi } });
-      const s = res.draft.scope;
-      // A fresh TV mount (e.g. at the second address) belongs on the TV path so size, wall, wires and power can be set.
-      const isTvMount = (i: ItemDraft) => i.category === "tv" && (i.action === "mount" || i.action === "install") && !i.thenAction;
-      const foldedTvs: Tv[] = (s.items ?? []).filter(isTvMount).flatMap((i, n) => Array.from({ length: i.quantity || 1 }, (_, k) => ({ ...newTv(1), ...((i as { tv?: Partial<Tv> }).tv ?? {}), id: `tv-ai-${n}-${k}`, site: i.site ?? 0 } as Tv)));
-      const items = (s.items ?? []).filter((i) => !isTvMount(i)).map((i, n) => ({ ...newItemDefaults(), ...i, id: i.id || `ai-${n}`, environment: { ...newItemDefaults().environment, ...(i.environment ?? {}) } }));
-      const secondSite = [...s.tvs, ...foldedTvs, ...items].some((x) => (x.site ?? 0) > 0);
-      setDraft((d) => ({ ...d, tvs: [...s.tvs.map((t) => ({ ...newTv(1), ...t })), ...foldedTvs], items, secondStop: secondSite ? { ...d.secondStop, enabled: true } : d.secondStop, extras: s.extras ?? [], access: s.access ?? d.access, cleanup: s.cleanup ?? d.cleanup }));
-      const questions = Array.from(new Set(res.draft.unresolved.map((u) => u.question)));
-      setIntakeMsg({ tone: questions.length ? "warn" : "info", text: `${res.aiUsed ? "AI-assisted" : "Keyword"} draft applied. Only details the customer stated are trusted; the rest are defaults to confirm.`, questions });
-    } catch (e) {
-      setIntakeMsg({ tone: "error", text: describeError(e) });
-    } finally {
-      setIntakeBusy(false);
-    }
+  /** Put an intake scope (confirmed facts only) into the builder. */
+  function applyScope(s: { tvs?: Tv[]; items?: ItemDraft[]; extras?: Extra[]; access?: Partial<Draft["access"]>; cleanup?: Draft["cleanup"] }, intakeId: string | null) {
+    // A fresh TV mount (e.g. at the second address) belongs on the TV path so size, wall, wires and power can be set.
+    const isTvMount = (i: ItemDraft) => i.category === "tv" && (i.action === "mount" || i.action === "install") && !i.thenAction && i.templateId !== "ceiling_tv_mount";
+    const foldedTvs: Tv[] = (s.items ?? []).filter(isTvMount).flatMap((i, n) => Array.from({ length: i.quantity || 1 }, (_, k) => ({ ...newTv(1), ...((i as { tv?: Partial<Tv> }).tv ?? {}), id: `tv-ai-${n}-${k}`, site: i.site ?? 0 } as Tv)));
+    const items = (s.items ?? []).filter((i) => !isTvMount(i)).map((i, n) => ({ ...newItemDefaults(), ...i, id: i.id || `ai-${n}`, environment: { ...newItemDefaults().environment, ...(i.environment ?? {}) }, conditions: (i.conditions as ItemDraft["conditions"]) ?? {} }));
+    const tvs = [...(s.tvs ?? []).map((t) => ({ ...newTv(1), ...t })), ...foldedTvs];
+    const secondSite = [...tvs, ...items].some((x) => (x.site ?? 0) > 0);
+    setDraft((d) => ({ ...d, intakeId: intakeId ?? d.intakeId, tvs, items, secondStop: secondSite ? { ...d.secondStop, enabled: true } : d.secondStop, extras: s.extras ?? [], access: { ...d.access, ...(s.access ?? {}) }, cleanup: s.cleanup ?? d.cleanup }));
+  }
+
+  function onIntakeApplied(scope: Parameters<typeof applyScope>[0], intakeId: string, pending: number, mode: ApplyMode) {
+    applyScope(scope, intakeId);
+    setIntakeMsg({ tone: pending ? "warn" : "info", text: pending ? `Applied. ${pending} unconfirmed detail${pending > 1 ? "s stay" : " stays"} unknown, so the price is an estimate until confirmed.` : "Applied. Everything used was confirmed." });
+    // Steps depend on whether TVs exist; compute the target from the scope, not the stale list.
+    const hasTvsNext = (scope.tvs?.length ?? 0) > 0 || (scope.items ?? []).some((i) => i.category === "tv" && (i.action === "mount" || i.action === "install") && !i.thenAction && i.templateId !== "ceiling_tv_mount");
+    const steps = ALL_STEPS.filter((x) => hasTvsNext || !(TV_STEPS as readonly string[]).includes(x));
+    setStep(mode === "confirm" ? steps.length - 1 : steps.indexOf("Items"));
   }
 
   function adjustmentPayload() {
@@ -257,7 +254,7 @@ function Builder() {
     try {
       const count = draft.items.reduce((n, i) => n + i.quantity, 0) + draft.tvs.length;
       const title = draft.title.trim() || `${count} item job`;
-      const job = await adminFetch<{ id: string }>("/jobs", { method: "POST", body: { title, customerLabel: draft.customerLabel.trim() || null, zip: /^\d{5}$/.test(draft.zip) ? draft.zip : null, source: "manual", scope: payload.scope, context: payload.context } });
+      const job = await adminFetch<{ id: string }>("/jobs", { method: "POST", body: { title, customerLabel: draft.customerLabel.trim() || null, zip: /^\d{5}$/.test(draft.zip) ? draft.zip : null, source: draft.intakeId ? "ai_intake" : "manual", scope: payload.scope, context: payload.context, ...(draft.intakeId ? { intakeId: draft.intakeId } : {}) } });
       const q = await adminFetch<{ quote: { id: string; shareToken: string }; version: { version: number } }>(`/jobs/${job.id}/quote`, { method: "POST", body: { adjustment: adjustmentPayload() } });
       setSaved({ jobId: job.id, quoteId: q.quote.id, shareToken: q.quote.shareToken, version: q.version.version });
     } catch (e) {
@@ -327,18 +324,8 @@ function Builder() {
           <>
             <Field label="Job name" htmlFor="jb-title"><input id="jb-title" className={inputClass} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="e.g. Living room + bedroom" maxLength={120} /></Field>
             <Field label="Customer (short label)" htmlFor="jb-label" hint="Just enough for you to recognize the job. Contact details stay on the booking."><input id="jb-label" className={inputClass} value={draft.customerLabel} onChange={(e) => setDraft({ ...draft, customerLabel: e.target.value })} maxLength={120} /></Field>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"><Sparkles className="h-4 w-4 text-blue-600" aria-hidden /> Start from the customer's message (optional)</p>
-              <textarea aria-label="Customer message" className="mt-2 min-h-[96px] w-full rounded-xl border border-slate-300 p-3 text-base" value={intakeText} onChange={(e) => setIntakeText(e.target.value)} maxLength={4000} placeholder="Paste the text or email they sent…" />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" className="h-11" disabled={intakeBusy} onClick={() => runIntake(false)}>{intakeBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Quick fill (no AI)</Button>
-                <Button type="button" variant="outline" className="h-11" disabled={intakeBusy || !aiAvailable} onClick={() => runIntake(true)} title={aiAvailable ? undefined : "AI is not available in this environment"}>AI fill</Button>
-              </div>
-              {!aiAvailable ? <p className="mt-1 text-xs text-slate-500">AI fill is off in this environment. Quick fill and manual entry work without it.</p> : null}
-              {intakeMsg ? (
-                <div className="mt-2 space-y-1"><Notice tone={intakeMsg.tone}>{intakeMsg.text}</Notice>{intakeMsg.questions?.length ? <ul className="list-disc space-y-0.5 pl-5 text-xs text-slate-600">{intakeMsg.questions.slice(0, 6).map((q) => <li key={q}>{q}</li>)}</ul> : null}</div>
-              ) : null}
-            </div>
+            <QuickIntake aiAvailable={aiAvailable} onApply={onIntakeApplied} />
+            {intakeMsg ? <Notice tone={intakeMsg.tone}>{intakeMsg.text}</Notice> : null}
           </>
         ) : null}
 

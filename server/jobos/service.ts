@@ -801,7 +801,8 @@ export class JobOsService {
 
     // Vision: only images not analyzed yet. One provider call per batch of up to 8 images.
     const vision = this.opts.vision ?? null;
-    const visionAvailable = !!vision && vision.enabled() && input.allowAi;
+    // Vision has its own availability (provider configured, outbound allowed); text AI is a separate owner choice.
+    const visionAvailable = !!vision && vision.enabled();
     let visionError: string | null = null;
     const todo = media.filter((m) => m.analysisStatus !== "analyzed");
     for (let i = 0; i < todo.length; i += 8) {
