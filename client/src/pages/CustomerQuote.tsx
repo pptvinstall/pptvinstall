@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { Check, FileDown, Loader2 } from "lucide-react";
+import { Check, FileDown, Loader2, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { businessPhone, telHref } from "@/components/ui/quote-tool/useQuoteState";
@@ -10,8 +10,10 @@ import { businessPhone, telHref } from "@/components/ui/quote-tool/useQuoteState
 
 type View = { version: number; lines: Array<{ label: string; detail?: string; amountCents: number | null }>; totalCents: number; notes: string[]; requiresReview: boolean };
 type State = { view: View; status: "sent" | "accepted" | "declined" | "expired" | "draft" | "superseded" };
+type PaymentOptions = { labels: string[]; hostedCheckout: boolean; provider: string | null };
 
 const fmt = (cents: number) => `${cents < 0 ? "-" : ""}$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: cents % 100 === 0 ? 0 : 2 })}`;
+const providerLabel = (provider: string | null) => provider === "stripe" ? "Stripe" : provider === "square" ? "Square" : "secure checkout";
 
 export default function CustomerQuotePage() {
   const [, params] = useRoute("/q/:token");
@@ -20,7 +22,7 @@ export default function CustomerQuotePage() {
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
-  const [paymentOptions, setPaymentOptions] = useState<{ labels: string[]; hostedCheckout: boolean }>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false });
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false, provider: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +44,7 @@ export default function CustomerQuotePage() {
     fetch("/api/payment-options")
       .then((res) => res.ok ? res.json() : null)
       .then((options) => {
-        if (!cancelled && options?.labels) setPaymentOptions({ labels: options.labels, hostedCheckout: Boolean(options.hostedCheckout) });
+        if (!cancelled && options?.labels) setPaymentOptions({ labels: options.labels, hostedCheckout: Boolean(options.hostedCheckout), provider: typeof options.provider === "string" ? options.provider : null });
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
@@ -80,9 +82,19 @@ export default function CustomerQuotePage() {
           </ul>
           <div className="flex items-center justify-between rounded-2xl bg-slate-900 p-4 text-white"><span className="font-semibold">Total</span><span className="text-3xl font-extrabold">{fmt(data.view.totalCents)}</span></div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-bold text-slate-900">Ways to pay</p>
-            <p className="mt-1 text-sm text-slate-700">{paymentOptions.labels.join(" · ")}</p>
-            <p className="mt-2 text-xs text-slate-500">{paymentOptions.hostedCheckout ? "Card and eligible Apple Pay payments use a secure hosted checkout link issued with your invoice." : "Cash, Zelle and Apple Pay are available. Card checkout is enabled once the secure payment provider is connected."}</p>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-green-700" />
+              <p className="text-sm font-bold text-slate-900">Payment options</p>
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-800">{paymentOptions.labels.join(" · ")}</p>
+            {paymentOptions.hostedCheckout ? (
+              <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-green-800">Secure online checkout: {providerLabel(paymentOptions.provider)}</p>
+                <p className="mt-1 text-xs leading-5 text-green-900">When your invoice is ready, card and eligible wallet payments open on the provider's secure page. PPTVInstall never receives your raw card number.</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">Cash, Zelle and Apple Pay are available. Secure card checkout appears once the hosted payment provider is connected.</p>
+            )}
           </div>
           {data.view.requiresReview ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Some details will be confirmed before work begins. Anything unusual is discussed with you first.</p> : null}
           {data.view.notes.map((n) => <p key={n} className="text-xs text-slate-500">{n}</p>)}
