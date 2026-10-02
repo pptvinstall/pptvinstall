@@ -33,7 +33,7 @@ function getAdminTokens() {
     process.env.ADMIN_PASSWORD?.trim(),
   ].filter((token): token is string => Boolean(token));
 
-  if (configuredTokens.length) return [...new Set(configuredTokens)];
+  if (configuredTokens.length) return Array.from(new Set(configuredTokens));
 
   // Local development fallback only. Production must explicitly configure an admin credential.
   if (process.env.NODE_ENV !== "production") return ["dev-admin-token"];
