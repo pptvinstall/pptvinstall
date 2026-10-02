@@ -65,6 +65,7 @@ export function scopeToLegacyState(scope: JobScope, notes: string[] = []): Quote
     surroundSound: false,
     floodlight,
     handymanMinutes,
+    moveProject: { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" },
     zipCode: "",
     notes: "",
   };
