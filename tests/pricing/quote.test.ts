@@ -151,6 +151,44 @@ test("form state bridge: packages for the public QuoteTool match what the calcul
   assert.deepEqual(findInternalKeys(pkgs), []);
 });
 
+test("move-project packages keep previous-home work and bundle savings in every package total", () => {
+  const state = createDefaultQuoteFormState();
+  state.tvs = Array.from({ length: 5 }, (_, i) => ({
+    ...state.tvs[0]!,
+    id: `move-pkg-${i + 1}`,
+    location: i === 0 ? "fireplace" : "standard",
+    wireConcealment: i === 1 || i === 2,
+    outletDistance: i === 1 || i === 2 ? "near" : null,
+    unmounting: false,
+  }));
+  state.zipCode = "30327";
+  state.moveProject = {
+    enabled: true,
+    previousZipCode: "30318",
+    oldHomeTvUnmountCount: 0,
+    oldHomeMountRemovalCount: 4,
+    rackTeardownLevel: "medium",
+  };
+
+  const current = calculateQuote(state);
+  assert.equal(current.total, 1250);
+
+  const pkgs = packagesForFormState(state);
+  assert.ok(pkgs.length >= 2);
+  for (const pkg of pkgs) {
+    const applied = applyPackageToFormState(state, pkg.id);
+    assert.equal(pkg.totalCents, legacyTotalCentsForFormState(applied), `${pkg.id} must include the entire move project`);
+    assert.equal(pkg.components.some((c) => c.label.includes("Existing TV mount / wall-hardware removal")), true);
+    assert.equal(pkg.components.some((c) => c.label.includes("wire-rack teardown")), true);
+    assert.equal(pkg.components.some((c) => c.label === "Two-home project bundle" && c.amountCents === -10000), true);
+    assert.equal(pkg.components.reduce((sum, c) => sum + (c.amountCents ?? 0), 0), pkg.totalCents);
+  }
+
+  const essential = pkgs.find((p) => p.id === "essential")!;
+  const clean = pkgs.find((p) => p.id === "clean")!;
+  assert.ok(clean.totalCents > essential.totalCents, "clean should not look cheaper than essential when move work is included");
+});
+
 test("form state bridge: scope mapping preserves wall, fireplace, mount and extras", () => {
   const state = createDefaultQuoteFormState();
   state.tvs[0] = { ...state.tvs[0]!, wallType: "highrise", location: "fireplace", unmounting: true };
