@@ -214,13 +214,14 @@ export function useQuoteState() {
 
   const reviewDiscountLabel = useMemo(() => {
     if (!quote || quote.discount <= 0) return "Total discounts";
+    if (formState.moveProject.enabled) return "Two-home project bundle";
     const tvGroupCount = quote.groups.filter((group) =>
       group.title.startsWith("TV "),
     ).length;
     return tvGroupCount > 1
       ? `Bundle Discount (${tvGroupCount} TVs)`
       : "Bundle Discount";
-  }, [quote]);
+  }, [formState.moveProject.enabled, quote]);
 
   const describeOutletFollowUpNeeded = useMemo(
     () =>
