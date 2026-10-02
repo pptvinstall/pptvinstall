@@ -301,7 +301,12 @@ export function heuristicIntake(text: string, work: WorkConfig = DEFAULT_WORK_CO
     const wallSteel = /steel stud|high[- ]?rise/.exec(t);
     const wallDry = /drywall|sheetrock/.exec(t);
     const fireplace = /fireplace/.exec(t);
-    const wantOutlet = /(hide|conceal|hidden|clean)[^.]*(wire|cord|cable)|outlet behind|in[- ]wall/.exec(t);
+    const conceal = /(hide|conceal|hidden|clean)[^.]*(wire|cord|cable)|in[- ]wall/.exec(t);
+    // "need an outlet" / "put an outlet behind it" = outlet work (a guess until confirmed);
+    // "there's an outlet behind it" / "already have an outlet" = existing power.
+    const needOutlet = /(need|install|add|put|run)[^.]{0,30}outlets?/.exec(t);
+    const hasOutlet = /(there'?s|there is|already|have|has|got)[^.]{0,25}outlets?\b(?! installed)|outlets? (is|are) (already )?(behind|there|right)/.exec(t);
+    const wantOutlet = needOutlet ?? conceal;
     const ownMount = /(have|own|already|bought)[^.]*mount|my mount|got a mount/.exec(t);
     const needMount = /(need|bring|supply|provide)[^.]*mount/.exec(t);
     return {
@@ -311,8 +316,12 @@ export function heuristicIntake(text: string, work: WorkConfig = DEFAULT_WORK_CO
       location: fireplace ? known("fireplace" as const, fireplace[0]) : unknown(),
       mountSource: ownMount ? known("customer" as const, ownMount[0]) : needMount ? known("pptv" as const, needMount[0]) : unknown(),
       mountType: unknown(),
-      wire: wantOutlet ? known("in_wall" as const, wantOutlet[0]) : unknown(),
-      power: wantOutlet ? { value: "outlet" as const, status: "inferred" as FieldStatus, evidence: wantOutlet[0] } : unknown(),
+      wire: conceal ? known("in_wall" as const, conceal[0]) : unknown(),
+      power: wantOutlet
+        ? { value: "outlet" as const, status: "inferred" as FieldStatus, evidence: wantOutlet[0] }
+        : hasOutlet
+          ? known("existing" as const, hasOutlet[0])
+          : unknown(),
       tvRemoval: /take down|remove|unmount/.test(t) && !parsedHasVerbs ? known(true, /take down|remove|unmount/.exec(t)![0]) : unknown(),
       remount: unknown(),
     };
