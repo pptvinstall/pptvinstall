@@ -204,6 +204,9 @@ export function calculateTroubleshootingTotal(minutes: number): number {
 }
 
 export function calculateQuote(state: QuoteFormState): QuoteResult {
+  // Historical/test callers may supply a pre-move QuoteFormState at runtime.
+  // Treat a missing moveProject as the disabled default instead of crashing.
+  const moveProject = state.moveProject ?? createDefaultMoveProjectConfig();
   const groups: QuoteGroup[] = [];
   const flags = new Set<string>();
   const travelContext =
@@ -407,9 +410,9 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
   }
 
   let moveSubtotal = 0;
-  if (state.moveProject.enabled) {
+  if (moveProject.enabled) {
     const moveItems: QuoteLineItem[] = [];
-    const move = state.moveProject;
+    const move = moveProject;
 
     if (move.oldHomeTvUnmountCount > 0) {
       const lineTotal = pricingData.tvMounting.unmount.price * move.oldHomeTvUnmountCount;
@@ -446,7 +449,7 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
   }
 
   const qualifiesMoveBundle =
-    state.moveProject.enabled &&
+    moveProject.enabled &&
     state.tvs.length >= pricingData.moveProject.bundleDiscount.minimumNewTvInstalls &&
     moveSubtotal > 0;
   const bundleDiscount = qualifiesMoveBundle ? pricingData.moveProject.bundleDiscount.amount : 0;
