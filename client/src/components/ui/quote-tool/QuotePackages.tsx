@@ -20,7 +20,7 @@ export default function QuotePackages() {
     <section aria-labelledby="packages-heading" className="space-y-3">
       <div>
         <h5 id="packages-heading" className="text-lg font-bold text-slate-900">Choose how clean you want it</h5>
-        <p className="text-sm text-slate-500">Same installer, same visit. Each option lists exactly what is included.</p>
+        <p className="text-sm text-slate-500">{formState.moveProject?.enabled ? "Each option keeps your previous-home work and move scope included; only the TV setup level changes." : "Same installer, same visit. Each option lists exactly what is included."}</p>
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         {packages.map((pkg) => {
