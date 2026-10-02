@@ -138,6 +138,7 @@ const VERBS: Array<{ re: RegExp; action: WorkAction; participle?: boolean; selfC
   { re: /\b(?:assembl(?:e|ed|ing)|put(?:ting)? together|build)\b/g, action: "assemble", participle: undefined },
   { re: /\b(?:mount(?:ed|ing)?|hang(?:ing)?|hung|put up)\b/g, action: "mount" },
   { re: /\binstall(?:ed|ing|ation)?\b/g, action: "install" },
+  { re: /\b(?:add(?:ed|ing)?|swap(?:ped|ping)?(?: out)?|replac(?:e|ed|ing))\b(?= (?:a|an|the|my|this|that|one|two|three|four|five|six|new|\d))/g, action: "install" },
 ];
 
 function findVerbs(t: string): VerbMatch[] {

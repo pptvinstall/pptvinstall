@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ATTACHMENTS, DISPOSALS, HELPER_MODES, HARDWARE_COMPLEXITY, INSTRUCTIONS, RELOCATIONS, RESTORATIONS, RISK_FLAGS, SURFACES, WORK_ACTIONS, workAssemblySchema } from "./work";
+import { ATTACHMENTS, DISPOSALS, HELPER_MODES, HARDWARE_COMPLEXITY, INSTRUCTIONS, PREMIUM_FACTORS, RELOCATIONS, RESTORATIONS, RISK_FLAGS, SURFACES, WORK_ACTIONS, workAssemblySchema } from "./work";
 
 // Work-model configuration: taxonomy, templates, labor assumptions, complexity bands,
 // material recipes and review limits. All of it is owner-editable data inside the versioned,
@@ -16,6 +16,29 @@ function full<K extends string, V extends z.ZodTypeAny>(keys: readonly K[], valu
   return z.object(Object.fromEntries(keys.map((k) => [k, value])) as Record<K, V>).strict();
 }
 
+/**
+ * A site condition that must be true before the work is safe/in scope (e.g. "existing light fixture in place",
+ * "fan-rated box", "ceiling joist verified"). The item records the answer in `conditions[key]`:
+ * yes = fine; unknown = whenUnknown; no = whenNo. Owner-editable data, so new safety rules need no code.
+ */
+export const prerequisiteSchema = z
+  .object({
+    key: slug,
+    label: z.string().min(1).max(80),
+    /** Asked when the answer is unknown. */
+    question: z.string().min(1).max(200),
+    whenUnknown: z.enum(["confirm", "manual_review"]),
+    whenNo: z.enum(["confirm", "manual_review", "not_supported"]),
+    /** Explanation used when the answer is "no". */
+    noMessage: z.string().min(1).max(200),
+    /** Actions it applies to. Default: actions that put something in place (mount, install, remount, relocate). */
+    actions: z.array(z.enum(WORK_ACTIONS)).max(11).optional(),
+    /** Customer-safe condition shown on quotes when the prerequisite applies. */
+    customerNote: z.string().max(200).optional(),
+  })
+  .strict();
+export type Prerequisite = z.infer<typeof prerequisiteSchema>;
+
 export const categorySchema = z.object({
   label: z.string().min(1).max(60),
   group: z.string().min(1).max(40),
@@ -25,6 +48,12 @@ export const categorySchema = z.object({
   keywords: z.array(z.string().min(1).max(40)).max(20),
   /** Per-unit base minutes for specific actions. Anything missing is derived by the engine. */
   actionMinutes: actionMinutes.optional(),
+  /** Complexity/risk premium factors this kind of work always carries (e.g. electrical). */
+  premiumFactors: z.array(z.enum(PREMIUM_FACTORS)).max(6).optional(),
+  /** Safety / scope prerequisites for this kind of work. */
+  prerequisites: z.array(prerequisiteSchema).max(8).optional(),
+  /** True when this category's own prerequisites already cover the mounting surface (e.g. a fan-rated box on a ceiling). */
+  skipSurfacePrerequisites: z.boolean().optional(),
 });
 
 export const recipeLineSchema = z.object({
@@ -46,7 +75,7 @@ export const templateDefaultsSchema = z
     assembly: workAssemblySchema.partial().optional(),
     restoration: z.enum(RESTORATIONS).optional(),
     disposal: z.array(z.enum(DISPOSALS)).max(4).optional(),
-    riskFlags: z.array(z.enum(RISK_FLAGS)).max(14).optional(),
+    riskFlags: z.array(z.enum(RISK_FLAGS)).max(RISK_FLAGS.length).optional(),
   })
   .strict();
 
@@ -66,6 +95,8 @@ export const workTemplateSchema = z.object({
   fixedPriceCents: cents.optional(),
   defaults: templateDefaultsSchema.optional(),
   notes: z.string().max(200).optional(),
+  /** Template-specific prerequisites (override the category's prerequisite with the same key). */
+  prerequisites: z.array(prerequisiteSchema).max(8).optional(),
 });
 
 const bandSchema = z.object({
@@ -151,6 +182,8 @@ export const workConfigSchema = z
       manualReview: z.array(z.enum(RISK_FLAGS)),
     }),
     surfaceRecipes: z.record(z.enum(SURFACES), slug).default({}),
+    /** Prerequisites that apply to any item placed on a given surface (e.g. ceiling structure). */
+    surfacePrerequisites: z.record(z.enum(SURFACES), z.array(prerequisiteSchema).max(6)).default(() => DEFAULT_SURFACE_PREREQUISITES),
     recipes: z.record(slug, z.object({ label: z.string().min(1).max(80), lines: z.array(recipeLineSchema).max(30) })),
     categories: z.record(slug, categorySchema),
     templates: z.record(slug, workTemplateSchema),
@@ -178,13 +211,88 @@ export type WorkTemplate = z.infer<typeof workTemplateSchema>;
 export type WorkCategory = z.infer<typeof categorySchema>;
 
 type M = Partial<Record<(typeof WORK_ACTIONS)[number], number>>;
-const cat = (label: string, group: string, weightRelevant: boolean, keywords: string[], actionMinutes?: M): WorkCategory => ({
+const cat = (label: string, group: string, weightRelevant: boolean, keywords: string[], actionMinutes?: M, extra: Pick<WorkCategory, "premiumFactors" | "prerequisites" | "skipSurfacePrerequisites"> = {}): WorkCategory => ({
   label,
   group,
   weightRelevant,
   keywords,
   ...(actionMinutes ? { actionMinutes: actionMinutes as WorkCategory["actionMinutes"] } : {}),
+  ...extra,
 });
+
+// ---- safety / scope prerequisites (owner-editable). PPTV does limited residential work: no new circuits,
+// no panel work, nothing that needs a licensed electrician. Anything outside that is review or not supported.
+const PR = (key: string, label: string, question: string, whenUnknown: Prerequisite["whenUnknown"], whenNo: Prerequisite["whenNo"], noMessage: string, extra: Partial<Prerequisite> = {}): Prerequisite => ({
+  key,
+  label,
+  question,
+  whenUnknown,
+  whenNo,
+  noMessage,
+  ...extra,
+});
+const P_CEILING_STRUCTURE = PR(
+  "ceiling_structure",
+  "Ceiling joist / approved blocking verified for the load",
+  "Is there a ceiling joist or approved blocking at the mounting point, rated for the item's weight?",
+  "manual_review",
+  "not_supported",
+  "no joist or approved blocking at the mounting point; it cannot be attached safely as described.",
+  { customerNote: "Ceiling mounting requires attachment to a ceiling joist or approved blocking. We verify this before work begins." },
+);
+const P_EXISTING_FIXTURE = PR(
+  "existing_fixture",
+  "Existing light fixture / box at this location",
+  "Is there an existing light fixture (or fixture box) at this location now?",
+  "confirm",
+  "not_supported",
+  "no existing fixture: running new wiring or a new circuit is licensed electrical work outside PPTV's scope.",
+  { customerNote: "Installs at an existing fixture location only; new wiring runs are not included." },
+);
+const P_FAN_RATED_BOX = PR(
+  "fan_rated_box",
+  "Fan-rated ceiling box / brace",
+  "Is the ceiling box fan-rated (or is there a fan brace), and is it secured to framing?",
+  "confirm",
+  "manual_review",
+  "the ceiling box is not fan-rated; a fan brace/box replacement must be reviewed before quoting.",
+  { customerNote: "Ceiling fans require a fan-rated box secured to framing; if it is not, we confirm the extra work first." },
+);
+const P_WIRING_OK = PR(
+  "wiring_ok",
+  "Existing wiring in good condition (no scorching, aluminum, or missing ground)",
+  "Is the existing wiring in good condition (no scorch marks, aluminum wiring, or missing ground) and controlled by a working switch?",
+  "confirm",
+  "manual_review",
+  "existing wiring has a problem; it needs a licensed electrician's review before PPTV can work there.",
+);
+const P_EXTEND_EXISTING = PR(
+  "extend_existing_circuit",
+  "Extends an existing nearby circuit (no new circuit or panel work)",
+  "Can the new outlet be fed from an existing outlet on the same wall/circuit (no new circuit or panel work)?",
+  "confirm",
+  "not_supported",
+  "a new circuit or panel work is licensed electrical work outside PPTV's scope.",
+  { customerNote: "Outlet work extends an existing nearby circuit; new circuits and panel work are not included." },
+);
+const P_DOORBELL_WIRING = PR(
+  "existing_doorbell_wiring",
+  "Existing doorbell wiring / transformer",
+  "Is there an existing wired doorbell (wires and a working transformer) at the door?",
+  "confirm",
+  "confirm",
+  "no existing doorbell wiring: use a battery doorbell or confirm a plug-in transformer option.",
+);
+const P_EXTERIOR_FIXTURE = PR(
+  "existing_exterior_fixture",
+  "Existing exterior fixture / box at this location",
+  "Is there an existing outdoor light fixture (with a weatherproof box) where the floodlight will go?",
+  "confirm",
+  "not_supported",
+  "no existing exterior fixture: new outdoor wiring is licensed electrical work outside PPTV's scope.",
+  { customerNote: "Hardwired floodlights replace an existing outdoor fixture; new outdoor wiring is not included." },
+);
+export const DEFAULT_SURFACE_PREREQUISITES: Partial<Record<(typeof SURFACES)[number], Prerequisite[]>> = { ceiling: [P_CEILING_STRUCTURE] };
 
 const CATEGORIES: Record<string, WorkCategory> = {
   // TV / AV
@@ -212,6 +320,13 @@ const CATEGORIES: Record<string, WorkCategory> = {
   doorbell: cat("Video doorbell", "Smart home", false, ["doorbell", "video doorbell"], { mount: 30 }),
   smart_device: cat("Smart hub / sensor / display", "Smart home", false, ["hub", "sensor", "sensors", "smart display", "thermostat"], { mount: 15 }),
   floodlight: cat("Floodlight (plug-in / low-voltage)", "Smart home", false, ["floodlight", "flood light"], { mount: 45 }),
+  doorbell_chime: cat("Doorbell chime", "Smart home", false, ["chime", "doorbell chime"], { install: 30 }, { prerequisites: [P_DOORBELL_WIRING] }),
+  // Electrical / lighting (limited residential scope: existing locations and existing circuits only)
+  ceiling_fan: cat("Ceiling fan", "Electrical / lighting", true, ["ceiling fan", "ceiling fans"], { install: 75, remove: 30 }, { premiumFactors: ["electrical", "height"], prerequisites: [P_EXISTING_FIXTURE, P_FAN_RATED_BOX, P_WIRING_OK], skipSurfacePrerequisites: true }),
+  light_fixture: cat("Light fixture (replace existing)", "Electrical / lighting", false, ["light fixture", "light fixtures", "chandelier", "pendant light"], { install: 45, remove: 20 }, { premiumFactors: ["electrical"], prerequisites: [P_EXISTING_FIXTURE, P_WIRING_OK], skipSurfacePrerequisites: true }),
+  receptacle: cat("Outlet (add / relocate)", "Electrical / lighting", false, ["outlet", "outlets", "receptacle", "receptacles", "power outlet"], { install: 45, relocate: 45, remove: 20 }, { premiumFactors: ["electrical"], prerequisites: [P_EXTEND_EXISTING, P_WIRING_OK] }),
+  low_voltage_pass_through: cat("Low-voltage cable pass-through", "Electrical / lighting", false, ["cable pass-through", "pass through", "low voltage", "hdmi in wall"], { install: 35 }),
+  floodlight_hardwired: cat("Floodlight (hardwired, replaces fixture)", "Electrical / lighting", true, ["hardwired floodlight", "floodlight camera"], { install: 60, remove: 25 }, { premiumFactors: ["electrical", "height"], prerequisites: [P_EXTERIOR_FIXTURE, P_WIRING_OK] }),
   // Storage
   wall_shelving: cat("Wall shelving system", "Storage", true, ["wall shelving", "track shelving"], { mount: 45 }),
   freestanding_shelving: cat("Freestanding shelving / rack", "Storage", false, ["shelving unit", "storage rack", "utility shelf", "utility shelves", "garage shelf", "wire rack"], { assemble: 35 }),
@@ -300,6 +415,30 @@ const RECIPES: WorkConfig["recipes"] = {
     label: "Camera mount extras",
     lines: [{ label: "Cable clips, weather sealant", qty: 1, unitCostCents: 300, kind: "consumable" }],
   },
+  ceiling_mount_hardware: {
+    label: "Ceiling mount hardware",
+    lines: [
+      { label: "Lag bolts into joist / blocking", qty: 1, unitCostCents: 600, kind: "hardware" },
+      { label: "Safety cable", qty: 1, unitCostCents: 800, kind: "hardware" },
+    ],
+  },
+  electrical_connectors: {
+    label: "Wire connectors and tape",
+    lines: [{ label: "Wire nuts, tape, misc.", qty: 1, unitCostCents: 300, kind: "consumable" }],
+  },
+  outlet_extension: {
+    label: "Outlet extension (existing circuit)",
+    lines: [
+      { label: "14/2 or 12/2 Romex (10 ft)", qty: 1, unitCostCents: 600, kind: "hardware" },
+      { label: "Old-work box", qty: 1, unitCostCents: 250, kind: "hardware" },
+      { label: "Receptacle", qty: 1, unitCostCents: 200, kind: "hardware" },
+      { label: "Cover plate", qty: 1, unitCostCents: 150, kind: "hardware" },
+    ],
+  },
+  low_voltage_plates: {
+    label: "Low-voltage pass-through plates",
+    lines: [{ label: "Brush / pass-through plate pair", qty: 1, unitCostCents: 700, kind: "hardware" }],
+  },
 };
 
 const T = (
@@ -327,9 +466,17 @@ const TEMPLATES: Record<string, WorkTemplate> = {
   furniture_disassembly: T("Furniture disassembly", "desk", "disassemble", ["teardown_supplies"], { defaults: { surface: "freestanding", attachment: "freestanding_assembly" } }),
   furniture_relocation: T("Furniture relocation", "dresser", "disassemble", ["teardown_supplies", "assembly_consumables"], { thenAction: "reassemble", defaults: { surface: "freestanding", attachment: "freestanding_assembly", helper: "recommended" } }),
   wall_shelf_removal: T("Wall shelf removal", "shelf", "remove", ["patch_kit"], { defaults: { restoration: "remove_hardware_only" } }),
+  ceiling_tv_mount: T("Ceiling TV mount", "tv", "mount", ["ceiling_mount_hardware"], { customerLabel: "Ceiling TV", laborMinutes: { mount: 75 }, defaults: { surface: "ceiling", attachment: "lag_hardware", helper: "required" }, notes: "Joist/blocking must be verified; stays a reviewed custom item, not the standard TV price." }),
+  ceiling_fan_existing_fixture: T("Ceiling fan (existing fixture)", "ceiling_fan", "install", ["electrical_connectors"], { customerLabel: "Ceiling fan", defaults: { surface: "ceiling", attachment: "manufacturer_bracket", hardwareSuppliedBy: "included" }, notes: "Replaces an existing light fixture. No new wiring runs." }),
+  light_fixture_swap: T("Light fixture swap", "light_fixture", "install", ["electrical_connectors"], { customerLabel: "Light fixture", defaults: { surface: "ceiling", attachment: "manufacturer_bracket", hardwareSuppliedBy: "included" } }),
+  outlet_add_existing_circuit: T("Add outlet (existing circuit)", "receptacle", "install", ["outlet_extension"], { customerLabel: "Outlet", defaults: { surface: "drywall_unknown_studs", attachment: "screws_fasteners", hardwareSuppliedBy: "pptv" } }),
+  low_voltage_pass_through: T("Low-voltage pass-through", "low_voltage_pass_through", "install", ["low_voltage_plates"], { customerLabel: "Cable pass-through", defaults: { surface: "drywall_unknown_studs", attachment: "screws_fasteners", hardwareSuppliedBy: "pptv" } }),
+  doorbell_chime: T("Doorbell chime", "doorbell_chime", "install", ["electrical_connectors"], { customerLabel: "Doorbell chime", defaults: { hardwareSuppliedBy: "included", attachment: "screws_fasteners" } }),
+  floodlight_hardwired: T("Hardwired floodlight", "floodlight_hardwired", "install", ["electrical_connectors", "low_voltage_camera"], { customerLabel: "Floodlight", defaults: { hardwareSuppliedBy: "included", attachment: "manufacturer_bracket" } }),
 };
 
 export const DEFAULT_WORK_CONFIG: WorkConfig = {
+  surfacePrerequisites: DEFAULT_SURFACE_PREREQUISITES,
   additionalUnitEfficiency: 0.85,
   minimumItemMinutes: 10,
   customDefaultMinutes: 30,
@@ -409,7 +556,7 @@ export const DEFAULT_WORK_CONFIG: WorkConfig = {
   },
   risk: {
     notSupported: ["gas_line", "roof_work", "high_voltage_or_panel", "new_circuit", "load_bearing", "permit_or_license_required", "hazardous_material", "outside_capability"],
-    manualReview: ["structural_modification", "plumbing_work", "unsafe_height", "unknown_structure", "ceiling_suspension", "commercial_rigging"],
+    manualReview: ["structural_modification", "plumbing_work", "unsafe_height", "unknown_structure", "ceiling_suspension", "commercial_rigging", "unsafe_electrical_condition"],
   },
   surfaceRecipes: {
     drywall_studs: "fasteners_stud",

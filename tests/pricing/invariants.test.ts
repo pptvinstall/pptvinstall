@@ -120,3 +120,31 @@ test("hostile numeric inputs are rejected at validation, not priced", () => {
   assert.throws(() => priceScope({ extras: [{ kind: "custom", qty: -1 }] } as never, {}, cfg()));
   assert.throws(() => priceScope({ extras: [{ kind: "custom", qty: 1, customMinutes: 1e12 }] } as never, {}, cfg()));
 });
+
+test("helper share and premium invariants across 400 random jobs", () => {
+  const r = rng(20261002);
+  const config = cfg();
+  for (let i = 0; i < 400; i++) {
+    const s = randomScope(r);
+    const ctx = randomContext(r);
+    const res = priceScope(s, ctx, config);
+    if (res.empty) continue;
+    // premium never touches the floor and is always capped
+    assert.ok(res.premium.pct >= 0 && res.premium.pct <= config.business.riskPremium.maxTotalPct + 1e-9, `premium cap case ${i}`);
+    for (const p of [res.floorCents, res.recommendedCents, res.premiumCents]) {
+      const e = economicsAtPrice(res, p);
+      for (const v of [e.helperCostCents, e.outOfPocketCents, e.costToServeCents]) assert.ok(Number.isFinite(v) && v >= 0, `econ case ${i}`);
+      if (res.helperPay.mode === "labor_revenue_share") {
+        // 20% of labor revenue: never more than 20% of the price, never a share of pass-through revenue.
+        assert.ok(e.helperCostCents <= Math.round(0.2 * p), `helper share bound case ${i}`);
+        assert.equal(e.helperCostCents, Math.round(0.2 * Math.max(0, p - res.helperPay.passThroughCents)));
+      } else if (res.helperPay.mode === "none") {
+        assert.equal(e.helperCostCents, 0);
+      }
+    }
+    // the floor really keeps the minimum margin with the helper paid at the floor price
+    assert.ok(economicsAtPrice(res, res.floorCents).marginPct >= config.business.minimumMarginPct - 0.02, `floor margin case ${i}`);
+    // no accidental $0 work
+    assert.ok(res.recommendedCents >= config.business.minimumTicketCents);
+  }
+});

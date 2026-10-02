@@ -156,6 +156,21 @@ test("intake: the draft suggests a template (labor, recipes) but never applies w
   assert.ok(r.questions.some((q) => /going on|made of/i.test(q.question)));
 });
 
+test("intake: electrical and ceiling-fan requests become reviewed items; a TV's outlet is not a second job", () => {
+  assert.deepEqual(summary("Install a ceiling fan where the light is in the bedroom").items, ["install:ceiling_fanx1"]);
+  assert.deepEqual(summary("add an outlet in the living room").items, ["install:receptaclex1"]);
+  assert.deepEqual(summary("swap a light fixture and install a doorbell chime").items, ["install:light_fixturex1", "install:doorbell_chimex1"]);
+  const tvOutlet = summary("Mount my 65 inch TV on brick, hide the wires and put an outlet behind it");
+  assert.equal(tvOutlet.scope.tvs.length, 1);
+  assert.deepEqual(tvOutlet.items, []);
+  // A ceiling-fan draft never claims the fixture or box conditions; the engine asks.
+  const fan = summary("Install a ceiling fan where the light is in the bedroom");
+  assert.deepEqual(fan.scope.items[0]!.conditions ?? {}, {});
+  const r = priceScope(fan.scope as never, { oneWayMiles: 8, oneWayDriveMinutes: 20 }, DEFAULT_ECONOMICS_CONFIG);
+  assert.notEqual(r.status, "priced");
+  assert.ok(r.questions.some((q) => /fan-rated/.test(q.question)));
+});
+
 // ----------------------------------------------------------------------------- service on both stores
 let pg: Awaited<ReturnType<typeof createTestDb>>;
 before(async () => {

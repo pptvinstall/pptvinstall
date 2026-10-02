@@ -83,8 +83,27 @@ export const RISK_FLAGS = [
   "commercial_rigging",
   "hazardous_material",
   "outside_capability",
+  "unsafe_electrical_condition",
 ] as const;
 export type RiskFlag = (typeof RISK_FLAGS)[number];
+
+/** Deterministic complexity/risk premium factors (see premium.ts). */
+export const PREMIUM_FACTORS = [
+  "fireplace",
+  "masonry",
+  "steel_studs",
+  "height",
+  "ceiling",
+  "helper",
+  "heavy_equipment",
+  "rush",
+  "multi_stop",
+  "confirmation_needed",
+  "specialty",
+  "electrical",
+  "difficult_access",
+] as const;
+export type PremiumFactor = (typeof PREMIUM_FACTORS)[number];
 
 export const WORK_STATUSES = ["priced", "estimate_with_confirmation", "manual_review_required", "not_supported"] as const;
 export type WorkStatus = (typeof WORK_STATUSES)[number];
@@ -194,7 +213,9 @@ export const workItemSchema = z
     /** Owner override of base minutes per unit for the primary phase. Band, environment and access still add. */
     ownerMinutesPerUnit: z.number().min(1).max(1_440).optional(),
     photoCount: z.number().int().min(0).max(20).default(0),
-    riskFlags: z.array(z.enum(RISK_FLAGS)).max(14).default([]),
+    riskFlags: z.array(z.enum(RISK_FLAGS)).max(RISK_FLAGS.length).default([]),
+    /** Answers to safety / scope prerequisites, keyed by prerequisite key (see workConfig prerequisites). */
+    conditions: z.record(slug, z.enum(["yes", "no", "unknown"])).default({}),
     tv: tvExtensionSchema.optional(),
     customerNote: z.string().max(300).optional(),
   })

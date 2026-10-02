@@ -204,7 +204,11 @@ export function intakeToScopeDraft(intake: AiScopeIntake, source: "ai" | "heuris
       } as (typeof tvs)[number]);
     }
   });
-  const work = intakeItemsToWorkInputs(workItems, workConfig);
+  // An outlet mentioned alongside a TV that needs one is the TV's outlet (priced by the TV engine), not a second job.
+  const tvNeedsOutlet = tvs.some((t) => t.power === "outlet");
+  const keptItems = tvNeedsOutlet ? workItems.filter((it) => it.category.value !== "receptacle") : workItems;
+  if (keptItems.length !== workItems.length) unresolved.push({ path: "tvs.power", status: "needs_confirmation", question: "Is the outlet the customer mentioned the one behind the TV (or a separate outlet elsewhere)?" });
+  const work = intakeItemsToWorkInputs(keptItems, workConfig);
   for (const issue of work.issues) unresolved.push(issue);
   for (const q of intake.openQuestions) unresolved.push({ path: "openQuestions", status: "needs_confirmation", question: q });
 

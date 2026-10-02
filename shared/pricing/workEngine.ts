@@ -15,7 +15,7 @@ import {
   type WorkItemInput,
   type WorkStatus,
 } from "./work";
-import type { WorkConfig, WorkTemplate } from "./workConfig";
+import type { Prerequisite, WorkConfig, WorkTemplate } from "./workConfig";
 
 // Generic work engine: labor, materials, helper and review status for ANY work item.
 // Pure and deterministic: integer cents, no clock, no network, no AI. Labor is compositional:
@@ -117,7 +117,8 @@ function wallFromSurface(surface: Surface): TvScope["wall"] {
 
 /** A fresh TV mount/install is handled by the specialised TV engine, one TvScope per unit. */
 export function isSpecialisedTvItem(item: WorkItem): boolean {
-  return item.category === "tv" && item.tv !== undefined && phasesOf(item).some((a) => a === "mount" || a === "install");
+  // Ceiling TVs stay generic work items: they need the structural prerequisite and have no catalog price.
+  return item.category === "tv" && item.tv !== undefined && item.environment.surface !== "ceiling" && phasesOf(item).some((a) => a === "mount" || a === "install");
 }
 
 function tvScopeFromItem(item: WorkItem, unit: number): TvScope {
@@ -285,8 +286,36 @@ function computeItem(item: WorkItem, index: number, ctx: ItemCtx): { result: Wor
   }
 
   const surface = item.environment.surface;
+  const exclusions: string[] = [];
+
+  // ---- safety / scope prerequisites (owner config: category, template, surface). Unknown never becomes "fine".
+  const prereqs = new Map<string, Prerequisite>();
+  for (const p of categoryKnown?.prerequisites ?? []) prereqs.set(p.key, p);
+  for (const p of tpl?.prerequisites ?? []) prereqs.set(p.key, p);
+  const surfacePrereqs = categoryKnown?.skipSurfacePrerequisites ? [] : W.surfacePrerequisites[surface] ?? [];
+  if (hasPlace || (hasBuild && item.assembly?.wallAnchoring)) for (const p of surfacePrereqs) if (!prereqs.has(p.key)) prereqs.set(p.key, { ...p, actions: p.actions ?? phases });
+  for (const p of Array.from(prereqs.values())) {
+    const acts: readonly WorkAction[] = p.actions ?? PLACE_ACTIONS;
+    if (!phases.some((a) => acts.includes(a))) continue;
+    const answer = item.conditions[p.key] ?? "unknown";
+    if (p.customerNote && answer !== "no" && !exclusions.includes(p.customerNote)) exclusions.push(p.customerNote);
+    if (answer === "yes") continue;
+    const code = `prereq_${p.key}`;
+    if (answer === "unknown") {
+      if (p.whenUnknown === "manual_review") {
+        review(code, `${p.label.toLowerCase()} is not verified; manual review required.`);
+        questions.push({ itemId: item.id, field: `conditions.${p.key}`, question: p.question });
+      } else {
+        confirm(code, `${p.label.toLowerCase()} is not verified yet.`, `conditions.${p.key}`, p.question);
+      }
+    } else if (p.whenNo === "not_supported") unsupported(code, p.noMessage);
+    else if (p.whenNo === "manual_review") review(code, p.noMessage);
+    else confirm(code, p.noMessage);
+  }
+
   if (hasPlace || (hasBuild && item.assembly?.wallAnchoring)) {
-    if (surface === "ceiling" && L.ceilingMountRequiresReview) review("ceiling", "ceiling mounting needs the structure verified; manual review required.");
+    // Older configs without a ceiling prerequisite keep the original blanket review.
+    if (surface === "ceiling" && L.ceilingMountRequiresReview && !surfacePrereqs.length && !categoryKnown?.skipSurfacePrerequisites) review("ceiling", "ceiling mounting needs the structure verified; manual review required.");
     if (surface === "unknown" && hasPlace) {
       if (weight >= L.unknownSurfaceReviewWeightLb) review("unknown_surface_heavy", `heavy item (${weight} lb) on an unknown surface; the substrate must be verified first.`);
       else confirm("surface_unknown", "wall/surface type unknown; hidden conditions are unverified until inspection.", "environment.surface", `What is the ${label.toLowerCase()} going on (drywall with studs, brick, concrete, tile, other)?`);
@@ -299,7 +328,6 @@ function computeItem(item: WorkItem, index: number, ctx: ItemCtx): { result: Wor
     review("transport", "PPTV transporting items between addresses is not supported by default; manual review.");
   }
   if (item.restoration === "major_repair") review("major_repair", "larger wall repair is outside ordinary patching; manual review.");
-  const exclusions: string[] = [];
   if (item.paintRequested && !L.paintSupported) {
     confirm("paint_excluded", "paint requested but painting is not offered; tell the customer it is excluded.");
     exclusions.push("Painting is not included.");

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { stableStringify } from "./hash";
 import { DEFAULT_WORK_CONFIG, workConfigSchema } from "./workConfig";
 import { MOUNT_TYPES, SCHEDULE_MODIFIERS, SIZE_BANDS, EXTRA_KINDS } from "./scope";
+import { PREMIUM_FACTORS, type PremiumFactor } from "./work";
 
 // Economics configuration. Everything the engine "believes" about cost lives here,
 // versioned and validated, so it can be edited by the owner without code changes.
@@ -28,18 +29,61 @@ export const recipeSchema = z.object({
 
 const mountCostKey = z.string().regex(/^(fixed|tilt|full_motion):(32-55|56\+)$/);
 
+/**
+ * How the helper is paid.
+ *  - "hourly": helper minutes x helperPerHourCents (the original model).
+ *  - "labor_revenue_share": a share of LABOR revenue only. Labor revenue = price minus pass-through
+ *    (materials and PPTV-supplied products at their charged amount, customer travel fee, tax). The
+ *    engine solves this in closed form, so there is no circular "helper cost changes price changes
+ *    helper cost" loop.
+ * Stored configs written before this field existed keep "hourly" (their original behavior).
+ */
+export const helperCompensationSchema = z
+  .object({
+    mode: z.enum(["hourly", "labor_revenue_share"]),
+    laborRevenueSharePct: z.number().min(0).max(0.6),
+    /** "whole_job": the helper's share applies to the whole job's labor revenue whenever a helper is on the job. */
+    appliesTo: z.enum(["whole_job"]),
+  })
+  .strict();
+export type HelperCompensation = z.infer<typeof helperCompensationSchema>;
+const LEGACY_HELPER_COMPENSATION: HelperCompensation = { mode: "hourly", laborRevenueSharePct: 0.2, appliesTo: "whole_job" };
+
+/** Deterministic complexity/risk factors (defined in work.ts). Each adds margin to the RECOMMENDED price only (never the floor). */
+export { PREMIUM_FACTORS, type PremiumFactor };
+export const riskPremiumSchema = z
+  .object({
+    enabled: z.boolean(),
+    /** Cap on the sum of all applied factors. */
+    maxTotalPct: z.number().min(0).max(0.3),
+    factors: z.object(Object.fromEntries(PREMIUM_FACTORS.map((k) => [k, z.number().min(0).max(0.2)])) as Record<PremiumFactor, z.ZodNumber>).strict(),
+  })
+  .strict();
+export type RiskPremiumConfig = z.infer<typeof riskPremiumSchema>;
+const zeroFactors = Object.fromEntries(PREMIUM_FACTORS.map((k) => [k, 0])) as Record<PremiumFactor, number>;
+/** Configs saved before risk premiums existed keep their old recommendation (premiums off). */
+const LEGACY_RISK_PREMIUM: RiskPremiumConfig = { enabled: false, maxTotalPct: 0, factors: zeroFactors };
+
 export const economicsConfigSchema = z
   .object({
     version: z.number().int().min(1),
     name: z.string().min(1).max(80),
-    /** "legacy": customer price = existing catalog. "dynamic": customer price = engine recommendation. */
-    pricingMode: z.enum(["legacy", "dynamic"]),
+    /**
+     * "legacy": customer price = existing catalog.
+     * "shadow": customer price = existing catalog; the engine also prices every public quote and stores the
+     *           comparison for the owner (never shown to customers).
+     * "dynamic": customer price = engine recommendation. Switching to dynamic requires an explicit owner confirmation.
+     */
+    pricingMode: z.enum(["legacy", "shadow", "dynamic"]),
     calibration: z.enum(["uncalibrated-default", "owner-edited", "calibrated-from-actuals"]),
 
     labor: z
       .object({
+        /** Value of the owner's hands-on labor time (cost-to-serve, not a customer hourly rate). */
         targetLaborPerHourCents: cents,
+        /** Used when helperCompensation.mode is "hourly". */
         helperPerHourCents: cents,
+        helperCompensation: helperCompensationSchema.default(LEGACY_HELPER_COMPENSATION),
         /** Minutes charged once per visit regardless of TV count (load in, walk-through, sign-off). */
         setupMinutes: minutes,
         perTvBaseMinutes: z.record(z.enum(SIZE_BANDS), minutes),
@@ -104,6 +148,7 @@ export const economicsConfigSchema = z
         /** Recommendation moves only if the new number differs by at least this much. */
         minimumMeaningfulAdjustmentCents: cents,
         maxDiscountPct: pct,
+        riskPremium: riskPremiumSchema.default(LEGACY_RISK_PREMIUM),
         /** Owner-controlled. Disabled by default; no tax rule is assumed by the system. */
         tax: z.object({ enabled: z.boolean(), rateBps: z.number().int().min(0).max(2_500), label: z.string().max(40) }),
       })
@@ -142,6 +187,12 @@ export const economicsConfigSchema = z
     if (cfg.business.minimumMarginPct >= 0.9 || cfg.business.desiredMarginPct >= 0.9) {
       ctx.addIssue({ code: "custom", path: ["business"], message: "margins must be below 90%" });
     }
+    // Closed-form pricing divides by (1 - margin - helper share); keep it well away from zero.
+    const share = cfg.labor.helperCompensation.mode === "labor_revenue_share" ? cfg.labor.helperCompensation.laborRevenueSharePct : 0;
+    const premium = cfg.business.riskPremium.enabled ? cfg.business.riskPremium.maxTotalPct : 0;
+    if (cfg.business.desiredMarginPct + premium + share > 0.85) {
+      ctx.addIssue({ code: "custom", path: ["labor", "helperCompensation", "laborRevenueSharePct"], message: "desired margin + max risk premium + helper share must stay at or below 85%" });
+    }
   });
 
 export type EconomicsConfig = z.infer<typeof economicsConfigSchema>;
@@ -150,12 +201,13 @@ export const ENGINE_VERSION = "2.0.0";
 
 export const DEFAULT_ECONOMICS_CONFIG: EconomicsConfig = {
   version: 1,
-  name: "Uncalibrated defaults",
+  name: "Owner rules ($100/hr, helper 20% of labor, $100 min) + default times",
   pricingMode: "legacy",
   calibration: "uncalibrated-default",
   labor: {
-    targetLaborPerHourCents: 7_000,
+    targetLaborPerHourCents: 10_000,
     helperPerHourCents: 2_500,
+    helperCompensation: { mode: "labor_revenue_share", laborRevenueSharePct: 0.2, appliesTo: "whole_job" },
     setupMinutes: 15,
     perTvBaseMinutes: { "32-55": 35, "56+": 40 },
     wallMinutes: { drywall: 0, brick: 25, stone: 30, steel: 15, unknown: 10 },
@@ -211,6 +263,25 @@ export const DEFAULT_ECONOMICS_CONFIG: EconomicsConfig = {
     roundingStepCents: 500,
     minimumMeaningfulAdjustmentCents: 500,
     maxDiscountPct: 0.2,
+    riskPremium: {
+      enabled: true,
+      maxTotalPct: 0.15,
+      factors: {
+        fireplace: 0.04,
+        masonry: 0.03,
+        steel_studs: 0.02,
+        height: 0.03,
+        ceiling: 0.05,
+        helper: 0.02,
+        heavy_equipment: 0.03,
+        rush: 0.05,
+        multi_stop: 0.02,
+        confirmation_needed: 0.03,
+        specialty: 0.04,
+        electrical: 0.03,
+        difficult_access: 0.03,
+      },
+    },
     tax: { enabled: false, rateBps: 0, label: "" },
   },
   scheduleModifiers: {
