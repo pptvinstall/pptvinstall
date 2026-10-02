@@ -192,3 +192,46 @@ test("public /quote: catalog price equals the browser calculator; every form map
     }
   }
 });
+
+
+test("two-home move quote prices rack teardown bands without a magic customer total", () => {
+  const state = createDefaultQuoteFormState();
+  state.tvs = Array.from({ length: 5 }, (_, i) => ({
+    ...state.tvs[0]!,
+    id: `move-tv-${i + 1}`,
+    location: i === 0 ? "fireplace" : "standard",
+    wireConcealment: i === 1 || i === 2,
+    outletDistance: i === 1 || i === 2 ? "near" : null,
+  }));
+  state.zipCode = "30327";
+  state.moveProject = { enabled: true, previousZipCode: "30318", oldHomeTvUnmountCount: 4, oldHomeMountRemovalCount: 0, rackTeardownLevel: "medium" };
+
+  const medium = calculateQuote(state);
+  assert.equal(medium.subtotal, 1350);
+  assert.equal(medium.discount, 100);
+  assert.equal(medium.total, 1250);
+
+  state.moveProject.rackTeardownLevel = "small";
+  assert.equal(calculateQuote(state).total, 1150);
+  state.moveProject.rackTeardownLevel = "large";
+  assert.equal(calculateQuote(state).total, 1350);
+
+  state.moveProject.rackTeardownLevel = "medium";
+  const req = publicQuoteRequestSchema.parse({
+    form: { ...state, notes: "" },
+    standalone: { removalCount: 0, troubleshootingMinutes: 0, wireManagementLocations: 0, deviceSetup: false, sharedUnmountCount: 0 },
+    stage: "review",
+  });
+  assert.equal(catalogPublicQuote(req).totalCents, 125000);
+  const scope = publicRequestToScope(req);
+  assert.equal(scope.tvs.length, 5);
+  assert.equal(scope.tvs.every((tv) => tv.site === 1), true);
+  assert.equal(scope.items.some((item) => item.id === "move-old-tv-unmount" && item.quantity === 4 && item.site === 0), true);
+  assert.equal(scope.items.some((item) => item.id === "move-rack-teardown" && item.ownerMinutesPerUnit === 120 && item.site === 0), true);
+  const p = priceForPublic(scope, { zip: "30318", extraStops: [{ label: "New home 30327" }] }, DEFAULT_ECONOMICS_CONFIG);
+  assert.equal(p.siteCount, 2);
+  assert.equal(p.recommendedCents >= 125000, true);
+  assert.equal(p.premium.factors.some((factor) => factor.key === "multi_stop"), true);
+  assert.equal(p.premium.factors.some((factor) => factor.key === "fireplace"), true);
+  assert.equal(p.premium.factors.some((factor) => factor.key === "electrical"), true);
+});
