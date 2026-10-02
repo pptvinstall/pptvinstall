@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Sparkles, Trash2 } from "l
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, Toggle, inputClass } from "@/components/jobos/controls";
+import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
 import ItemsStep, { itemPayload, newItemFrom, type ItemDraft, type WorkCfg } from "./ItemsStep";
 import { Button } from "@/components/ui/button";
 import { adminFetch, describeError, money } from "@/lib/adminApi";
@@ -114,9 +115,10 @@ type Preview = {
     belowFloor: boolean;
     internalFlags: string[];
     customerLines: Array<{ label: string; detail?: string; amountCents: number | null }>;
-    economics: { marginCents: number; marginPct: number; effectiveGrossPerHourCents: number };
+    economics: PanelEconomics;
   } | null;
-  pricing: {
+  atRecommended?: PanelEconomics;
+  pricing: PanelPricing & {
     status: string;
     statusReasons: Reason[];
     questions: Array<{ itemId?: string; field: string; question: string }>;
@@ -129,7 +131,6 @@ type Preview = {
     totalOwnerMinutes: number;
     labor: { minutes: number; ownerCostCents: number; helperCostCents: number; helperMinutes: number };
     materials: { costCents: number; chargeCents: number };
-    travel: { roundTripMiles: number; roundTripDriveMinutes: number; fuelCents: number; vehicleCents: number; timeCents: number; source: string };
     uncertainties: string[];
     flags: string[];
     why: string[];
@@ -462,22 +463,12 @@ function Builder() {
                   {gate?.code === "NOT_SUPPORTED" ? <p className="mt-1 text-sm text-slate-700">PPTV does not do this work, so a quote can't be created. Remove the item or the flag.</p> : null}
                   {p.statusReasons.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-slate-700">{Array.from(new Set(p.statusReasons.filter((r) => r.severity !== "confirm").map((r) => r.message))).slice(0, 8).map((m) => <li key={m}>{m}</li>)}</ul> : null}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Stat label="Customer quote" value={comp ? money(comp.customerTotalCents) : "—"} sub={!comp ? "Set after review" : preview!.pricingMode === "legacy" ? "Current catalog price" : "Engine recommendation"} />
-                  <Stat label="Recommended" value={money(stableRec ?? p.recommendedCents)} sub="Internal" />
-                  <Stat label="Floor" value={money(p.floorCents)} tone={comp?.belowFloor ? "warn" : "default"} sub={comp?.belowFloor ? "Quote is below floor" : "Internal minimum"} />
-                  <Stat label="Premium ref." value={money(p.premiumCents)} tone="muted" sub="Internal" />
-                  <Stat label="Est. time" value={`${Math.floor(p.totalOwnerMinutes / 60)}h ${p.totalOwnerMinutes % 60}m`} sub={`${p.labor.minutes} min on site${p.labor.helperMinutes ? ` · helper ${p.labor.helperMinutes} min` : ""}`} />
-                  <Stat label="Materials" value={money(p.materials.costCents)} sub={`charge ${money(p.materials.chargeCents)}`} />
-                  <Stat label="Travel cost" value={money(p.travel.fuelCents + p.travel.vehicleCents + p.travel.timeCents)} sub={`${p.travel.roundTripMiles} mi · ${p.travel.roundTripDriveMinutes} min${p.siteCount > 1 ? ` · ${p.siteCount} addresses` : ""}`} />
-                  <Stat label="Margin at quote" value={comp ? `${(comp.economics.marginPct * 100).toFixed(0)}%` : "—"} tone={comp && comp.economics.marginPct < 0.12 ? "warn" : "good"} sub={comp ? `${money(comp.economics.effectiveGrossPerHourCents)}/hr gross · estimate` : "after you set a price"} />
-                </div>
-                {p.questions.length ? (
-                  <details className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm" open={p.questions.length <= 4}>
-                    <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Questions to confirm ({p.questions.length})</summary>
-                    <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-700">{p.questions.slice(0, 20).map((q, i) => <li key={`${q.itemId}-${q.field}-${i}`}>{q.question}</li>)}</ul>
-                  </details>
-                ) : null}
+                <EconomicsPanel
+                  pricing={p}
+                  economics={comp?.economics ?? preview!.atRecommended ?? null}
+                  customerCents={comp ? comp.customerTotalCents : null}
+                  customerSub={!comp ? "Set after review" : preview!.pricingMode === "dynamic" ? "Engine recommendation" : "Catalog price customers see"}
+                />
                 {p.work.items.length ? (
                   <details className="rounded-2xl border border-slate-200 p-3 text-sm" data-testid="item-breakdown">
                     <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Per-item breakdown ({p.work.items.length})</summary>
@@ -495,10 +486,6 @@ function Builder() {
                   <div className="space-y-1.5">{Array.from(new Set([...(comp?.internalFlags ?? []), ...p.uncertainties])).slice(0, 12).map((f) => <Notice key={f} tone="warn">{f}</Notice>)}</div>
                 ) : null}
                 {p.exclusions.length ? <p className="text-xs text-slate-600">Not included: {p.exclusions.join(" ")}</p> : null}
-                <details className="rounded-2xl border border-slate-200 p-3 text-sm">
-                  <summary className="min-h-[44px] cursor-pointer py-2 font-semibold text-slate-800">Why this price</summary>
-                  <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">{p.why.map((w) => <li key={w}>{w}</li>)}</ul>
-                </details>
                 {gate?.code !== "NOT_SUPPORTED" ? (
                   <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
                     <p className="text-sm font-bold text-slate-900">Owner adjustment</p>

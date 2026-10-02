@@ -78,7 +78,7 @@ function ratios(rows: CompletedJobRecord[], est: (r: CompletedJobRecord) => numb
 }
 
 export interface CalibrationSuggestion {
-  metric: "laborMinutes" | "travelMinutes" | "materialsCents";
+  metric: "laborMinutes" | "travelMinutes" | "materialsCents" | "ownerHourly";
   sampleSize: number;
   medianActualOverEstimate: number;
   message: string;
@@ -97,7 +97,7 @@ export interface IntelligenceReport {
   note: string;
 }
 
-export function buildIntelligence(records: CompletedJobRecord[], opts: { includeSynthetic?: boolean } = {}): IntelligenceReport {
+export function buildIntelligence(records: CompletedJobRecord[], opts: { includeSynthetic?: boolean; targetOwnerHourlyCents?: number } = {}): IntelligenceReport {
   const rows = opts.includeSynthetic ? records : records.filter((r) => !r.synthetic);
   const sufficient = rows.length >= MIN_SAMPLE;
   const labor = ratios(rows, (r) => r.estimateLaborMinutes, (r) => r.actualLaborMinutes);
@@ -123,6 +123,18 @@ export function buildIntelligence(records: CompletedJobRecord[], opts: { include
     add("laborMinutes", labor, "labor minutes");
     add("travelMinutes", travel, "travel minutes");
     add("materialsCents", materials, "material cost");
+    // Learning loop on the owner's own number: are completed jobs actually paying the labor value they are priced at?
+    const target = opts.targetOwnerHourlyCents;
+    const medHourly = percentile([...hourly].sort((a, b) => a - b), 0.5);
+    if (target && medHourly !== null && hourly.length >= MIN_SAMPLE && medHourly < target * 0.9) {
+      suggestions.push({
+        metric: "ownerHourly",
+        sampleSize: hourly.length,
+        medianActualOverEstimate: Number((medHourly / target).toFixed(3)),
+        message: `Across ${hourly.length} jobs you netted a median $${(medHourly / 100).toFixed(0)}/hr of your time (labor + driving) against a $${(target / 100).toFixed(0)}/hr labor value. Compare the catalog with the engine recommendation in shadow mode; nothing has been changed.`,
+        applied: false,
+      });
+    }
   }
 
   return {

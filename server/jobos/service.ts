@@ -185,11 +185,11 @@ export class JobOsService {
     // Saving a quote is still blocked by composeQuote (NOT_SUPPORTED always; MANUAL_REVIEW_REQUIRED unless overridden).
     try {
       const composition = composeQuote({ scope: s, context: c, config: cfg });
-      return { composition, gate: null, pricing: composition.pricing, packages: buildPackages(s) as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
+      return { composition, gate: null, pricing: composition.pricing, atRecommended: economicsAtPrice(composition.pricing, composition.pricing.recommendedCents), packages: buildPackages(s) as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
     } catch (e) {
       if (!(e instanceof QuotePolicyError) || (e.code !== "NOT_SUPPORTED" && e.code !== "MANUAL_REVIEW_REQUIRED")) throw e;
       const pricing = priceScope(s, c, cfg);
-      return { composition: null, gate: { code: e.code, message: e.message }, pricing, packages: [] as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
+      return { composition: null, gate: { code: e.code, message: e.message }, pricing, atRecommended: economicsAtPrice(pricing, pricing.recommendedCents), packages: [] as CustomerPackage[], configVersion: cfg.version, pricingMode: cfg.pricingMode };
     }
   }
 
@@ -523,7 +523,7 @@ export class JobOsService {
   async intelligence(opts: { includeSynthetic?: boolean; comparableTo?: string } = {}) {
     const records = await this.completedRecords();
     const itemReport = buildItemIntelligence(await this.completedItemRecords(), opts);
-    const report = buildIntelligence(records, opts);
+    const report = buildIntelligence(records, { ...opts, targetOwnerHourlyCents: (await this.getActiveConfig()).config.labor.targetLaborPerHourCents });
     let comparable: ReturnType<typeof findComparableJobs> = [];
     if (opts.comparableTo) {
       const job = await this.requireJob(opts.comparableTo);

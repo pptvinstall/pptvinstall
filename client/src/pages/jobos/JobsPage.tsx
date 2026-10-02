@@ -5,12 +5,24 @@ import { ArrowLeft, Copy, Loader2, RefreshCw } from "lucide-react";
 import AdminGate from "@/components/jobos/AdminGate";
 import OwnerNav from "@/components/jobos/OwnerNav";
 import { Field, Notice, Segmented, Stat, inputClass } from "@/components/jobos/controls";
+import EconomicsPanel, { type PanelEconomics, type PanelPricing } from "@/components/jobos/EconomicsPanel";
 import { Button } from "@/components/ui/button";
 import { adminFetch, describeError, money } from "@/lib/adminApi";
 import { cn } from "@/lib/utils";
 
 type Job = { id: string; title: string; status: string; customerLabel: string | null; zip: string | null; bookingId: number | null; createdAt: string; source: string };
-type Version = { id: string; version: number; customerAmountCents: number; recommendedCents: number; floorCents: number; discountCents: number; configVersion: number; createdAt: string; acceptedAt: string | null };
+type Version = {
+  id: string;
+  version: number;
+  customerAmountCents: number;
+  recommendedCents: number;
+  floorCents: number;
+  discountCents: number;
+  configVersion: number;
+  createdAt: string;
+  acceptedAt: string | null;
+  snapshot?: { pricingMode?: string; composition?: { pricing?: PanelPricing; economics?: PanelEconomics } };
+};
 type Invoice = { id: string; invoiceNumber: string; status: string; totalCents: number; paidCents: number; taxCents: number; sentAt: string | null };
 type Payment = { id: string; invoiceId: string; amountCents: number; method: string; tipCents: number; receivedAt: string };
 type Detail = {
@@ -60,15 +72,15 @@ export default function JobsPage() {
 
 function JobsInner() {
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<"jobs" | "insights">("jobs");
+  const [tab, setTab] = useState<"jobs" | "website" | "insights">("jobs");
   return (
     <main className="mx-auto max-w-2xl px-4 py-4">
       {selected ? (
         <JobDetail id={selected} onBack={() => setSelected(null)} />
       ) : (
         <>
-          <Segmented label="Jobs view" value={tab} onChange={setTab} options={[{ value: "jobs", label: "Jobs" }, { value: "insights", label: "Pricing insights" }]} />
-          <div className="mt-4">{tab === "jobs" ? <JobList onOpen={setSelected} /> : <Insights />}</div>
+          <Segmented label="Jobs view" columns={3} value={tab} onChange={setTab} options={[{ value: "jobs", label: "Jobs" }, { value: "website", label: "Website quotes" }, { value: "insights", label: "Insights" }]} />
+          <div className="mt-4">{tab === "jobs" ? <JobList onOpen={setSelected} /> : tab === "website" ? <WebsiteQuotes onOpenJob={setSelected} /> : <Insights />}</div>
         </>
       )}
     </main>
@@ -167,6 +179,14 @@ function JobDetail({ id, onBack }: { id: string; onBack: () => void }) {
               <Stat label="Floor" value={money(latest.floorCents)} tone={latest.customerAmountCents < latest.floorCents ? "warn" : "muted"} />
             </div>
             <p className="text-xs text-slate-500">{versions.length} version{versions.length > 1 ? "s" : ""}. Each version keeps the config it was priced with (v{latest.configVersion}); later config changes never rewrite it.</p>
+            {latest.snapshot?.composition?.pricing && latest.snapshot.composition.pricing.why ? (
+              <details className="rounded-2xl border border-slate-200 p-3">
+                <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold">Economics for v{latest.version}</summary>
+                <div className="mt-2">
+                  <EconomicsPanel pricing={latest.snapshot.composition.pricing} economics={latest.snapshot.composition.economics ?? null} customerCents={latest.customerAmountCents} customerSub={latest.snapshot.pricingMode === "dynamic" ? "Engine price" : "Catalog / owner price"} />
+                </div>
+              </details>
+            ) : null}
             {quote ? <Button variant="outline" className="h-12 w-full" disabled={busy === "send"} onClick={copyLink}>{busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} {quote.status === "draft" ? "Mark sent & copy customer link" : `Copy customer link (${quote.status})`}</Button> : null}
           </>
         )}
@@ -194,6 +214,7 @@ function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; ex
   const [f, setF] = useState({
     laborMinutes: String(a.laborMinutes ?? ""),
     helperMinutes: String(a.helperMinutes ?? ""),
+    helperPaid: a.helperPaidCents !== undefined ? String(a.helperPaidCents / 100) : "",
     travelMinutes: String(a.travelMinutes ?? ""),
     mileage: String(a.mileage ?? ""),
     materials: a.actualMaterialsCents ? String(a.actualMaterialsCents / 100) : "",
@@ -207,13 +228,13 @@ function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; ex
   const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const n = (s: string) => (s.trim() === "" ? 0 : Number(s));
   const cents = (s: string) => Math.round(n(s) * 100);
-  const invalid = f.laborMinutes.trim() === "" || [f.laborMinutes, f.helperMinutes, f.travelMinutes, f.mileage, f.materials, f.otherSpend, f.collected, f.tip].some((v) => v.trim() !== "" && !(Number(v) >= 0));
+  const invalid = f.laborMinutes.trim() === "" || [f.laborMinutes, f.helperMinutes, f.helperPaid, f.travelMinutes, f.mileage, f.materials, f.otherSpend, f.collected, f.tip].some((v) => v.trim() !== "" && !(Number(v) >= 0));
 
   async function save() {
     setSaving(true);
     setMsg(null);
     try {
-      await adminFetch(`/jobs/${jobId}/actuals`, { method: "POST", body: { laborMinutes: n(f.laborMinutes), helperMinutes: n(f.helperMinutes), travelMinutes: n(f.travelMinutes), mileage: n(f.mileage), actualMaterialsCents: cents(f.materials), otherSpendCents: cents(f.otherSpend), collectedCents: cents(f.collected), tipCents: cents(f.tip), ...(cents(f.collected) > 0 ? { paymentMethod: f.method } : {}), ...(f.notes.trim() ? { notes: f.notes.trim() } : {}) } });
+      await adminFetch(`/jobs/${jobId}/actuals`, { method: "POST", body: { laborMinutes: n(f.laborMinutes), helperMinutes: n(f.helperMinutes), ...(f.helperPaid.trim() !== "" ? { helperPaidCents: cents(f.helperPaid) } : {}), travelMinutes: n(f.travelMinutes), mileage: n(f.mileage), actualMaterialsCents: cents(f.materials), otherSpendCents: cents(f.otherSpend), collectedCents: cents(f.collected), tipCents: cents(f.tip), ...(cents(f.collected) > 0 ? { paymentMethod: f.method } : {}), ...(f.notes.trim() ? { notes: f.notes.trim() } : {}) } });
       setMsg({ tone: "success", text: "Actuals saved." });
       onSaved();
     } catch (e) {
@@ -233,6 +254,7 @@ function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; ex
       <div className="grid grid-cols-2 gap-3">
         {field("laborMinutes", "On-site minutes")}
         {field("helperMinutes", "Helper minutes")}
+        {field("helperPaid", "Helper paid ($)", "Blank = use your helper rule")}
         {field("travelMinutes", "Drive minutes (total)")}
         {field("mileage", "Miles (round trip)")}
         {field("materials", "Materials spent ($)")}
@@ -255,13 +277,121 @@ function ActualsForm({ jobId, existing, disabled, onSaved }: { jobId: string; ex
           </div>
           <ul className="space-y-1 text-xs text-slate-600">
             {Object.entries(p.variances).filter(([k]) => k !== "priceVsCollectedCents").map(([k, v]) => (
-              <li key={k} className="flex justify-between"><span>{k.replace(/([A-Z])/g, " $1").toLowerCase()}</span><span>est {k.endsWith("Cents") ? money(v.estimate) : v.estimate} → actual {k.endsWith("Cents") ? money(v.actual) : v.actual}</span></li>
+              <li key={k} className="flex justify-between gap-2"><span>{k.replace(/(Cents|Pct)$/, "").replace(/([A-Z])/g, " $1").toLowerCase()}</span><span>est {fmtVar(k, v.estimate)} → actual {fmtVar(k, v.actual)}</span></li>
             ))}
           </ul>
           <p className="text-xs text-slate-500">{p.note}</p>
         </div>
       ) : null}
     </section>
+  );
+}
+
+function fmtVar(key: string, v: number) {
+  if (key.endsWith("Cents")) return money(Math.round(v));
+  if (key.endsWith("Pct")) return `${(v * 100).toFixed(0)}%`;
+  return Math.round(v * 10) / 10;
+}
+
+type ShadowSample = {
+  id: string;
+  day: string;
+  zip: string | null;
+  pricingMode: string;
+  shownCents: number;
+  recommendedCents: number;
+  floorCents: number;
+  status: string;
+  jobId: string | null;
+  createdAt: string;
+  summary: {
+    shownSource: string;
+    catalogHasCustomQuoteLines: boolean;
+    complexity: string;
+    confidence: string;
+    premiumFactors: string[];
+    onsiteMinutes: number;
+    totalOwnerMinutes: number;
+    helperMinutes: number;
+    atShown: { helperCostCents: number; costToServeCents: number; ownerNetCents: number; marginPct: number; effectivePerHourCents: number };
+    atRecommended: { marginPct: number; effectivePerHourCents: number };
+    flags: string[];
+    questions: string[];
+    why: string[];
+  };
+};
+type ShadowReport = { samples: ShadowSample[]; stats: { count: number; comparableCount: number; shownBelowFloor: number; shownBelowRecommended: number; medianShownCents: number | null; medianRecommendedCents: number | null; medianGapCents: number | null; medianEffectivePerHourAtShownCents: number | null; statusCounts: Record<string, number> }; note: string };
+
+const STATUS_SHORT: Record<string, string> = { priced: "Priced", estimate_with_confirmation: "Estimate", manual_review_required: "Review", not_supported: "Not supported" };
+
+/** Shadow mode: website quotes, what the customer saw vs what the engine recommends. Owner-only. */
+function WebsiteQuotes({ onOpenJob }: { onOpenJob: (id: string) => void }) {
+  const [data, setData] = useState<ShadowReport | null>(null);
+  const [mode, setMode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const load = useCallback(() => {
+    setError("");
+    Promise.all([adminFetch<ShadowReport>("/shadow-samples?limit=100"), adminFetch<{ config: { pricingMode: string } }>("/config")])
+      .then(([r, c]) => {
+        setData(r);
+        setMode(c.config.pricingMode);
+      })
+      .catch((e) => setError(describeError(e)));
+  }, []);
+  useEffect(load, [load]);
+  async function toJob(id: string) {
+    setBusy(id);
+    try {
+      const job = await adminFetch<{ id: string }>(`/shadow-samples/${id}/job`, { method: "POST", body: {} });
+      onOpenJob(job.id);
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setBusy("");
+    }
+  }
+  if (error) return <div className="space-y-2"><Notice tone="error">{error}</Notice><Button variant="outline" onClick={load}><RefreshCw className="h-4 w-4" /> Retry</Button></div>;
+  if (!data) return <div className="flex items-center gap-2 py-8 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  const st = data.stats;
+  return (
+    <div className="space-y-3" data-testid="website-quotes">
+      {mode === "legacy" ? <Notice tone="warn">Shadow comparison is off. Switch pricing mode to Shadow under Economics: customers keep seeing catalog prices and each website quote is priced by the engine here.</Notice> : <Notice tone="info">{mode === "shadow" ? "Shadow mode: customers see catalog prices. " : "Dynamic mode: customers see engine prices. "}{data.note}</Notice>}
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="Website quotes" value={st.count} sub={`${st.comparableCount} fully priced by the catalog`} />
+        <Stat label="Catalog under floor" value={`${st.shownBelowFloor} / ${st.comparableCount}`} tone={st.shownBelowFloor ? "warn" : "default"} />
+        <Stat label="Median catalog" value={st.medianShownCents === null ? "—" : money(st.medianShownCents)} />
+        <Stat label="Median engine" value={st.medianRecommendedCents === null ? "—" : money(st.medianRecommendedCents)} sub={st.medianGapCents === null ? undefined : `gap ${money(st.medianGapCents)}`} />
+        <Stat label="Your $/hr at catalog" value={st.medianEffectivePerHourAtShownCents === null ? "—" : `${money(st.medianEffectivePerHourAtShownCents)}/hr`} sub="median, after cash costs" />
+        <Stat label="Needs review" value={(st.statusCounts.manual_review_required ?? 0) + (st.statusCounts.estimate_with_confirmation ?? 0)} sub="estimate or review" />
+      </div>
+      {!data.samples.length ? <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No website quotes recorded yet.</p> : null}
+      <ul className="space-y-2">
+        {data.samples.map((x) => (
+          <li key={x.id} className="rounded-2xl border border-slate-200 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-slate-900">{money(x.shownCents)} <span className="text-xs font-normal text-slate-500">shown · engine {money(x.recommendedCents)} · floor {money(x.floorCents)}</span></p>
+                <p className="text-xs text-slate-500">{[x.zip, x.day, STATUS_SHORT[x.status] ?? x.status, x.summary.complexity, x.summary.catalogHasCustomQuoteLines ? "has custom-quote lines" : null].filter(Boolean).join(" · ")}</p>
+              </div>
+              <span className={cn("shrink-0 rounded-full px-2 py-1 text-xs font-semibold", x.shownCents < x.floorCents ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>{x.shownCents < x.floorCents ? "under floor" : "ok"}</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-600">At the shown price: net {money(x.summary.atShown.ownerNetCents)} · {money(x.summary.atShown.effectivePerHourCents)}/hr · margin {(x.summary.atShown.marginPct * 100).toFixed(0)}% · {Math.round(x.summary.totalOwnerMinutes)} min of your time{x.summary.helperMinutes ? ` · helper ${money(x.summary.atShown.helperCostCents)}` : ""}</p>
+            {x.summary.premiumFactors.length ? <p className="text-xs text-slate-500">Factors: {x.summary.premiumFactors.join(", ")}</p> : null}
+            <details className="mt-1 text-xs text-slate-600">
+              <summary className="min-h-[44px] cursor-pointer py-2 font-semibold">Why and open questions</summary>
+              <ul className="list-disc space-y-1 pl-5">{x.summary.why.map((w) => <li key={w}>{w}</li>)}</ul>
+              {x.summary.questions.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">{x.summary.questions.map((q) => <li key={q}>{q}</li>)}</ul> : null}
+            </details>
+            {x.jobId ? (
+              <Button variant="outline" className="mt-1 h-11 w-full" onClick={() => onOpenJob(x.jobId!)}>Open job</Button>
+            ) : (
+              <Button variant="outline" className="mt-1 h-11 w-full" disabled={busy === x.id} onClick={() => toJob(x.id)}>{busy === x.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Create job from this quote</Button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

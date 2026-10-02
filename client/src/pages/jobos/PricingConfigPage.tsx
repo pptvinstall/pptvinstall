@@ -87,7 +87,7 @@ function Inner() {
     setSaving(true);
     setMsg(null);
     try {
-      await adminFetch("/config", { method: "PUT", body: { config: draft, reason: reason.trim() } });
+      await adminFetch("/config", { method: "PUT", body: { config: draft, reason: reason.trim(), ...(draft.pricingMode === "dynamic" ? { confirmDynamic: confirmDynamic.trim() } : {}) } });
       setMsg({ tone: "success", text: "Saved as a new version and activated." });
       setReason("");
       setConfirmDynamic("");
@@ -103,7 +103,7 @@ function Inner() {
     setSaving(true);
     setMsg(null);
     try {
-      await adminFetch("/config/rollback", { method: "POST", body: { version } });
+      await adminFetch("/config/rollback", { method: "POST", body: { version, ...(confirmDynamic.trim() ? { confirmDynamic: confirmDynamic.trim() } : {}) } });
       setMsg({ tone: "success", text: `Version ${version} is active again.` });
       await load();
     } catch (e) {
@@ -123,7 +123,8 @@ function Inner() {
 
       <section className="space-y-3" aria-labelledby="mode-h">
         <h2 id="mode-h" className="text-lg font-bold">Customer pricing mode</h2>
-        <Segmented label="Pricing mode" columns={1} value={draft.pricingMode} onChange={(v) => set(["pricingMode"], v)} options={[{ value: "legacy", label: "Legacy — customers see today's catalog prices" }, { value: "dynamic", label: "Dynamic — customers see the engine recommendation" }]} />
+        <Segmented label="Pricing mode" columns={1} value={draft.pricingMode} onChange={(v) => set(["pricingMode"], v)} options={[{ value: "legacy", label: "Legacy — customers see today's catalog prices" }, { value: "shadow", label: "Shadow — customers see catalog prices; you see the engine side by side" }, { value: "dynamic", label: "Dynamic — customers see the engine recommendation" }]} />
+        {draft.pricingMode === "shadow" ? <Notice tone="info">Customer prices do not change. Every website quote is also priced by the engine and stored for you under Jobs → Website quotes.</Notice> : null}
         {draft.pricingMode === "dynamic" ? (
           <Notice tone="warn">Dynamic mode changes what customers are quoted. Leave on Legacy until you have reviewed the engine against real jobs.{changingMode ? (<span className="mt-2 block"><label htmlFor="confirm-dyn" className="font-semibold">Type "change customer prices" to confirm</label><input id="confirm-dyn" className={`${inputClass} mt-1`} value={confirmDynamic} onChange={(e) => setConfirmDynamic(e.target.value)} /></span>) : null}</Notice>
         ) : null}
@@ -131,8 +132,13 @@ function Inner() {
 
       <section className="space-y-3" aria-labelledby="labor-h">
         <h2 id="labor-h" className="text-lg font-bold">Labor & business</h2>
-        {dollars("Your labor value per hour ($)", ["labor", "targetLaborPerHourCents"])}
-        {dollars("Helper cost per hour ($)", ["labor", "helperPerHourCents"])}
+        {dollars("Your labor value per hour ($)", ["labor", "targetLaborPerHourCents"], "What your hands-on time is worth in cost-to-serve. Customers never see an hourly rate.")}
+        <Field label="How your helper is paid">
+          <Segmented label="Helper pay" columns={1} value={draft.labor.helperCompensation?.mode ?? "hourly"} onChange={(v) => set(["labor", "helperCompensation"], { mode: v, laborRevenueSharePct: draft.labor.helperCompensation?.laborRevenueSharePct ?? 0.2, appliesTo: "whole_job" })} options={[{ value: "labor_revenue_share", label: "Share of labor revenue (not materials, mounts or travel fee)" }, { value: "hourly", label: "Hourly rate" }]} />
+        </Field>
+        {(draft.labor.helperCompensation?.mode ?? "hourly") === "labor_revenue_share"
+          ? plain("Helper share of labor revenue (%)", ["labor", "helperCompensation", "laborRevenueSharePct"], "e.g. 20 = helper gets $20 of every $100 of labor.", 100)
+          : dollars("Helper cost per hour ($)", ["labor", "helperPerHourCents"])}
         {dollars("Minimum ticket ($)", ["business", "minimumTicketCents"])}
         {dollars("Minimum trip economics ($)", ["business", "minimumTripEconomicsCents"], "Least you must keep after out-of-pocket costs to make a trip worthwhile.")}
         {dollars("Overhead per job ($)", ["business", "overheadPerJobCents"])}
@@ -144,11 +150,28 @@ function Inner() {
         {dollars("Ignore price changes under ($)", ["business", "minimumMeaningfulAdjustmentCents"], "Keeps the recommendation steady when inputs wobble slightly.")}
       </section>
 
+      <section className="space-y-3" aria-labelledby="risk-h">
+        <h2 id="risk-h" className="text-lg font-bold">Complexity & risk pricing</h2>
+        <Toggle label="Add margin for complexity and risk" hint="Fireplace, masonry, height, ceiling, helper, rush, multi-stop, unconfirmed details… Raises the recommendation only, never the floor." checked={Boolean(draft.business.riskPremium?.enabled)} onChange={(v) => set(["business", "riskPremium"], { ...(draft.business.riskPremium ?? { maxTotalPct: 0.15, factors: {} }), enabled: v })} />
+        {draft.business.riskPremium?.enabled ? (
+          <>
+            {plain("Cap on total premium (%)", ["business", "riskPremium", "maxTotalPct"], undefined, 100)}
+            <details className="rounded-2xl border border-slate-200 p-3">
+              <summary className="min-h-[44px] cursor-pointer py-2 text-sm font-semibold">Premium per factor (%)</summary>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {Object.keys(draft.business.riskPremium.factors ?? {}).map((k) => <div key={k}>{plain(k.replace(/_/g, " "), ["business", "riskPremium", "factors", k], undefined, 100)}</div>)}
+              </div>
+            </details>
+          </>
+        ) : null}
+      </section>
+
       <section className="space-y-3" aria-labelledby="travel-h">
         <h2 id="travel-h" className="text-lg font-bold">Vehicle & travel</h2>
         <Field label="Vehicle label" htmlFor="veh-label"><input id="veh-label" className={inputClass} value={draft.travel.vehicleLabel} onChange={(e) => set(["travel", "vehicleLabel"], e.target.value)} maxLength={80} /></Field>
         {plain("MPG", ["travel", "mpg"], "Your real-world average. Default is a ~20 MPG estimate for the Atlas.")}
         {dollars("Fuel price per gallon ($)", ["travel", "fuelPricePerGalCents"], "A reference you set. Not live fuel data.")}
+        <Field label="Fuel price as of" htmlFor="fuel-asof" hint="When you last checked the price, e.g. 2026-10-02 GasBuddy Atlanta."><input id="fuel-asof" className={inputClass} maxLength={40} value={draft.travel.fuelPriceAsOf} onChange={(e) => set(["travel", "fuelPriceAsOf"], e.target.value)} /></Field>
         {dollars("Vehicle cost per mile ($)", ["travel", "vehicleCostPerMileCents"], "Wear, tires, maintenance, depreciation.")}
         {dollars("Your time while driving, per hour ($)", ["travel", "ownerTimeValuePerHourCents"])}
         {plain("Default traffic multiplier", ["travel", "defaultTrafficMultiplier"], "1 = normal. No live traffic data is used.")}
@@ -183,6 +206,9 @@ function Inner() {
               <div className="flex items-center justify-between"><span className="font-semibold">v{v.version}{v.isActive ? " · active" : ""}</span><span className="text-xs text-slate-500">{new Date(v.createdAt).toLocaleString()}</span></div>
               <p className="text-slate-600">{v.changeReason ?? "Initial defaults"} <span className="text-xs text-slate-400">by {v.createdBy}</span></p>
               {v.changedPaths.length ? <p className="text-xs text-slate-500">Changed: {v.changedPaths.slice(0, 6).join(", ")}{v.changedPaths.length > 6 ? "…" : ""}</p> : null}
+              {!v.isActive && v.config?.pricingMode === "dynamic" && active.config.pricingMode !== "dynamic" ? (
+                <span className="mt-2 block"><label htmlFor={`confirm-rb-${v.version}`} className="text-xs font-semibold">This version uses dynamic pricing. Type "change customer prices" to re-activate it.</label><input id={`confirm-rb-${v.version}`} className={`${inputClass} mt-1`} value={confirmDynamic} onChange={(e) => setConfirmDynamic(e.target.value)} /></span>
+              ) : null}
               {!v.isActive ? <Button variant="outline" className="mt-2 h-11" disabled={saving} onClick={() => rollback(v.version)}><RotateCcw className="h-4 w-4" /> Make active</Button> : null}
             </li>
           ))}

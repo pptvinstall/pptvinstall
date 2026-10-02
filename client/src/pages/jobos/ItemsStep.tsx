@@ -32,13 +32,31 @@ export type ItemDraft = {
   disposal: string[];
   riskFlags: string[];
   recipes: string[];
+  /** Answers to safety / scope prerequisites (existing fixture, fan-rated box, ceiling joist...). */
+  conditions: Record<string, "yes" | "no" | "unknown">;
   [k: string]: unknown;
 };
 
+export type Prereq = { key: string; label: string; question: string; whenUnknown: string; whenNo: string; noMessage: string; actions?: string[] };
 export type WorkCfg = {
-  categories: Record<string, { label: string; group: string; keywords: string[] }>;
-  templates: Record<string, { label: string; customerLabel?: string; category: string; action: string; thenAction?: string; recipes: string[]; fixedPriceCents?: number; defaults?: Record<string, unknown> }>;
+  categories: Record<string, { label: string; group: string; keywords: string[]; prerequisites?: Prereq[]; skipSurfacePrerequisites?: boolean }>;
+  templates: Record<string, { label: string; customerLabel?: string; category: string; action: string; thenAction?: string; recipes: string[]; fixedPriceCents?: number; defaults?: Record<string, unknown>; prerequisites?: Prereq[] }>;
+  surfacePrerequisites?: Record<string, Prereq[]>;
 };
+
+const PLACE = ["mount", "install", "remount", "relocate"];
+/** The same prerequisite selection the engine uses: category + template, plus the surface's when placing it. */
+export function prerequisitesFor(item: ItemDraft, cfg: WorkCfg | null): Prereq[] {
+  if (!cfg) return [];
+  const phases = [item.action, ...(item.thenAction ? [item.thenAction] : [])];
+  const category = cfg.categories[item.category];
+  const map = new Map<string, Prereq>();
+  for (const p of category?.prerequisites ?? []) map.set(p.key, p);
+  for (const p of (item.templateId ? cfg.templates[item.templateId]?.prerequisites : undefined) ?? []) map.set(p.key, p);
+  const places = phases.some((a) => PLACE.includes(a));
+  if (places && !category?.skipSurfacePrerequisites) for (const p of cfg.surfacePrerequisites?.[item.environment.surface] ?? []) if (!map.has(p.key)) map.set(p.key, { ...p, actions: p.actions ?? phases });
+  return Array.from(map.values()).filter((p) => phases.some((a) => (p.actions ?? PLACE).includes(a)));
+}
 
 const ACTIONS = [
   ["mount", "Mount"], ["install", "Install"], ["assemble", "Assemble"], ["reassemble", "Reassemble"], ["remount", "Remount"], ["relocate", "Relocate"],
@@ -94,6 +112,7 @@ export function newItemFrom(cfg: WorkCfg | null, opts: { action: string; templat
     disposal: (d.disposal as string[]) ?? [],
     riskFlags: (d.riskFlags as string[]) ?? [],
     recipes: [],
+    conditions: {},
     ...(d.assembly ? { assembly: d.assembly } : {}),
   };
 }
@@ -130,6 +149,8 @@ function ItemCard({ item, cfg, hasSecondSite, onChange, onRemove, onSavedTemplat
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const title = itemTitle(item, cfg);
   const known = Boolean(cfg?.categories[item.category]) && item.category !== "custom";
+  const prereqs = prerequisitesFor(item, cfg);
+  const confirmed = prereqs.filter((p) => (item.conditions ?? {})[p.key] === "yes").length;
 
   async function saveTemplate() {
     const id = slugify(title);
@@ -167,6 +188,7 @@ function ItemCard({ item, cfg, hasSecondSite, onChange, onRemove, onSavedTemplat
           <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${title}`} onClick={onRemove}><Trash2 /></Button>
         </div>
       </div>
+      {prereqs.length ? <p className={cn("mt-1 text-xs font-semibold", confirmed === prereqs.length ? "text-green-700" : "text-amber-700")}>Safety checks: {confirmed}/{prereqs.length} confirmed</p> : null}
       <button type="button" className="mt-1 min-h-[44px] text-sm font-semibold text-blue-700" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide details" : "Details (only if it changes the price)"}</button>
       {open ? (
         <div className="mt-2 space-y-3 border-t border-slate-100 pt-3">
@@ -180,6 +202,16 @@ function ItemCard({ item, cfg, hasSecondSite, onChange, onRemove, onSavedTemplat
             <NumInput id={`${item.id}-h`} label="Longest side" unit="in" value={item.dimensions?.widthIn} onChange={(v) => onChange({ dimensions: { ...item.dimensions, widthIn: v } })} />
           </div>
           <Select id={`${item.id}-surface`} label="Surface / where" value={item.environment.surface} options={SURFACES} onChange={(v) => env({ surface: v })} />
+          {prereqs.length ? (
+            <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-2" data-testid="site-checks">
+              <p className="text-sm font-semibold text-slate-800">Safety / scope checks</p>
+              {prereqs.map((p) => (
+                <Field key={p.key} label={p.label} hint={p.question}>
+                  <Segmented label={p.label} columns={3} value={(item.conditions ?? {})[p.key] ?? "unknown"} onChange={(v) => onChange({ conditions: { ...(item.conditions ?? {}), [p.key]: v as "yes" | "no" | "unknown" } })} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }, { value: "unknown", label: "Not sure" }]} />
+                </Field>
+              ))}
+            </div>
+          ) : null}
           <Select id={`${item.id}-att`} label="How it attaches" value={item.attachment} options={ATTACHMENTS} onChange={(v) => onChange({ attachment: v })} />
           <Field label="Hardware supplied by"><Segmented label="Hardware supplied by" columns={3} value={item.hardwareSuppliedBy} onChange={(v) => onChange({ hardwareSuppliedBy: v })} options={[{ value: "customer", label: "Customer" }, { value: "pptv", label: "PPTV" }, { value: "unknown", label: "Not sure" }]} /></Field>
           <Field label="Condition"><Segmented label="Assembly state" columns={3} value={item.assemblyState} onChange={(v) => onChange({ assemblyState: v })} options={[{ value: "boxed", label: "In box" }, { value: "assembled", label: "Assembled" }, { value: "unknown", label: "Not sure" }]} /></Field>

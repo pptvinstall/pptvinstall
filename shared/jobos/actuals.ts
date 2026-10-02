@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { EconomicsConfig } from "../pricing/config";
 import { safeCents, type Cents } from "../pricing/money";
+import { helperCostAt } from "../pricing/engine";
 import type { QuoteSnapshot } from "../pricing/quote";
 
 // Job actuals: what really happened. Captured after the work; never rewrites the quote
@@ -33,6 +34,8 @@ export const jobActualsInputSchema = z
     finishedAt: iso.optional(),
     laborMinutes: minutes,
     helperMinutes: minutes.default(0),
+    /** What the helper was actually paid. When absent, the configured helper rule is applied to the actuals. */
+    helperPaidCents: z.number().int().min(0).max(5_000_000).optional(),
     travelMinutes: minutes.default(0),
     /** Round-trip miles actually driven. */
     mileage: z.number().min(0).max(1_000).default(0),
@@ -111,7 +114,17 @@ export interface Profitability {
     miles: Variance;
     materialsCents: Variance;
     priceVsCollectedCents: Variance;
+    /** Helper pay: estimate at the quoted price vs actual (paid, or the configured rule applied to actuals). */
+    helperCents: Variance;
+    outOfPocketCents: Variance;
+    /** Margin after valuing owner time: estimate at quote vs actual. */
+    netMarginPct: Variance;
+    /** Owner net per hour of owner time: estimate at quote vs actual. */
+    effectivePerHourCents: Variance;
   };
+  /** Actual helper cost used above, and how it was determined. */
+  helperCostCents: Cents;
+  helperBasis: "paid" | "labor_revenue_share" | "hourly" | "none";
   /** Estimate vs actual per work item (only items with a recorded actual). Empty for TV-only jobs. */
   items: Array<{ itemId: string; label: string; quantity: number; estimateMinutes: number; actualMinutes: number; deltaMinutes: number; ratio: number | null; estimateMaterialsCents: number; actualMaterialsCents: number | null }>;
 }
@@ -127,7 +140,24 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
 
   const fuel = safeCents((actuals.mileage / T.mpg) * T.fuelPricePerGalCents);
   const vehicle = safeCents(actuals.mileage * T.vehicleCostPerMileCents);
-  const helper = safeCents((actuals.helperMinutes / 60) * config.labor.helperPerHourCents);
+  // Helper: what was paid if recorded; otherwise the configured rule applied to what actually happened.
+  const HC = config.labor.helperCompensation;
+  const passThrough = est.helperPay?.passThroughCents ?? est.materials.chargeCents;
+  const helperBasis: Profitability["helperBasis"] =
+    actuals.helperPaidCents !== undefined ? "paid" : actuals.helperMinutes <= 0 ? "none" : HC.mode === "labor_revenue_share" ? "labor_revenue_share" : "hourly";
+  const helper =
+    helperBasis === "paid"
+      ? actuals.helperPaidCents!
+      : helperBasis === "labor_revenue_share"
+        ? safeCents(HC.laborRevenueSharePct * Math.max(0, actuals.collectedCents - passThrough))
+        : helperBasis === "hourly"
+          ? safeCents((actuals.helperMinutes / 60) * config.labor.helperPerHourCents)
+          : 0;
+  // Estimates at the quoted price (older snapshots predate revenue-share helpers: fall back to their stored figures).
+  const quoted = args.customerQuotedCents;
+  const estHelper = est.helperPay ? helperCostAt(est.helperPay, quoted) : est.labor.helperCostCents;
+  const estOutOfPocket = est.outOfPocketExHelperCents !== undefined ? est.outOfPocketExHelperCents + estHelper : est.outOfPocketCents;
+  const estEconomics = snapshot.composition.economics;
   const outOfPocket = actuals.actualMaterialsCents + actuals.otherSpendCents + fuel + vehicle + helper;
   const ownerMinutes = actuals.laborMinutes + actuals.travelMinutes;
   const ownerHours = ownerMinutes / 60;
@@ -173,7 +203,13 @@ export function computeProfitability(args: { snapshot: QuoteSnapshot; customerQu
       miles: variance(est.travel.roundTripMiles, actuals.mileage),
       materialsCents: variance(est.materials.costCents, actuals.actualMaterialsCents),
       priceVsCollectedCents: variance(args.customerQuotedCents, actuals.collectedCents),
+      helperCents: variance(estHelper, helper),
+      outOfPocketCents: variance(estOutOfPocket, outOfPocket),
+      netMarginPct: variance(Number((estEconomics?.marginPct ?? 0).toFixed(4)), Number(pct(net).toFixed(4))),
+      effectivePerHourCents: variance(estEconomics?.effectiveGrossPerHourCents ?? 0, ownerHours > 0 ? safeCents(gross / ownerHours) : 0),
     },
+    helperCostCents: helper,
+    helperBasis,
     items: itemVariances,
   };
 }
