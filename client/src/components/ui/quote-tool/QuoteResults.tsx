@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
 
 import { formatPrice } from "@/data/pricing-data";
 import { cn } from "@/lib/utils";
@@ -14,14 +14,17 @@ import { SelectorButton } from "@/components/ui/quote-tool/QuoteComponents";
 import { useQuoteContext } from "@/components/ui/quote-tool/useQuoteState";
 import QuotePackages from "@/components/ui/quote-tool/QuotePackages";
 
+type PaymentOptions = { labels: string[]; hostedCheckout: boolean; provider: string | null };
+const providerLabel = (provider: string | null) => provider === "stripe" ? "Stripe" : provider === "square" ? "Square" : "secure checkout";
+
 export default function QuoteResults() {
-  const [paymentOptions, setPaymentOptions] = useState<{ labels: string[]; hostedCheckout: boolean }>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false });
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false, provider: null });
   useEffect(() => {
     let cancelled = false;
     fetch("/api/payment-options")
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
-        if (!cancelled && data?.labels) setPaymentOptions({ labels: data.labels, hostedCheckout: Boolean(data.hostedCheckout) });
+        if (!cancelled && data?.labels) setPaymentOptions({ labels: data.labels, hostedCheckout: Boolean(data.hostedCheckout), provider: typeof data.provider === "string" ? data.provider : null });
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
@@ -205,9 +208,19 @@ export default function QuoteResults() {
       ) : null}
 
       <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-bold text-slate-900">Payment options</p>
-        <p className="mt-1 text-sm text-slate-700">{paymentOptions.labels.join(" · ")}</p>
-        <p className="mt-2 text-xs text-slate-500">{paymentOptions.hostedCheckout ? "Credit/debit card and eligible Apple Pay checkout use a secure hosted payment page; PPTVInstall never collects card numbers in this form." : "Cash, Zelle and Apple Pay are available. Secure card checkout will appear once the hosted payment provider is configured."}</p>
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-green-700" />
+          <p className="text-sm font-bold text-slate-900">How you can pay</p>
+        </div>
+        <p className="mt-2 text-sm font-medium text-slate-800">{paymentOptions.labels.join(" · ")}</p>
+        {paymentOptions.hostedCheckout ? (
+          <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-green-800">Secure online checkout: {providerLabel(paymentOptions.provider)}</p>
+            <p className="mt-1 text-xs leading-5 text-green-900">Card and eligible wallet payments open on the provider's hosted page. PPTVInstall never collects or stores your raw card number.</p>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">Cash, Zelle and Apple Pay are available. Secure card checkout appears once the hosted payment provider is connected.</p>
+        )}
       </div>
 
       <p className="text-xs font-medium text-slate-500">
