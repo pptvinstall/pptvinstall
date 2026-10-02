@@ -145,6 +145,30 @@ export const pricingData = {
     }
   },
 
+  // Two-location move projects
+  moveProject: {
+    secondSiteCoordination: {
+      name: "Two-location project coordination",
+      price: 100,
+      description: "Covers the extra setup, handoff, and coordination required when work happens at two homes."
+    },
+    mountRemovalOnly: {
+      name: "Existing TV mount / wall-hardware removal",
+      price: 50,
+      description: "Removing an existing TV mount and ordinary wall hardware after the TV is already down."
+    },
+    rackTeardown: {
+      small: { name: "Light wire-rack teardown", minutes: 60, price: 150, description: "A few racks / about 1 hour of teardown." },
+      medium: { name: "Medium wire-rack teardown", minutes: 120, price: 250, description: "Most of a room / about 2 hours of teardown." },
+      large: { name: "Large wire-rack teardown", minutes: 180, price: 350, description: "Whole-room / about 3 hours of teardown." }
+    },
+    bundleDiscount: {
+      name: "Two-home project bundle",
+      amount: 100,
+      minimumNewTvInstalls: 4
+    }
+  },
+
   // Discounts
   discounts: {
     multipleTvs: {
