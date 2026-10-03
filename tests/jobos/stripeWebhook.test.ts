@@ -23,6 +23,23 @@ async function invoiceFixture() {
   return { store, svc, job, invoice };
 }
 
+function paidEvent(invoice: { id: string; invoiceNumber: string; totalCents: number }, sessionId: string, eventId: string): StripeCheckoutEvent {
+  return {
+    id: eventId,
+    type: "checkout.session.completed",
+    created: 1_800_000_000,
+    data: {
+      object: {
+        id: sessionId,
+        payment_status: "paid",
+        amount_total: invoice.totalCents,
+        currency: "usd",
+        metadata: { invoice_id: invoice.id, invoice_number: invoice.invoiceNumber },
+      },
+    },
+  };
+}
+
 test("Stripe webhook signature uses the exact raw body and rejects stale/tampered events", () => {
   const secret = "whsec_test_only";
   const timestamp = 1_800_000_000;
@@ -45,20 +62,7 @@ test("Stripe webhook signature uses the exact raw body and rejects stale/tampere
 test("successful Stripe Checkout records one card payment, marks the invoice/job paid, and retries are idempotent", async () => {
   const { store, svc, job, invoice } = await invoiceFixture();
   const sessionId = "cs_live_pptv_test_123";
-  const event: StripeCheckoutEvent = {
-    id: "evt_paid_1",
-    type: "checkout.session.completed",
-    created: 1_800_000_000,
-    data: {
-      object: {
-        id: sessionId,
-        payment_status: "paid",
-        amount_total: invoice.totalCents,
-        currency: "usd",
-        metadata: { invoice_id: invoice.id, invoice_number: invoice.invoiceNumber },
-      },
-    },
-  };
+  const event = paidEvent(invoice, sessionId, "evt_paid_1");
 
   const first = await reconcileStripeCheckoutEvent(store, event);
   assert.equal(first.status, "recorded");
@@ -72,6 +76,23 @@ test("successful Stripe Checkout records one card payment, marks the invoice/job
   const retry = await reconcileStripeCheckoutEvent(store, { ...event, id: "evt_paid_retry" });
   assert.equal(retry.status, "duplicate");
   assert.equal((await svc.jobDetail(job.id)).payments.length, 1);
+});
+
+test("concurrent duplicate deliveries for one Checkout Session create exactly one payment", async () => {
+  const { store, svc, job, invoice } = await invoiceFixture();
+  const sessionId = "cs_live_concurrent_123";
+  const [a, b, c] = await Promise.all([
+    reconcileStripeCheckoutEvent(store, paidEvent(invoice, sessionId, "evt_concurrent_a")),
+    reconcileStripeCheckoutEvent(store, paidEvent(invoice, sessionId, "evt_concurrent_b")),
+    reconcileStripeCheckoutEvent(store, paidEvent(invoice, sessionId, "evt_concurrent_c")),
+  ]);
+
+  assert.equal([a, b, c].filter((result) => result.status === "recorded").length, 1);
+  assert.equal([a, b, c].filter((result) => result.status === "duplicate").length, 2);
+  const detail = await svc.jobDetail(job.id);
+  assert.equal(detail.payments.length, 1);
+  assert.equal(detail.invoices[0]!.paidCents, invoice.totalCents);
+  assert.equal(detail.job.status, "paid");
 });
 
 test("unpaid or mismatched Stripe sessions never mutate the invoice", async () => {
