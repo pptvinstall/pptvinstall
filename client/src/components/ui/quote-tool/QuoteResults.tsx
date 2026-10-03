@@ -17,6 +17,33 @@ import QuotePackages from "@/components/ui/quote-tool/QuotePackages";
 type PaymentOptions = { labels: string[]; hostedCheckout: boolean; provider: string | null };
 const providerLabel = (provider: string | null) => provider === "stripe" ? "Stripe" : provider === "square" ? "Square" : "secure checkout";
 
+function PaymentPanel({ paymentOptions }: { paymentOptions: PaymentOptions }) {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="rounded-xl bg-green-50 p-2 text-green-700">
+          <ShieldCheck className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Payment options</p>
+          <h5 className="mt-1 text-lg font-extrabold text-slate-900">Pick what works best after your quote is approved</h5>
+          <p className="mt-2 text-sm font-semibold text-slate-800">{paymentOptions.labels.join(" · ")}</p>
+          {paymentOptions.hostedCheckout ? (
+            <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-green-800">Secure online checkout: {providerLabel(paymentOptions.provider)}</p>
+              <p className="mt-1 text-xs leading-5 text-green-900">Card and eligible wallet payments open on the provider&apos;s hosted page. PPTVInstall never collects or stores your raw card number.</p>
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs leading-5 text-slate-600">Cash, Zelle and Apple Pay are available now. Secure card checkout will appear here automatically once the hosted payment provider is connected.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuoteResults() {
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions>({ labels: ["Cash", "Zelle", "Apple Pay"], hostedCheckout: false, provider: null });
   useEffect(() => {
@@ -106,7 +133,7 @@ export default function QuoteResults() {
         <div className="rounded-[28px] bg-slate-900 p-5 text-white shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Estimated Total</p>
           <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
-          <p className="mt-2 text-sm text-slate-300">Custom-quote items are confirmed before booking and are not included until priced.</p>
+          <p className="mt-2 text-sm text-slate-300">This is the whole-project estimate based on the work selected below.</p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Travel / Route</p>
@@ -119,6 +146,8 @@ export default function QuoteResults() {
           <p className="mt-2 text-sm text-slate-500">{promoCodeInput ? "Promo will be verified before final payment." : "No promo applied right now."}</p>
         </div>
       </div>
+
+      <PaymentPanel paymentOptions={paymentOptions} />
 
       {reviewFlags.length > 0 ? reviewFlags.map((flag) => (
         <Alert key={flag} className="border-amber-200 bg-amber-50 text-amber-900">
@@ -143,32 +172,40 @@ export default function QuoteResults() {
 
       {priceSource === "catalog" ? <QuotePackages /> : null}
 
-      <div className="space-y-4">
-        {reviewGroups.map((group) => (
-          <div key={group.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h4 className="text-lg font-bold text-slate-900">{group.title}</h4>
-              {group.subtitle ? <p className="text-sm text-slate-500">{group.subtitle}</p> : null}
-            </div>
-            <div className="space-y-3">
-              {group.items.map((item) => (
-                <div key={`${group.title}-${item.name}-${item.lineTotal}`} className="flex items-start justify-between gap-4 text-sm">
-                  <div className="text-slate-700">{item.qty && item.qty > 1 ? `${item.qty}x ${item.name}` : item.name}</div>
-                  <div className={cn("shrink-0 font-semibold", item.lineTotal < 0 ? "text-green-700" : "text-slate-900")}>
-                    {item.lineTotal === 0 && /custom quote|scope review|assessment required/i.test(item.name)
-                      ? "Custom"
-                      : <>{item.lineTotal < 0 ? "-" : ""}{formatPrice(Math.abs(item.lineTotal))}</>}
+      <section aria-labelledby="itemized-estimate-heading" className="space-y-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Itemized estimate</p>
+          <h5 id="itemized-estimate-heading" className="mt-1 text-xl font-extrabold text-slate-900">What you&apos;re paying for</h5>
+          <p className="mt-1 text-sm text-slate-500">Every priced line below rolls into the whole-project total above.</p>
+        </div>
+
+        <div className="space-y-4">
+          {reviewGroups.map((group) => (
+            <div key={group.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4">
+                <h4 className="text-lg font-bold text-slate-900">{group.title}</h4>
+                {group.subtitle ? <p className="text-sm text-slate-500">{group.subtitle}</p> : null}
+              </div>
+              <div className="space-y-3">
+                {group.items.map((item) => (
+                  <div key={`${group.title}-${item.name}-${item.lineTotal}`} className="flex items-start justify-between gap-4 text-sm">
+                    <div className="text-slate-700">{item.qty && item.qty > 1 ? `${item.qty}x ${item.name}` : item.name}</div>
+                    <div className={cn("shrink-0 font-semibold", item.lineTotal < 0 ? "text-green-700" : "text-slate-900")}>
+                      {item.lineTotal === 0 && /custom quote|scope review|assessment required/i.test(item.name)
+                        ? "Custom"
+                        : <>{item.lineTotal < 0 ? "-" : ""}{formatPrice(Math.abs(item.lineTotal))}</>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-bold">
+                <span className="text-slate-500">Subtotal</span>
+                <span className="text-slate-900">{formatPrice(group.subtotal)}</span>
+              </div>
             </div>
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-bold">
-              <span className="text-slate-500">Subtotal</span>
-              <span className="text-slate-900">{formatPrice(group.subtotal)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
       <div className="rounded-[28px] bg-slate-900 p-5 text-white">
         <div className="flex items-center justify-between text-sm">
@@ -206,22 +243,6 @@ export default function QuoteResults() {
           Promo available this season: <strong>{seasonalTheme.promoCode}</strong>. We&apos;ll verify it during booking rather than auto-applying it here.
         </div>
       ) : null}
-
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-green-700" />
-          <p className="text-sm font-bold text-slate-900">How you can pay</p>
-        </div>
-        <p className="mt-2 text-sm font-medium text-slate-800">{paymentOptions.labels.join(" · ")}</p>
-        {paymentOptions.hostedCheckout ? (
-          <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-green-800">Secure online checkout: {providerLabel(paymentOptions.provider)}</p>
-            <p className="mt-1 text-xs leading-5 text-green-900">Card and eligible wallet payments open on the provider's hosted page. PPTVInstall never collects or stores your raw card number.</p>
-          </div>
-        ) : (
-          <p className="mt-2 text-xs text-slate-500">Cash, Zelle and Apple Pay are available. Secure card checkout appears once the hosted payment provider is connected.</p>
-        )}
-      </div>
 
       <p className="text-xs font-medium text-slate-500">
         Final pricing may vary for complex installs. We confirm anything unusual before work begins.
