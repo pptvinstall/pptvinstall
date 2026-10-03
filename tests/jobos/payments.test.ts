@@ -36,8 +36,8 @@ test("Stripe is preferred and creates an amount-specific hosted Checkout Session
   assert.equal(body.get("line_items[0][price_data][unit_amount]"), "125000");
   assert.equal(body.get("line_items[0][price_data][currency]"), "usd");
   assert.equal(body.get("metadata[invoice_id]"), "11111111-1111-4111-8111-111111111111");
-  assert.equal(body.get("success_url"), "https://pptvinstall.com/?payment=success");
-  assert.equal(body.get("cancel_url"), "https://pptvinstall.com/?payment=cancelled");
+  assert.equal(body.get("success_url"), "https://pptvinstall.com/payment/success?session_id={CHECKOUT_SESSION_ID}");
+  assert.equal(body.get("cancel_url"), "https://pptvinstall.com/payment/cancelled");
   assert.equal(String(request!.init.body).includes("card_number"), false);
 });
 

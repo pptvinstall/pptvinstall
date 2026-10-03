@@ -28,6 +28,7 @@ const Gallery = lazy(() => import("@/pages/gallery"));
 const Booking = lazy(() => import("@/pages/booking"));
 const QuotePage = lazy(() => import("@/pages/quote"));
 const Confirmation = lazy(() => import("@/pages/Confirmation"));
+const PaymentStatusPage = lazy(() => import("@/pages/PaymentStatus"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const AdminBookings = lazy(() => import("@/pages/admin-bookings"));
 const JobBuilder = lazy(() => import("@/pages/jobos/JobBuilder"));
@@ -70,10 +71,12 @@ function Router() {
         <Route path="/contact" component={Contact} />
         <Route path="/faq" component={FAQ} />
 
-        {/* Booking Flow */}
+        {/* Booking / Quote / Payment Flow */}
         <Route path="/booking" component={Booking} />
         <Route path="/quote" component={QuotePage} />
         <Route path="/confirmation" component={Confirmation} />
+        <Route path="/payment/success" component={PaymentStatusPage} />
+        <Route path="/payment/cancelled" component={PaymentStatusPage} />
 
         {/* Owner Dashboard */}
         <Route path="/dashboard" component={Dashboard} />

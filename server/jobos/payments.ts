@@ -42,8 +42,8 @@ function createStripeCheckoutProvider(env: NodeJS.ProcessEnv, fetchImpl: FetchLi
 
       const body = new URLSearchParams();
       body.set("mode", "payment");
-      body.set("success_url", `${baseUrl}/?payment=success`);
-      body.set("cancel_url", `${baseUrl}/?payment=cancelled`);
+      body.set("success_url", `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`);
+      body.set("cancel_url", `${baseUrl}/payment/cancelled`);
       body.set("client_reference_id", input.invoiceId);
       body.set("metadata[invoice_id]", input.invoiceId);
       body.set("metadata[invoice_number]", input.invoiceNumber);

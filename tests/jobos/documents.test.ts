@@ -9,10 +9,10 @@ import { DbJobOsStore } from "../../server/jobos/dbStore";
 import { MemoryJobOsStore } from "../../server/jobos/memoryStore";
 import { JobOsService } from "../../server/jobos/service";
 import { NotFoundError, type JobOsStore } from "../../server/jobos/store";
-import { documentFilename, formatMoney, renderDocumentPdf } from "../../server/jobos/pdf/renderDocument";
+import { documentFilename, formatDate, formatMoney, renderDocumentPdf } from "../../server/jobos/pdf/renderDocument";
 import { extractPdfText, textWidth, wrapText } from "../../server/jobos/pdf/pdfWriter";
 import { DEFAULT_ECONOMICS_CONFIG, InternalDataLeakError, findInternalKeys } from "../../shared/pricing";
-import { DocumentNotAvailableError, assertDocumentSafe, type CustomerDocument } from "../../shared/jobos/documents";
+import { DocumentNotAvailableError, addDays, assertDocumentSafe, localDate, type CustomerDocument } from "../../shared/jobos/documents";
 import { createTestDb } from "./pg";
 
 // Customer documents (estimate, invoice, paid receipt) are built from canonical records and rendered
@@ -69,11 +69,12 @@ for (const [name, makeStore] of impls) {
     const svc = fresh();
     const { quote, version } = await quoted(svc);
     const doc = await svc.estimateDocument(quote.id);
+    const issuedDate = localDate(version.createdAt);
     assert.equal(doc.kind, "estimate");
     assert.equal(doc.heading, "Estimate");
     assert.equal(doc.number, "EST-1001");
-    assert.equal(doc.issuedDate, "2026-10-02");
-    assert.equal(doc.expiresDate, "2026-11-01", "valid for the configured 30 days");
+    assert.equal(doc.issuedDate, issuedDate);
+    assert.equal(doc.expiresDate, addDays(issuedDate, 30), "valid for the configured 30 days");
     assert.equal(doc.customer.name, "Jordan Example");
     assert.deepEqual(doc.customer.addressLines, ["123 Peachtree St NE", "Atlanta, GA 30303"]);
     assert.equal(doc.customer.phone, "404-555-0100");
@@ -230,7 +231,7 @@ for (const [name, makeStore] of impls) {
     const next = await quoted(svc);
     const nextDoc = await svc.estimateDocument(next.quote.id);
     assert.equal(nextDoc.taxLabel, "Sales tax");
-    assert.equal(nextDoc.expiresDate, "2026-10-09");
+    assert.equal(nextDoc.expiresDate, addDays(localDate(next.version.createdAt), 7));
     assert.ok(nextDoc.depositCents! > 0);
     assert.deepEqual(nextDoc.terms, config.documents.terms);
   });
@@ -256,7 +257,7 @@ test("PDFs: expected customer fields, file names, US Letter, deterministic, vali
   assert.ok(pdf.toString("latin1").includes("/MediaBox [0 0 612 792]"), "US Letter");
   assert.equal(documentFilename(est), "PPTVInstall-Estimate-1001.pdf");
   const text = pdfText(pdf);
-  for (const expected of ["Estimate", "EST-1001", "Picture Perfect TV Install", "404-702-4748", "Jordan Example", "123 Peachtree St NE", "Atlanta, GA 30303", "Living room TVs (synthetic)", "Oct 2, 2026", "Nov 1, 2026", "Total", formatMoney(version.customerAmountCents), "Terms"]) {
+  for (const expected of ["Estimate", "EST-1001", "Picture Perfect TV Install", "404-702-4748", "Jordan Example", "123 Peachtree St NE", "Atlanta, GA 30303", "Living room TVs (synthetic)", formatDate(est.issuedDate), formatDate(est.expiresDate!), "Total", formatMoney(version.customerAmountCents), "Terms"]) {
     assert.ok(text.toLowerCase().includes(expected.toLowerCase()), `estimate PDF shows ${expected}`);
   }
   assert.ok(!INTERNAL_WORDS.test(text), `no internal economics wording: ${text.match(INTERNAL_WORDS)?.[0]}`);

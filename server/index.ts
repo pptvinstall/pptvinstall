@@ -2,12 +2,14 @@ import "./env";
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import { checkDatabaseConnection } from "./db";
+import { checkDatabaseConnection, db } from "./db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { alertOnError } from "./services/errorAlertService";
 import { startScheduler } from "./services/schedulerService";
 import { assertSafeBoot } from "./outbound";
+import { DbJobOsStore } from "./jobos/dbStore";
+import { reconcileStripeCheckoutEvent, StripeWebhookError, verifyStripeWebhook } from "./jobos/stripeWebhook";
 
 // Staging safety: refuse to boot against the production DB or without admin auth.
 assertSafeBoot();
@@ -19,7 +21,15 @@ const app = express();
 app.set("trust proxy", 1);
 
 app.use(compression());
-app.use(express.json({ limit: "256kb" }));
+app.use(express.json({
+  limit: "256kb",
+  verify: (req, _res, buf) => {
+    // Stripe signatures cover the exact request bytes, so keep only this route's raw body.
+    if ((req.url ?? "").split("?", 1)[0] === "/api/stripe/webhook") {
+      (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: false, limit: "256kb" }));
 
 // Lightweight liveness endpoint for the hosting platform.
@@ -74,6 +84,35 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// Stripe is the only automated payment source. Cash/Zelle/manual Apple Pay remain owner-recorded.
+// The event signature is verified before any invoice or payment record is touched.
+app.post("/api/stripe/webhook", async (req, res) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim() || "";
+  if (!secret) return res.status(503).json({ message: "Stripe webhook is not configured." });
+
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+  const signature = req.header("stripe-signature")?.trim() || "";
+  if (!rawBody || !signature) return res.status(400).json({ message: "Invalid Stripe webhook." });
+
+  try {
+    const event = verifyStripeWebhook(rawBody, signature, secret);
+    const result = await reconcileStripeCheckoutEvent(new DbJobOsStore(db), event);
+    if (result.status === "review") {
+      console.warn(`[stripe] payment reconciliation needs review event=${result.eventId} reason=${result.reason}`);
+    } else if (result.status === "recorded") {
+      console.info(`[stripe] payment reconciled event=${result.eventId} invoice=${result.invoiceId}`);
+    }
+    return res.status(200).json({ received: true, status: result.status });
+  } catch (error) {
+    if (error instanceof StripeWebhookError) {
+      console.warn(`[stripe] webhook rejected code=${error.code}`);
+      return res.status(400).json({ message: "Invalid Stripe webhook." });
+    }
+    console.error("[stripe] webhook processing failed", error instanceof Error ? error.name : "unknown_error");
+    return res.status(500).json({ message: "Stripe webhook processing failed." });
+  }
 });
 
 (async () => {
