@@ -16,12 +16,20 @@ export default function QuotePackages() {
 
   if (quoteSourceMode !== "form" || !quote || packages.length < 2) return null;
 
+  const isMoveProject = Boolean(formState.moveProject?.enabled);
+
   return (
-    <section aria-labelledby="packages-heading" className="space-y-3">
-      <div>
-        <h5 id="packages-heading" className="text-lg font-bold text-slate-900">Choose how clean you want it</h5>
-        <p className="text-sm text-slate-500">{formState.moveProject?.enabled ? "Each option keeps your previous-home work and move scope included; only the TV setup level changes." : "Same installer, same visit. Each option lists exactly what is included."}</p>
+    <section aria-labelledby="packages-heading" className="space-y-4">
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Compare setup options</p>
+        <h5 id="packages-heading" className="mt-1 text-xl font-extrabold text-slate-900">Choose the finish you want</h5>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          {isMoveProject
+            ? "Every price below is the total for your entire two-home project. Previous-home removal, teardown, coordination, and the rest of your move scope stay included — only the new-TV setup level changes."
+            : "Every price below is the total for this job. Same installer and visit — only the TV setup level changes."}
+        </p>
       </div>
+
       <div className="grid gap-3 md:grid-cols-3">
         {packages.map((pkg) => {
           const selected = Math.round(quote.total * 100) === pkg.totalCents;
@@ -30,13 +38,28 @@ export default function QuotePackages() {
               key={pkg.id}
               className={cn("flex flex-col rounded-[24px] border bg-white p-4 shadow-sm", selected ? "border-blue-600 ring-2 ring-blue-100" : "border-slate-200")}
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="text-base font-bold text-slate-900">{pkg.name}</p>
-                <p className="text-xl font-extrabold text-slate-900">{formatPrice(pkg.totalCents / 100)}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-bold text-slate-900">{pkg.name}</p>
+                  <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Whole-project total</p>
+                </div>
+                {selected ? (
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">Current</span>
+                ) : null}
               </div>
-              <p className="mt-1 text-sm text-slate-500">{pkg.summary}</p>
-              <ul className="mt-3 flex-1 space-y-1.5 text-sm text-slate-700">
-                {pkg.components.map((component, index) => (
+
+              <p className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{formatPrice(pkg.totalCents / 100)}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{pkg.summary}</p>
+
+              {isMoveProject ? (
+                <div className="mt-3 rounded-xl border border-green-100 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+                  Previous-home work + move scope included
+                </div>
+              ) : null}
+
+              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">Included in this total</p>
+              <ul className="mt-2 flex-1 space-y-1.5 text-sm text-slate-700">
+                {pkg.components.slice(0, 7).map((component, index) => (
                   <li key={`${component.label}-${index}`} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden />
                     <span className="flex-1">{component.label}</span>
@@ -44,6 +67,10 @@ export default function QuotePackages() {
                   </li>
                 ))}
               </ul>
+              {pkg.components.length > 7 ? (
+                <p className="mt-2 text-xs font-medium text-slate-500">+ {pkg.components.length - 7} more line {pkg.components.length - 7 === 1 ? "item" : "items"} in the itemized estimate below.</p>
+              ) : null}
+
               <Button
                 type="button"
                 variant={selected ? "secondary" : "outline"}
