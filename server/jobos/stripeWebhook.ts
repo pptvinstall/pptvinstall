@@ -72,6 +72,22 @@ export type StripeReconcileResult =
   | { status: "review"; eventId: string; sessionId: string; invoiceId?: string; reason: string }
   | { status: "recorded"; eventId: string; sessionId: string; invoiceId: string; amountCents: number; invoiceStatus: string };
 
+// Render currently runs this service as one Node process. Stripe can retry or deliver the same
+// Checkout Session concurrently, so serialize mutation for a session while the persistent payment
+// reference handles later retries/restarts. This keeps the existing schema migration-free.
+const sessionQueues = new Map<string, Promise<unknown>>();
+
+async function serializeSession<T>(sessionId: string, work: () => Promise<T>): Promise<T> {
+  const previous = sessionQueues.get(sessionId) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(work);
+  sessionQueues.set(sessionId, run);
+  try {
+    return await run;
+  } finally {
+    if (sessionQueues.get(sessionId) === run) sessionQueues.delete(sessionId);
+  }
+}
+
 /**
  * Reconcile only successful Stripe Checkout Sessions created for PPTVInstall invoices.
  * Returns 2xx-safe review results for mismatches so Stripe retries cannot double-credit an invoice.
@@ -88,44 +104,46 @@ export async function reconcileStripeCheckoutEvent(store: JobOsStore, event: Str
     return { status: "pending", eventId: event.id, sessionId: session.id };
   }
 
-  const invoiceId = session.metadata.invoice_id?.trim() || "";
-  const invoiceNumber = session.metadata.invoice_number?.trim() || "";
-  if (!invoiceId) return { status: "review", eventId: event.id, sessionId: session.id, reason: "missing_invoice_id" };
+  return serializeSession(session.id, async () => {
+    const invoiceId = session.metadata.invoice_id?.trim() || "";
+    const invoiceNumber = session.metadata.invoice_number?.trim() || "";
+    if (!invoiceId) return { status: "review", eventId: event.id, sessionId: session.id, reason: "missing_invoice_id" };
 
-  const invoice = await store.getInvoice(invoiceId);
-  if (!invoice) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invoice_not_found" };
-  if (invoiceNumber && invoice.invoiceNumber !== invoiceNumber) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invoice_number_mismatch" };
-  if ((session.currency ?? "").toLowerCase() !== "usd") return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "currency_mismatch" };
-  if (!Number.isInteger(session.amount_total) || !session.amount_total || session.amount_total <= 0) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invalid_amount" };
+    const invoice = await store.getInvoice(invoiceId);
+    if (!invoice) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invoice_not_found" };
+    if (invoiceNumber && invoice.invoiceNumber !== invoiceNumber) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invoice_number_mismatch" };
+    if ((session.currency ?? "").toLowerCase() !== "usd") return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "currency_mismatch" };
+    if (!Number.isInteger(session.amount_total) || !session.amount_total || session.amount_total <= 0) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId, reason: "invalid_amount" };
 
-  const reference = `stripe:checkout:${session.id}`.slice(0, 80);
-  const existing = await store.listPayments(invoice.id);
-  if (existing.some((payment) => payment.reference === reference)) {
-    return { status: "duplicate", eventId: event.id, sessionId: session.id, invoiceId: invoice.id };
-  }
+    const reference = `stripe:checkout:${session.id}`.slice(0, 80);
+    const existing = await store.listPayments(invoice.id);
+    if (existing.some((payment) => payment.reference === reference)) {
+      return { status: "duplicate", eventId: event.id, sessionId: session.id, invoiceId: invoice.id };
+    }
 
-  const balanceCents = Math.max(0, invoice.totalCents - invoice.paidCents);
-  if (invoice.status === "void") return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "invoice_void" };
-  if (invoice.status === "paid" || balanceCents <= 0) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "invoice_already_paid" };
-  if (session.amount_total !== balanceCents) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "amount_mismatch" };
+    const balanceCents = Math.max(0, invoice.totalCents - invoice.paidCents);
+    if (invoice.status === "void") return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "invoice_void" };
+    if (invoice.status === "paid" || balanceCents <= 0) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "invoice_already_paid" };
+    if (session.amount_total !== balanceCents) return { status: "review", eventId: event.id, sessionId: session.id, invoiceId: invoice.id, reason: "amount_mismatch" };
 
-  assertPaymentAllowed({ status: invoice.status, balanceCents, amountCents: session.amount_total });
-  const receivedAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString();
-  const result = await store.recordPayment(invoice.id, {
-    amountCents: session.amount_total,
-    method: "card",
-    tipCents: 0,
-    reference,
-    receivedAt,
+    assertPaymentAllowed({ status: invoice.status, balanceCents, amountCents: session.amount_total });
+    const receivedAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString();
+    const result = await store.recordPayment(invoice.id, {
+      amountCents: session.amount_total,
+      method: "card",
+      tipCents: 0,
+      reference,
+      receivedAt,
+    });
+    if (result.invoice.status === "paid") await store.updateJob(invoice.jobId, { status: "paid" });
+
+    return {
+      status: "recorded",
+      eventId: event.id,
+      sessionId: session.id,
+      invoiceId: invoice.id,
+      amountCents: session.amount_total,
+      invoiceStatus: result.invoice.status,
+    };
   });
-  if (result.invoice.status === "paid") await store.updateJob(invoice.jobId, { status: "paid" });
-
-  return {
-    status: "recorded",
-    eventId: event.id,
-    sessionId: session.id,
-    invoiceId: invoice.id,
-    amountCents: session.amount_total,
-    invoiceStatus: result.invoice.status,
-  };
 }
