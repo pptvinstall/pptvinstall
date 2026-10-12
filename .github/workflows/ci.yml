@@ -43,6 +43,34 @@ jobs:
             exit 1
           fi
 
+          # Gmail app passwords are 16 letters. Block values with that shape even
+          # when they are accidentally pasted into Markdown deployment guides.
+          if git grep -q -E '(GMAIL_APP_PASSWORD|EMAIL_PASS)=[a-z]{16}([[:space:]]|$)' -- .; then
+            echo "Possible literal Gmail app password found in tracked files."
+            exit 1
+          fi
+
+          # Runtime/admin credentials belong in Render/GitHub secrets, not tracked
+          # source files. Documentation may only use clearly recognizable placeholders.
+          admin_source_hits="$(git grep -n -E '^[[:space:]]*ADMIN_PASSWORD=[^[:space:]]+' -- . ':!*.md' ':!.env.example' ':!.github/workflows/ci.yml' || true)"
+          if [ -n "$admin_source_hits" ]; then
+            echo "Literal ADMIN_PASSWORD assignment found outside approved examples/docs."
+            echo "$admin_source_hits"
+            exit 1
+          fi
+
+          while IFS= read -r assignment; do
+            [ -z "$assignment" ] && continue
+            value="${assignment#*=}"
+            case "$value" in
+              YOUR_*|your_*|REPLACE_*|'<>'|'<'*'>'|'${'*'}') ;;
+              *)
+                echo "ADMIN_PASSWORD documentation value must be an obvious placeholder."
+                exit 1
+                ;;
+            esac
+          done < <(git grep -h -E '^[[:space:]]*ADMIN_PASSWORD=[^[:space:]]+' -- '*.md' || true)
+
       - name: Install dependencies
         run: npm ci
 
