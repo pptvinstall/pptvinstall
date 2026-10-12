@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { totalmem } from 'os';
 import { logger } from './services/loggingService';
 import { storage } from './storage';
 import { db } from './db';
@@ -26,6 +28,48 @@ export interface LaunchModeConfig {
   alertsEnabled: boolean;
   realTimeMonitoring: boolean;
   debugLogging: boolean;
+}
+
+function readPositiveNumber(path: string): number | null {
+  try {
+    const raw = readFileSync(path, 'utf8').trim();
+    if (!raw || raw === 'max') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function getMemoryPressure() {
+  const processMemory = process.memoryUsage();
+
+  // Render and most modern Linux hosts use cgroup v2. Those values represent
+  // the actual container budget, which is the signal that matters for OOM risk.
+  let usedBytes = readPositiveNumber('/sys/fs/cgroup/memory.current');
+  let totalBytes = readPositiveNumber('/sys/fs/cgroup/memory.max');
+
+  // Keep compatibility with cgroup v1 hosts.
+  if (!usedBytes || !totalBytes) {
+    usedBytes = readPositiveNumber('/sys/fs/cgroup/memory/memory.usage_in_bytes');
+    totalBytes = readPositiveNumber('/sys/fs/cgroup/memory/memory.limit_in_bytes');
+  }
+
+  // Local development and non-container hosts do not expose a cgroup limit.
+  // In that case use process RSS against host memory. RSS is intentionally used
+  // instead of heapUsed/heapTotal: V8 normally runs near the top of its currently
+  // allocated heap and grows/GCs it dynamically, so heap occupancy is not a
+  // reliable system-memory pressure signal.
+  if (!usedBytes || !totalBytes || totalBytes <= usedBytes) {
+    usedBytes = processMemory.rss;
+    totalBytes = totalmem();
+  }
+
+  const used = Math.max(1, Math.round(usedBytes / 1024 / 1024));
+  const total = Math.max(used, Math.round(totalBytes / 1024 / 1024));
+  const percentage = Math.min(100, Math.round((usedBytes / totalBytes) * 100));
+
+  return { used, total, percentage };
 }
 
 export class MonitoringService {
@@ -69,13 +113,9 @@ export class MonitoringService {
       logger.error('Email service health check failed:', error as Error);
     }
 
-    // Get memory usage
-    const memUsage = process.memoryUsage();
-    const memory = {
-      used: Math.round(memUsage.heapUsed / 1024 / 1024),
-      total: Math.round(memUsage.heapTotal / 1024 / 1024),
-      percentage: Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100)
-    };
+    // Measure actual container/process memory pressure. Using V8 heap occupancy
+    // here causes false degraded states because heapTotal expands dynamically.
+    const memory = getMemoryPressure();
 
     // Get active bookings count
     let activeBookings = 0;
