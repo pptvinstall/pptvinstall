@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import {
-  Apartment,
+  Building,
   Building2,
   CheckCircle2,
   Handshake,
@@ -21,7 +21,7 @@ const partnerTypes = [
   { icon: Home, title: "Realtors & apartment locators", copy: "Give buyers, renters and move-in clients a trusted local option for TVs, artwork and basic setup work." },
   { icon: Building2, title: "Property managers & communities", copy: "Use us for resident move-ins, turnover-related mounting, common-area displays and scheduled install days." },
   { icon: Users, title: "Senior living communities", copy: "Offer resident tech-help days for TV mounting, streaming-device setup, soundbars, pictures and simple home-tech support." },
-  { icon: Apartment, title: "Short-term rental operators", copy: "Get a local install partner for replacement TVs, streaming setups, wall mounting and repeat property work." },
+  { icon: Building, title: "Short-term rental operators", copy: "Get a local install partner for replacement TVs, streaming setups, wall mounting and repeat property work." },
   { icon: Store, title: "Designers, stagers & home-service pros", copy: "Hand off the technical finishing work while your team stays focused on the room, move or project." },
 ];
 
