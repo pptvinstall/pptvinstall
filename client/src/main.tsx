@@ -25,6 +25,7 @@ const Services = lazy(() => import("@/pages/services"));
 const Contact = lazy(() => import("@/pages/contact"));
 const FAQ = lazy(() => import("@/pages/faq"));
 const Gallery = lazy(() => import("@/pages/gallery"));
+const Partners = lazy(() => import("@/pages/partners"));
 const Booking = lazy(() => import("@/pages/booking"));
 const QuotePage = lazy(() => import("@/pages/quote"));
 const Confirmation = lazy(() => import("@/pages/Confirmation"));
@@ -41,7 +42,7 @@ const NotFoundPage = lazy(() => import("@/pages/not-found"));
 const CityPageComponent = lazy(() =>
   import("@/pages/city/CityPage").then((m) => ({ default: m.default })),
 );
-import { cityPages, getCityBySlug } from "@/data/city-pages";
+import { getCityBySlug } from "@/data/city-pages";
 
 function PageLoader() {
   return (
@@ -68,6 +69,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/services" component={Services} />
         <Route path="/gallery" component={Gallery} />
+        <Route path="/partners" component={Partners} />
         <Route path="/contact" component={Contact} />
         <Route path="/faq" component={FAQ} />
 
