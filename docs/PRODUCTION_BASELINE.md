@@ -6,12 +6,12 @@ Verified live on 2026-10-12 against `https://pptvinstall.com/healthz` and `https
 | --- | --- |
 | Canonical source repo | `pptvinstall/pptvinstall` |
 | Branch | `main` |
-| Live deployment SHA | `8b30663fdfe4d38319f458c6c973ad350a55d0f4` (`8b30663`) |
-| Live HEAD subject | "Add partner and referral landing page" |
-| Live SHA matches canonical `main`? | Yes |
+| Verified live deployment SHA | `908b4b36011d8a5bc26a1992203ebbe366722458` (`908b4b3`) |
+| Verified live change | `fix(monitoring): use real memory pressure signal` |
+| Live SHA matched canonical `main` at verification? | Yes |
 | Hosting | Render (confirmed by live response header `x-render-origin-server: Render`) |
 | Domain | `pptvinstall.com` |
-| Live health | `/healthz` returned HTTP 200; `/api/health` returned HTTP 200 on verification |
+| Live health | `/healthz` HTTP 200; `/api/health` HTTP 200 with `status: healthy` |
 
 ## Source-of-truth rule
 
@@ -21,9 +21,10 @@ The former `consolidation/job-os` branch has no unique commits relative to `main
 
 ## What was verified live
 
-- Render is serving canonical commit `8b30663fdfe4d38319f458c6c973ad350a55d0f4`.
+- Render served canonical commit `908b4b36011d8a5bc26a1992203ebbe366722458` after PR #12 merged.
 - `GET /healthz` returned HTTP 200 with `status: ok`.
-- `GET /api/health` returned HTTP 200 and reported production mode, database available, email configured, and deployment SHA `8b30663fdfe4d38319f458c6c973ad350a55d0f4`.
+- `GET /api/health` returned HTTP 200 with `status: healthy`, database available, email configured, and the expected deployment SHA.
+- Memory reporting changed from misleading V8 heap occupancy to actual container pressure. On the verified deployment it reported approximately 99 MB used of a 512 MB container budget (19%).
 - The live service is behind Cloudflare and Render.
 
 ## What was verified from source
@@ -34,11 +35,11 @@ The former `consolidation/job-os` branch has no unique commits relative to `main
 - Database uses PostgreSQL with Drizzle.
 - Sensitive mail/database/admin values are represented as environment variables / non-synced Render secrets in current source rather than literal active credentials.
 - Health endpoints and smoke checks are present.
+- PR #12 passed CI (type-check, pricing regression tests, Job OS tests, and build) before merge.
 
 ## Remaining operational cautions
 
-- Live `/api/health` reported `status: degraded` during the 2026-10-12 verification because its process-memory health calculation was at 94%. `/healthz` remained healthy and the service was serving traffic. Treat this as an observability/performance follow-up rather than evidence that production is offline.
-- A credential previously appeared in public Git history. Current source uses environment variables, but any credential ever committed publicly must be treated as compromised and rotated outside Git.
+- Credentials previously appeared in public Git history. Current source uses environment variables, but any credential ever committed publicly must be treated as compromised and rotated outside Git. Track completion in issue #13 without pasting replacement secrets into GitHub.
 - Live database contents, secret values, provider account state, and third-party delivery behavior are intentionally not recorded in this document.
 
 ## Baseline rule
