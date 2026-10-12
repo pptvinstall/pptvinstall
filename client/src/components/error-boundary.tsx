@@ -36,9 +36,10 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-24">
           <div className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white p-6 text-center shadow-sm md:p-8">
-            <h2 className="text-2xl font-extrabold text-slate-900">Something went wrong, but we can still help.</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">Picture Perfect TV Install</p>
+            <h1 className="mt-3 text-2xl font-extrabold text-slate-900">Atlanta TV mounting & installation — booking is still available.</h1>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
-              The page hit a temporary issue. Call, text, or jump back into booking and we&apos;ll get your install scheduled.
+              We&apos;re having trouble loading this page, but you can still call, text, get a quote, or book professional TV mounting across Metro Atlanta.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <a href="tel:4047024748" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-500">
@@ -48,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Text 404-702-4748
               </a>
               <a href="/booking" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-900 transition-colors hover:bg-slate-50">
-                Go to Booking
+                Book Installation
               </a>
               <a href="/quote" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-900 transition-colors hover:bg-slate-50">
                 Get a Quote
