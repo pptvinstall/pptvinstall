@@ -28,13 +28,16 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-800 bg-slate-900 py-12 text-slate-300">
+    <footer className="border-t border-slate-800 bg-slate-900 pb-28 pt-12 text-slate-300 md:pb-12">
       <div className="container mx-auto px-4">
         <div className="grid gap-10 md:grid-cols-3">
           <div className="space-y-4">
             <Logo variant="light" />
-            <p className="text-sm text-slate-400">
+            <p className="text-sm leading-6 text-slate-400">
               TV mounting in Atlanta, wire concealment, fireplace installs, and smart home setup across Midtown, Buckhead, Decatur, Marietta, Alpharetta, Roswell, Lawrenceville, and nearby Metro Atlanta areas.
+            </p>
+            <p className="text-xs leading-5 text-slate-500">
+              Standard TV mounting starts at $100. Final pricing depends on the wall, placement, TV setup, and selected add-ons.
             </p>
           </div>
 
@@ -43,6 +46,7 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li><Link href="/services" className="hover:text-blue-400">Services</Link></li>
               <li><Link href="/quote" className="hover:text-blue-400">Get a Quote</Link></li>
+              <li><Link href="/booking" className="hover:text-blue-400">Book Installation</Link></li>
               <li><Link href="/gallery" className="hover:text-blue-400">Our Work</Link></li>
               <li><Link href="/partners" className="hover:text-blue-400">Partners & Referrals</Link></li>
               <li><Link href="/faq" className="hover:text-blue-400">FAQ</Link></li>
@@ -81,7 +85,7 @@ export default function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={social.label}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-800 text-slate-200 transition-all hover:scale-105 hover:bg-blue-600 hover:text-white"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-800 text-slate-200 transition-all hover:scale-105 hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                     >
                       <Icon />
                     </a>
