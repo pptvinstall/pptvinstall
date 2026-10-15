@@ -191,7 +191,7 @@ export function getTravelContext(zip: string): {
 
   const feeLabel = tier === "out_of_range"
     ? "We travel to you — exact fuel is confirmed from the actual route"
-    : fee > 0
+    : typeof fee === "number" && fee > 0
       ? `Estimated fuel travel: $${fee}`
       : "Local travel included";
 
