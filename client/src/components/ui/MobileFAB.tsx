@@ -1,74 +1,55 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
-import { AnimatePresence, motion } from "framer-motion";
-import { MessageSquare, Phone, Sparkles } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { CalendarDays, MessageSquare, Phone, Sparkles } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+const PHONE_HREF = "4047024748";
 
 export default function MobileFAB() {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [location] = useLocation();
+  const isFocusedFlow =
+    location.startsWith("/quote") ||
+    location.startsWith("/booking") ||
+    location.startsWith("/confirmation") ||
+    location.startsWith("/payment") ||
+    location.startsWith("/q/");
 
-  useEffect(() => {
-    function handlePointer(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    if (open) {
-      document.addEventListener("mousedown", handlePointer);
-    }
-
-    return () => document.removeEventListener("mousedown", handlePointer);
-  }, [open]);
-
-  const actions = [
-    { label: "Quote", href: "/quote", icon: Sparkles, type: "link" as const },
-    { label: "Call", href: "tel:4047024748", icon: Phone, type: "anchor" as const },
-    { label: "Text", href: "sms:4047024748", icon: MessageSquare, type: "anchor" as const },
-  ];
+  if (isFocusedFlow) return null;
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-50 md:hidden">
-      <AnimatePresence>
-        {open ? (
-          <motion.div initial="hidden" animate="show" exit="hidden" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } } }} className="mb-3 flex flex-col items-end gap-3">
-            {actions.map((action) => {
-              const content = (
-                <motion.div
-                  key={action.label}
-                  variants={{ hidden: { opacity: 0, y: 8, scale: 0.96 }, show: { opacity: 1, y: 0, scale: 1 } }}
-                  className="flex items-center gap-3"
-                >
-                  <span className="rounded-full bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-lg">{action.label}</span>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-900 shadow-lg">
-                    <action.icon className="h-5 w-5" />
-                  </div>
-                </motion.div>
-              );
-
-              if (action.type === "link") {
-                return (
-                  <Link key={action.label} href={action.href}>
-                    <button type="button" onClick={() => setOpen(false)}>{content}</button>
-                  </Link>
-                );
-              }
-
-              return (
-                <a key={action.label} href={action.href} onClick={() => setOpen(false)}>
-                  {content}
-                </a>
-              );
-            })}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      <Button type="button" size="icon" onClick={() => setOpen((current) => !current)} className="h-14 w-14 rounded-full bg-blue-600 text-white shadow-2xl hover:bg-blue-500">
-        <Phone className="h-6 w-6" />
-      </Button>
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+        <Link
+          href="/quote"
+          className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl bg-blue-600 px-2 text-[11px] font-extrabold text-white"
+          aria-label="Get an instant quote"
+        >
+          <Sparkles className="h-5 w-5" />
+          Quote
+        </Link>
+        <Link
+          href="/booking"
+          className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-extrabold text-slate-800 transition hover:bg-slate-100"
+          aria-label="Book an installation"
+        >
+          <CalendarDays className="h-5 w-5 text-slate-600" />
+          Book
+        </Link>
+        <a
+          href={`tel:${PHONE_HREF}`}
+          className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-extrabold text-slate-800 transition hover:bg-slate-100"
+          aria-label="Call Picture Perfect TV Install"
+        >
+          <Phone className="h-5 w-5 text-slate-600" />
+          Call
+        </a>
+        <a
+          href={`sms:${PHONE_HREF}?body=Hi! I'm interested in a TV installation.`}
+          className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-extrabold text-slate-800 transition hover:bg-slate-100"
+          aria-label="Text Picture Perfect TV Install"
+        >
+          <MessageSquare className="h-5 w-5 text-slate-600" />
+          Text
+        </a>
+      </div>
     </div>
   );
 }
