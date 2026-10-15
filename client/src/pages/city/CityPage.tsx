@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "wouter";
 import { MapPin, CheckCircle2, Star, Phone, CalendarDays, Tv, Camera, Bell, Plug, Speaker, Wrench, Smartphone, Trash2 } from "lucide-react";
 
@@ -33,18 +32,6 @@ const TRUST_POINTS = [
 type Props = { city: CityPageData };
 
 export default function CityPage({ city }: Props) {
-  // Set page title on mount
-  useEffect(() => {
-    document.title = `${city.name} TV Mounting & Smart Home Install | Picture Perfect TV Install`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute(
-        "content",
-        `Professional TV mounting and selective smart-home installation in ${city.name}, ${city.county}. Evening and weekend appointments; same-day may be possible. Starting at $100 — call ${PHONE}.`,
-      );
-    }
-  }, [city]);
-
   // JSON-LD LocalBusiness schema
   const jsonLd = {
     "@context": "https://schema.org",

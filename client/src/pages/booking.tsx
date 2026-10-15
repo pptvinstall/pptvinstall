@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics";
+import { fetchTakenSlots } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
 import BookingLoadingState from "@/pages/booking/BookingLoadingState";
@@ -42,6 +43,9 @@ export default function Booking() {
   const [time, setTime] = useState("");
   const [heldSlot, setHeldSlot] = useState("");
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
+  const [availabilityDate, setAvailabilityDate] = useState("");
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [availabilityAttempt, setAvailabilityAttempt] = useState(0);
   const [suggestedSlots, setSuggestedSlots] = useState<string[]>([]);
   const [slotConflict, setSlotConflict] = useState("");
   const [sameDayMessage, setSameDayMessage] = useState("");
@@ -79,10 +83,20 @@ export default function Booking() {
       return;
     }
 
-    fetch(`/api/availability?date=${format(date, "yyyy-MM-dd")}`)
-      .then((response) => response.json())
-      .then((data: string[]) => {
+    const controller = new AbortController();
+    const requestedDate = format(date, "yyyy-MM-dd");
+    setAvailabilityDate("");
+    setAvailabilityError("");
+    setSameDayMessage("");
+    setSameDayJump(null);
+    setSameDayJumpSlot("");
+    fetchTakenSlots(requestedDate, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
         setTakenSlots(data);
+        setAvailabilityDate(requestedDate);
+        setTime((current) => getAvailableSlots(date, data).includes(current) ? current : "");
+        setHeldSlot((current) => getAvailableSlots(date, data).includes(current) ? current : "");
         const isToday = date.toDateString() === new Date().toDateString();
         const availableToday = getAvailableSlots(date, data);
         if (isToday && availableToday.length === 0) {
@@ -104,13 +118,18 @@ export default function Booking() {
           setSameDayJumpSlot("");
         }
       })
-      .catch((error) => console.error("Availability error:", error));
-  }, [date]);
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setAvailabilityError("We couldn't check availability. Please retry or call 404-702-4748.");
+      });
+    return () => controller.abort();
+  }, [date, availabilityAttempt]);
 
   const isQuoteFlow = Boolean(pendingQuote);
   const roughEstimate = useMemo(() => calculateRoughEstimate(isQuoteFlow, entryMode, quickDetails), [entryMode, isQuoteFlow, quickDetails]);
   const estimatedTotal = pendingQuote?.total ?? roughEstimate?.high ?? 0;
-  const availableSlots = useMemo(() => (date ? getAvailableSlots(date, takenSlots) : []), [date, takenSlots]);
+  const availabilityReady = Boolean(date && availabilityDate === format(date, "yyyy-MM-dd"));
+  const availableSlots = useMemo(() => (date && availabilityReady ? getAvailableSlots(date, takenSlots) : []), [date, takenSlots, availabilityReady]);
   const earliestAvailable = availableSlots[0] ?? "";
   const reviewItems = useMemo(() => buildReviewItems(pendingQuote, entryMode, quickDetails), [entryMode, pendingQuote, quickDetails]);
 
@@ -144,7 +163,7 @@ export default function Booking() {
   }
 
   async function submitBooking() {
-    if (!date || !time) {
+    if (!date || !time || !availabilityReady || !availableSlots.includes(time)) {
       toast({ title: "Choose a time slot", description: "Please pick a date and time first.", variant: "destructive" });
       setStep(1);
       return;
@@ -199,7 +218,9 @@ export default function Booking() {
       });
 
       if (response.status === 409) {
-        const refreshed = await fetch(`/api/availability?date=${format(date, "yyyy-MM-dd")}`).then((res) => res.json() as Promise<string[]>);
+        const refreshed = await fetchTakenSlots(format(date, "yyyy-MM-dd"));
+        setTime("");
+        setHeldSlot("");
         setTakenSlots(refreshed);
         setSlotConflict("Someone just grabbed that slot! Here are the next available times:");
         setSuggestedSlots(getAvailableSlots(date, refreshed).slice(0, 3));
@@ -297,6 +318,9 @@ export default function Booking() {
               estimatedTotal={estimatedTotal}
               earliestAvailable={earliestAvailable}
               isSearching={isSearching}
+              availabilityReady={availabilityReady}
+              availabilityError={availabilityError}
+              onRetryAvailability={() => setAvailabilityAttempt((current) => current + 1)}
               setTime={setTime}
               setDate={setDate}
               setHeldSlot={setHeldSlot}

@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { Switch, Route } from "wouter";
+import { MotionConfig } from "framer-motion";
 import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -12,6 +13,7 @@ import { trackPageView } from "@/lib/analytics";
 
 // Layout & Components (not lazy — needed on every page)
 import Nav from "@/components/nav";
+import PageMetadata from "@/components/page-metadata";
 import Footer from "@/components/footer";
 import MobileFAB from "@/components/ui/MobileFAB";
 import { EnvironmentIndicator } from "@/components/ui/environment-indicator";
@@ -46,7 +48,8 @@ import { getCityBySlug } from "@/data/city-pages";
 
 function PageLoader() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
+    <div role="status" className="flex min-h-[50vh] items-center justify-center">
+      <span className="sr-only">Loading page…</span>
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
     </div>
   );
@@ -123,6 +126,8 @@ function Shell() {
   const owner = isOwnerToolPath(location);
   return (
     <>
+      <PageMetadata />
+      <a className="skip-link" href="#main-content">Skip to content</a>
       {owner ? null : (
         <>
           <SeasonalBanner />
@@ -131,7 +136,7 @@ function Shell() {
           <Nav />
         </>
       )}
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Router />
       </main>
       {owner ? null : (
@@ -149,7 +154,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Shell />
+        <MotionConfig reducedMotion="user">
+          <Shell />
+        </MotionConfig>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>

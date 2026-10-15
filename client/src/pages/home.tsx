@@ -33,6 +33,7 @@ export default function Home() {
     function handleScroll() {
       setShowStickyBar(window.scrollY > 420);
     }
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -55,7 +56,7 @@ export default function Home() {
     const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 20;
 
     window.history.replaceState(null, "", "#instant-quote");
-    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+    window.scrollTo({ top: Math.max(top, 0), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, []);
 
   const servicePills = [
@@ -139,7 +140,7 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -64, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="fixed left-0 right-0 top-[56px] z-40 hidden border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur md:block"
+            className="fixed left-0 right-0 top-[var(--site-nav-height)] z-40 hidden border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur md:block"
           >
             <div className="container mx-auto flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -192,7 +193,7 @@ export default function Home() {
             </h1>
 
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-300 md:text-xl">
-              TV mounting in Atlanta with clean installs, wire concealment, fireplace mounting, and smart home setup across Midtown, Buckhead, Decatur, Marietta, Alpharetta, and more.
+              Clean, secure TV mounting across Atlanta and Metro Atlanta. Drywall mounting starts at $100 with your compatible mount. Get an itemized quote for fireplace installs, cable management, and smart home setup.
             </p>
 
             <div className="pt-8">
@@ -221,10 +222,10 @@ export default function Home() {
 
             <div className="flex flex-wrap justify-center gap-6 pt-12 text-sm font-medium text-slate-400">
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-blue-400" /> Licensed & Insured
+                <Shield className="h-5 w-5 text-blue-400" /> Mount Compatibility Checked
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-400" /> Same-Day Service
+                <Clock className="h-5 w-5 text-blue-400" /> Evening & Weekend Appointments
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 fill-amber-400 text-amber-400" /> 5-Star Rated
@@ -241,7 +242,7 @@ export default function Home() {
               { label: "Happy Customers", value: "250+", icon: CheckCircle2 },
               { label: "TVs Mounted", value: "500+", icon: Tv },
               { label: "Average Rating", value: "5.0", icon: Star },
-              { label: "Satisfaction", value: "100%", icon: Trophy },
+              { label: "Upfront Quotes", value: "Itemized", icon: Trophy },
             ].map((stat, idx) => (
               <motion.div
                 key={idx}
@@ -315,7 +316,7 @@ export default function Home() {
               </p>
 
               <ul className="mb-8 space-y-3">
-                {["Level installation guaranteed", "Stud finding & secure mounting", "All TV sizes supported", "Basic cable management", "Post-install cleanup"].map((item, i) => (
+                {["Level installation guaranteed", "Stud finding & secure mounting", "TV and mount compatibility checked", "Basic cable management", "Post-install cleanup"].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-slate-700">
                     <div className="rounded-full bg-green-100 p-1">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -333,11 +334,11 @@ export default function Home() {
             <div className="relative flex flex-col items-center justify-center overflow-hidden bg-blue-600 p-8 text-center text-white md:w-2/5 md:p-12">
               <div className="absolute inset-0 rotate-45 scale-150 transform bg-blue-700 opacity-50"></div>
               <div className="relative z-10">
-                <div className="mb-2 text-lg font-medium opacity-90">Flat Rate Pricing</div>
+                <div className="mb-2 text-lg font-medium opacity-90">Drywall Mounting Starts At</div>
                 <div className="mb-2 text-6xl font-black tracking-tight">$100</div>
-                <div className="text-xl font-medium opacity-90">Per TV</div>
+                <div className="text-xl font-medium opacity-90">Per TV · With Your Mount</div>
                 <div className="mt-8 border-t border-blue-400 pt-4 text-sm opacity-75">
-                  Mount not included.<br />We provide mounts starting at $40.
+                  Mount not included. Fireplace, masonry, outlet work, and other add-ons are quoted separately.<br />Need a mount? Include it in your quote.
                 </div>
               </div>
             </div>
@@ -414,7 +415,7 @@ export default function Home() {
             <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-blue-600">Real Installations</p>
             <h2 className="text-4xl font-extrabold text-slate-900">See Our Work</h2>
             <p className="mx-auto mt-3 max-w-xl text-lg text-slate-500">
-              Every mount is level, every wire is hidden, every customer is happy.
+              Explore real TV mounting, fireplace, and cable-management projects.
             </p>
           </div>
 
@@ -435,6 +436,7 @@ export default function Home() {
                   alt={img.alt}
                   className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                   loading="lazy"
+                  decoding="async"
                 />
               </div>
             ))}

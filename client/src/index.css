@@ -188,9 +188,6 @@
 .scroll-area-root,
 .scroll-area-container,
 .radix-scroll-area,
-[role="dialog"],
-.dialog-content,
-.dialog-overlay,
 .container,
 .service-selection-grid,
 .booking-step-grid,
@@ -204,18 +201,6 @@
   overflow: auto !important;
   height: 100% !important;
   pointer-events: auto !important;
-}
-
-/* Fix pointer events for interactive elements */
-button,
-a,
-input,
-select,
-[role="button"],
-[tabindex="0"] {
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 1;
 }
 
 /* Global fix for Radix UI ScrollArea */
@@ -289,16 +274,6 @@ select,
     height: 100%;
   }
   
-  /* Fix main step container */
-  .md\:col-span-3 {
-    grid-column: span 3 / span 3 !important;
-  }
-  
-  /* Fix sidebar container */
-  .md\:col-span-2 {
-    grid-column: span 2 / span 2 !important;
-  }
-  
   /* ScrollArea fixes */
   [data-radix-scroll-area-viewport] {
     position: relative !important;
@@ -364,5 +339,37 @@ select,
   textarea,
   select {
     font-size: 16px !important;
+  }
+}
+
+/* Respect component positioning, disabled states, and keyboard navigation. */
+:root { --site-nav-height: 80px; }
+html { scroll-padding-top: calc(var(--site-nav-height) + 24px); }
+main:focus { outline: none; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 4px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  transform: translateY(-150%);
+  border-radius: 8px;
+  background: white;
+  color: #1e40af;
+  padding: 12px 20px;
+  font-weight: 700;
+}
+.skip-link:focus { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  html, body { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
