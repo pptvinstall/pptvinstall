@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "wouter";
 import { MapPin, CheckCircle2, Star, Phone, CalendarDays, Tv, Camera, Bell, Plug, Speaker, Wrench, Smartphone, Trash2 } from "lucide-react";
 
@@ -33,19 +32,6 @@ const TRUST_POINTS = [
 type Props = { city: CityPageData };
 
 export default function CityPage({ city }: Props) {
-  // Set page title on mount
-  useEffect(() => {
-    document.title = `${city.name} TV Mounting & Smart Home Install | Picture Perfect TV Install`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute(
-        "content",
-        `Professional TV mounting and selective smart-home installation in ${city.name}, ${city.county}. Evening and weekend appointments; same-day may be possible. Starting at $100 — call ${PHONE}.`,
-      );
-    }
-  }, [city]);
-
-  // JSON-LD LocalBusiness schema
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -92,14 +78,12 @@ export default function CityPage({ city }: Props) {
 
   return (
     <>
-      {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       <div className="min-h-screen bg-white">
-        {/* ── Hero ────────────────────────────────────────────────────────── */}
         <section className="bg-slate-900 px-6 py-16 text-white md:px-8 md:py-24">
           <div className="mx-auto max-w-4xl">
             <div className="mb-4 flex items-center gap-2 text-blue-300">
@@ -125,7 +109,6 @@ export default function CityPage({ city }: Props) {
           </div>
         </section>
 
-        {/* ── Area blurb ──────────────────────────────────────────────────── */}
         <section className="px-6 py-12 md:px-8">
           <div className="mx-auto max-w-4xl">
             <p className="text-lg leading-8 text-slate-700">{city.areaBlurb}</p>
@@ -139,7 +122,6 @@ export default function CityPage({ city }: Props) {
           </div>
         </section>
 
-        {/* ── Services ────────────────────────────────────────────────────── */}
         <section className="bg-slate-50 px-6 py-12 md:px-8">
           <div className="mx-auto max-w-4xl">
             <h2 className="text-2xl font-extrabold text-slate-900">Services in {city.name}</h2>
@@ -165,7 +147,6 @@ export default function CityPage({ city }: Props) {
           </div>
         </section>
 
-        {/* ── Trust signals ───────────────────────────────────────────────── */}
         <section className="px-6 py-12 md:px-8">
           <div className="mx-auto max-w-4xl">
             <div className="grid gap-8 md:grid-cols-2">
@@ -195,7 +176,6 @@ export default function CityPage({ city }: Props) {
           </div>
         </section>
 
-        {/* ── FAQ ─────────────────────────────────────────────────────────── */}
         <section className="bg-slate-50 px-6 py-12 md:px-8">
           <div className="mx-auto max-w-4xl">
             <h2 className="text-2xl font-extrabold text-slate-900">Frequently asked questions — {city.name}</h2>
@@ -210,7 +190,6 @@ export default function CityPage({ city }: Props) {
           </div>
         </section>
 
-        {/* ── Final CTA ───────────────────────────────────────────────────── */}
         <section className="px-6 py-16 md:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-3xl font-extrabold text-slate-900">Ready to book in {city.name}?</h2>
