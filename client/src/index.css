@@ -85,7 +85,6 @@
 
 /* Gradient text utilities */
 @layer utilities {
-  /* Text gradients */
   .text-gradient-primary {
     @apply bg-gradient-to-r from-brand-blue-600 to-brand-blue-800 bg-clip-text text-transparent;
   }
@@ -94,17 +93,14 @@
     @apply bg-gradient-to-r from-brand-blue-400 to-brand-blue-600 bg-clip-text text-transparent;
   }
 
-  /* Shadows with hover effects */
   .shadow-card {
     @apply shadow-md transition-all duration-300 hover:shadow-lg;
   }
 
-  /* Button hover effects */
   .btn-hover-effect {
     @apply transform transition-transform duration-300 hover:scale-105 active:scale-95;
   }
 
-  /* Trust badge styles - enhanced */
   .trust-badge {
     @apply inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shadow-sm transition-all duration-200 hover:bg-blue-100;
   }
@@ -113,12 +109,10 @@
     @apply text-blue-600;
   }
 
-  /* Enhanced section styles */
   .section-padding {
     @apply py-12 md:py-16 lg:py-20;
   }
   
-  /* Dialog customizations */
   .dialog-overlay {
     @apply fixed inset-0 bg-black/50 z-40 backdrop-blur-sm;
   }
@@ -135,18 +129,15 @@
     @apply text-lg text-blue-600 mb-8;
   }
 
-  /* Scroll container positioning */
   .scroll-container {
     @apply relative;
     position: relative !important;
   }
 
-  /* Card styles */
   .feature-card {
     @apply p-6 rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg hover:border-blue-200;
   }
 
-  /* Hero grid pattern overlay */
   .hero-grid-pattern {
     background-image:
       linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
@@ -154,13 +145,11 @@
     background-size: 60px 60px;
   }
 
-  /* Elevated card style — cleaner shadow + subtle border */
   .card-elevated {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
     border: 1px solid rgba(0,0,0,0.06);
   }
 
-  /* Animation utilities */
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
@@ -188,9 +177,6 @@
 .scroll-area-root,
 .scroll-area-container,
 .radix-scroll-area,
-[role="dialog"],
-.dialog-content,
-.dialog-overlay,
 .container,
 .service-selection-grid,
 .booking-step-grid,
@@ -199,31 +185,16 @@
   pointer-events: auto !important;
 }
 
-/* Ensure proper overflow handling */
 .scroll-area-viewport {
   overflow: auto !important;
   height: 100% !important;
   pointer-events: auto !important;
 }
 
-/* Fix pointer events for interactive elements */
-button,
-a,
-input,
-select,
-[role="button"],
-[tabindex="0"] {
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 1;
-}
-
-/* Global fix for Radix UI ScrollArea */
 [data-radix-scroll-area-viewport] {
   position: relative !important;
 }
 
-/* Ensure all possible scroll containers have proper positioning */
 .scroll-area-root,
 .scroll-area-viewport,
 [data-radix-scroll-area],
@@ -233,9 +204,7 @@ select,
   overflow: auto;
 }
 
-/* Desktop Responsive Fixes */
 @media (min-width: 768px) {
-  /* Main container for booking wizard */
   .booking-wizard-container {
     max-width: 95%; 
     width: 100%;
@@ -243,16 +212,14 @@ select,
     position: relative !important;
   }
   
-  /* Grid layout for booking steps */
   .booking-step-grid {
     display: grid;
-    grid-template-columns: 3fr 2fr !important; /* Fixed ratio for desktop */
+    grid-template-columns: 3fr 2fr !important;
     gap: 1.5rem;
     align-items: stretch;
     width: 100%;
   }
   
-  /* Service selection grid for desktop */
   .service-selection-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -260,14 +227,12 @@ select,
     width: 100%;
   }
   
-  /* Form layout for customer details */
   .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1.25rem;
   }
   
-  /* Price calculator for desktop */
   .price-calculator {
     display: flex;
     flex-direction: column;
@@ -275,7 +240,6 @@ select,
     min-height: 300px;
   }
   
-  /* Calendar container */
   .calendar-container {
     display: flex;
     flex-direction: row;
@@ -283,23 +247,11 @@ select,
     align-items: flex-start;
   }
   
-  /* Better spacing for steps */
   .wizard-step {
     padding: 1.5rem;
     height: 100%;
   }
   
-  /* Fix main step container */
-  .md\:col-span-3 {
-    grid-column: span 3 / span 3 !important;
-  }
-  
-  /* Fix sidebar container */
-  .md\:col-span-2 {
-    grid-column: span 2 / span 2 !important;
-  }
-  
-  /* ScrollArea fixes */
   [data-radix-scroll-area-viewport] {
     position: relative !important;
     height: auto !important;
@@ -307,12 +259,10 @@ select,
   }
 }
 
-/* Dialog overlay fixes */
 [data-state="open"][data-scope="dialog"] {
   pointer-events: auto !important;
 }
 
-/* Mobile dialog fixes - Custom styles */
 @media (max-width: 640px) {
   [data-state="open"][data-scope="dialog"][data-scope-content="content"] {
     position: fixed !important;
@@ -331,7 +281,6 @@ select,
   }
 }
 
-/* Important fixes for z-indexes */
 .popover-content, 
 .rdp, 
 .calendar-popover,
@@ -364,5 +313,37 @@ select,
   textarea,
   select {
     font-size: 16px !important;
+  }
+}
+
+/* Respect component positioning, disabled states, and keyboard navigation. */
+:root { --site-nav-height: 80px; }
+html { scroll-padding-top: calc(var(--site-nav-height) + 24px); }
+main:focus { outline: none; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 4px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  transform: translateY(-150%);
+  border-radius: 8px;
+  background: white;
+  color: #1e40af;
+  padding: 12px 20px;
+  font-weight: 700;
+}
+.skip-link:focus { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  html, body { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
