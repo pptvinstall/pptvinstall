@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { trackPageView } from "@/lib/analytics";
+import { canonicalUrl, getPageMeta, notFoundMeta } from "@shared/seo/pageMeta";
 
 // Layout & Components (not lazy — needed on every page)
 import Nav from "@/components/nav";
@@ -37,6 +38,7 @@ const JobsPage = lazy(() => import("@/pages/jobos/JobsPage"));
 const PricingConfigPage = lazy(() => import("@/pages/jobos/PricingConfigPage"));
 const CustomerQuotePage = lazy(() => import("@/pages/CustomerQuote"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
+const ReviewPage = lazy(() => import("@/pages/review"));
 
 // City SEO pages — lazy loaded, share a single CityPage component
 const CityPageComponent = lazy(() =>
@@ -52,10 +54,33 @@ function PageLoader() {
   );
 }
 
+function setMeta(selector: string, attribute: "content" | "href", value: string) {
+  const element = document.head.querySelector(selector);
+  if (element) element.setAttribute(attribute, value);
+}
+
+/** Keeps title/description/canonical in sync on in-app navigation (the server sets them on first load). */
+function applyClientPageMeta(location: string) {
+  const meta = getPageMeta(location) ?? notFoundMeta(location);
+  const url = canonicalUrl(meta.path);
+  document.title = meta.title;
+  setMeta('meta[name="description"]', "content", meta.description);
+  setMeta('link[rel="canonical"]', "href", url);
+  setMeta('meta[name="robots"]', "content", meta.noindex ? "noindex,follow" : "index,follow,max-image-preview:large");
+  setMeta('meta[property="og:title"]', "content", meta.title);
+  setMeta('meta[property="og:description"]', "content", meta.description);
+  setMeta('meta[property="og:url"]', "content", url);
+  setMeta('meta[name="twitter:title"]', "content", meta.title);
+  setMeta('meta[name="twitter:description"]', "content", meta.description);
+}
+
 function PageViewTracker() {
   const [location] = useLocation();
   useEffect(() => {
     trackPageView(location);
+    applyClientPageMeta(location);
+    // New page starts at the top (wouter doesn't do this), unless a #section was linked.
+    if (!window.location.hash) window.scrollTo(0, 0);
   }, [location]);
   return null;
 }
@@ -72,6 +97,7 @@ function Router() {
         <Route path="/partners" component={Partners} />
         <Route path="/contact" component={Contact} />
         <Route path="/faq" component={FAQ} />
+        <Route path="/review" component={ReviewPage} />
 
         {/* Booking / Quote / Payment Flow */}
         <Route path="/booking" component={Booking} />

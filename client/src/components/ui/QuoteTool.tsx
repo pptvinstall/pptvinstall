@@ -15,21 +15,18 @@ export default function QuoteTool() {
 
   return (
     <QuoteToolContext.Provider value={state}>
-      <Card className="mx-auto w-full max-w-5xl overflow-hidden rounded-[32px] border-slate-200 bg-white shadow-2xl">
+      <Card className="mx-auto w-full max-w-5xl overflow-clip rounded-[32px] border-slate-200 bg-white shadow-2xl">
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="bg-slate-900 px-6 py-6 text-white md:px-8">
+        <div className="bg-slate-900 px-5 py-5 text-white md:px-8 md:py-6">
           <div className="flex items-start gap-4">
-            <div className="rounded-2xl bg-blue-600/20 p-3 text-blue-300">
+            <div className="hidden rounded-2xl bg-blue-600/20 p-3 text-blue-300 sm:block">
               <Sparkles className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">Instant Estimate Builder</p>
-              <h3 className="text-2xl font-extrabold leading-tight md:text-3xl">Build each TV exactly the way you want it</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300 md:text-sm">Instant Estimate</p>
+              <h3 className="text-xl font-extrabold leading-tight md:text-3xl">Build your setup, see your price</h3>
               <p className="max-w-2xl text-sm text-slate-300 md:text-base">
-                Configure every TV, add shared services, and watch the estimate update in real time.
-              </p>
-              <p className="text-sm text-slate-300">
-                Need a faster answer? <a href={telHref} className="font-semibold text-white hover:underline">Call or text {businessPhone}</a>.
+                The total updates as you go. Rather talk? <a href={telHref} className="font-semibold text-white underline-offset-2 hover:underline">Call or text {businessPhone}</a>.
               </p>
             </div>
           </div>
@@ -47,30 +44,34 @@ export default function QuoteTool() {
           ) : null}
 
           {/* ── Step navigation ────────────────────────────────────────────── */}
-          {step !== "loading" ? (
-            <div className="border-b border-slate-100 px-6 py-4 md:px-8">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {stepFlow.map((stepItem, index) => {
-                  const active = stepItem.key === step;
-                  const currentIndex = stepFlow.findIndex((item) => item.key === step);
-                  const completed = currentIndex > index;
-
-                  return (
-                    <div
-                      key={stepItem.key}
-                      className={cn(
-                        "rounded-2xl border px-3 py-3 text-center transition-all",
-                        active ? "border-blue-600 bg-blue-50 text-blue-700" : completed ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-400",
-                      )}
-                    >
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em]">Step {index + 1}</p>
-                      <p className="mt-1 text-sm font-bold">{stepItem.label}</p>
-                    </div>
-                  );
-                })}
+          {step !== "loading" ? (() => {
+            const currentIndex = stepFlow.findIndex((item) => item.key === step);
+            return (
+              <div className="border-b border-slate-100 px-5 py-3 md:px-8 md:py-4">
+                <ol className="flex items-center gap-2 md:gap-3" aria-label="Quote progress">
+                  {stepFlow.map((stepItem, index) => {
+                    const active = index === currentIndex;
+                    const completed = currentIndex > index;
+                    return (
+                      <li
+                        key={stepItem.key}
+                        aria-current={active ? "step" : undefined}
+                        className={cn(
+                          "flex min-w-0 items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all md:flex-1 md:justify-center md:rounded-2xl md:px-3 md:py-2.5 md:text-sm",
+                          active ? "flex-1 border-blue-600 bg-blue-50 text-blue-700" : completed ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-400",
+                        )}
+                      >
+                        <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]", active ? "bg-blue-600 text-white" : completed ? "bg-green-600 text-white" : "bg-slate-200 text-slate-500")}>
+                          {completed ? "✓" : index + 1}
+                        </span>
+                        <span className={cn("truncate", active ? "inline" : "hidden md:inline")}>{stepItem.label}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
-            </div>
-          ) : null}
+            );
+          })() : null}
 
           {/* ── Step content ───────────────────────────────────────────────── */}
           <AnimatePresence mode="wait">

@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { applyPageMeta, getPageMeta, notFoundMeta } from "@shared/seo/pageMeta";
 
 const viteLogger = createLogger();
 
@@ -59,7 +60,11 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      const meta = getPageMeta(req.originalUrl.split("?")[0]);
+      res
+        .status(meta ? 200 : 404)
+        .set({ "Content-Type": "text/html" })
+        .end(applyPageMeta(page, meta ?? notFoundMeta(req.originalUrl.split("?")[0])));
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
@@ -76,11 +81,38 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath, { maxAge: '1y', immutable: true }));
+  // Hashed build files (/assets/*) never change, so browsers may keep them for a year.
+  // Everything else must be rechecked: the HTML shell, the service worker, manifest,
+  // and unhashed images. index.html is never served from here (index: false) so it
+  // always goes through the handler below with no-cache and per-page meta.
+  app.use(
+    express.static(distPath, {
+      index: false,
+      setHeaders(res, filePath) {
+        const rel = path.relative(distPath, filePath).split(path.sep).join("/");
+        if (rel.startsWith("assets/")) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else if (rel === "sw.js" || rel.endsWith(".html") || rel.endsWith(".webmanifest") || rel === "manifest.json") {
+          res.setHeader("Cache-Control", "no-cache");
+        } else {
+          res.setHeader("Cache-Control", "public, max-age=86400");
+        }
+      },
+    }),
+  );
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.resolve(distPath, "index.html"));
+  const template = fs.readFileSync(path.resolve(distPath, "index.html"), "utf-8");
+
+  // Every page is the same app shell, but with its own title, description and
+  // canonical so Google indexes each page separately. Unknown paths get a real
+  // 404 status (the app still renders its friendly not-found page).
+  app.use("*", (req, res) => {
+    const requestPath = req.originalUrl.split("?")[0];
+    const meta = getPageMeta(requestPath);
+    res.setHeader("Cache-Control", "no-cache");
+    res
+      .status(meta ? 200 : 404)
+      .type("html")
+      .send(applyPageMeta(template, meta ?? notFoundMeta(requestPath)));
   });
 }
