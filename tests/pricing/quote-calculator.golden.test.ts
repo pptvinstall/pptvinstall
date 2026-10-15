@@ -95,15 +95,19 @@ test("golden: two basic TVs remain $200 with no automatic bundle discount", () =
   assert.equal(quote.total, 200);
 });
 
-test("golden: ZIP tier is informational and does not auto-charge travel", () => {
-  const quote = calculateQuote(state([tv()], "30034"));
+test("golden: a known non-local ZIP adds estimated fuel only", () => {
+  // 30337 is Tier 1 from both weekday and weekend origins, so this stays clock-independent.
+  const quote = calculateQuote(state([tv()], "30337"));
+  assert.equal(quote.travelFee, 6);
+  // The calculator keeps base work separate; the quote UI normalization adds travel to the displayed total.
   assert.equal(quote.total, 100);
-  assert.equal(quote.travelFee, 0);
+  assert.ok(quote.travelContext.feeLabel.toLowerCase().includes("fuel"));
 });
 
-test("golden: unknown ZIP requires route review without changing price", () => {
+test("golden: unknown ZIP stays serviceable pending exact route miles", () => {
   const quote = calculateQuote(state([tv()], "99999"));
   assert.equal(quote.total, 100);
   assert.equal(quote.travelTier, "out_of_range");
   assert.ok(quote.flags.some((flag) => flag.toLowerCase().includes("route")));
+  assert.ok(quote.travelContext.feeLabel.toLowerCase().includes("travel"));
 });
