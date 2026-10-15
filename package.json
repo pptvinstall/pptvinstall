@@ -13,7 +13,8 @@
     "smoke": "node scripts/smoke-check.js",
     "test:pricing": "tsx --test tests/pricing/*.test.ts",
     "test:jobos": "tsx --test tests/jobos/*.test.ts",
-    "test": "npm run test:pricing && npm run test:jobos"
+    "test:site": "tsx --test tests/site/*.test.ts",
+    "test": "npm run test:pricing && npm run test:jobos && npm run test:site"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1145.0",
