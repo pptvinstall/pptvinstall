@@ -1,9 +1,19 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { CalendarDays, MessageSquare, Phone, Sparkles } from "lucide-react";
 
 const PHONE_HREF = "4047024748";
 
 export default function MobileFAB() {
+  const [location] = useLocation();
+  const isFocusedFlow =
+    location.startsWith("/quote") ||
+    location.startsWith("/booking") ||
+    location.startsWith("/confirmation") ||
+    location.startsWith("/payment") ||
+    location.startsWith("/q/");
+
+  if (isFocusedFlow) return null;
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
