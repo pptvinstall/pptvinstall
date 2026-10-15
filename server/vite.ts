@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { serveStaticFrom } from "./static";
 
 const viteLogger = createLogger();
 
@@ -68,19 +69,5 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "../dist/public");
-
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
-  }
-
-  app.use(express.static(distPath, { maxAge: '1y', immutable: true }));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
+  serveStaticFrom(app, path.resolve(__dirname, "../dist/public"));
 }
