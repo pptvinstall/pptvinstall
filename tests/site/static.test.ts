@@ -58,3 +58,13 @@ test("non-document requests do not fall through to HTML", async () => {
   const response = await fetch(base + "/missing", { headers: { Accept: "application/json" } });
   assert.equal(response.status, 404);
 });
+
+test("owner and customer-token pages send privacy and indexing headers before JavaScript runs", async () => {
+  for (const route of ["/admin", "/admin/jobs", "/dashboard", "/q/private-token", "/payment/success", "/confirmation"]) {
+    const response = await fetch(base + route, { headers: { Accept: "text/html" } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  }
+});

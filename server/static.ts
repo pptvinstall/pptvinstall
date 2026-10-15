@@ -29,7 +29,12 @@ export function serveStaticFrom(app: Express, distPath: string) {
       res.setHeader("Cache-Control", "no-store");
       return res.status(404).end();
     }
-    res.setHeader("Cache-Control", "no-cache");
+    const privatePage = /^\/(admin(?:\/|$)|dashboard(?:\/|$)|q\/|payment\/|confirmation(?:\/|$))/.test(req.path);
+    res.setHeader("Cache-Control", privatePage ? "no-store" : "no-cache");
+    if (privatePage) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      res.setHeader("Referrer-Policy", "no-referrer");
+    }
     res.setHeader("X-Content-Type-Options", "nosniff");
     return res.sendFile(path.resolve(distPath, "index.html"));
   });

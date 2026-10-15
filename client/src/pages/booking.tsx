@@ -63,9 +63,9 @@ export default function Booking() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(QUOTE_KEY);
-    if (!raw) return;
     try {
+      const raw = window.localStorage.getItem(QUOTE_KEY);
+      if (!raw) return;
       const parsed = JSON.parse(raw) as PendingQuote;
       setPendingQuote(parsed);
       if (parsed.zipCode) {
@@ -106,7 +106,7 @@ export default function Booking() {
           if (jump) {
             setSameDayJump(jump.date);
             setSameDayJumpSlot(jump.slot);
-            setSameDayMessage(`No more slots available today - the next available time is ${format(jump.date, "EEE, MMM d")} at ${jump.slot}.`);
+            setSameDayMessage(`No more slots available today. Try ${format(jump.date, "EEE, MMM d")} at ${jump.slot}; we'll check availability when you select it.`);
           } else {
             setSameDayJump(null);
             setSameDayJumpSlot("");
@@ -230,7 +230,10 @@ export default function Booking() {
       }
 
       if (!response.ok) throw new Error("Booking failed");
-      if (typeof window !== "undefined" && pendingQuote) window.localStorage.removeItem(QUOTE_KEY);
+      if (typeof window !== "undefined" && pendingQuote) {
+        // Booking already succeeded; storage failure must not encourage a duplicate.
+        try { window.localStorage.removeItem(QUOTE_KEY); } catch { /* best effort */ }
+      }
       trackEvent("booking_submitted", { source: pendingQuote ? "quote" : "direct" });
       setLocation("/confirmation");
     } catch (error) {
