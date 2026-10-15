@@ -20,7 +20,7 @@ import SeasonalBanner from "@/components/ui/SeasonalBanner";
 import ErrorBoundary from "@/components/error-boundary";
 
 // Pages — lazy loaded so each route is a separate chunk
-const Home = lazy(() => import("@/pages/home"));
+const Home = lazy(() => import("@/pages/home-v2"));
 const Services = lazy(() => import("@/pages/services"));
 const Contact = lazy(() => import("@/pages/contact"));
 const FAQ = lazy(() => import("@/pages/faq"));
