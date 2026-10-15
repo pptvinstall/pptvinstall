@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Check, Flame, Settings, Shield, Star, Tv, Video, Wrench, XCircle, Zap } from "lucide-react";
@@ -95,10 +94,6 @@ const troubleshootingServices = [
 ];
 
 export default function Services() {
-  useEffect(() => {
-    document.title = "TV Mounting Services in Atlanta | Picture Perfect TV Install";
-  }, []);
-
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <section className="relative overflow-hidden bg-slate-900 pb-24 pt-32 text-white">

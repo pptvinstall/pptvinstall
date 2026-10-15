@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { GOOGLE_REVIEWS_URL, GOOGLE_REVIEW_COUNT } from "@/lib/business";
 
 const QuoteTool = lazy(() => import("@/components/ui/QuoteTool"));
 
@@ -355,12 +356,12 @@ export default function HomeV2() {
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-5xl">Good work should make the next call easier.</h2>
             </div>
             <a
-              href="https://g.page/r/CR7z0j9VraqQEAI/review"
+              href={GOOGLE_REVIEWS_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold text-blue-600 hover:text-blue-700"
             >
-              View Google reviews
+              Read all {GOOGLE_REVIEW_COUNT} Google reviews →
             </a>
           </div>
 

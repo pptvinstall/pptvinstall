@@ -1,3 +1,5 @@
+import { GOOGLE_WRITE_REVIEW_URL } from "@/lib/business";
+
 export function ReviewCTA() {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white text-center">
@@ -7,7 +9,7 @@ export function ReviewCTA() {
         A quick review helps other Atlanta homeowners find us — and means the world to us.
       </p>
       <a
-        href="https://g.page/r/CR7z0j9VraqQEAI/review"
+        href={GOOGLE_WRITE_REVIEW_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-block w-full bg-white text-blue-700 font-bold px-8 py-4 rounded-xl text-lg hover:bg-blue-50 transition-colors"
