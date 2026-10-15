@@ -38,6 +38,7 @@ const JobBuilder = lazy(() => import("@/pages/jobos/JobBuilder"));
 const JobsPage = lazy(() => import("@/pages/jobos/JobsPage"));
 const PricingConfigPage = lazy(() => import("@/pages/jobos/PricingConfigPage"));
 const CustomerQuotePage = lazy(() => import("@/pages/CustomerQuote"));
+const ReviewPage = lazy(() => import("@/pages/review"));
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
 // City SEO pages — lazy loaded, share a single CityPage component
@@ -59,6 +60,7 @@ function PageViewTracker() {
   const [location] = useLocation();
   useEffect(() => {
     trackPageView(location);
+    if (!window.location.hash) window.scrollTo(0, 0);
   }, [location]);
   return null;
 }
@@ -75,6 +77,7 @@ function Router() {
         <Route path="/partners" component={Partners} />
         <Route path="/contact" component={Contact} />
         <Route path="/faq" component={FAQ} />
+        <Route path="/review" component={ReviewPage} />
 
         {/* Booking / Quote / Payment Flow */}
         <Route path="/booking" component={Booking} />
