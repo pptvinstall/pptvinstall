@@ -2,7 +2,6 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Calendar, Mail } from "lucide-react";
-import { ReviewCTA } from "@/components/ui/ReviewCTA";
 
 export default function Confirmation() {
   return (
@@ -48,11 +47,6 @@ export default function Confirmation() {
           </Link>
         </CardContent>
       </Card>
-
-      {/* Review request — shown after booking is confirmed */}
-      <div className="max-w-md w-full">
-        <ReviewCTA />
-      </div>
     </div>
   );
 }
