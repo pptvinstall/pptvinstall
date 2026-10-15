@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   Loader2,
   Mic,
+  Minus,
+  Plus,
   ShieldAlert,
 } from "lucide-react";
 
@@ -87,6 +91,31 @@ export default function QuoteStepForm() {
     step,
   } = useQuoteContext();
 
+  // Extras start closed so phones see the TV questions and the ZIP box first.
+  // They open automatically if anything in them is already selected.
+  const extrasSelected =
+    formState.cameras.length > 0 ||
+    formState.doorbell ||
+    formState.soundbar ||
+    formState.surroundSound ||
+    formState.floodlight ||
+    formState.handymanMinutes > 0 ||
+    standaloneServices.sharedUnmountCount > 0;
+  const [extrasOpen, setExtrasOpen] = useState(extrasSelected);
+
+  const submitFormQuote = () => {
+    if (!isZipValid) {
+      setZipError("Add your 5-digit ZIP code to see your price.");
+      const zipInput = document.getElementById("quote-zip");
+      if (zipInput) {
+        zipInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.setTimeout(() => zipInput.focus({ preventScroll: true }), 350);
+      }
+      return;
+    }
+    void handleFormQuote();
+  };
+
   return (
     <AnimatePresence mode="wait">
       {step === "build" ? (
@@ -95,7 +124,7 @@ export default function QuoteStepForm() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
-          className="space-y-6 p-6 md:p-8"
+          className="space-y-6 p-5 md:p-8"
         >
           <Tabs value={mode} onValueChange={(value) => setMode(value as typeof mode)} className="w-full">
             <TabsList data-quote-tabs="true" className="grid h-auto w-full grid-cols-3 gap-2 rounded-3xl bg-slate-100 p-2">
@@ -109,11 +138,13 @@ export default function QuoteStepForm() {
                 Voice Note
               </TabsTrigger>
             </TabsList>
-            <div className="mt-3 grid gap-2 text-xs text-slate-500 md:grid-cols-3">
-              <p><span className="font-semibold text-slate-700">Build It</span> — best if you know exactly what you need</p>
-              <p><span className="font-semibold text-slate-700">Describe It</span> — best if you want us to figure it out</p>
-              <p><span className="font-semibold text-slate-700">Voice Note</span> — best if it&apos;s easier to explain it out loud</p>
-            </div>
+            <p className="mt-3 text-center text-xs text-slate-500">
+              {mode === "form"
+                ? "Tap through your setup. Best if you know what you need."
+                : mode === "text"
+                  ? "Type it in your own words and we'll figure out the details."
+                  : "Easier to say it out loud? Record a quick voice note."}
+            </p>
 
             {/* ── Build It (form) ─────────────────────────────────────────── */}
             <TabsContent value="form" className="mt-6 space-y-8">
@@ -121,13 +152,13 @@ export default function QuoteStepForm() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h4 className="text-xl font-bold text-slate-900">1. How many TVs?</h4>
-                    <p className="text-sm text-slate-500">Set the TV count first, then configure each screen individually.</p>
+                    <p className="text-sm text-slate-500">Pick 0 if you only need cameras, a doorbell, or other services.</p>
                   </div>
                   {formState.tvs.length >= 5 ? (
                     <Badge className="border-amber-200 bg-amber-50 text-amber-800">Large project</Badge>
                   ) : null}
                 </div>
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                <div className="grid grid-cols-6 gap-2 sm:gap-3">
                   {["0", "1", "2", "3", "4", "5+"].map((option) => (
                     <SelectorButton
                       key={option}
@@ -139,7 +170,7 @@ export default function QuoteStepForm() {
                         setFormState((current) => ({ ...current, tvs: nextTvs }));
                         setActiveTvId(nextTvs[0]?.id ?? "");
                       }}
-                      className="py-4 text-base"
+                      className="px-0 py-3.5 text-base sm:py-4"
                     >
                       {option}
                     </SelectorButton>
@@ -159,12 +190,12 @@ export default function QuoteStepForm() {
               {formState.tvs.length > 0 ? (
                 <section className="space-y-4">
                   <div>
-                    <h4 className="text-xl font-bold text-slate-900">2. Configure each TV</h4>
-                    <p className="text-sm text-slate-500">Every TV gets its own wall, mount, and wire plan.</p>
+                    <h4 className="text-xl font-bold text-slate-900">{formState.tvs.length > 1 ? "2. Set up each TV" : "2. Set up your TV"}</h4>
+                    <p className="text-sm text-slate-500">{formState.tvs.length > 1 ? "Tap each TV to set its wall, mount, and wires." : "Wall, mount, and wires for your TV."}</p>
                   </div>
 
                   <Tabs value={activeTvId} onValueChange={setActiveTvId} className="w-full">
-                    <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-3xl bg-slate-100 p-2 md:grid-cols-5">
+                    <TabsList className={cn("h-auto w-full grid-cols-2 gap-2 rounded-3xl bg-slate-100 p-2 md:grid-cols-5", formState.tvs.length > 1 ? "grid" : "hidden")}>
                       {formState.tvs.map((tv, index) => (
                         <TabsTrigger
                           key={tv.id}
@@ -178,7 +209,7 @@ export default function QuoteStepForm() {
                     </TabsList>
 
                     {formState.tvs.map((tv, index) => (
-                      <TabsContent key={tv.id} value={tv.id} className="mt-4">
+                      <TabsContent key={tv.id} value={tv.id} className={formState.tvs.length > 1 ? "mt-4" : "mt-0"}>
                         <div className={cn("rounded-[28px] border border-slate-200 border-l-4 bg-slate-50 p-5 md:p-6", tvAccentClasses[index] ?? "border-l-blue-500")}>
                           <div className="space-y-6">
                             <section className="space-y-3">
@@ -228,12 +259,13 @@ export default function QuoteStepForm() {
 
                             <section className="space-y-3">
                               <p className="text-sm font-semibold text-slate-900">Wall type</p>
-                              <div className="grid gap-3 md:grid-cols-3">
+                              <div className="grid grid-cols-3 gap-2 md:gap-3">
                                 {(["drywall", "brick", "highrise"] as WallType[]).map((wallType) => (
                                   <SelectorButton
                                     key={wallType}
                                     selected={tv.wallType === wallType}
                                     onClick={() => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, wallType } : item)) }))}
+                                    className="px-2 text-xs leading-snug sm:px-4 sm:text-sm"
                                   >
                                     {wallTypeLabels[wallType]}
                                   </SelectorButton>
@@ -258,13 +290,13 @@ export default function QuoteStepForm() {
                                 </SelectorButton>
                               </div>
                               {!tv.hasMount ? (
-                                <div className="grid gap-3 md:grid-cols-3">
+                                <div className="grid grid-cols-3 gap-2 md:gap-3">
                                   {(["fixed", "tilting", "fullMotion"] as MountType[]).map((mountType) => (
                                     <SelectorButton
                                       key={mountType}
                                       selected={tv.mountType === mountType}
                                       onClick={() => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, mountType } : item)) }))}
-                                      className="min-h-[84px] text-left"
+                                      className="min-h-[84px] px-2.5 text-left sm:px-4"
                                     >
                                       <div>{mountTypeLabels[mountType]}</div>
                                       <div className="mt-1 text-xs font-medium opacity-80">
@@ -426,11 +458,11 @@ export default function QuoteStepForm() {
 
               <section className="space-y-5 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
                 <div>
-                  <h4 className="text-xl font-bold text-slate-900">3. Moving / work at another address</h4>
-                  <p className="text-sm text-slate-500">Use this when we take things down at one home and install at another.</p>
+                  <h4 className="text-xl font-bold text-slate-900">3. Moving?</h4>
+                  <p className="text-sm text-slate-500">Only if we&apos;re also taking things down at your old place.</p>
                 </div>
                 <ToggleCard
-                  title="This project includes work at my previous home"
+                  title="Yes, include work at my previous home"
                   active={formState.moveProject.enabled}
                   onClick={() => setFormState((current) => ({ ...current, moveProject: { ...current.moveProject, enabled: !current.moveProject.enabled } }))}
                 />
@@ -442,7 +474,7 @@ export default function QuoteStepForm() {
                         value={formState.moveProject.previousZipCode}
                         maxLength={5}
                         inputMode="numeric"
-                        placeholder="30327"
+                        placeholder="Old ZIP (optional)"
                         className="h-12 rounded-xl bg-white"
                         onChange={(event) => {
                           const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 5);
@@ -496,25 +528,53 @@ export default function QuoteStepForm() {
                 ) : null}
               </section>
 
-              <section className="space-y-5 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
-                <div>
-                  <h4 className="text-xl font-bold text-slate-900">4. Shared add-ons</h4>
-                  <p className="text-sm text-slate-500">Add the extras that apply to the whole job.</p>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-slate-900">Security cameras</p>
-                  <div className="grid grid-cols-3 gap-2 md:grid-cols-9">
-                    {Array.from({ length: 9 }, (_, index) => index).map((count) => (
-                      <SelectorButton
-                        key={count}
-                        selected={formState.cameras.length === count}
-                        onClick={() => setFormState((current) => ({ ...current, cameras: updateCameraCount(current.cameras, count) }))}
-                      >
-                        {count}
-                      </SelectorButton>
-                    ))}
+              <section className="rounded-[28px] border border-slate-200 bg-white">
+                <button
+                  type="button"
+                  aria-expanded={extrasOpen}
+                  onClick={() => setExtrasOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left md:p-6"
+                >
+                  <div>
+                    <h4 className="text-xl font-bold text-slate-900">4. Extras <span className="text-base font-medium text-slate-400">(optional)</span></h4>
+                    <p className="text-sm text-slate-500">Cameras, doorbell, soundbar, floodlight, removals, special requests.</p>
                   </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {extrasSelected ? <Badge className="border-blue-200 bg-blue-50 text-blue-700">Added</Badge> : null}
+                    <ChevronDown className={cn("h-5 w-5 text-slate-500 transition-transform", extrasOpen && "rotate-180")} />
+                  </span>
+                </button>
+
+                {extrasOpen ? (
+                <div className="space-y-5 border-t border-slate-100 p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Security cameras</p>
+                    <p className="text-xs text-slate-500">Custom-priced after a quick device review.</p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                    <button
+                      type="button"
+                      aria-label="Remove a camera"
+                      disabled={formState.cameras.length === 0}
+                      onClick={() => setFormState((current) => ({ ...current, cameras: updateCameraCount(current.cameras, Math.max(0, current.cameras.length - 1)) }))}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm disabled:opacity-40"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="w-8 text-center text-base font-bold tabular-nums text-slate-900" aria-live="polite">{formState.cameras.length}</span>
+                    <button
+                      type="button"
+                      aria-label="Add a camera"
+                      disabled={formState.cameras.length >= 8}
+                      onClick={() => setFormState((current) => ({ ...current, cameras: updateCameraCount(current.cameras, Math.min(8, current.cameras.length + 1)) }))}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm disabled:opacity-40"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-3">
                   {formState.cameras.length > 0 ? (
                     <div className="space-y-3">
                       {formState.cameras.map((camera, index) => (
@@ -554,8 +614,8 @@ export default function QuoteStepForm() {
                             <option value="indoor">Indoor</option>
                             <option value="outdoor">Outdoor</option>
                           </select>
-                          <p className="md:col-span-3 text-xs text-slate-500">
-                            Camera {index + 1} is custom-priced after device, wiring, and location review.
+                          <p className="md:col-span-3 text-xs font-semibold text-slate-500">
+                            Camera {index + 1}
                           </p>
                         </div>
                       ))}
@@ -563,7 +623,7 @@ export default function QuoteStepForm() {
                   ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <ToggleCard
                     title="Add smart doorbell install (custom quote)"
                     active={formState.doorbell}
@@ -627,33 +687,30 @@ export default function QuoteStepForm() {
                     onClick={() => setFormState((current) => ({ ...current, handymanMinutes: current.handymanMinutes > 0 ? 0 : 60 }))}
                   />
                   {formState.handymanMinutes > 0 ? (
-                    <>
-                      <p className="text-sm text-slate-500">Tell us the exact scope below. We&apos;ll confirm whether it fits PPTVInstall and price it before booking.</p>
-                      <Input
-                        value={formState.notes}
-                        onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))}
-                        placeholder="What do you need? (projector, outdoor TV, unusual device setup, specialty mounting, etc.)"
-                        className="h-12 rounded-xl bg-white"
-                      />
-                    </>
+                    <p className="text-sm text-slate-500">Describe it in the notes box in step 5 (projector, outdoor TV, unusual device, specialty mount). We&apos;ll confirm it fits and price it before booking.</p>
                   ) : null}
                 </div>
+                </div>
+                ) : null}
               </section>
 
               <section className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
                 <div>
-                  <h4 className="text-xl font-bold text-slate-900">5. ZIP code and notes</h4>
-                  <p className="text-sm text-slate-500">We use your ZIP to confirm route fit and service coverage.</p>
+                  <h4 className="text-xl font-bold text-slate-900">5. Your ZIP code</h4>
+                  <p className="text-sm text-slate-500">Confirms we cover your area. Notes are optional.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-900">Your ZIP code</label>
+                  <label htmlFor="quote-zip" className="text-sm font-semibold text-slate-900">ZIP code <span className="text-red-600">*</span></label>
                   <Input
+                    id="quote-zip"
                     value={formState.zipCode}
                     maxLength={5}
                     inputMode="numeric"
-                    placeholder="30318"
-                    className="h-12 rounded-xl"
+                    autoComplete="postal-code"
+                    placeholder="Enter your ZIP"
+                    aria-invalid={Boolean(zipError)}
+                    className={cn("h-12 rounded-xl text-base", zipError && "border-red-400 focus-visible:ring-red-400")}
                     onBlur={() => { setZipError(/^\d{5}$/.test(formState.zipCode) ? "" : "Please enter a valid 5-digit ZIP code."); }}
                     onChange={(event) => {
                       const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 5);
@@ -687,34 +744,36 @@ export default function QuoteStepForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-900">Anything else we should know?</label>
+                  <label htmlFor="quote-notes" className="text-sm font-semibold text-slate-900">Anything else we should know? <span className="font-normal text-slate-400">(optional)</span></label>
                   <Textarea
+                    id="quote-notes"
                     value={formState.notes}
                     onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))}
                     placeholder="e.g. 3rd floor apartment, parking situation, TV already unboxed, etc."
-                    className="min-h-[140px] rounded-2xl bg-slate-50"
+                    className="min-h-[96px] rounded-2xl bg-slate-50 text-base"
                   />
                 </div>
               </section>
 
-              <div className="sticky bottom-0 z-20 -mx-6 border-t border-slate-200 bg-white/95 px-6 py-4 backdrop-blur md:-mx-8 md:px-8">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="sticky bottom-0 z-20 -mx-5 border-t border-slate-200 bg-white/95 px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur md:-mx-8 md:px-8 md:py-4">
+                <div className="flex items-center justify-between gap-3">
                   <motion.div
                     key={liveQuote.total}
                     initial={{ scale: 0.98, opacity: 0.85 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 220, damping: 18 }}
                   >
-                    <p className="text-sm font-medium text-slate-500">Estimated total</p>
-                    <p className="text-3xl font-extrabold text-slate-900">{formatPrice(liveQuote.total)}</p>
+                    <p className="text-xs font-medium text-slate-500 md:text-sm">Estimated total</p>
+                    <p className="text-2xl font-extrabold text-slate-900 md:text-3xl">{formatPrice(liveQuote.total)}</p>
                   </motion.div>
-                  <Button
-                    className="h-14 rounded-2xl bg-blue-600 px-8 text-base font-bold text-white hover:bg-blue-500"
-                    disabled={!isZipValid}
-                    onClick={handleFormQuote}
-                  >
-                    Get My Quote
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      className="h-12 rounded-2xl bg-blue-600 px-6 text-base font-bold text-white hover:bg-blue-500 md:h-14 md:px-8"
+                      onClick={submitFormQuote}
+                    >
+                      {isZipValid ? "See My Quote" : "Next: Add ZIP"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -746,24 +805,24 @@ export default function QuoteStepForm() {
                   }
                 }}
                 placeholder="e.g. Two TVs: a 65-inch above a brick fireplace with a full motion mount, and a bedroom TV on drywall. Add a Ring doorbell and two outdoor Arlo cameras in 30075."
-                className="min-h-[240px] rounded-[28px] border-slate-200 bg-slate-50 px-4 py-4 text-base"
+                className="min-h-[160px] rounded-[28px] border-slate-200 bg-slate-50 px-4 py-4 text-base md:min-h-[220px]"
               />
-              <div className="space-y-2">
-                <p className="text-sm text-slate-500">Keep it short and simple — just describe the job.</p>
-                <p className="text-sm text-slate-500">Example: 2 TVs, one over fireplace, hide wires in bedroom, I already have mounts</p>
-                <p className="text-sm text-slate-500">Example: Mount 1 TV on drywall, set up a soundbar, and the outlet is already close to the TV spot</p>
-              </div>
+              <p className="text-sm text-slate-500">
+                Example: <span className="italic">&ldquo;2 TVs, one over the fireplace, hide wires in the bedroom, I already have mounts.&rdquo;</span>
+              </p>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <label className="text-sm font-semibold text-slate-900">ZIP Code (for route review)</label>
+                <label htmlFor="quote-text-zip" className="text-sm font-semibold text-slate-900">ZIP code</label>
                 <span className={cn("font-semibold transition-colors", describeUsageRatio >= 1 ? "text-red-600" : describeUsageRatio >= 0.9 ? "text-amber-600" : describeUsageRatio >= 0.75 ? "text-slate-700" : "text-slate-500")}>
                   {describeCharacterCount} / {DESCRIBE_IT_MAX_CHARS}
                 </span>
               </div>
               <Input
+                id="quote-text-zip"
                 value={textZipCode}
                 maxLength={5}
                 inputMode="numeric"
-                placeholder="30318"
+                autoComplete="postal-code"
+                placeholder="Enter your ZIP"
                 className="h-12 rounded-xl"
                 onBlur={() => {
                   if (!textZipCode || isValidFiveDigitZip(textZipCode)) { setTextZipError(""); return; }
