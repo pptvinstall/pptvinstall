@@ -453,7 +453,9 @@ export function registerRoutes(app: Express): Server {
         error: err,
       }));
 
-      sendBookingEmails(booking).catch(err => console.error("Email Error:", err));
+      sendBookingEmails(booking).catch((err) =>
+        console.error("Booking email failed:", { bookingId: booking.id, error: String(err) }),
+      );
       // Phase 2A SMS foundation only: transactional SMS sends are intentionally disabled
       // until reminder/confirmation jobs are added with dedupe and delivery logging.
       
@@ -783,6 +785,70 @@ export function registerRoutes(app: Express): Server {
     });
     sendCancellationEmail(updated).catch(e => console.error(e));
     res.json(updated);
+  });
+
+  // --- Booking confirmation workflow (booking-20 incident) ---
+  // A new web booking is only *acknowledged* until a human confirms it.
+  //   "active"    = acknowledgment sent, awaiting human confirmation
+  //   "scheduled" = human-confirmed by the owner
+  //   "completed" / "cancelled" = terminal
+  // The customer email promises confirmation within 1 hour; these endpoints
+  // back that promise with a queryable SLA queue and an explicit confirm action.
+  const CONFIRMATION_SLA_MS = 60 * 60 * 1000;
+
+  app.get("/api/admin/bookings/needs-confirmation", async (_req, res) => {
+    try {
+      const cutoff = Date.now() - CONFIRMATION_SLA_MS;
+      const bookings = await storage.getAllBookings();
+      const pending = bookings
+        .filter(
+          (b) =>
+            (b.status ?? "active") === "active" &&
+            b.createdAt &&
+            new Date(b.createdAt).getTime() < cutoff,
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt as unknown as string).getTime() -
+            new Date(b.createdAt as unknown as string).getTime(),
+        )
+        .map((b) => ({
+          id: b.id,
+          name: b.name,
+          phone: b.phone,
+          email: b.email,
+          preferredDate: b.preferredDate,
+          appointmentTime: b.appointmentTime,
+          pricingTotal: b.pricingTotal,
+          createdAt: b.createdAt,
+          minutesWaiting: Math.round(
+            (Date.now() - new Date(b.createdAt as unknown as string).getTime()) / 60000,
+          ),
+        }));
+      res.json({ slaMinutes: 60, count: pending.length, bookings: pending });
+    } catch (error) {
+      console.error("needs-confirmation error:", error);
+      res.status(500).json({ message: "Could not load unconfirmed bookings." });
+    }
+  });
+
+  app.post("/api/admin/bookings/:id/confirm", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ message: "Invalid booking ID." });
+      }
+      const booking = await storage.getBookingById(id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found." });
+      }
+      const updated = await storage.updateBooking(id, { status: "scheduled" });
+      console.log(`Booking ${id} human-confirmed by owner (active -> scheduled).`);
+      res.json(updated);
+    } catch (error) {
+      console.error("Admin confirm error:", error);
+      res.status(500).json({ message: "Could not confirm this booking right now." });
+    }
   });
 
   // --- JOB OS (owner pricing/job/invoice tools; admin-token protected, see docs/JOB_OS.md) ---

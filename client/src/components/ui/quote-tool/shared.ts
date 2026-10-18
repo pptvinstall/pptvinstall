@@ -157,13 +157,43 @@ function hasTravelFeeLine(groups: QuoteGroup[]): boolean {
 
 export function normalizeQuoteForDisplayTotals<T extends DisplayQuote>(quote: T): T {
   const travelFeeAmount = getTravelFeeAmount(quote.travelFee);
-  const subtotalExcludingTravel = Math.max(0, quote.subtotal - (hasTravelFeeLine(quote.groups) ? travelFeeAmount : 0));
-  const totalIncludingTravel = Math.max(0, subtotalExcludingTravel - quote.discount + travelFeeAmount);
+  const alreadyItemized = hasTravelFeeLine(quote.groups);
+  // Base work subtotal, excluding any travel line already present in the groups.
+  const workSubtotal = Math.max(0, quote.subtotal - (alreadyItemized ? travelFeeAmount : 0));
+
+  let groups = quote.groups;
+  if (travelFeeAmount > 0 && !alreadyItemized) {
+    // Itemize the fuel travel fee so booking pages, emails and Job OS show
+    // exactly what the extra dollars are (booking-20: $100 work + $9 travel,
+    // previously displayed as $109 with no explanation). Idempotent: the
+    // hasTravelFeeLine guard prevents double-adding on re-normalization.
+    const feeLabel = quote.travelContext?.feeLabel || `Estimated fuel travel: $${travelFeeAmount}`;
+    groups = [
+      ...groups,
+      {
+        title: "Travel",
+        subtitle: feeLabel,
+        items: [
+          {
+            name: "Travel Fee (estimated fuel)",
+            price: travelFeeAmount,
+            qty: 1,
+            lineTotal: travelFeeAmount,
+          },
+        ],
+        subtotal: travelFeeAmount,
+      },
+    ];
+  }
+
+  const subtotal = workSubtotal + travelFeeAmount;
+  const total = Math.max(0, subtotal - quote.discount);
 
   return {
     ...quote,
-    subtotal: subtotalExcludingTravel,
-    total: totalIncludingTravel,
+    groups,
+    subtotal,
+    total,
   };
 }
 

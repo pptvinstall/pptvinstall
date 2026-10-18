@@ -1,5 +1,51 @@
 // Calendar export utilities for booking appointments
 
+/** All appointment times are America/New_York wall-clock times. */
+const BUSINESS_TIME_ZONE = "America/New_York";
+
+function getTimeZoneOffsetMs(instant: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(instant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return asUtc - instant.getTime();
+}
+
+/**
+ * Interpret a booking wall-clock (date "yyyy-MM-dd", time like "5:30 PM") in
+ * America/New_York and return the true UTC instant. Never format a local
+ * wall-clock Date with a "Z" suffix — that was the booking-20 calendar bug
+ * (5:30 PM ET rendered as 1:30 PM ET in Google Calendar).
+ */
+export function bookingWallTimeToUtc(date: string, time: string, timeZone: string = BUSINESS_TIME_ZONE): Date {
+  const [timePart, meridiemPart] = time.split(" ");
+  const [hoursPart, minutesPart] = timePart.split(":");
+  let hours = Number(hoursPart);
+  const minutes = Number(minutesPart);
+  const meridiem = (meridiemPart || "").toUpperCase();
+
+  if (meridiem === "PM" && hours !== 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
+
+  const [year, month, day] = date.split("-").map(Number);
+  const wallAsUtcMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+
+  let instant = new Date(wallAsUtcMs - getTimeZoneOffsetMs(new Date(wallAsUtcMs), timeZone));
+  for (let i = 0; i < 2; i++) {
+    instant = new Date(wallAsUtcMs - getTimeZoneOffsetMs(instant, timeZone));
+  }
+  return instant;
+}
+
 export interface CalendarEvent {
   title: string;
   description: string;
@@ -16,7 +62,7 @@ export interface CalendarEvent {
   };
 }
 
-// Format date for ICS file
+// Format a UTC instant for ICS file (input must already be a true UTC instant)
 const formatICSDate = (date: Date): string => {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 };
@@ -36,7 +82,8 @@ export const generateICSContent = (event: CalendarEvent): string => {
     `SUMMARY:${event.title}`,
     `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
     `LOCATION:${event.location}`,
-    'STATUS:CONFIRMED',
+    // A web booking is only acknowledged until a human confirms it — never CONFIRMED.
+    'STATUS:TENTATIVE',
     'SEQUENCE:0',
     `DTSTAMP:${formatICSDate(new Date())}`,
     event.organizer ? `ORGANIZER;CN=${event.organizer.name}:mailto:${event.organizer.email}` : '',
@@ -63,14 +110,14 @@ export const downloadICSFile = (event: CalendarEvent, filename?: string): void =
   const icsContent = generateICSContent(event);
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename || `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 };
 
@@ -85,7 +132,7 @@ export const generateGoogleCalendarURL = (event: CalendarEvent): string => {
     location: event.location,
     sprop: 'website:pictureperfe.ct'
   });
-  
+
   return `${baseURL}?${params.toString()}`;
 };
 
@@ -99,13 +146,14 @@ export const generateOutlookCalendarURL = (event: CalendarEvent): string => {
     body: event.description,
     location: event.location
   });
-  
+
   return `${baseURL}?${params.toString()}`;
 };
 
 // Create calendar event from booking data
 export const createCalendarEvent = (bookingData: any): CalendarEvent => {
-  const startDate = new Date(`${bookingData.preferredDate}T${convertTo24Hour(bookingData.appointmentTime)}`);
+  // bookingData.appointmentTime is an America/New_York wall-clock like "5:30 PM".
+  const startDate = bookingWallTimeToUtc(bookingData.preferredDate, bookingData.appointmentTime);
   const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000)); // 2 hours duration
 
   const servicesList = [];
@@ -147,20 +195,4 @@ export const createCalendarEvent = (bookingData: any): CalendarEvent => {
       email: bookingData.email
     }
   };
-};
-
-// Helper function to convert 12-hour time to 24-hour format
-const convertTo24Hour = (time12h: string): string => {
-  const [time, modifier] = time12h.split(' ');
-  let [hours, minutes] = time.split(':');
-  
-  if (hours === '12') {
-    hours = '00';
-  }
-  
-  if (modifier === 'PM') {
-    hours = String(parseInt(hours, 10) + 12);
-  }
-  
-  return `${hours}:${minutes}:00`;
 };

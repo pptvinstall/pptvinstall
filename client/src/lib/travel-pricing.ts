@@ -119,19 +119,19 @@ const WEEKEND_TIERS: Record<string, TravelTier> = {
   "30269": 4, "30265": 4, "30263": 4,
 };
 
-export function getDayType(): DayType {
-  const day = new Date().getDay();
+export function getDayType(forDate: Date = new Date()): DayType {
+  const day = forDate.getDay();
   return day === 0 || day === 6 ? "weekend" : "weekday";
 }
 
-export function getOriginLabel(): string {
-  return getDayType() === "weekday"
+export function getOriginLabel(forDate: Date = new Date()): string {
+  return getDayType(forDate) === "weekday"
     ? "Midtown Atlanta (Georgia Tech)"
     : "Decatur";
 }
 
-export function getAvailabilityNote(): string | null {
-  if (getDayType() === "weekday") {
+export function getAvailabilityNote(forDate: Date = new Date()): string | null {
+  if (getDayType(forDate) === "weekday") {
     return "Weekday appointments start at 5:30 PM — we come from Midtown.";
   }
   return null;
@@ -152,8 +152,8 @@ export function getZipReferenceRoute(zip: string, dayType: DayType): { tier: 0 |
   return { tier, oneWayMiles: ONE_WAY_MILES_ESTIMATE[tier] };
 }
 
-export function getTravelTier(zip: string): TravelTier {
-  const tiers = getDayType() === "weekday" ? WEEKDAY_TIERS : WEEKEND_TIERS;
+export function getTravelTier(zip: string, forDate: Date = new Date()): TravelTier {
+  const tiers = getDayType(forDate) === "weekday" ? WEEKDAY_TIERS : WEEKEND_TIERS;
   // Internal legacy sentinel name only. Unknown ZIPs are still serviceable.
   return tiers[zip] ?? "out_of_range";
 }
@@ -164,14 +164,14 @@ function estimateFuelFee(oneWayMiles: number): number {
   return Math.ceil(oneWayMiles * 2 * COST_PER_MILE);
 }
 
-export function getTravelFee(zip: string): number | "out_of_range" {
-  const tier = getTravelTier(zip);
+export function getTravelFee(zip: string, forDate: Date = new Date()): number | "out_of_range" {
+  const tier = getTravelTier(zip, forDate);
   if (tier === "out_of_range") return "out_of_range";
   if (tier === 0) return 0;
   return estimateFuelFee(ONE_WAY_MILES_ESTIMATE[tier]);
 }
 
-export function getTravelContext(zip: string): {
+export function getTravelContext(zip: string, forDate: Date = new Date()): {
   fee: number | "out_of_range";
   tier: TravelTier;
   dayType: DayType;
@@ -181,11 +181,11 @@ export function getTravelContext(zip: string): {
   oneWayMiles: number | null;
   roundTripMiles: number | null;
 } {
-  const dayType = getDayType();
-  const tier = getTravelTier(zip);
-  const fee = getTravelFee(zip);
-  const origin = getOriginLabel();
-  const availabilityNote = getAvailabilityNote();
+  const dayType = getDayType(forDate);
+  const tier = getTravelTier(zip, forDate);
+  const fee = getTravelFee(zip, forDate);
+  const origin = getOriginLabel(forDate);
+  const availabilityNote = getAvailabilityNote(forDate);
   const oneWayMiles = tier === "out_of_range" ? null : ONE_WAY_MILES_ESTIMATE[tier];
   const roundTripMiles = oneWayMiles === null ? null : oneWayMiles * 2;
 
