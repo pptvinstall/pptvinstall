@@ -23,7 +23,7 @@ test("pool errors never log credentials or the Error/client object", () => {
 
   const unsafeValue = "TEST_ONLY_SECRET_DO_NOT_LOG";
   const error = Object.assign(new Error(`Database failed ${unsafeValue}`), {
-    connectionString: `postgresql://user:${unsafeValue}@example.invalid/db`,
+    connectionString: unsafeValue,
     client: {
       connectionParameters: { password: unsafeValue },
     },
