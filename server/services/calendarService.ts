@@ -1,15 +1,7 @@
+import { atlantaSlotInstant } from "@shared/atlantaTime";
+
 function parseBookingDateTime(date: string, time: string): Date {
-  const [timePart, meridiemPart] = time.split(" ");
-  const [hoursPart, minutesPart] = timePart.split(":");
-  let hours = Number(hoursPart);
-  const minutes = Number(minutesPart);
-  const meridiem = meridiemPart.toUpperCase();
-
-  if (meridiem === "PM" && hours !== 12) hours += 12;
-  if (meridiem === "AM" && hours === 12) hours = 0;
-
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return atlantaSlotInstant(date, time);
 }
 
 function addHours(date: Date, hours: number): Date {

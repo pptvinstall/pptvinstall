@@ -1,4 +1,4 @@
-import { format, addDays, subDays } from "date-fns";
+import { addDateKeyDays, atlantaDateKey } from "@shared/atlantaTime";
 
 import { storage } from "../storage";
 import { sendAppointmentReminder, sendPostJobFollowUp } from "../email";
@@ -10,9 +10,9 @@ const reminderSentIds = new Set<string | number>();
 const followUpSentIds = new Set<string | number>();
 
 async function runSchedulerTick() {
-  const today = format(new Date(), "yyyy-MM-dd");
-  const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
-  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+  const today = atlantaDateKey();
+  const tomorrow = addDateKeyDays(today, 1);
+  const yesterday = addDateKeyDays(today, -1);
 
   let allBookings;
   try {

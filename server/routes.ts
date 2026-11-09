@@ -5,7 +5,8 @@ import { createGuardedTransport, describeOutboundState } from "./outbound";
 import { storage } from "./storage";
 import { sendBookingEmails, sendCancellationEmail, sendContactMessageEmail, sendRescheduleEmail } from "./email";
 import { crmContacts, insertBookingSchema, insertContactMessageSchema, promotions, smsMessages, smsOptOuts } from "@shared/schema";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
+import { addDateKeyDays, atlantaDateKey, atlantaSlotInstant, isValidDateKey } from "@shared/atlantaTime";
 import { generateICS } from "./services/calendarService";
 import { monitoring } from "./monitoring";
 import { db } from "./db";
@@ -245,24 +246,15 @@ export function registerRoutes(app: Express): Server {
     return slots;
   }
 
-  function parseSlotTime(date: Date, slot: string): Date {
-    const [timePart, meridiemPart] = slot.split(" ");
-    const [hoursPart, minutesPart] = timePart.split(":");
-    let hours = Number(hoursPart);
-    const minutes = Number(minutesPart);
-    const meridiem = meridiemPart.toUpperCase();
-    if (meridiem === "PM" && hours !== 12) hours += 12;
-    if (meridiem === "AM" && hours === 12) hours = 0;
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
-  }
 
   function getAvailableSlots(date: Date, bookedSlots: string[]) {
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
+    const dateKey = format(date, "yyyy-MM-dd");
+    const isToday = dateKey === atlantaDateKey(now);
     let allSlots = getSlots(date);
     if (isToday) {
       const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-      allSlots = allSlots.filter((slot) => parseSlotTime(date, slot) >= twoHoursFromNow);
+      allSlots = allSlots.filter((slot) => atlantaSlotInstant(dateKey, slot) >= twoHoursFromNow);
     }
     return allSlots.filter((slot) => !bookedSlots.includes(slot));
   }
@@ -272,13 +264,13 @@ export function registerRoutes(app: Express): Server {
     try {
       const allBookings = await storage.getAllBookings();
 
-      let checkDate = new Date();
+      const todayKey = atlantaDateKey();
       let foundSlot = null;
       let foundDate = null;
 
       for (let i = 0; i <= 14; i++) {
-        const targetDate = addDays(checkDate, i);
-        const dateStr = format(targetDate, 'yyyy-MM-dd');
+        const dateStr = addDateKeyDays(todayKey, i);
+        const targetDate = new Date(`${dateStr}T12:00:00`);
 
         const takenOnDay = allBookings
           .filter(b => b.preferredDate === dateStr && b.status !== 'cancelled')
@@ -402,18 +394,13 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/bookings", async (req, res) => {
     try {
       const data = insertBookingSchema.parse(req.body);
-      const requestedDate = new Date(`${data.preferredDate}T12:00:00`);
-
-      if (Number.isNaN(requestedDate.getTime())) {
+      if (!isValidDateKey(data.preferredDate)) {
         return res.status(400).json({ message: "Please select a valid appointment date." });
       }
+      const requestedDate = new Date(`${data.preferredDate}T12:00:00`);
+      const todayKey = atlantaDateKey();
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const requestedDay = new Date(requestedDate);
-      requestedDay.setHours(0, 0, 0, 0);
-
-      if (requestedDay < today) {
+      if (data.preferredDate < todayKey) {
         return res.status(400).json({ message: "Please select a future appointment date." });
       }
 
@@ -422,8 +409,8 @@ export function registerRoutes(app: Express): Server {
       }
 
       if (
-        requestedDay.getTime() === today.getTime() &&
-        parseSlotTime(requestedDate, data.appointmentTime).getTime() < Date.now() + 2 * 60 * 60 * 1000
+        data.preferredDate === todayKey &&
+        atlantaSlotInstant(data.preferredDate, data.appointmentTime).getTime() < Date.now() + 2 * 60 * 60 * 1000
       ) {
         return res.status(409).json({ message: "Same-day appointments require at least two hours notice." });
       }
@@ -742,21 +729,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "Invalid booking ID." });
       }
 
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) {
+      if (!isValidDateKey(preferredDate)) {
         return res.status(400).json({ message: "Please choose a valid appointment date." });
       }
-
       const requestedDate = new Date(`${preferredDate}T12:00:00`);
-      if (Number.isNaN(requestedDate.getTime())) {
-        return res.status(400).json({ message: "Please choose a valid appointment date." });
-      }
+      const todayKey = atlantaDateKey();
 
-      const today = new Date();
-      const requestedDay = new Date(requestedDate);
-      today.setHours(0, 0, 0, 0);
-      requestedDay.setHours(0, 0, 0, 0);
-
-      if (requestedDay < today) {
+      if (preferredDate < todayKey) {
         return res.status(400).json({ message: "Appointments cannot be moved to a past date." });
       }
 
@@ -765,8 +744,8 @@ export function registerRoutes(app: Express): Server {
       }
 
       if (
-        requestedDay.getTime() === today.getTime() &&
-        parseSlotTime(requestedDate, appointmentTime).getTime() <= Date.now()
+        preferredDate === todayKey &&
+        atlantaSlotInstant(preferredDate, appointmentTime).getTime() <= Date.now()
       ) {
         return res.status(400).json({ message: "Appointments cannot be moved to a time that has already passed." });
       }
