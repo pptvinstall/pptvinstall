@@ -14,6 +14,38 @@ const transporter = createGuardedTransport({
   socketTimeout: 10000,
 });
 
+export type MailDiagnostic = {
+  status: "connected" | "not_configured" | "authentication_failed" | "connection_failed" | "suppressed";
+  checkedAt: string;
+};
+
+/**
+ * Admin-only diagnostic: verify Gmail SMTP login without sending a message,
+ * exposing credentials, or reserving a customer appointment.
+ */
+export async function diagnoseBookingEmailConnection(): Promise<MailDiagnostic> {
+  const checkedAt = new Date().toISOString();
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return { status: "not_configured", checkedAt };
+  }
+
+  try {
+    const connected = await transporter.verify();
+    return { status: connected ? "connected" : "suppressed", checkedAt };
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : "unknown";
+    console.warn("[mail-diagnostic] SMTP verification failed", {
+      category: code === "EAUTH" ? "authentication_failed" : "connection_failed",
+    });
+    return {
+      status: code === "EAUTH" ? "authentication_failed" : "connection_failed",
+      checkedAt,
+    };
+  }
+}
+
 type LineItem = { name: string; total: number };
 
 export type BookingEmailDelivery = {

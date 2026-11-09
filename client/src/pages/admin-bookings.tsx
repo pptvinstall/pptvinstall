@@ -90,6 +90,8 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [emailDiagnostic, setEmailDiagnostic] = useState("");
 
   async function adminRequest(method: string, url: string, data?: unknown) {
     const headers: Record<string, string> = { "x-admin-token": adminToken };
@@ -105,6 +107,34 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
       throw new Error(payload?.message || response.statusText);
     }
     return response;
+  }
+
+  async function checkEmailLogin() {
+    setCheckingEmail(true);
+    try {
+      const response = await adminRequest("GET", "/api/admin/email-diagnostic");
+      const data = (await response.json()) as { status?: string };
+      const messages: Record<string, string> = {
+        connected: "Gmail authentication succeeded. No email was sent.",
+        not_configured: "Gmail SMTP credentials are missing in Render.",
+        authentication_failed: "Gmail rejected the app password. Replace GMAIL_APP_PASSWORD in Render.",
+        connection_failed: "Could not reach or authenticate with Gmail. Check Render logs.",
+        suppressed: "Outbound messages are intentionally suppressed in this environment.",
+      };
+      const message = messages[data.status || ""] || "Mail status couldn't be verified.";
+      setEmailDiagnostic(message);
+      toast({
+        title: data.status === "connected" ? "Gmail connection verified" : "Gmail needs attention",
+        description: message,
+        variant: data.status === "connected" ? "default" : "destructive",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Email test unavailable.";
+      setEmailDiagnostic(message);
+      toast({ title: "Email test unavailable", description: message, variant: "destructive" });
+    } finally {
+      setCheckingEmail(false);
+    }
   }
 
   const { data: bookings = [] } = useQuery({
@@ -129,7 +159,7 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
-      toast({ title: "Updated!", description: "Customer has been emailed." });
+      toast({ title: "Appointment updated", description: "Email delivery has not been verified." });
       setRescheduleBooking(null);
     },
     onError: (error) => {
@@ -147,7 +177,7 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
-      toast({ title: "Cancelled", description: "Booking cancelled & email sent." });
+      toast({ title: "Booking cancelled", description: "Email delivery has not been verified." });
     }
   });
 
@@ -182,7 +212,12 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
              <h1 className="text-3xl font-bold text-slate-900">Booking Command Center</h1>
              <p className="text-slate-500">Manage schedule, revenue, and customer alerts.</p>
            </div>
-           <div className="flex gap-2">
+           <div className="flex flex-col gap-2">
+             <Button variant="outline" disabled={checkingEmail} onClick={checkEmailLogin}>
+               {checkingEmail ? "Checking Gmail connection..." : "Test Gmail connection (no email sent)"}
+             </Button>
+             {emailDiagnostic ? <p role="status" className="max-w-md text-xs text-slate-700">{emailDiagnostic}</p> : null}
+             <div className="flex flex-wrap gap-2">
              <Card className="p-4 flex items-center gap-3 border-blue-100 bg-blue-50">
                <div className="p-2 bg-blue-100 rounded-full text-blue-600"><TrendingUp className="h-5 w-5"/></div>
                <div>
@@ -197,6 +232,7 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
                  <div className="text-lg font-black text-slate-900">{activeJobs}</div>
                </div>
              </Card>
+             </div>
            </div>
          </div>
 
