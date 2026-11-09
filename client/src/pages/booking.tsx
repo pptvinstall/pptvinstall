@@ -230,6 +230,18 @@ export default function Booking() {
       }
 
       if (!response.ok) throw new Error("Booking failed");
+      const saved = (await response.json()) as { id?: number | string; confirmationEmailSent?: boolean };
+      if (typeof window !== "undefined") {
+        // Keep a minimal on-screen receipt, even if SMTP is down or the email is lost.
+        try {
+          window.sessionStorage.setItem("pptvinstall_last_booking", JSON.stringify({
+            reference: saved.id == null ? "" : String(saved.id),
+            date: format(date, "yyyy-MM-dd"),
+            time,
+            confirmationEmailSent: saved.confirmationEmailSent === true,
+          }));
+        } catch { /* Session storage may be disabled; booking is still saved. */ }
+      }
       if (typeof window !== "undefined" && pendingQuote) {
         // Booking already succeeded; storage failure must not encourage a duplicate.
         try { window.localStorage.removeItem(QUOTE_KEY); } catch { /* best effort */ }

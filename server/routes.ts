@@ -453,11 +453,20 @@ export function registerRoutes(app: Express): Server {
         error: err,
       }));
 
-      sendBookingEmails(booking).catch(err => console.error("Email Error:", err));
-      // Phase 2A SMS foundation only: transactional SMS sends are intentionally disabled
-      // until reminder/confirmation jobs are added with dedupe and delivery logging.
-      
-      res.json(booking);
+      // A saved booking is successful even when SMTP is unavailable. Report the
+      // confirmation status honestly instead of claiming an email was sent.
+      let confirmationEmailSent = false;
+      try {
+        const delivery = await sendBookingEmails(booking);
+        confirmationEmailSent = delivery.customerEmailSent;
+      } catch (error) {
+        console.error("[booking-email] unexpected notification failure", {
+          bookingId: booking.id,
+          reason: error instanceof Error ? error.message : "unknown_error",
+        });
+      }
+      // Phase 2A SMS foundation only: automatic transactional SMS is disabled.
+      res.json({ ...booking, confirmationEmailSent });
     } catch (error) {
       if (error instanceof ZodError) {
         console.warn("Booking validation failed");
