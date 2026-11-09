@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   bookingEstimate,
   bookingMatchesFilter,
+  bookingSortTime,
   getBookingBucket,
   summarizeBookingDashboard,
   type BookingFilter,
@@ -226,10 +227,10 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
       const bucketA = getBookingBucket(a, now);
       const bucketB = getBookingBucket(b, now);
       if (rank[bucketA] !== rank[bucketB]) return rank[bucketA] - rank[bucketB];
-      const dateA = String(a.preferredDate || "") + " " + String(a.appointmentTime || "");
-      const dateB = String(b.preferredDate || "") + " " + String(b.appointmentTime || "");
-      if (bucketA === "upcoming") return dateA.localeCompare(dateB);
-      return dateB.localeCompare(dateA);
+      const timestampA = bookingSortTime(a);
+      const timestampB = bookingSortTime(b);
+      if (bucketA === "upcoming" || bucketA === "in_progress") return timestampA - timestampB;
+      return timestampB - timestampA;
     });
   const safeCustomers = Array.isArray(customerResponse.customers) ? customerResponse.customers : [];
   const crmStats = {
@@ -321,8 +322,21 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
          ) : (
            <div className="grid gap-4">
              {filteredBookings.map((booking: any) => {
-               // SAFETY CHECK: If booking ID is missing, skip rendering this card
                if (!booking || !booking.id) return null;
+               const bucket = getBookingBucket(booking, now);
+               const statusLabels: Record<string, string> = {
+                 upcoming: "Scheduled",
+                 in_progress: "In progress",
+                 past_due: "Needs follow-up",
+                 needs_review: "Review date/time",
+                 completed: "Completed",
+                 cancelled: "Cancelled",
+               };
+               const phoneDigits = String(booking.phone || "").replace(/\D/g, "");
+               const normalizedPhone = phoneDigits.length === 10 ? `+1${phoneDigits}`
+                 : phoneDigits.length === 11 && phoneDigits.startsWith("1") ? `+${phoneDigits}` : "";
+               const isOpen = booking.status !== "cancelled" && booking.status !== "completed";
+               const canMarkCompleted = isOpen && (bucket === "in_progress" || bucket === "past_due");
 
                return (
                  <Card key={booking.id} className="overflow-hidden hover:shadow-md transition-all border-slate-200">
@@ -330,42 +344,80 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
                      <div className="space-y-2">
                        <div className="flex items-center gap-3">
                          <span className="font-bold text-lg text-slate-900">{booking.name}</span>
-                         {booking.status === 'cancelled' 
-                            ? <Badge variant="destructive">Cancelled</Badge> 
-                            : <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>}
-                         <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">${booking.pricingTotal}</span>
+                         <Badge
+                           variant={bucket === "cancelled" ? "destructive" : "secondary"}
+                           className={bucket === "upcoming" || bucket === "in_progress" ? "bg-blue-100 text-blue-800 hover:bg-blue-100" : bucket === "past_due" || bucket === "needs_review" ? "bg-amber-100 text-amber-900 hover:bg-amber-100" : ""}
+                         >{statusLabels[bucket]}</Badge>
+                         <span className="text-sm font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                           Estimate: {bookingEstimate(booking.pricingTotal) > 0 ? `${bookingEstimate(booking.pricingTotal).toFixed(2)}` : "TBD"}
+                         </span>
                        </div>
                        <div className="text-sm text-slate-500 flex flex-wrap gap-4">
                          <span className="flex items-center gap-1"><CalendarIcon className="h-4 w-4 text-blue-500"/> {booking.preferredDate}</span>
                          <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-blue-500"/> {booking.appointmentTime}</span>
                        </div>
-                       <div className="text-xs text-slate-400 font-medium">
+                       <div className="text-xs text-slate-500 font-medium">
                          {booking.serviceType} • {booking.streetAddress}, {booking.city}
                        </div>
+                       {bucket === "past_due" ? (
+                         <p className="text-xs text-amber-900">The appointment time passed. Confirm whether it was completed, cancelled, or needs rescheduling.</p>
+                       ) : null}
+                       {bucket === "needs_review" ? (
+                         <p className="text-xs text-amber-900">Check the date, time, or status before treating this booking as scheduled.</p>
+                       ) : null}
                      </div>
 
-                     {booking.status !== 'cancelled' && (
-                       <div className="flex gap-2 w-full md:w-auto">
-                         <Button 
-                           variant="outline" 
-                           size="sm" 
-                           className="flex-1 md:flex-none border-blue-200 text-blue-700 hover:bg-blue-50"
-                           onClick={() => setRescheduleBooking(booking)}
-                         >
-                           <Edit className="h-4 w-4 mr-2"/> Move
+                     <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                       {normalizedPhone && bucket !== "cancelled" ? (
+                         <>
+                           <Button asChild variant="outline" size="sm">
+                             <a href={`tel:${normalizedPhone}`}>Call</a>
+                           </Button>
+                           <Button asChild variant="outline" size="sm">
+                             <a href={`sms:${normalizedPhone}`}>Text</a>
+                           </Button>
+                         </>
+                       ) : null}
+                       {isOpen ? (
+                         <Button variant="outline" size="sm"
+                           className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                           onClick={() => setRescheduleBooking(booking)}>
+                           <Edit className="h-4 w-4 mr-2" /> Move
                          </Button>
-                         <Button 
-                           variant="ghost" 
-                           size="sm"
-                           className="flex-1 md:flex-none text-red-600 hover:text-red-700 hover:bg-red-50"
+                       ) : null}
+                       {canMarkCompleted ? (
+                         <Button size="sm" disabled={statusMutation.isPending}
                            onClick={() => {
-                             if(confirm("Are you sure? This will email the customer.")) cancelMutation.mutate(booking.id);
-                           }}
-                         >
-                           <Trash2 className="h-4 w-4 mr-2"/> Cancel
+                             if (window.confirm("Mark this job completed? This does NOT record payment or message the customer.")) {
+                               statusMutation.mutate({ id: booking.id, status: "completed" });
+                             }
+                           }}>
+                           Mark completed
                          </Button>
-                       </div>
-                     )}
+                       ) : null}
+                       {bucket === "completed" ? (
+                         <Button variant="outline" size="sm" disabled={statusMutation.isPending}
+                           onClick={() => {
+                             if (window.confirm("Reopen this completed job for review?")) {
+                               statusMutation.mutate({ id: booking.id, status: "active" });
+                             }
+                           }}>
+                           Reopen
+                         </Button>
+                       ) : null}
+                       {isOpen ? (
+                         <Button variant="ghost" size="sm"
+                           disabled={cancelMutation.isPending}
+                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                           onClick={() => {
+                             if (window.confirm("Cancel this booking? A customer email will be attempted but may not deliver. The history will be kept.")) {
+                               cancelMutation.mutate(booking.id);
+                             }
+                           }}>
+                           <Trash2 className="h-4 w-4 mr-2" /> Cancel
+                         </Button>
+                       ) : null}
+                     </div>
                    </div>
                  </Card>
                );
