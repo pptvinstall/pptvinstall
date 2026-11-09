@@ -229,34 +229,54 @@ export default function Booking() {
         return;
       }
 
-      if (!response.ok) throw new Error("Booking failed");
-      const saved = (await response.json()) as { id?: number | string; confirmationEmailSent?: boolean };
+      if (!response.ok) throw new Error("Booking status uncertain");
+      // An HTTP success can outlive a malformed/empty response body. Do not
+      // encourage a second submission when the server may already have saved it.
+      let saved: { id?: number | string; confirmationEmailSent?: boolean } | null = null;
+      try {
+        const parsed: unknown = await response.json();
+        if (parsed && typeof parsed === "object" && "id" in parsed) {
+          const candidate = parsed as { id?: unknown; confirmationEmailSent?: unknown };
+          if (typeof candidate.id === "string" || typeof candidate.id === "number") {
+            saved = {
+              id: candidate.id,
+              confirmationEmailSent: candidate.confirmationEmailSent === true,
+            };
+          }
+        }
+      } catch {
+        console.warn("Booking response could not be parsed; asking customer to verify instead of retrying.");
+      }
+      const receiptVerified = saved?.id !== undefined;
+
       if (typeof window !== "undefined") {
-        // Keep a minimal on-screen receipt, even if SMTP is down or the email is lost.
         try {
           window.sessionStorage.setItem("pptvinstall_last_booking", JSON.stringify({
-            reference: saved.id == null ? "" : String(saved.id),
+            reference: receiptVerified ? String(saved?.id) : "",
             date: format(date, "yyyy-MM-dd"),
             time,
-            confirmationEmailSent: saved.confirmationEmailSent === true,
+            confirmationEmailSent: receiptVerified && saved?.confirmationEmailSent === true,
+            status: receiptVerified ? "saved" : "unverified",
+            savedAt: Date.now(),
           }));
-        } catch { /* Session storage may be disabled; booking is still saved. */ }
+        } catch { /* Storage failures must not encourage a duplicate booking. */ }
       }
-      if (typeof window !== "undefined" && pendingQuote) {
-        // Booking already succeeded; storage failure must not encourage a duplicate.
+      if (typeof window !== "undefined" && pendingQuote && receiptVerified) {
         try { window.localStorage.removeItem(QUOTE_KEY); } catch { /* best effort */ }
       }
-      trackEvent("booking_submitted", { source: pendingQuote ? "quote" : "direct" });
+      trackEvent(receiptVerified ? "booking_submitted" : "booking_status_unverified", {
+        source: pendingQuote ? "quote" : "direct",
+      });
       setLocation("/confirmation");
     } catch (error) {
       console.error(error);
       toast({
-        title: "Booking didn't go through",
+        title: "We couldn't verify your booking status",
         description: (
           <span>
             Call or text{" "}
             <a href="tel:4047024748" className="font-bold underline">404-702-4748</a>
-            {" "}and we&apos;ll get you scheduled manually.{" "}
+            {" "}to check whether your request was saved before trying again.{" "}
             <a href="sms:4047024748" className="font-bold underline">Text us</a>
           </span>
         ),
