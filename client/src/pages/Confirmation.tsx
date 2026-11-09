@@ -89,16 +89,12 @@ export default function Confirmation() {
           </div>
 
           <div className="space-y-2">
-            <a href="sms:4047024748" className="block">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                <MessageSquare className="mr-2 h-4 w-4" /> Text us to confirm
-              </Button>
-            </a>
-            <a href="tel:4047024748" className="block">
-              <Button variant="outline" className="w-full border-slate-300">
-                <Phone className="mr-2 h-4 w-4" /> Call 404-702-4748
-              </Button>
-            </a>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              <a href="sms:4047024748"><MessageSquare className="mr-2 h-4 w-4" /> Text us to confirm</a>
+            </Button>
+            <Button asChild variant="outline" className="w-full border-slate-300">
+              <a href="tel:4047024748"><Phone className="mr-2 h-4 w-4" /> Call 404-702-4748</a>
+            </Button>
             <Link href="/">
               <Button variant="ghost" className="w-full text-slate-700">Return to Home</Button>
             </Link>
