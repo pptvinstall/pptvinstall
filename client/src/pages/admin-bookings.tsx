@@ -13,6 +13,7 @@ import {
   bookingMatchesFilter,
   bookingSortTime,
   getBookingBucket,
+  googleCalendarDraftUrl,
   summarizeBookingDashboard,
   type BookingFilter,
 } from "@/lib/booking-dashboard";
@@ -310,7 +311,7 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
                </Button>
              ))}
            </div>
-           <p className="text-xs text-slate-500">Older, uncompleted appointments remain in Follow up; cancelled records are not deleted. Completed does not mean paid.</p>
+           <p className="text-xs text-slate-500">Older, uncompleted appointments remain in Follow up; cancelled records are not deleted. Completed does not mean paid. Calendar drafts must be reviewed and saved manually.</p>
          </div>
 
          {filteredBookings.length === 0 ? (
@@ -340,6 +341,7 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
                const normalizedPhone = phoneDigits.length === 10 ? `+1${phoneDigits}`
                  : phoneDigits.length === 11 && phoneDigits.startsWith("1") ? `+${phoneDigits}` : "";
                const isOpen = booking.status !== "cancelled" && booking.status !== "completed";
+               const calendarDraft = bucket === "upcoming" || bucket === "in_progress" ? googleCalendarDraftUrl(booking) : null;
                const canMarkCompleted = isOpen && (bucket === "in_progress" || bucket === "past_due");
 
                return (
@@ -372,6 +374,13 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
                      </div>
 
                      <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                       {calendarDraft ? (
+                         <Button asChild variant="outline" size="sm">
+                           <a href={calendarDraft} target="_blank" rel="noopener noreferrer" aria-label="Open Google Calendar draft to review and save">
+                             <CalendarIcon className="mr-2 h-4 w-4" /> Calendar draft
+                           </a>
+                         </Button>
+                       ) : null}
                        {normalizedPhone && bucket !== "cancelled" ? (
                          <>
                            <Button asChild variant="outline" size="sm">
