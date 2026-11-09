@@ -9,6 +9,8 @@ type BookingReceipt = {
   date: string;
   time: string;
   confirmationEmailSent: boolean;
+  status: "saved" | "unverified";
+  savedAt: number;
 };
 
 function readBookingReceipt(): BookingReceipt | null {
@@ -18,11 +20,15 @@ function readBookingReceipt(): BookingReceipt | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<BookingReceipt>;
     if (typeof parsed.date !== "string" || typeof parsed.time !== "string") return null;
+    if (typeof parsed.savedAt !== "number" || !Number.isFinite(parsed.savedAt)) return null;
+    if (parsed.savedAt > Date.now() || Date.now() - parsed.savedAt > 60 * 60 * 1000) return null;
     return {
       reference: typeof parsed.reference === "string" ? parsed.reference : "",
       date: parsed.date,
       time: parsed.time,
       confirmationEmailSent: parsed.confirmationEmailSent === true,
+      status: parsed.status === "saved" ? "saved" : "unverified",
+      savedAt: parsed.savedAt,
     };
   } catch {
     return null;
@@ -48,14 +54,16 @@ export default function Confirmation() {
         </div>
 
         <CardHeader className="text-center pb-2">
-          <CardTitle className="text-2xl font-bold text-slate-900">Booking Request Received</CardTitle>
+          <CardTitle className="text-2xl font-bold text-slate-900">
+            {receipt?.status === "saved" ? "Booking Request Received" : "Please Verify Your Appointment"}
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-6 text-center">
           <p className="text-slate-600">
-            {receipt
+            {receipt?.status === "saved"
               ? "Your appointment request was saved. We'll review the details and follow up to confirm your requested time."
-              : "If you just submitted a request, please contact us to confirm your appointment details."}
+              : "We couldn't verify whether the request was saved. Please text or call us before trying to book again."}
           </p>
 
           {receipt ? (
@@ -63,7 +71,7 @@ export default function Confirmation() {
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-semibold">Your requested appointment</p>
+                  <p className="font-semibold">{receipt.status === "saved" ? "Your requested appointment" : "Appointment details (not yet verified)"}</p>
                   <p>{displayDate(receipt.date)} at {receipt.time}</p>
                   {receipt.reference ? <p className="text-slate-600">Booking reference: #{receipt.reference}</p> : null}
                   <p className="text-xs text-slate-600">Save a screenshot of this page for your records.</p>
@@ -82,7 +90,9 @@ export default function Confirmation() {
                 <p className="text-xs text-slate-600">
                   {receipt?.confirmationEmailSent
                     ? "Your confirmation was accepted by the email provider. Please check your inbox and spam folder."
-                    : "We couldn't verify that an email was sent. Your saved request does not depend on email delivery. Please text or call to confirm the details."}
+                    : receipt?.status === "saved"
+                      ? "We couldn't verify that an email was sent. Your saved request does not depend on email delivery. Please text or call to confirm the details."
+                      : "We couldn't verify receipt or email delivery. Please text or call to check the request before resubmitting."}
                 </p>
               </div>
             </div>
