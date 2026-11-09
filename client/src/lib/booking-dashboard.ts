@@ -36,6 +36,15 @@ export function getBookingBucket(booking: DashboardBooking, now = new Date()): B
   }
 }
 
+export function bookingSortTime(booking: DashboardBooking): number {
+  try {
+    if (!booking.preferredDate || !booking.appointmentTime) return 0;
+    return atlantaSlotInstant(booking.preferredDate, booking.appointmentTime).getTime();
+  } catch {
+    return 0;
+  }
+}
+
 export function bookingMatchesFilter(bucket: BookingBucket, filter: BookingFilter): boolean {
   if (filter === "all") return true;
   if (filter === "actionable") return !["completed", "cancelled"].includes(bucket);
