@@ -1,4 +1,4 @@
-import { createGuardedTransport } from "./outbound";
+import { createGuardedTransport, outboundSuppressed } from "./outbound";
 import { format } from "date-fns";
 import { addHours, formatICSDate, parseBookingDateTime } from "./services/calendarService";
 import type { InsertContactMessage } from "@shared/schema";
@@ -9,9 +9,17 @@ const transporter = createGuardedTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  connectionTimeout: 7000,
+  greetingTimeout: 7000,
+  socketTimeout: 10000,
 });
 
 type LineItem = { name: string; total: number };
+
+export type BookingEmailDelivery = {
+  customerEmailSent: boolean;
+  ownerEmailSent: boolean;
+};
 
 function getFromAddress() {
   return process.env.EMAIL_FROM || "Picture Perfect TV Install <pptvinstall@gmail.com>";
@@ -77,7 +85,7 @@ function getGoogleCalendarUrl(booking: any, summary: string) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export async function sendBookingEmails(booking: any) {
+export async function sendBookingEmails(booking: any): Promise<BookingEmailDelivery> {
   const [firstName] = String(booking.name || "").split(" ");
   const appointmentLabel = formatAppointment(booking.preferredDate, booking.appointmentTime);
   const items = parseLineItems(booking);
@@ -163,21 +171,43 @@ export async function sendBookingEmails(booking: any) {
     `Questions? 404-702-4748 or pptvinstall@gmail.com\n` +
     `No payment required until after the job is complete.`;
 
-  await transporter.sendMail({
-    from: getFromAddress(),
-    to: booking.email,
-    subject: customerSubject,
-    html: customerHtml,
-    text: customerText,
-  });
+  // Attempt both notifications independently. A bad customer address should
+  // never prevent the business owner from learning about a saved booking.
+  const [customerResult, ownerResult] = await Promise.allSettled([
+    transporter.sendMail({
+      from: getFromAddress(),
+      to: booking.email,
+      subject: customerSubject,
+      html: customerHtml,
+      text: customerText,
+    }),
+    transporter.sendMail({
+      from: getFromAddress(),
+      to: getAdminAddress(),
+      subject: ownerSubject,
+      html: ownerHtml,
+      text: ownerText,
+    }),
+  ]);
 
-  await transporter.sendMail({
-    from: getFromAddress(),
-    to: getAdminAddress(),
-    subject: ownerSubject,
-    html: ownerHtml,
-    text: ownerText,
-  });
+  const customerEmailSent = customerResult.status === "fulfilled" && !outboundSuppressed();
+  const ownerEmailSent = ownerResult.status === "fulfilled" && !outboundSuppressed();
+
+  if (customerResult.status === "rejected") {
+    console.error("[booking-email] customer confirmation failed", {
+      bookingId: booking.id,
+      reason: customerResult.reason instanceof Error ? customerResult.reason.message : "unknown_error",
+    });
+  }
+  if (ownerResult.status === "rejected") {
+    console.error("[booking-email] owner notification failed", {
+      bookingId: booking.id,
+      reason: ownerResult.reason instanceof Error ? ownerResult.reason.message : "unknown_error",
+    });
+  }
+
+  console.info("[booking-email] delivery", { bookingId: booking.id, customerEmailSent, ownerEmailSent });
+  return { customerEmailSent, ownerEmailSent };
 }
 
 export async function sendContactMessageEmail(message: InsertContactMessage) {
