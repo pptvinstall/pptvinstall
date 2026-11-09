@@ -4,6 +4,7 @@ import { logger } from './services/loggingService';
 import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import { getSmtpAuthenticationState, type SmtpAuthenticationStatus } from "./outbound";
 
 export interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -11,6 +12,9 @@ export interface SystemHealth {
   uptime: number;
   database: boolean;
   email: boolean;
+  emailConfigured: boolean;
+  emailAuthentication: SmtpAuthenticationStatus;
+  emailCheckedAt: string | null;
   memory: {
     used: number;
     total: number;
@@ -105,13 +109,11 @@ export class MonitoringService {
       logger.error('Database health check failed:', error as Error);
     }
 
-    // Test email service — project uses Gmail SMTP, not SendGrid
-    let emailHealthy = false;
-    try {
-      emailHealthy = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
-    } catch (error) {
-      logger.error('Email service health check failed:', error as Error);
-    }
+    // Passive health read: configured credentials are not proof that Gmail
+    // accepts the login. Verification is done only by a deliberate admin test
+    // or a real outbound email, never from a public health request.
+    const smtp = getSmtpAuthenticationState();
+    const emailHealthy = smtp.configured && smtp.status === "connected";
 
     // Measure actual container/process memory pressure. Using V8 heap occupancy
     // here causes false degraded states because heapTotal expands dynamically.
@@ -150,6 +152,9 @@ export class MonitoringService {
       uptime,
       database: databaseHealthy,
       email: emailHealthy,
+      emailConfigured: smtp.configured,
+      emailAuthentication: smtp.status,
+      emailCheckedAt: smtp.checkedAt,
       memory,
       responseTime,
       activeBookings,

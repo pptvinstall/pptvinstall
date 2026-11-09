@@ -56,6 +56,42 @@ export function clearOutbox(): void {
   outbox.length = 0;
 }
 
+export type SmtpAuthenticationStatus =
+  | "not_configured"
+  | "not_verified"
+  | "connected"
+  | "authentication_failed"
+  | "connection_failed"
+  | "suppressed";
+
+let lastSmtpStatus: SmtpAuthenticationStatus = "not_verified";
+let lastSmtpCheckedAt: string | null = null;
+
+function setSmtpStatus(status: SmtpAuthenticationStatus): void {
+  lastSmtpStatus = status;
+  lastSmtpCheckedAt = new Date().toISOString();
+}
+
+function recordSmtpFailure(error: unknown): void {
+  const code = error && typeof error === "object" && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : "unknown";
+  if (code === "EAUTH") setSmtpStatus("authentication_failed");
+  else if (code === "ECONNECTION" || code === "ETIMEDOUT" || code === "ESOCKET") {
+    setSmtpStatus("connection_failed");
+  }
+}
+
+export function getSmtpAuthenticationState() {
+  const configured = Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+  return {
+    configured,
+    status: !configured ? "not_configured" as const
+      : outboundSuppressed() ? "suppressed" as const : lastSmtpStatus,
+    checkedAt: lastSmtpCheckedAt,
+  };
+}
+
 type MailOptions = { to?: unknown; subject?: string } & Record<string, unknown>;
 
 /** Drop-in replacement for nodemailer.createTransport that honours outbound suppression. */
@@ -64,15 +100,34 @@ export function createGuardedTransport(options: Record<string, unknown>) {
   return {
     // Auth-only SMTP handshake; does not send an email.
     async verify(): Promise<boolean> {
-      if (outboundSuppressed()) return false;
-      return real.verify();
+      if (outboundSuppressed()) {
+        setSmtpStatus("suppressed");
+        return false;
+      }
+      try {
+        const verified = await real.verify();
+        if (verified) setSmtpStatus("connected");
+        return verified;
+      } catch (error) {
+        recordSmtpFailure(error);
+        throw error;
+      }
     },
     async sendMail(mail: MailOptions) {
       if (outboundSuppressed()) {
         recordSuppressed("email", mail.to, String(mail.subject ?? "(no subject)"));
+        setSmtpStatus("suppressed");
         return { messageId: "suppressed", accepted: [], rejected: [], suppressed: true } as unknown as Awaited<ReturnType<typeof real.sendMail>>;
       }
-      return real.sendMail(mail as Parameters<typeof real.sendMail>[0]);
+      try {
+        const response = await real.sendMail(mail as Parameters<typeof real.sendMail>[0]);
+        setSmtpStatus("connected");
+        return response;
+      } catch (error) {
+        // Recipient-specific rejections don't prove the SMTP login is broken.
+        recordSmtpFailure(error);
+        throw error;
+      }
     },
   };
 }
