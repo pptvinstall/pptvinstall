@@ -15,6 +15,12 @@ export interface DashboardBooking {
   preferredDate?: string | null;
   appointmentTime?: string | null;
   pricingTotal?: string | number | null;
+  name?: string | null;
+  serviceType?: string | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
 }
 
 const APPOINTMENT_WINDOW_MS = 2 * 60 * 60 * 1000;
@@ -51,6 +57,33 @@ export function bookingMatchesFilter(bucket: BookingBucket, filter: BookingFilte
   if (filter === "upcoming") return bucket === "upcoming" || bucket === "in_progress";
   if (filter === "follow_up") return bucket === "past_due" || bucket === "needs_review";
   return bucket === filter;
+}
+
+/** Build an owner-reviewable Google Calendar draft. Clicking it does not save an event. */
+export function googleCalendarDraftUrl(booking: DashboardBooking): string | null {
+  const startMs = bookingSortTime(booking);
+  if (!startMs) return null;
+
+  const formatUtc = (millis: number) => new Date(millis).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const address = [booking.streetAddress, booking.city, booking.state, booking.zipCode].filter(Boolean).join(", ");
+  const estimate = bookingEstimate(booking.pricingTotal);
+  const description = [
+    "Picture Perfect TV Install — owner appointment draft.",
+    booking.serviceType ? `Service: ${booking.serviceType}` : "",
+    estimate > 0 ? `Estimated total: ${estimate.toFixed(2)} (not payment received)` : "",
+    "Review details before saving. This is not automatic calendar sync.",
+  ].filter(Boolean).join("\n");
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `TV Install — ${String(booking.name || "Customer")}`,
+    dates: `${formatUtc(startMs)}/${formatUtc(startMs + 2 * 60 * 60 * 1000)}`,
+    details: description,
+    location: address,
+    sf: "true",
+    output: "xml",
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export function bookingEstimate(value: DashboardBooking["pricingTotal"]): number {
