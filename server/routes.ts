@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { timingSafeEqual } from "crypto";
 import { createGuardedTransport, describeOutboundState } from "./outbound";
 import { storage } from "./storage";
-import { sendBookingEmails, sendCancellationEmail, sendContactMessageEmail, sendRescheduleEmail } from "./email";
+import { diagnoseBookingEmailConnection, sendBookingEmails, sendCancellationEmail, sendContactMessageEmail, sendRescheduleEmail } from "./email";
 import { crmContacts, insertBookingSchema, insertContactMessageSchema, promotions, smsMessages, smsOptOuts } from "@shared/schema";
 import { format } from "date-fns";
 import { addDateKeyDays, atlantaDateKey, atlantaSlotInstant, isValidDateKey } from "@shared/atlantaTime";
@@ -659,6 +659,13 @@ export function registerRoutes(app: Express): Server {
 
   // --- ADMIN ROUTES ---
   app.use("/api/admin", requireAdminToken);
+
+  app.get("/api/admin/email-diagnostic", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    // Only available after x-admin-token authorization. Never include credentials.
+    const result = await diagnoseBookingEmailConnection();
+    res.json(result);
+  });
 
   app.get("/api/admin/bookings", async (req, res) => {
     try {
