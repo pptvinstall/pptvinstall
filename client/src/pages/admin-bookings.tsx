@@ -98,7 +98,11 @@ function DashboardContent({ adminToken }: { adminToken: string }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [bookingFilter, setBookingFilter] = useState<BookingFilter>("actionable");
-  const [now] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
   const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailDiagnostic, setEmailDiagnostic] = useState("");
