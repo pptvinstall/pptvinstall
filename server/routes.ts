@@ -770,6 +770,47 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Owner-only lifecycle update. Completion tracks work performed, NOT payment.
+  // Never notify a customer just because the owner marks a job completed.
+  app.post("/api/admin/bookings/:id/status", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const newStatus = req.body?.status;
+      if (!Number.isInteger(id) || id <= 0 || (newStatus !== "completed" && newStatus !== "active")) {
+        return res.status(400).json({ message: "Choose a valid booking and status." });
+      }
+
+      const booking = await storage.getBookingById(id);
+      if (!booking) return res.status(404).json({ message: "Booking not found." });
+      if (booking.status === "cancelled") {
+        return res.status(409).json({ message: "Cancelled bookings cannot be reopened here." });
+      }
+      if (booking.status === newStatus) return res.json({ id, status: newStatus });
+
+      if (newStatus === "completed") {
+        if (booking.status !== "active" && booking.status !== "scheduled") {
+          return res.status(409).json({ message: "Only active appointments may be completed." });
+        }
+        try {
+          if (atlantaSlotInstant(booking.preferredDate, booking.appointmentTime).getTime() > Date.now()) {
+            return res.status(409).json({ message: "This appointment has not started yet." });
+          }
+        } catch {
+          return res.status(422).json({ message: "Appointment date/time must be reviewed before completion." });
+        }
+      } else if (booking.status !== "completed") {
+        return res.status(409).json({ message: "Only completed bookings may be reopened here." });
+      }
+
+      await storage.updateBooking(id, { status: newStatus });
+      console.info("[booking-status] owner updated job", { bookingId: id, status: newStatus });
+      return res.json({ id, status: newStatus });
+    } catch (error) {
+      console.error("[booking-status] update failed", error instanceof Error ? error.name : "unknown_error");
+      return res.status(500).json({ message: "Could not update this appointment." });
+    }
+  });
+
   app.post("/api/admin/bookings/:id/cancel", async (req, res) => {
     const id = parseInt(req.params.id);
     const updated = await storage.updateBooking(id, {
