@@ -62,6 +62,11 @@ type MailOptions = { to?: unknown; subject?: string } & Record<string, unknown>;
 export function createGuardedTransport(options: Record<string, unknown>) {
   const real = nodemailer.createTransport(options as never);
   return {
+    // Auth-only SMTP handshake; does not send an email.
+    async verify(): Promise<boolean> {
+      if (outboundSuppressed()) return false;
+      return real.verify();
+    },
     async sendMail(mail: MailOptions) {
       if (outboundSuppressed()) {
         recordSuppressed("email", mail.to, String(mail.subject ?? "(no subject)"));
