@@ -45,3 +45,25 @@ The former `consolidation/job-os` branch has no unique commits relative to `main
 ## Baseline rule
 
 The live deployment SHA reported by `/api/health` is the behavioral production baseline. It should normally match canonical `pptvinstall/pptvinstall` `main`. If those diverge, stop production feature work until the deployment source and live SHA are reconciled.
+
+
+## Subsequent live verification — 2026-10-21 (13:40 UTC)
+
+This is a later point-in-time check, **not** a replacement for the preserved 2026-10-12 migration history above.
+
+| Item | 2026-10-21 observation |
+| --- | --- |
+| URL | `https://pptvinstall.com/healthz` and `https://pptvinstall.com/api/health` |
+| Liveness | `status: ok` |
+| API health | `status: healthy` |
+| Canonical live commit | `9802210a84f200f08b0d9bb1ea40c2a4ed19da95` |
+| Canonical `main` head | `9802210a84f200f08b0d9bb1ea40c2a4ed19da95` — **matched exactly** |
+| Database | `true` in health response |
+| Email configured | `true` in health response; **delivery not independently tested** |
+| App environment | `production`; `outboundSuppressed: false` |
+| Memory | approximately 113 / 512 MB (22%) |
+| Last canonical main commit | October 15, 2026; corresponding GitHub CI completed successfully |
+
+**Separate unclosed Render incident:** a service named historically `PPTVInstall-Release-Candidate` (`srv-d20nkpjipnbc73dfnk10`) reported exit 1 on October 21 at ~07:08 ET. Public health recovered or remained healthy by the later check, but the alerted service's linked repository/branch, deploy SHA, domains, and actual exception were **not independently accessible**. Do not infer that production is backed by the archived RC repo solely from a service name. See [RENDER_INCIDENT_2026-10-21.md](RENDER_INCIDENT_2026-10-21.md).
+
+**Pending:** Render settings/log inspection, `render.yaml` drift reconciliation, historical Gmail/admin credential rotation (#13), and separately reviewable booking time-zone/confirmation fixes (draft PR #23). A healthy API response does not certify message delivery, customer bookings, or credential rotation.
