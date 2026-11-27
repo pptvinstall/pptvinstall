@@ -14,6 +14,9 @@ export type MoveProjectConfig = {
   rackTeardownLevel: RackTeardownLevel;
 };
 
+/** Explicit size answer for a 56"+ TV (Issue #35 review fix): the customer must say which range the TV is in, or that they are not sure. */
+export type TvSizeChoice = "56-85" | "86+" | "unsure";
+
 export type TVConfig = {
   id: string;
   size: "32-55" | "56+";
@@ -24,7 +27,60 @@ export type TVConfig = {
   wireConcealment: boolean;
   outletDistance: "near" | "far" | null;
   unmounting: boolean;
+  /** Explicit 56"+ size-range answer. "86+" routes to custom-quote review; "unsure" routes to size-confirmation review. */
+  sizeChoice?: TvSizeChoice | null;
+  /** Exact diagonal in inches when the customer knows it. 86+ routes to custom-quote review (owner rule S-4). */
+  exactInches?: number | null;
+  /** Exact TV model, collected for oversize / compatibility review. */
+  model?: string | null;
+  /** TV weight in pounds when known (oversize review). */
+  weightLbs?: number | null;
+  /** VESA pattern (e.g. "600x400") when known (oversize review). */
+  vesaPattern?: string | null;
 };
+
+/** Owner rule S-4: TVs at or above this diagonal are never instant-priced; they route to custom-quote review. 85" is NOT oversized. */
+export const OVERSIZE_THRESHOLD_INCHES = 86;
+
+export function isOversizeTv(tv: Pick<TVConfig, "exactInches" | "sizeChoice">): boolean {
+  if (tv.sizeChoice === "86+") return true;
+  return typeof tv.exactInches === "number" && Number.isFinite(tv.exactInches) && tv.exactInches >= OVERSIZE_THRESHOLD_INCHES;
+}
+
+export type TvSizeReview = { kind: "oversize" | "unknown" | "contradiction"; detail: string };
+
+/**
+ * Issue #35 review fix (size gate): decide whether a TV's size answer routes it
+ * out of instant pricing. A stated exact size that contradicts the chosen band
+ * or range is a contradiction — it is never silently dropped or priced. An
+ * explicit "unsure" is unknown. An absent choice with absent inches keeps the
+ * legacy behaviour for internal callers; the public form and the public API
+ * both require the explicit choice before a firm price can be accepted.
+ */
+export function tvSizeReview(tv: Pick<TVConfig, "size" | "exactInches" | "sizeChoice">): TvSizeReview | null {
+  const inches = typeof tv.exactInches === "number" && Number.isFinite(tv.exactInches) ? tv.exactInches : null;
+  if (inches !== null) {
+    if (tv.size === "32-55" && inches >= 56) {
+      return { kind: "contradiction", detail: `the size range says 32–55" but the exact size is ${inches}"` };
+    }
+    if (tv.size === "56+" && inches < 56) {
+      return { kind: "contradiction", detail: `the size range says 56"+ but the exact size is ${inches}"` };
+    }
+    if (tv.sizeChoice === "56-85" && inches >= OVERSIZE_THRESHOLD_INCHES) {
+      return { kind: "contradiction", detail: `the size range says 56–85" but the exact size is ${inches}"` };
+    }
+    if (tv.sizeChoice === "86+" && inches < OVERSIZE_THRESHOLD_INCHES) {
+      return { kind: "contradiction", detail: `the size range says 86"+ but the exact size is ${inches}"` };
+    }
+  }
+  if (isOversizeTv(tv)) {
+    return { kind: "oversize", detail: inches !== null ? `${inches}"` : "86 inches or larger" };
+  }
+  if (tv.sizeChoice === "unsure") {
+    return { kind: "unknown", detail: "exact size not confirmed" };
+  }
+  return null;
+}
 
 export type CameraConfig = {
   id: string;
@@ -69,6 +125,10 @@ export type QuoteResult = {
   total: number;
   flags: string[];
   followUp?: string;
+  /** True when part of the job must be reviewed before a firm final price (oversize TVs, masonry fireplaces). */
+  requiresReview?: boolean;
+  /** Customer-safe reasons the review is required. */
+  reviewReasons?: string[];
   travelTier: TravelTier;
   travelFee: number | "out_of_range";
   travelContext: ReturnType<typeof getTravelContext>;
@@ -112,6 +172,7 @@ function getMountLabel(size: TVConfig["size"], mountType: MountType): string {
 }
 
 function getTvSubtitle(tv: TVConfig): string {
+  const sizeLabel = typeof tv.exactInches === "number" && tv.exactInches > 0 ? `${tv.exactInches}" · ` : "";
   const locationLabel = tv.location === "fireplace" ? "Above fireplace" : "Standard wall";
   const wallLabel =
     tv.wallType === "brick"
@@ -127,7 +188,7 @@ function getTvSubtitle(tv: TVConfig): string {
         ? "Tilting mount"
         : "Fixed mount";
 
-  return `${locationLabel}, ${wallLabel}, ${mountLabel}`;
+  return `${sizeLabel}${locationLabel}, ${wallLabel}, ${mountLabel}`;
 }
 
 export function createDefaultTVConfig(): TVConfig {
@@ -141,6 +202,11 @@ export function createDefaultTVConfig(): TVConfig {
     wireConcealment: false,
     outletDistance: null,
     unmounting: false,
+    sizeChoice: null,
+    exactInches: null,
+    model: "",
+    weightLbs: null,
+    vesaPattern: "",
   };
 }
 
@@ -228,81 +294,151 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
   let positiveSubtotal = 0;
   let pricedWireJobs = 0;
   let additionalTvDiscountUnits = 0;
+  const reviewReasons: string[] = [];
 
   state.tvs.forEach((tv, index) => {
     const items: QuoteLineItem[] = [];
     const isAdditionalTv = index > 0;
+    const sizeReview = tvSizeReview(tv);
+    const masonryFireplace = tv.location === "fireplace" && tv.wallType === "brick";
 
-    const baseMountPrice =
-      tv.location === "fireplace"
-        ? pricingData.tvMounting.fireplace.price
-        : pricingData.tvMounting.standard.price;
-
-    items.push({
-      name:
-        tv.location === "fireplace"
-          ? pricingData.tvMounting.fireplace.name
-          : pricingData.tvMounting.standard.name,
-      price: baseMountPrice,
-      qty: 1,
-      lineTotal: baseMountPrice,
-    });
-    positiveSubtotal += baseMountPrice;
-
-    if (tv.wallType === "brick" && tv.location !== "fireplace") {
-      items.push({
-        name: pricingData.tvMounting.nonDrywall.name,
-        price: pricingData.tvMounting.nonDrywall.price,
-        qty: 1,
-        lineTotal: pricingData.tvMounting.nonDrywall.price,
-      });
-      positiveSubtotal += pricingData.tvMounting.nonDrywall.price;
-    }
-
-    if (tv.wallType === "highrise") {
-      items.push({
-        name: pricingData.tvMounting.highRise.name,
-        price: pricingData.tvMounting.highRise.price,
-        qty: 1,
-        lineTotal: pricingData.tvMounting.highRise.price,
-      });
-      positiveSubtotal += pricingData.tvMounting.highRise.price;
-    }
-
-    if (!tv.hasMount && tv.mountType) {
-      const mountPrice = getMountPrice(tv.size, tv.mountType);
-      items.push({
-        name: getMountLabel(tv.size, tv.mountType),
-        price: mountPrice,
-        qty: 1,
-        lineTotal: mountPrice,
-      });
-      positiveSubtotal += mountPrice;
-    }
-
-    if (tv.wireConcealment) {
-      if (tv.location === "fireplace") {
+    if (sizeReview) {
+      // Owner rule S-4 + Issue #35 size gate: a TV whose size is oversize,
+      // unconfirmed, or self-contradictory is never instant-priced (no $100
+      // fallback, and a contradictory size is never silently dropped). Mount
+      // and wire work for this TV are part of the review, so they are not
+      // priced here either; unmounting an existing TV below stays standard work.
+      if (sizeReview.kind === "oversize") {
+        const label = typeof tv.exactInches === "number" ? `${tv.exactInches}"` : "86\"+";
         items.push({
-          name: "Wire concealment assessment required",
+          name: `Oversized TV (${label}) — custom quote, review required`,
           price: 0,
           qty: 1,
           lineTotal: 0,
         });
-        flags.add("Wire concealment above fireplaces requires photos before we can confirm pricing.");
-      } else {
-        pricedWireJobs += 1;
+        reviewReasons.push(
+          `TV ${index + 1} (${label}): TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, mount/load compatibility, access, and whether a helper is needed.`,
+        );
+        flags.add(
+          `TV ${index + 1} is ${label}. TVs 86"+ never get an instant price — we'll review the model, weight, VESA pattern, and mount compatibility and send a custom quote. Any mount or wire work for this TV is confirmed in that review.`,
+        );
+      } else if (sizeReview.kind === "unknown") {
         items.push({
-          name: pricingData.wireConcealment.standard.name,
-          price: pricingData.wireConcealment.standard.price,
+          name: "TV size to confirm — custom quote if it is 86 inches or larger",
+          price: 0,
           qty: 1,
-          lineTotal: pricingData.wireConcealment.standard.price,
+          lineTotal: 0,
         });
-        positiveSubtotal += pricingData.wireConcealment.standard.price;
-        if (tv.outletDistance === "far") {
-          flags.add(`TV ${index + 1} wire concealment may need extra outlet work because the nearest outlet is more than 1–2 feet from the TV location. We'll confirm final pricing before work begins.`);
-        } else if (tv.outletDistance === null) {
-          flags.add(`TV ${index + 1} wire concealment pricing assumes the nearest outlet is within 1–2 feet of the TV location. If not, we may need to confirm extra work.`);
+        reviewReasons.push(
+          `TV ${index + 1}: the exact size is not confirmed yet. TVs 86 inches and larger are custom-quoted, so we'll confirm the size before a final price.`,
+        );
+        flags.add(
+          `TV ${index + 1}: exact size not confirmed. If it is 86 inches or larger it will be custom-quoted after a compatibility review.`,
+        );
+      } else {
+        items.push({
+          name: "TV size details conflict — custom quote after we confirm the exact size",
+          price: 0,
+          qty: 1,
+          lineTotal: 0,
+        });
+        reviewReasons.push(
+          `TV ${index + 1}: the size details conflict (${sizeReview.detail}). We'll confirm the exact size before pricing this TV.`,
+        );
+        flags.add(
+          `TV ${index + 1}: size details conflict (${sizeReview.detail}) — we'll confirm the exact size before pricing.`,
+        );
+      }
+    } else {
+      const baseMountPrice =
+        tv.location === "fireplace"
+          ? pricingData.tvMounting.fireplace.price
+          : pricingData.tvMounting.standard.price;
+
+      items.push({
+        name:
+          tv.location === "fireplace"
+            ? pricingData.tvMounting.fireplace.name
+            : pricingData.tvMounting.standard.name,
+        price: baseMountPrice,
+        qty: 1,
+        lineTotal: baseMountPrice,
+      });
+      positiveSubtotal += baseMountPrice;
+
+      if (tv.wallType === "brick" && tv.location !== "fireplace") {
+        items.push({
+          name: pricingData.tvMounting.nonDrywall.name,
+          price: pricingData.tvMounting.nonDrywall.price,
+          qty: 1,
+          lineTotal: pricingData.tvMounting.nonDrywall.price,
+        });
+        positiveSubtotal += pricingData.tvMounting.nonDrywall.price;
+      }
+
+      if (tv.wallType === "highrise") {
+        items.push({
+          name: pricingData.tvMounting.highRise.name,
+          price: pricingData.tvMounting.highRise.price,
+          qty: 1,
+          lineTotal: pricingData.tvMounting.highRise.price,
+        });
+        positiveSubtotal += pricingData.tvMounting.highRise.price;
+      }
+
+      if (!tv.hasMount && tv.mountType) {
+        const mountPrice = getMountPrice(tv.size, tv.mountType);
+        items.push({
+          name: getMountLabel(tv.size, tv.mountType),
+          price: mountPrice,
+          qty: 1,
+          lineTotal: mountPrice,
+        });
+        positiveSubtotal += mountPrice;
+      }
+
+      if (tv.wireConcealment) {
+        if (tv.location === "fireplace") {
+          items.push({
+            name: "Wire concealment assessment required",
+            price: 0,
+            qty: 1,
+            lineTotal: 0,
+          });
+          flags.add("Wire concealment above fireplaces requires photos before we can confirm pricing.");
+          // Issue #35 flag propagation: an unpriced assessment line means the
+          // total is knowingly partial, so the quote must carry review state
+          // end-to-end (results, booking block, inquiry payload), not just a flag.
+          reviewReasons.push(
+            `TV ${index + 1}: wire concealment above a fireplace is priced after a photo assessment, so that part of the job is confirmed during review.`,
+          );
+        } else {
+          pricedWireJobs += 1;
+          items.push({
+            name: pricingData.wireConcealment.standard.name,
+            price: pricingData.wireConcealment.standard.price,
+            qty: 1,
+            lineTotal: pricingData.wireConcealment.standard.price,
+          });
+          positiveSubtotal += pricingData.wireConcealment.standard.price;
+          if (tv.outletDistance === "far") {
+            flags.add(`TV ${index + 1} wire concealment may need extra outlet work because the nearest outlet is more than 1–2 feet from the TV location. We'll confirm final pricing before work begins.`);
+          } else if (tv.outletDistance === null) {
+            flags.add(`TV ${index + 1} wire concealment pricing assumes the nearest outlet is within 1–2 feet of the TV location. If not, we may need to confirm extra work.`);
+          }
         }
+      }
+
+      if (masonryFireplace) {
+        // Owner rule S-2: brick/stone fireplaces START at the $200 fireplace price —
+        // no universal surcharge — but the total is a starting price, not a firm
+        // quote, until a photo review confirms the surface difficulty.
+        reviewReasons.push(
+          `TV ${index + 1}: brick/stone fireplace mounting starts at $200. The final price is confirmed after a quick photo review of the fireplace surface.`,
+        );
+        flags.add(
+          `TV ${index + 1}: brick/stone fireplace mounting starts at $200. Please have photos of the fireplace and wall ready — we'll confirm the final price after a quick photo review before booking.`,
+        );
       }
     }
 
@@ -461,6 +597,8 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
     discount: bundleDiscount,
     total: Math.max(0, positiveSubtotal - bundleDiscount),
     flags: Array.from(flags),
+    requiresReview: reviewReasons.length > 0,
+    reviewReasons,
     travelTier,
     travelFee,
     travelContext,

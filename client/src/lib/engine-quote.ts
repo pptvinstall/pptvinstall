@@ -8,7 +8,7 @@ import type { DisplayQuote, StandaloneServices } from "@/components/ui/quote-too
 export type PriceSource = "catalog" | "engine";
 
 export type PublicPriceResponse =
-  | { source: "catalog"; totalCents: number }
+  | { source: "catalog"; totalCents: number; requiresReview?: boolean; reviewReasons?: string[] }
   | { source: "engine"; totalCents: number | null; status: "firm" | "estimate" | "review"; lines: Array<{ label: string; detail?: string; amountCents: number | null }>; notes: string[] };
 
 async function withTimeout(input: string, init: RequestInit, ms: number): Promise<Response | null> {

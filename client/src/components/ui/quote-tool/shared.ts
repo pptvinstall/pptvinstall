@@ -44,7 +44,28 @@ export type PendingQuoteStorage = {
   flags: string[];
   followUp?: string;
   promoCode?: string;
+  /** Issue #35: review state travels with the saved quote so the booking page can block a confirmed booking until review. */
+  requiresReview?: boolean;
+  reviewReasons?: string[];
 };
+
+/**
+ * Issue #35 results-rendering rule: how a quote may be presented and accepted.
+ * - "review-only": nothing is priced (total $0) — render "Custom quote required", never "$0".
+ * - "partial": some work is priced and some is not (review required or unpriced
+ *   custom/assessment lines) — the total is the priced portion only, and final
+ *   price acceptance / confirmed booking stays blocked until review.
+ * - "firm": the total is the whole price and may be accepted/booked.
+ */
+export type QuoteDisplayState = "firm" | "partial" | "review-only";
+
+export function quoteDisplayState(quote: Pick<DisplayQuote, "total" | "requiresReview" | "groups">): QuoteDisplayState {
+  if (quote.total <= 0) return "review-only";
+  const hasUnpricedLines = quote.groups.some((group) =>
+    group.items.some((item) => item.lineTotal === 0 && /custom quote|scope review|assessment required|to confirm/i.test(item.name)),
+  );
+  return quote.requiresReview || hasUnpricedLines ? "partial" : "firm";
+}
 
 export type StandaloneServices = {
   removalCount: number;
@@ -73,6 +94,13 @@ export type FullAiQuoteResponse = {
   summary?: string;
   flags?: string[];
   followUp?: string;
+  /** Set by the server when it re-prices the AI-extracted scope deterministically (Issue #35 S-10). */
+  requiresReview?: boolean;
+  reviewReasons?: string[];
+  /** "deterministic" when server-priced; "review" when the server failed closed to manual review (no AI prices). */
+  pricedBy?: string;
+  /** Factual scope preserved on a fail-closed review payload. */
+  requestedScope?: unknown;
 };
 
 export const tvAccentClasses = [
@@ -406,6 +434,26 @@ export function getMountPriceLabel(size: TVConfig["size"], type: MountType): str
 }
 
 export function normalizeAiQuote(response: FullAiQuoteResponse): DisplayQuote {
+  // Issue #35 S-10 fail-closed: the server returns a zero-total review payload
+  // (no groups, no AI prices) when the scope could not be validated. Render it
+  // as a review-only quote instead of throwing "no items".
+  if (response.pricedBy === "review" || (response.requiresReview === true && (response.groups ?? []).length === 0 && (response.total ?? 0) <= 0)) {
+    return {
+      groups: [],
+      subtotal: 0,
+      discount: 0,
+      total: 0,
+      flags: response.flags ?? [],
+      summary: response.summary?.trim() || "Thanks — we've got your request. We'll review the details and follow up with your confirmed quote.",
+      followUp: response.followUp?.trim() || undefined,
+      requiresReview: true,
+      reviewReasons: response.reviewReasons ?? [],
+      travelTier: 0,
+      travelFee: 0,
+      travelContext: getTravelContext("30332"),
+    };
+  }
+
   const rawGroups: QuoteGroup[] = [];
 
   for (const group of response.groups ?? []) {
@@ -468,6 +516,8 @@ export function normalizeAiQuote(response: FullAiQuoteResponse): DisplayQuote {
     flags: response.flags ?? [],
     summary: response.summary?.trim() || "Here is the estimate based on the details you shared.",
     followUp: response.followUp?.trim() || undefined,
+    requiresReview: response.requiresReview ?? false,
+    reviewReasons: response.reviewReasons ?? [],
     travelTier: 0,
     travelFee: 0,
     travelContext: getTravelContext("30332"),
@@ -577,6 +627,9 @@ export function buildLocalQuoteSummary(quote: QuoteResult, state: QuoteFormState
   return `This estimate covers ${serviceSummary}. ${travelSummary}`;
 }
 
+/** Owner rule S-9: every house visit is at least $100. Shared-visit add-ons on a job that already meets the minimum keep their ~$50 add-on price. */
+export const HOUSE_VISIT_MINIMUM = 100;
+
 export function buildAugmentedQuote(baseQuote: QuoteResult, standaloneServices: StandaloneServices): QuoteResult {
   const extraItems: QuoteLineItem[] = [];
   const flags = [...baseQuote.flags];
@@ -632,6 +685,25 @@ export function buildAugmentedQuote(baseQuote: QuoteResult, standaloneServices: 
       lineTotal,
     });
     extraSubtotal += lineTotal;
+  }
+
+  // Owner rule S-9: enforce the $100 per-visit minimum on the final priced total.
+  // Only a visit with a real priced total below the minimum is adjusted (e.g. a
+  // standalone $50 TV removal). $0 custom-quote-only requests get no invented
+  // price, and jobs already at/above the minimum — including ~$50 shared-visit
+  // add-ons — are untouched. Applies to new quote calculations only; accepted
+  // quotes are never repriced.
+  const rawTotal = baseQuote.total + extraSubtotal;
+  if (rawTotal > 0 && rawTotal < HOUSE_VISIT_MINIMUM) {
+    const adjustment = HOUSE_VISIT_MINIMUM - rawTotal;
+    extraItems.push({
+      name: `Per-visit minimum adjustment (visits start at ${formatPrice(HOUSE_VISIT_MINIMUM)})`,
+      price: adjustment,
+      qty: 1,
+      lineTotal: adjustment,
+    });
+    extraSubtotal += adjustment;
+    flags.push(`A ${formatPrice(HOUSE_VISIT_MINIMUM)} minimum applies per house visit, so this quote is adjusted to the minimum.`);
   }
 
   if (extraItems.length === 0) {

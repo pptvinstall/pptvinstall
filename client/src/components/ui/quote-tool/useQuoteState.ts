@@ -18,6 +18,7 @@ import {
   isValidPhoneNumber,
   normalizeAiQuote,
   normalizeQuoteForDisplayTotals,
+  quoteDisplayState,
   quoteNeedsOutletDistanceFollowUp,
   groupContextText,
   pendingQuoteStorageKey,
@@ -445,6 +446,16 @@ export function useQuoteState() {
       setZipError("Please enter a valid 5-digit ZIP code.");
       return;
     }
+    // Issue #35 size gate: a 56"+ TV needs an explicit size-range answer
+    // (56–85 / 86+ / not sure) or an exact size before a quote is built —
+    // otherwise a 98" TV could sail through at the standard price.
+    const unansweredSize = formState.tvs.some(
+      (tv) => tv.size === "56+" && tv.sizeChoice == null && typeof tv.exactInches !== "number",
+    );
+    if (unansweredSize) {
+      setError("Please choose a size range for each large TV (56–85\", 86\" or larger, or Not sure) — TVs 86\" and larger are custom-quoted, so we need the range before pricing.");
+      return;
+    }
     setError("");
     setQuoteRequestError("");
     setQuoteRequestStatus("idle");
@@ -570,6 +581,8 @@ export function useQuoteState() {
       flags: nextQuote.flags,
       followUp: nextQuote.followUp,
       promoCode: promoCodeInput.trim() || undefined,
+      requiresReview: nextQuote.requiresReview ?? false,
+      reviewReasons: nextQuote.reviewReasons ?? [],
     };
     window.localStorage.setItem(pendingQuoteStorageKey, JSON.stringify(payload));
   }
@@ -625,6 +638,15 @@ export function useQuoteState() {
 
   function handleScheduleNow() {
     if (!quote) return;
+    // Issue #35: a quote that still needs review (or is only partially priced)
+    // cannot be accepted as a final price or turned into a confirmed booking.
+    // The inquiry paths (send quote / request follow-up) stay open.
+    if (quoteDisplayState(quote) !== "firm") {
+      setQuoteRequestError(
+        "This quote needs a quick review before it can be booked — use “Send Me This Quote” or “Request Follow-Up” and we'll confirm the final price with you first.",
+      );
+      return;
+    }
     if (!validateContactInfo()) return;
     savePendingQuote(quote);
     setNextStepIntent("schedule");
@@ -658,6 +680,10 @@ export function useQuoteState() {
         quoteItems: flattenQuoteItems(quote.groups),
         quoteSummary: [quote.summary, contactSummary].filter(Boolean).join("\n\n"),
         zipCode: formState.zipCode || "N/A",
+        // Issue #35 flag propagation: review state reaches the owner inquiry.
+        requiresReview: quote.requiresReview ?? false,
+        reviewReasons: quote.reviewReasons ?? [],
+        flags: quote.flags,
       });
       setQuoteRequestStatus("success");
       setStep("booking");

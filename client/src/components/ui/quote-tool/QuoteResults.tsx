@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   OUTLET_DISTANCE_QUESTION,
+  quoteDisplayState,
   type OutletDistanceAnswer,
 } from "@/components/ui/quote-tool/shared";
 import { SelectorButton } from "@/components/ui/quote-tool/QuoteComponents";
@@ -78,6 +79,10 @@ export default function QuoteResults() {
 
   if (step !== "review" || !quote) return null;
 
+  // Issue #35: never render a $0 review-only quote as a price, and never
+  // present a partial total as the whole price.
+  const displayState = quoteDisplayState(quote);
+
   return (
     <motion.div
       key="review"
@@ -91,6 +96,21 @@ export default function QuoteResults() {
         <h4 className="text-3xl font-extrabold text-slate-900">Make sure everything looks right</h4>
         <p className="text-base leading-7 text-slate-700">{quote.summary}</p>
       </div>
+
+      {quote.requiresReview ? (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Part of this quote needs a quick review before it&apos;s final</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              {(quote.reviewReasons ?? []).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+            <p className="mt-2">The total below covers the priced items only. We&apos;ll confirm the reviewed items with you before any work is booked — nothing about them is charged until you approve it.</p>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {describeOutletFollowUpNeeded ? (
         <div className="rounded-[28px] border border-blue-200 bg-blue-50 p-5 shadow-sm">
@@ -131,9 +151,21 @@ export default function QuoteResults() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-[28px] bg-slate-900 p-5 text-white shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Estimated Total</p>
-          <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
-          <p className="mt-2 text-sm text-slate-300">This is the whole-project estimate based on the work selected below.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
+            {displayState === "partial" ? "Priced Portion (Partial)" : "Estimated Total"}
+          </p>
+          {displayState === "review-only" ? (
+            <p className="mt-3 text-3xl font-extrabold">Custom quote required</p>
+          ) : (
+            <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
+          )}
+          <p className="mt-2 text-sm text-slate-300">
+            {displayState === "review-only"
+              ? "Part of this job is custom-quoted, so there's no instant total. Send it for review and we'll confirm your price — nothing is booked or charged yet."
+              : displayState === "partial"
+                ? "This total covers the priced items below only. The reviewed items are confirmed separately before booking — the final price may be higher."
+                : "This is the whole-project estimate based on the work selected below."}
+          </p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Travel / Route</p>
@@ -170,7 +202,11 @@ export default function QuoteResults() {
         </div>
       ) : null}
 
-      {priceSource === "catalog" ? <QuotePackages /> : null}
+      {/* Packages present firm whole-project totals, so they render ONLY for
+          firm quotes. On a partial/review quote they would contradict the
+          review state above (e.g. a 98" custom-quote TV shown as a $100
+          "whole-project total") — found in browser testing, 2026-11-27. */}
+      {priceSource === "catalog" && displayState === "firm" ? <QuotePackages /> : null}
 
       <section aria-labelledby="itemized-estimate-heading" className="space-y-4">
         <div>
@@ -225,8 +261,8 @@ export default function QuoteResults() {
           </div>
         ) : null}
         <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xl font-extrabold">
-          <span>TOTAL</span>
-          <span>{formatPrice(quote.total)}</span>
+          <span>{displayState === "partial" ? "PRICED PORTION (PARTIAL)" : "TOTAL"}</span>
+          <span>{displayState === "review-only" ? "Custom quote required" : formatPrice(quote.total)}</span>
         </div>
       </div>
 
@@ -254,7 +290,7 @@ export default function QuoteResults() {
           disabled={describeOutletFollowUpNeeded && !describeOutletAnswer}
           onClick={handleReviewApproval}
         >
-          Looks Good <ArrowRight className="h-4 w-4" />
+          {displayState === "review-only" ? "Send for Review" : displayState === "partial" ? "Continue — Review Pending" : "Looks Good"} <ArrowRight className="h-4 w-4" />
         </Button>
         <Button type="button" variant="outline" className="h-14 rounded-2xl" onClick={handleEditQuote}>
           Edit Quote

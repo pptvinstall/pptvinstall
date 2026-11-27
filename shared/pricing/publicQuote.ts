@@ -21,6 +21,14 @@ const tvSchema = z
     wireConcealment: z.boolean(),
     outletDistance: z.enum(["near", "far"]).nullable(),
     unmounting: z.boolean(),
+    /** Explicit 56"+ size-range answer (Issue #35 size gate): "86+" is oversize, "unsure" routes to review. */
+    sizeChoice: z.enum(["56-85", "86+", "unsure"]).nullable().optional(),
+    /** Exact diagonal (owner rule S-4): 86"+ routes the TV to custom-quote review. */
+    exactInches: z.number().int().min(19).max(120).nullable().optional(),
+    /** Exact model / weight / VESA collected for the oversize compatibility review. */
+    model: z.string().max(120).nullable().optional(),
+    weightLbs: z.number().min(0).max(400).nullable().optional(),
+    vesaPattern: z.string().max(40).nullable().optional(),
   })
   .strip();
 
@@ -79,16 +87,39 @@ export type PublicQuoteRequest = z.infer<typeof publicQuoteRequestSchema>;
 function toFormState(form: PublicQuoteRequest["form"]): QuoteFormState {
   return {
     ...form,
+    // Issue #35 size gate: at the public boundary an omitted size answer for a
+    // 56"+ TV means the size is unconfirmed — normalize it to an explicit
+    // "unsure" so the catalog calculator routes the TV to review instead of
+    // silently instant-pricing what could be a 98" TV. Contradictory answers
+    // pass through untouched; the calculator flags them as contradictions.
+    tvs: form.tvs.map((tv) => ({
+      ...tv,
+      sizeChoice:
+        tv.size === "56+" && typeof tv.exactInches !== "number" && tv.sizeChoice == null
+          ? ("unsure" as const)
+          : tv.sizeChoice ?? null,
+    })),
     moveProject: form.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" },
     notes: "",
   };
 }
 
+/** The full deterministic catalog quote (browser calculator + standalone services) for a public request. */
+export function catalogPublicQuoteResult(req: Pick<PublicQuoteRequest, "form" | "standalone">) {
+  return buildAugmentedQuote(calculateQuote(toFormState(req.form)), req.standalone as StandaloneServices);
+}
+
 /** Exactly what the browser calculator shows the customer today, in cents. */
-export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "standalone">): { totalCents: Cents; hasCustomQuoteLines: boolean; flags: string[] } {
-  const quote = buildAugmentedQuote(calculateQuote(toFormState(req.form)), req.standalone as StandaloneServices);
+export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "standalone">): { totalCents: Cents; hasCustomQuoteLines: boolean; flags: string[]; requiresReview: boolean; reviewReasons: string[] } {
+  const quote = catalogPublicQuoteResult(req);
   const hasCustomQuoteLines = quote.groups.some((g) => g.items.some((i) => i.lineTotal === 0 && /custom quote|review|assessment/i.test(i.name)));
-  return { totalCents: toCents(quote.total), hasCustomQuoteLines, flags: quote.flags };
+  return {
+    totalCents: toCents(quote.total),
+    hasCustomQuoteLines,
+    flags: quote.flags,
+    requiresReview: quote.requiresReview ?? false,
+    reviewReasons: quote.reviewReasons ?? [],
+  };
 }
 
 /** The same public request as structured scope for the engine. Only facts the customer chose; nothing invented. */
@@ -96,10 +127,33 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
   const { form, standalone } = req;
   const move = form.moveProject ?? { enabled: false, previousZipCode: "", oldHomeTvUnmountCount: 0, oldHomeMountRemovalCount: 0, rackTeardownLevel: "none" as const };
   const newHomeSite = move.enabled ? 1 : 0;
-  const tvs: JobScope["tvs"] = form.tvs.map((tv) => ({
+  const tvs: JobScope["tvs"] = form.tvs.map((tv) => {
+    const hasInches = typeof tv.exactInches === "number";
+    const bandAgrees = !hasInches || tv.exactInches! < 32 || (tv.exactInches! >= 56) === (tv.size === "56+");
+    const choiceContradicts =
+      (tv.sizeChoice === "56-85" && hasInches && tv.exactInches! >= 86) ||
+      (tv.sizeChoice === "86+" && hasInches && tv.exactInches! < 86) ||
+      (tv.sizeChoice != null && tv.size === "32-55");
+    // Issue #35 size gate: a contradictory size answer is never silently
+    // dropped and priced — the inches are withheld from the engine (the scope
+    // schema would reject the pair) and the TV is marked size-unconfirmed so
+    // every channel routes it to review.
+    const contradictory = hasInches && (!bandAgrees || choiceContradicts);
+    return {
     id: tv.id.slice(0, 64),
     site: newHomeSite,
     sizeBand: tv.size,
+    // Owner rule S-4: carry the exact diagonal into the engine scope so the ≥86"
+    // gate can fire. Only pass it when it agrees with the size band — the scope
+    // schema rejects a disagreeing inches/band pair, and a bad pair must never
+    // break public pricing.
+    inches: !contradictory && bandAgrees && hasInches ? tv.exactInches! : undefined,
+    sizeChoice:
+      tv.size !== "56+"
+        ? undefined
+        : contradictory
+          ? ("unsure" as const)
+          : (tv.sizeChoice ?? (hasInches ? undefined : ("unsure" as const))),
     wall: tv.wallType === "highrise" ? "steel" : tv.wallType,
     location: tv.location,
     mountSource: tv.hasMount ? "customer" : "pptv",
@@ -108,7 +162,8 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
     // Concealment in the public tool is the outlet / clean-cord kit; a far outlet stays an outlet job with a question.
     power: tv.wireConcealment ? "outlet" : "existing",
     removal: { tvRemoval: tv.unmounting, mountRemoval: false, remount: false },
-  }));
+    };
+  });
   const extras: JobScope["extras"] = [];
   if (form.soundbar) extras.push({ kind: "soundbar", qty: 1 });
   if (form.doorbell) extras.push({ kind: "doorbell", qty: 1 });

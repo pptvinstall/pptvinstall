@@ -211,7 +211,11 @@ test("public /quote: catalog price equals the browser calculator; every form map
   for (let i = 0; i < 250; i++) {
     const tvs = Array.from({ length: Math.floor(r() * 5) }, (_, k) => {
       const hasMount = r() > 0.5;
-      return { id: `t${k}`, size: pick(["32-55", "56+"] as const), wallType: pick(["drywall", "brick", "highrise"] as const), location: pick(["standard", "fireplace"] as const), hasMount, mountType: hasMount ? null : pick(["fixed", "tilting", "fullMotion"] as const), wireConcealment: r() > 0.5, outletDistance: pick([null, "near", "far"] as const), unmounting: r() > 0.7 };
+      const size = pick(["32-55", "56+"] as const);
+      // Issue #35 size gate: the public form now requires an explicit size
+      // range for 56"+ TVs, so answered forms carry sizeChoice. (Unanswered
+      // forms route to review instead — covered in issue-35-blockers tests.)
+      return { id: `t${k}`, size, sizeChoice: size === "56+" ? ("56-85" as const) : undefined, wallType: pick(["drywall", "brick", "highrise"] as const), location: pick(["standard", "fireplace"] as const), hasMount, mountType: hasMount ? null : pick(["fixed", "tilting", "fullMotion"] as const), wireConcealment: r() > 0.5, outletDistance: pick([null, "near", "far"] as const), unmounting: r() > 0.7 };
     });
     const req = publicQuoteRequestSchema.parse({
       form: { tvs, cameras: Array.from({ length: Math.floor(r() * 3) }, (_, k) => ({ id: `c${k}`, brand: "ring", type: "wired_smart", location: "outdoor" })), doorbell: r() > 0.7, doorbellBrand: "Ring", soundbar: r() > 0.7, surroundSound: r() > 0.9, floodlight: r() > 0.8, handymanMinutes: r() > 0.8 ? 60 : 0, zipCode: pick(["", "30030", "30332", "99999"]) },
@@ -237,6 +241,7 @@ test("two-home move quote prices rack teardown bands without a magic customer to
   state.tvs = Array.from({ length: 5 }, (_, i) => ({
     ...state.tvs[0]!,
     id: `move-tv-${i + 1}`,
+    sizeChoice: "56-85" as const,
     location: i === 0 ? "fireplace" : "standard",
     wireConcealment: i === 1 || i === 2,
     outletDistance: i === 1 || i === 2 ? "near" : null,

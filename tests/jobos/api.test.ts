@@ -322,7 +322,7 @@ test("health reports environment and suppression without exposing secrets", asyn
 test("public /quote pricing: legacy shows the catalog, shadow stores owner-only economics, dynamic needs explicit confirmation", async () => {
   const { calculateQuote } = await import("../../client/src/lib/quote-calculator");
   const form = {
-    tvs: [{ id: "browser-uuid-1", size: "56+", wallType: "brick", location: "standard", hasMount: false, mountType: "tilting", wireConcealment: true, outletDistance: null, unmounting: false }],
+    tvs: [{ id: "browser-uuid-1", size: "56+", sizeChoice: "56-85", wallType: "brick", location: "standard", hasMount: false, mountType: "tilting", wireConcealment: true, outletDistance: null, unmounting: false }],
     cameras: [],
     doorbell: false,
     doorbellBrand: "Ring",

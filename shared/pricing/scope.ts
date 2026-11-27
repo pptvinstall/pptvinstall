@@ -45,6 +45,12 @@ export const tvScopeSchema = z
     sizeBand: z.enum(SIZE_BANDS).default("56+"),
     /** Exact diagonal, optional. When present it must agree with the size band. */
     inches: z.number().int().min(19).max(120).optional(),
+    /**
+     * Explicit size-range answer for a 56"+ TV (Issue #35 size gate):
+     * "86+" is oversize even without inches; "unsure" means the size is
+     * unconfirmed and the job must route to review rather than instant pricing.
+     */
+    sizeChoice: z.enum(["56-85", "86+", "unsure"]).optional(),
     wall: z.enum(WALL_TYPES).default("drywall"),
     location: z.enum(TV_LOCATIONS).default("standard"),
     mountSource: z.enum(MOUNT_SOURCES).default("customer"),
@@ -68,6 +74,17 @@ export const tvScopeSchema = z
       const band: SizeBand = tv.inches >= 56 ? "56+" : "32-55";
       if (tv.inches >= 32 && band !== tv.sizeBand) {
         ctx.addIssue({ code: "custom", path: ["inches"], message: `inches (${tv.inches}) disagrees with sizeBand ${tv.sizeBand}` });
+      }
+    }
+    if (tv.sizeChoice !== undefined) {
+      if (tv.sizeBand !== "56+") {
+        ctx.addIssue({ code: "custom", path: ["sizeChoice"], message: "sizeChoice only applies to 56+ TVs" });
+      }
+      if (tv.sizeChoice === "56-85" && tv.inches !== undefined && tv.inches >= 86) {
+        ctx.addIssue({ code: "custom", path: ["sizeChoice"], message: `sizeChoice 56-85 disagrees with inches (${tv.inches})` });
+      }
+      if (tv.sizeChoice === "86+" && tv.inches !== undefined && tv.inches < 86) {
+        ctx.addIssue({ code: "custom", path: ["sizeChoice"], message: `sizeChoice 86+ disagrees with inches (${tv.inches})` });
       }
     }
   });
