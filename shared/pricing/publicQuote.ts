@@ -21,6 +21,12 @@ const tvSchema = z
     wireConcealment: z.boolean(),
     outletDistance: z.enum(["near", "far"]).nullable(),
     unmounting: z.boolean(),
+    /** Exact diagonal (owner rule S-4): 86"+ routes the TV to custom-quote review. */
+    exactInches: z.number().int().min(19).max(120).nullable().optional(),
+    /** Exact model / weight / VESA collected for the oversize compatibility review. */
+    model: z.string().max(120).nullable().optional(),
+    weightLbs: z.number().min(0).max(400).nullable().optional(),
+    vesaPattern: z.string().max(40).nullable().optional(),
   })
   .strip();
 
@@ -84,11 +90,22 @@ function toFormState(form: PublicQuoteRequest["form"]): QuoteFormState {
   };
 }
 
+/** The full deterministic catalog quote (browser calculator + standalone services) for a public request. */
+export function catalogPublicQuoteResult(req: Pick<PublicQuoteRequest, "form" | "standalone">) {
+  return buildAugmentedQuote(calculateQuote(toFormState(req.form)), req.standalone as StandaloneServices);
+}
+
 /** Exactly what the browser calculator shows the customer today, in cents. */
-export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "standalone">): { totalCents: Cents; hasCustomQuoteLines: boolean; flags: string[] } {
-  const quote = buildAugmentedQuote(calculateQuote(toFormState(req.form)), req.standalone as StandaloneServices);
+export function catalogPublicQuote(req: Pick<PublicQuoteRequest, "form" | "standalone">): { totalCents: Cents; hasCustomQuoteLines: boolean; flags: string[]; requiresReview: boolean; reviewReasons: string[] } {
+  const quote = catalogPublicQuoteResult(req);
   const hasCustomQuoteLines = quote.groups.some((g) => g.items.some((i) => i.lineTotal === 0 && /custom quote|review|assessment/i.test(i.name)));
-  return { totalCents: toCents(quote.total), hasCustomQuoteLines, flags: quote.flags };
+  return {
+    totalCents: toCents(quote.total),
+    hasCustomQuoteLines,
+    flags: quote.flags,
+    requiresReview: quote.requiresReview ?? false,
+    reviewReasons: quote.reviewReasons ?? [],
+  };
 }
 
 /** The same public request as structured scope for the engine. Only facts the customer chose; nothing invented. */
@@ -100,6 +117,14 @@ export function publicRequestToScope(req: Pick<PublicQuoteRequest, "form" | "sta
     id: tv.id.slice(0, 64),
     site: newHomeSite,
     sizeBand: tv.size,
+    // Owner rule S-4: carry the exact diagonal into the engine scope so the ≥86"
+    // gate can fire. Only pass it when it agrees with the size band — the scope
+    // schema rejects a disagreeing inches/band pair, and a bad pair must never
+    // break public pricing.
+    inches:
+      typeof tv.exactInches === "number" && (tv.exactInches < 32 || (tv.exactInches >= 56) === (tv.size === "56+"))
+        ? tv.exactInches
+        : undefined,
     wall: tv.wallType === "highrise" ? "steel" : tv.wallType,
     location: tv.location,
     mountSource: tv.hasMount ? "customer" : "pptv",

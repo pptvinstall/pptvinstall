@@ -634,9 +634,25 @@ export class JobOsService {
     }
     const pricing: PricingResult = composition?.pricing ?? priceScope(scope, context, cfg);
 
+    // Owner rule S-4: a TV 86"+ is always a custom quote / review, in every mode.
+    const hasOversizeTv = scope.tvs.some((t) => typeof t.inches === "number" && t.inches >= 86);
     let response: PublicPriceResponse;
     if (cfg.pricingMode !== "dynamic") {
-      response = { source: "catalog", totalCents: catalog.totalCents };
+      // Review fields are attached only when a gate actually fires, so ordinary
+      // catalog responses keep their established shape.
+      response = {
+        source: "catalog",
+        totalCents: catalog.totalCents,
+        ...(catalog.requiresReview ? { requiresReview: true, reviewReasons: catalog.reviewReasons } : {}),
+      };
+    } else if (hasOversizeTv) {
+      response = {
+        source: "engine",
+        totalCents: null,
+        status: "review",
+        lines: [],
+        notes: ["TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, and mount compatibility."],
+      };
     } else if (!composition || pricing.empty) {
       response = {
         source: "engine",
@@ -1145,7 +1161,7 @@ function mediaSummary(m: MediaRecord): MediaSummary {
 }
 
 export type PublicPriceResponse =
-  | { source: "catalog"; totalCents: number }
+  | { source: "catalog"; totalCents: number; requiresReview?: boolean; reviewReasons?: string[] }
   | { source: "engine"; totalCents: number | null; status: "firm" | "estimate" | "review"; lines: Array<{ label: string; detail?: string; amountCents: number | null }>; notes: string[] };
 
 export function hashMessage(message: string) {
