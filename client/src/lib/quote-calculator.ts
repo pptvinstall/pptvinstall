@@ -14,6 +14,9 @@ export type MoveProjectConfig = {
   rackTeardownLevel: RackTeardownLevel;
 };
 
+/** Explicit size answer for a 56"+ TV (Issue #35 review fix): the customer must say which range the TV is in, or that they are not sure. */
+export type TvSizeChoice = "56-85" | "86+" | "unsure";
+
 export type TVConfig = {
   id: string;
   size: "32-55" | "56+";
@@ -24,6 +27,8 @@ export type TVConfig = {
   wireConcealment: boolean;
   outletDistance: "near" | "far" | null;
   unmounting: boolean;
+  /** Explicit 56"+ size-range answer. "86+" routes to custom-quote review; "unsure" routes to size-confirmation review. */
+  sizeChoice?: TvSizeChoice | null;
   /** Exact diagonal in inches when the customer knows it. 86+ routes to custom-quote review (owner rule S-4). */
   exactInches?: number | null;
   /** Exact TV model, collected for oversize / compatibility review. */
@@ -37,8 +42,44 @@ export type TVConfig = {
 /** Owner rule S-4: TVs at or above this diagonal are never instant-priced; they route to custom-quote review. 85" is NOT oversized. */
 export const OVERSIZE_THRESHOLD_INCHES = 86;
 
-export function isOversizeTv(tv: Pick<TVConfig, "exactInches">): boolean {
+export function isOversizeTv(tv: Pick<TVConfig, "exactInches" | "sizeChoice">): boolean {
+  if (tv.sizeChoice === "86+") return true;
   return typeof tv.exactInches === "number" && Number.isFinite(tv.exactInches) && tv.exactInches >= OVERSIZE_THRESHOLD_INCHES;
+}
+
+export type TvSizeReview = { kind: "oversize" | "unknown" | "contradiction"; detail: string };
+
+/**
+ * Issue #35 review fix (size gate): decide whether a TV's size answer routes it
+ * out of instant pricing. A stated exact size that contradicts the chosen band
+ * or range is a contradiction — it is never silently dropped or priced. An
+ * explicit "unsure" is unknown. An absent choice with absent inches keeps the
+ * legacy behaviour for internal callers; the public form and the public API
+ * both require the explicit choice before a firm price can be accepted.
+ */
+export function tvSizeReview(tv: Pick<TVConfig, "size" | "exactInches" | "sizeChoice">): TvSizeReview | null {
+  const inches = typeof tv.exactInches === "number" && Number.isFinite(tv.exactInches) ? tv.exactInches : null;
+  if (inches !== null) {
+    if (tv.size === "32-55" && inches >= 56) {
+      return { kind: "contradiction", detail: `the size range says 32–55" but the exact size is ${inches}"` };
+    }
+    if (tv.size === "56+" && inches < 56) {
+      return { kind: "contradiction", detail: `the size range says 56"+ but the exact size is ${inches}"` };
+    }
+    if (tv.sizeChoice === "56-85" && inches >= OVERSIZE_THRESHOLD_INCHES) {
+      return { kind: "contradiction", detail: `the size range says 56–85" but the exact size is ${inches}"` };
+    }
+    if (tv.sizeChoice === "86+" && inches < OVERSIZE_THRESHOLD_INCHES) {
+      return { kind: "contradiction", detail: `the size range says 86"+ but the exact size is ${inches}"` };
+    }
+  }
+  if (isOversizeTv(tv)) {
+    return { kind: "oversize", detail: inches !== null ? `${inches}"` : "86 inches or larger" };
+  }
+  if (tv.sizeChoice === "unsure") {
+    return { kind: "unknown", detail: "exact size not confirmed" };
+  }
+  return null;
 }
 
 export type CameraConfig = {
@@ -161,6 +202,7 @@ export function createDefaultTVConfig(): TVConfig {
     wireConcealment: false,
     outletDistance: null,
     unmounting: false,
+    sizeChoice: null,
     exactInches: null,
     model: "",
     weightLbs: null,
@@ -257,25 +299,56 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
   state.tvs.forEach((tv, index) => {
     const items: QuoteLineItem[] = [];
     const isAdditionalTv = index > 0;
-    const oversize = isOversizeTv(tv);
+    const sizeReview = tvSizeReview(tv);
     const masonryFireplace = tv.location === "fireplace" && tv.wallType === "brick";
 
-    if (oversize) {
-      // Owner rule S-4: a TV 86"+ is never instant-priced (no $100 fallback). Mount and
-      // wire work for this TV are part of the compatibility review, so they are not
+    if (sizeReview) {
+      // Owner rule S-4 + Issue #35 size gate: a TV whose size is oversize,
+      // unconfirmed, or self-contradictory is never instant-priced (no $100
+      // fallback, and a contradictory size is never silently dropped). Mount
+      // and wire work for this TV are part of the review, so they are not
       // priced here either; unmounting an existing TV below stays standard work.
-      items.push({
-        name: `Oversized TV (${tv.exactInches}") — custom quote, review required`,
-        price: 0,
-        qty: 1,
-        lineTotal: 0,
-      });
-      reviewReasons.push(
-        `TV ${index + 1} (${tv.exactInches}"): TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, mount/load compatibility, access, and whether a helper is needed.`,
-      );
-      flags.add(
-        `TV ${index + 1} is ${tv.exactInches} inches. TVs 86"+ never get an instant price — we'll review the model, weight, VESA pattern, and mount compatibility and send a custom quote. Any mount or wire work for this TV is confirmed in that review.`,
-      );
+      if (sizeReview.kind === "oversize") {
+        const label = typeof tv.exactInches === "number" ? `${tv.exactInches}"` : "86\"+";
+        items.push({
+          name: `Oversized TV (${label}) — custom quote, review required`,
+          price: 0,
+          qty: 1,
+          lineTotal: 0,
+        });
+        reviewReasons.push(
+          `TV ${index + 1} (${label}): TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, mount/load compatibility, access, and whether a helper is needed.`,
+        );
+        flags.add(
+          `TV ${index + 1} is ${label}. TVs 86"+ never get an instant price — we'll review the model, weight, VESA pattern, and mount compatibility and send a custom quote. Any mount or wire work for this TV is confirmed in that review.`,
+        );
+      } else if (sizeReview.kind === "unknown") {
+        items.push({
+          name: "TV size to confirm — custom quote if it is 86 inches or larger",
+          price: 0,
+          qty: 1,
+          lineTotal: 0,
+        });
+        reviewReasons.push(
+          `TV ${index + 1}: the exact size is not confirmed yet. TVs 86 inches and larger are custom-quoted, so we'll confirm the size before a final price.`,
+        );
+        flags.add(
+          `TV ${index + 1}: exact size not confirmed. If it is 86 inches or larger it will be custom-quoted after a compatibility review.`,
+        );
+      } else {
+        items.push({
+          name: "TV size details conflict — custom quote after we confirm the exact size",
+          price: 0,
+          qty: 1,
+          lineTotal: 0,
+        });
+        reviewReasons.push(
+          `TV ${index + 1}: the size details conflict (${sizeReview.detail}). We'll confirm the exact size before pricing this TV.`,
+        );
+        flags.add(
+          `TV ${index + 1}: size details conflict (${sizeReview.detail}) — we'll confirm the exact size before pricing.`,
+        );
+      }
     } else {
       const baseMountPrice =
         tv.location === "fireplace"
@@ -333,6 +406,12 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
             lineTotal: 0,
           });
           flags.add("Wire concealment above fireplaces requires photos before we can confirm pricing.");
+          // Issue #35 flag propagation: an unpriced assessment line means the
+          // total is knowingly partial, so the quote must carry review state
+          // end-to-end (results, booking block, inquiry payload), not just a flag.
+          reviewReasons.push(
+            `TV ${index + 1}: wire concealment above a fireplace is priced after a photo assessment, so that part of the job is confirmed during review.`,
+          );
         } else {
           pricedWireJobs += 1;
           items.push({

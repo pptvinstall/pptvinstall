@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
@@ -16,6 +16,7 @@ import {
   type CameraConfig,
   type CameraType,
   type MountType,
+  type TvSizeChoice,
   type WallType,
 } from "@/lib/quote-calculator";
 import { getAreaName } from "@/lib/travel-pricing";
@@ -30,6 +31,7 @@ import {
   DESCRIBE_IT_MAX_CHARS,
   getMountPriceLabel,
   mountTypeLabels,
+  quoteDisplayState,
   tvAccentClasses,
   tvDotClass,
   updateCameraCount,
@@ -40,6 +42,64 @@ import {
 } from "@/components/ui/quote-tool/shared";
 import { SelectorButton, ToggleCard } from "@/components/ui/quote-tool/QuoteComponents";
 import { useQuoteContext } from "@/components/ui/quote-tool/useQuoteState";
+
+/**
+ * Issue #35 numeric-input fix: the exact-inches field keeps the RAW string
+ * while the customer is typing and only parses/commits on blur. The old
+ * controlled input converted every keystroke immediately and nulled any
+ * intermediate value below 19, so typing "98" reset the field on the "9".
+ */
+function ExactInchesInput({
+  value,
+  onCommit,
+}: {
+  value: number | null | undefined;
+  onCommit: (inches: number | null) => void;
+}) {
+  const [raw, setRaw] = useState<string>(value != null ? String(value) : "");
+  const [invalid, setInvalid] = useState(false);
+
+  // Keep the field in sync when the committed value changes from elsewhere
+  // (e.g. switching TV tabs reuses this component instance).
+  useEffect(() => {
+    setRaw(value != null ? String(value) : "");
+    setInvalid(false);
+  }, [value]);
+
+  return (
+    <div className="space-y-1">
+      <Input
+        value={raw}
+        inputMode="numeric"
+        placeholder='e.g. 65, 75, 85, 98'
+        aria-invalid={invalid}
+        className="h-12 rounded-xl bg-white"
+        onChange={(event) => {
+          setRaw(event.target.value.replace(/\D/g, "").slice(0, 3));
+          setInvalid(false);
+        }}
+        onBlur={() => {
+          const digits = raw.trim();
+          if (!digits) {
+            onCommit(null);
+            setInvalid(false);
+            return;
+          }
+          const inches = Number(digits);
+          if (Number.isInteger(inches) && inches >= 19 && inches <= 120) {
+            onCommit(inches);
+            setInvalid(false);
+          } else {
+            // Out-of-range entry: revert to the committed value, never commit garbage.
+            setRaw(value != null ? String(value) : "");
+            setInvalid(true);
+          }
+        }}
+      />
+      {invalid ? <p className="text-xs font-medium text-red-600">Enter a size between 19 and 120 inches.</p> : null}
+    </div>
+  );
+}
 
 export default function QuoteStepForm() {
   const {
@@ -217,7 +277,7 @@ export default function QuoteStepForm() {
                               <div className="grid grid-cols-2 gap-3">
                                 <SelectorButton
                                   selected={tv.size === "32-55"}
-                                  onClick={() => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, size: "32-55" } : item)) }))}
+                                  onClick={() => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, size: "32-55", sizeChoice: null } : item)) }))}
                                 >
                                   32"-55"
                                 </SelectorButton>
@@ -229,45 +289,69 @@ export default function QuoteStepForm() {
                                 </SelectorButton>
                               </div>
                               {tv.size === "56+" ? (
-                                <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-3">
                                   <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-900">Exact size in inches (optional)</label>
-                                    <Input
-                                      value={tv.exactInches ?? ""}
-                                      inputMode="numeric"
-                                      placeholder='e.g. 65, 75, 85, 98'
-                                      className="h-12 rounded-xl bg-white"
-                                      onChange={(event) => {
-                                        const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
-                                        const inches = digits ? Number(digits) : null;
-                                        setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, exactInches: inches && inches >= 19 && inches <= 120 ? inches : null } : item)) }));
-                                      }}
-                                    />
+                                    <p className="text-sm font-semibold text-slate-900">Which range is it in?</p>
+                                    <div className="grid grid-cols-3 gap-2 md:gap-3">
+                                      {([
+                                        { value: "56-85", label: '56"–85"' },
+                                        { value: "86+", label: '86" or larger' },
+                                        { value: "unsure", label: "Not sure" },
+                                      ] as { value: TvSizeChoice; label: string }[]).map((option) => (
+                                        <SelectorButton
+                                          key={option.value}
+                                          selected={tv.sizeChoice === option.value}
+                                          onClick={() => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, sizeChoice: option.value } : item)) }))}
+                                        >
+                                          {option.label}
+                                        </SelectorButton>
+                                      ))}
+                                    </div>
+                                    {tv.sizeChoice == null && typeof tv.exactInches !== "number" ? (
+                                      <p className="text-xs font-medium text-amber-700">Pick a range so we can price this TV — 86&quot; and larger are custom-quoted.</p>
+                                    ) : null}
                                   </div>
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-900">TV model (optional)</label>
-                                    <Input
-                                      value={tv.model ?? ""}
-                                      maxLength={120}
-                                      placeholder="e.g. Samsung QN90C 98&quot;"
-                                      className="h-12 rounded-xl bg-white"
-                                      onChange={(event) => {
-                                        const model = event.target.value;
-                                        setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, model } : item)) }));
-                                      }}
-                                    />
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-semibold text-slate-900">Exact size in inches (optional)</label>
+                                      <ExactInchesInput
+                                        value={tv.exactInches ?? null}
+                                        onCommit={(inches) => setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, exactInches: inches } : item)) }))}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-semibold text-slate-900">TV model (optional)</label>
+                                      <Input
+                                        value={tv.model ?? ""}
+                                        maxLength={120}
+                                        placeholder="e.g. Samsung QN90C 98&quot;"
+                                        className="h-12 rounded-xl bg-white"
+                                        onChange={(event) => {
+                                          const model = event.target.value;
+                                          setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, model } : item)) }));
+                                        }}
+                                      />
+                                    </div>
+                                    {(typeof tv.exactInches === "number" && tv.exactInches >= 86) || tv.sizeChoice === "86+" ? (
+                                      <Alert className="border-amber-200 bg-amber-50 text-amber-900 sm:col-span-2">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle>Custom quote for 86&quot;+ TVs</AlertTitle>
+                                        <AlertDescription>
+                                          TVs 86 inches and larger are custom-quoted — we confirm the exact model, weight, VESA pattern, and mount compatibility before pricing, so there is no instant price for this TV.
+                                        </AlertDescription>
+                                      </Alert>
+                                    ) : tv.sizeChoice === "unsure" ? (
+                                      <Alert className="border-blue-200 bg-blue-50 text-blue-900 sm:col-span-2">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle>No problem — we&apos;ll confirm the size</AlertTitle>
+                                        <AlertDescription>
+                                          We&apos;ll confirm the exact size with you before final pricing. If it turns out to be 86 inches or larger, it will be custom-quoted after a quick compatibility review.
+                                        </AlertDescription>
+                                      </Alert>
+                                    ) : (
+                                      <p className="text-xs text-slate-500 sm:col-span-2">Exact size helps us confirm mount compatibility. TVs 86&quot; and larger are custom-quoted after a quick review.</p>
+                                    )}
                                   </div>
-                                  {typeof tv.exactInches === "number" && tv.exactInches >= 86 ? (
-                                    <Alert className="border-amber-200 bg-amber-50 text-amber-900 sm:col-span-2">
-                                      <AlertCircle className="h-4 w-4" />
-                                      <AlertTitle>Custom quote for 86&quot;+ TVs</AlertTitle>
-                                      <AlertDescription>
-                                        TVs 86 inches and larger are custom-quoted — we confirm the exact model, weight, VESA pattern, and mount compatibility before pricing, so there is no instant price for this TV.
-                                      </AlertDescription>
-                                    </Alert>
-                                  ) : (
-                                    <p className="text-xs text-slate-500 sm:col-span-2">Exact size helps us confirm mount compatibility. TVs 86&quot; and larger are custom-quoted after a quick review.</p>
-                                  )}
                                 </div>
                               ) : null}
                             </section>
@@ -814,8 +898,10 @@ export default function QuoteStepForm() {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 220, damping: 18 }}
                   >
-                    <p className="text-xs font-medium text-slate-500 md:text-sm">Estimated total</p>
-                    <p className="text-2xl font-extrabold text-slate-900 md:text-3xl">{formatPrice(liveQuote.total)}</p>
+                    <p className="text-xs font-medium text-slate-500 md:text-sm">{quoteDisplayState(liveQuote) === "partial" ? "Priced portion (partial)" : "Estimated total"}</p>
+                    <p className="text-2xl font-extrabold text-slate-900 md:text-3xl">
+                      {quoteDisplayState(liveQuote) === "review-only" ? "Custom quote required" : formatPrice(liveQuote.total)}
+                    </p>
                   </motion.div>
                   <div className="flex flex-col items-end gap-1">
                     <Button

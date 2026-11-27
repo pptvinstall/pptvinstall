@@ -163,6 +163,17 @@ export default function Booking() {
   }
 
   async function submitBooking() {
+    // Issue #35: a quote still awaiting review can never become a confirmed
+    // booking at the quoted total (defense in depth — the quote tool already
+    // blocks Schedule Now for these, but a stale saved quote must not slip by).
+    if (pendingQuote?.requiresReview) {
+      toast({
+        title: "This quote needs a review first",
+        description: "Part of the quote is custom-priced. We'll confirm the final price with you before booking — please use the quote follow-up options or call 404-702-4748.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!date || !time || !availabilityReady || !availableSlots.includes(time)) {
       toast({ title: "Choose a time slot", description: "Please pick a date and time first.", variant: "destructive" });
       setStep(1);
@@ -178,7 +189,7 @@ export default function Booking() {
 
     setIsSubmitting(true);
     const pricingBreakdown = pendingQuote
-      ? JSON.stringify({ source: "quote_generated", quoteSummary: pendingQuote.summary, quoteGroups: pendingQuote.groups, quoteFlags: pendingQuote.flags ?? [], promoCode: pendingQuote.promoCode })
+      ? JSON.stringify({ source: "quote_generated", quoteSummary: pendingQuote.summary, quoteGroups: pendingQuote.groups, quoteFlags: pendingQuote.flags ?? [], promoCode: pendingQuote.promoCode, requiresReview: pendingQuote.requiresReview ?? false, reviewReasons: pendingQuote.reviewReasons ?? [] })
       : JSON.stringify({
           source: "direct_booking",
           entryMode,

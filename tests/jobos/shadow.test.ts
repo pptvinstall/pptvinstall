@@ -24,7 +24,7 @@ const impls: Array<[string, () => JobOsStore]> = [
 ];
 
 const form = {
-  tvs: [{ id: "b-1", size: "56+", wallType: "drywall", location: "fireplace", hasMount: true, mountType: null, wireConcealment: false, outletDistance: null, unmounting: false }],
+  tvs: [{ id: "b-1", size: "56+", sizeChoice: "56-85", wallType: "drywall", location: "fireplace", hasMount: true, mountType: null, wireConcealment: false, outletDistance: null, unmounting: false }],
   cameras: [],
   doorbell: false,
   doorbellBrand: "",

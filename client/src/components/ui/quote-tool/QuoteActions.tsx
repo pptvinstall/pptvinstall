@@ -13,6 +13,7 @@ import {
 import { formatPrice } from "@/data/pricing-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { quoteDisplayState } from "@/components/ui/quote-tool/shared";
 import { useQuoteContext, businessPhone, telHref, mailtoHref } from "@/components/ui/quote-tool/useQuoteState";
 
 export default function QuoteActions() {
@@ -88,26 +89,41 @@ export default function QuoteActions() {
 
             <div className="space-y-4">
               <div className="rounded-[28px] bg-slate-900 p-5 text-white shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Estimated Total</p>
-                <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
+                  {quoteDisplayState(quote) === "partial" ? "Priced Portion (Partial)" : "Estimated Total"}
+                </p>
+                {quoteDisplayState(quote) === "review-only" ? (
+                  <p className="mt-3 text-3xl font-extrabold">Custom quote required</p>
+                ) : (
+                  <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
+                )}
                 <p className="mt-2 text-sm text-slate-300">Travel: reviewed before booking</p>
               </div>
 
               <div className="space-y-3">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Choose your next step</p>
-                <button
-                  type="button"
-                  onClick={handleScheduleNow}
-                  className="w-full rounded-[28px] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-blue-200 hover:shadow-md"
-                >
-                  <div className="flex items-center gap-3">
-                    <CalendarDays className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="font-bold text-slate-900">Schedule Now</p>
-                      <p className="text-sm text-slate-500">Save this quote and move to the booking calendar.</p>
+                {quoteDisplayState(quote) === "firm" ? (
+                  <button
+                    type="button"
+                    onClick={handleScheduleNow}
+                    className="w-full rounded-[28px] border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-blue-200 hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="font-bold text-slate-900">Schedule Now</p>
+                        <p className="text-sm text-slate-500">Save this quote and move to the booking calendar.</p>
+                      </div>
                     </div>
+                  </button>
+                ) : (
+                  <div className="w-full rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-left">
+                    <p className="font-bold text-amber-900">Booking opens after a quick review</p>
+                    <p className="mt-1 text-sm text-amber-800">
+                      Part of this quote is custom-priced, so we confirm the final price with you first. Send the quote or request a follow-up below and we&apos;ll lock it in.
+                    </p>
                   </div>
-                </button>
+                )}
 
                 <button
                   type="button"
@@ -195,10 +211,12 @@ export default function QuoteActions() {
           <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Quote total</p>
+                <p className="text-sm font-semibold text-slate-900">{quoteDisplayState(quote) === "partial" ? "Priced portion (partial)" : "Quote total"}</p>
                 <p className="text-xs text-slate-500">Held under {quoteRequest.name || "your"} quote request</p>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900">{formatPrice(quote.total)}</p>
+              <p className="text-3xl font-extrabold text-slate-900">
+                {quoteDisplayState(quote) === "review-only" ? "Custom quote required" : formatPrice(quote.total)}
+              </p>
             </div>
             <div className="mt-4 text-sm text-slate-600">
               <p>Phone: {quoteRequest.phone || businessPhone}</p>

@@ -635,7 +635,10 @@ export class JobOsService {
     const pricing: PricingResult = composition?.pricing ?? priceScope(scope, context, cfg);
 
     // Owner rule S-4: a TV 86"+ is always a custom quote / review, in every mode.
-    const hasOversizeTv = scope.tvs.some((t) => typeof t.inches === "number" && t.inches >= 86);
+    // Issue #35 size gate: an explicit "86+" range answer is oversize even
+    // without inches, and an unconfirmed size ("unsure") routes to review too.
+    const hasOversizeTv = scope.tvs.some((t) => (typeof t.inches === "number" && t.inches >= 86) || t.sizeChoice === "86+");
+    const hasUnconfirmedSizeTv = scope.tvs.some((t) => t.sizeChoice === "unsure");
     let response: PublicPriceResponse;
     if (cfg.pricingMode !== "dynamic") {
       // Review fields are attached only when a gate actually fires, so ordinary
@@ -652,6 +655,14 @@ export class JobOsService {
         status: "review",
         lines: [],
         notes: ["TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, and mount compatibility."],
+      };
+    } else if (hasUnconfirmedSizeTv) {
+      response = {
+        source: "engine",
+        totalCents: null,
+        status: "review",
+        lines: [],
+        notes: ["We need to confirm the exact size of each large TV before we can confirm a price — TVs 86 inches and larger are custom-quoted."],
       };
     } else if (!composition || pricing.empty) {
       response = {

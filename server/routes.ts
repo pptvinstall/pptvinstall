@@ -534,6 +534,9 @@ export function registerRoutes(app: Express): Server {
       quoteItems,
       quoteSummary,
       zipCode,
+      requiresReview,
+      reviewReasons,
+      flags,
     } = req.body as {
       name?: string;
       phone?: string;
@@ -541,6 +544,9 @@ export function registerRoutes(app: Express): Server {
       quoteItems?: Array<{ name?: string; price?: number; qty?: number }>;
       quoteSummary?: string;
       zipCode?: string;
+      requiresReview?: boolean;
+      reviewReasons?: string[];
+      flags?: string[];
     };
 
     if (!name || !phone || quoteTotal === undefined || !Array.isArray(quoteItems)) {
@@ -551,13 +557,22 @@ export function registerRoutes(app: Express): Server {
       .map((item) => `  • ${item.name ?? "Service"}: $${Number(item.price ?? 0) * Number(item.qty ?? 1)}`)
       .join("\n");
 
+    // Issue #35 flag propagation: review state is explicit in the owner
+    // inquiry — a partial or review-only total is never presented as final.
+    const reviewBlock = requiresReview
+      ? `\nREVIEW REQUIRED before a final price:\n${(reviewReasons ?? []).map((r) => `  • ${r}`).join("\n")}\nTotal below is the PRICED PORTION ONLY.\n`
+      : "";
+    const flagsBlock = Array.isArray(flags) && flags.length ? `\nFlags:\n${flags.map((f) => `  • ${f}`).join("\n")}\n` : "";
+
     const ownerMessage =
       `NEW QUOTE REQUEST\n` +
       `Customer: ${name}\n` +
       `Phone: ${phone}\n` +
       `Zip: ${zipCode ?? "N/A"}\n` +
-      `Total: $${quoteTotal}\n\n` +
-      `Services:\n${itemsList}\n\n` +
+      `Total: $${quoteTotal}\n` +
+      reviewBlock +
+      flagsBlock +
+      `\nServices:\n${itemsList}\n\n` +
       `Summary: ${quoteSummary ?? "No summary provided."}`;
 
     const customerMessage =
@@ -580,7 +595,7 @@ export function registerRoutes(app: Express): Server {
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || "Picture Perfect TV Install <pptvinstall@gmail.com>",
           to: process.env.ADMIN_EMAIL || "pptvinstall@gmail.com",
-          subject: `New Quote Request - ${name} - $${quoteTotal}`,
+          subject: `${requiresReview ? "[REVIEW] " : ""}New Quote Request - ${name} - $${quoteTotal}`,
           text: ownerMessage,
         });
 

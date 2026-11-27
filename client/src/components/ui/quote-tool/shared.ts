@@ -44,7 +44,28 @@ export type PendingQuoteStorage = {
   flags: string[];
   followUp?: string;
   promoCode?: string;
+  /** Issue #35: review state travels with the saved quote so the booking page can block a confirmed booking until review. */
+  requiresReview?: boolean;
+  reviewReasons?: string[];
 };
+
+/**
+ * Issue #35 results-rendering rule: how a quote may be presented and accepted.
+ * - "review-only": nothing is priced (total $0) — render "Custom quote required", never "$0".
+ * - "partial": some work is priced and some is not (review required or unpriced
+ *   custom/assessment lines) — the total is the priced portion only, and final
+ *   price acceptance / confirmed booking stays blocked until review.
+ * - "firm": the total is the whole price and may be accepted/booked.
+ */
+export type QuoteDisplayState = "firm" | "partial" | "review-only";
+
+export function quoteDisplayState(quote: Pick<DisplayQuote, "total" | "requiresReview" | "groups">): QuoteDisplayState {
+  if (quote.total <= 0) return "review-only";
+  const hasUnpricedLines = quote.groups.some((group) =>
+    group.items.some((item) => item.lineTotal === 0 && /custom quote|scope review|assessment required|to confirm/i.test(item.name)),
+  );
+  return quote.requiresReview || hasUnpricedLines ? "partial" : "firm";
+}
 
 export type StandaloneServices = {
   removalCount: number;
@@ -76,6 +97,10 @@ export type FullAiQuoteResponse = {
   /** Set by the server when it re-prices the AI-extracted scope deterministically (Issue #35 S-10). */
   requiresReview?: boolean;
   reviewReasons?: string[];
+  /** "deterministic" when server-priced; "review" when the server failed closed to manual review (no AI prices). */
+  pricedBy?: string;
+  /** Factual scope preserved on a fail-closed review payload. */
+  requestedScope?: unknown;
 };
 
 export const tvAccentClasses = [
@@ -409,6 +434,26 @@ export function getMountPriceLabel(size: TVConfig["size"], type: MountType): str
 }
 
 export function normalizeAiQuote(response: FullAiQuoteResponse): DisplayQuote {
+  // Issue #35 S-10 fail-closed: the server returns a zero-total review payload
+  // (no groups, no AI prices) when the scope could not be validated. Render it
+  // as a review-only quote instead of throwing "no items".
+  if (response.pricedBy === "review" || (response.requiresReview === true && (response.groups ?? []).length === 0 && (response.total ?? 0) <= 0)) {
+    return {
+      groups: [],
+      subtotal: 0,
+      discount: 0,
+      total: 0,
+      flags: response.flags ?? [],
+      summary: response.summary?.trim() || "Thanks — we've got your request. We'll review the details and follow up with your confirmed quote.",
+      followUp: response.followUp?.trim() || undefined,
+      requiresReview: true,
+      reviewReasons: response.reviewReasons ?? [],
+      travelTier: 0,
+      travelFee: 0,
+      travelContext: getTravelContext("30332"),
+    };
+  }
+
   const rawGroups: QuoteGroup[] = [];
 
   for (const group of response.groups ?? []) {

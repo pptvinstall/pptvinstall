@@ -187,7 +187,7 @@ test("issue-35 S-4/S-9: public schema carries exactInches and the catalog quote 
   assert.equal(result.requiresReview, true);
 });
 
-test("issue-35 S-4: inches that disagree with the size band are dropped, never thrown", () => {
+test("issue-35 size gate: inches that disagree with the size band route to review — never silently dropped, never priced", () => {
   const req = publicQuoteRequestSchema.parse({
     form: {
       tvs: [
@@ -213,7 +213,12 @@ test("issue-35 S-4: inches that disagree with the size band are dropped, never t
       zipCode: "",
     },
   });
+  // The engine scope withholds the contradictory inches and marks the TV
+  // size-unconfirmed; the catalog quote prices nothing for it and reviews.
   const scope = publicRequestToScope(req);
   assert.equal(scope.tvs[0]?.inches, undefined);
-  assert.equal(catalogPublicQuote(req).totalCents, 10_000);
+  assert.equal(scope.tvs[0]?.sizeChoice, "unsure");
+  const catalog = catalogPublicQuote(req);
+  assert.equal(catalog.totalCents, 0);
+  assert.equal(catalog.requiresReview, true);
 });
