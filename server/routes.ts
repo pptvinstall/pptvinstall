@@ -12,6 +12,7 @@ import { monitoring } from "./monitoring";
 import { db } from "./db";
 import { isStopKeyword, normalizePhoneForSms, validateTwilioWebhookRequest } from "./services/smsService";
 import {
+  applyDeterministicPricing,
   checkAiQuoteRateLimit,
   getAiQuoteProtectionConfig,
   requestAnthropicQuote,
@@ -383,7 +384,10 @@ export function registerRoutes(app: Express): Server {
       }
 
       const content = await requestAnthropicQuote(aiMessage);
-      return res.json({ content });
+      // Issue #35 S-10: when the AI returned a usable scope extraction, its totals
+      // are replaced with the deterministic catalog price for that scope before
+      // the customer sees them. Falls back to the raw AI content when it cannot.
+      return res.json({ content: applyDeterministicPricing(content) });
     } catch (error) {
       console.error("AI quote route error:", error);
       return res.status(500).json({ message: "We couldn't generate that AI quote right now. Please try again or call us directly." });
