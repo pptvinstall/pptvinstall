@@ -24,7 +24,22 @@ export type TVConfig = {
   wireConcealment: boolean;
   outletDistance: "near" | "far" | null;
   unmounting: boolean;
+  /** Exact diagonal in inches when the customer knows it. 86+ routes to custom-quote review (owner rule S-4). */
+  exactInches?: number | null;
+  /** Exact TV model, collected for oversize / compatibility review. */
+  model?: string | null;
+  /** TV weight in pounds when known (oversize review). */
+  weightLbs?: number | null;
+  /** VESA pattern (e.g. "600x400") when known (oversize review). */
+  vesaPattern?: string | null;
 };
+
+/** Owner rule S-4: TVs at or above this diagonal are never instant-priced; they route to custom-quote review. 85" is NOT oversized. */
+export const OVERSIZE_THRESHOLD_INCHES = 86;
+
+export function isOversizeTv(tv: Pick<TVConfig, "exactInches">): boolean {
+  return typeof tv.exactInches === "number" && Number.isFinite(tv.exactInches) && tv.exactInches >= OVERSIZE_THRESHOLD_INCHES;
+}
 
 export type CameraConfig = {
   id: string;
@@ -69,6 +84,10 @@ export type QuoteResult = {
   total: number;
   flags: string[];
   followUp?: string;
+  /** True when part of the job must be reviewed before a firm final price (oversize TVs, masonry fireplaces). */
+  requiresReview?: boolean;
+  /** Customer-safe reasons the review is required. */
+  reviewReasons?: string[];
   travelTier: TravelTier;
   travelFee: number | "out_of_range";
   travelContext: ReturnType<typeof getTravelContext>;
@@ -112,6 +131,7 @@ function getMountLabel(size: TVConfig["size"], mountType: MountType): string {
 }
 
 function getTvSubtitle(tv: TVConfig): string {
+  const sizeLabel = typeof tv.exactInches === "number" && tv.exactInches > 0 ? `${tv.exactInches}" · ` : "";
   const locationLabel = tv.location === "fireplace" ? "Above fireplace" : "Standard wall";
   const wallLabel =
     tv.wallType === "brick"
@@ -127,7 +147,7 @@ function getTvSubtitle(tv: TVConfig): string {
         ? "Tilting mount"
         : "Fixed mount";
 
-  return `${locationLabel}, ${wallLabel}, ${mountLabel}`;
+  return `${sizeLabel}${locationLabel}, ${wallLabel}, ${mountLabel}`;
 }
 
 export function createDefaultTVConfig(): TVConfig {
@@ -141,6 +161,10 @@ export function createDefaultTVConfig(): TVConfig {
     wireConcealment: false,
     outletDistance: null,
     unmounting: false,
+    exactInches: null,
+    model: "",
+    weightLbs: null,
+    vesaPattern: "",
   };
 }
 
@@ -228,81 +252,114 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
   let positiveSubtotal = 0;
   let pricedWireJobs = 0;
   let additionalTvDiscountUnits = 0;
+  const reviewReasons: string[] = [];
 
   state.tvs.forEach((tv, index) => {
     const items: QuoteLineItem[] = [];
     const isAdditionalTv = index > 0;
+    const oversize = isOversizeTv(tv);
+    const masonryFireplace = tv.location === "fireplace" && tv.wallType === "brick";
 
-    const baseMountPrice =
-      tv.location === "fireplace"
-        ? pricingData.tvMounting.fireplace.price
-        : pricingData.tvMounting.standard.price;
-
-    items.push({
-      name:
+    if (oversize) {
+      // Owner rule S-4: a TV 86"+ is never instant-priced (no $100 fallback). Mount and
+      // wire work for this TV are part of the compatibility review, so they are not
+      // priced here either; unmounting an existing TV below stays standard work.
+      items.push({
+        name: `Oversized TV (${tv.exactInches}") — custom quote, review required`,
+        price: 0,
+        qty: 1,
+        lineTotal: 0,
+      });
+      reviewReasons.push(
+        `TV ${index + 1} (${tv.exactInches}"): TVs 86 inches and larger are custom-quoted after we confirm the exact model, weight, VESA pattern, mount/load compatibility, access, and whether a helper is needed.`,
+      );
+      flags.add(
+        `TV ${index + 1} is ${tv.exactInches} inches. TVs 86"+ never get an instant price — we'll review the model, weight, VESA pattern, and mount compatibility and send a custom quote. Any mount or wire work for this TV is confirmed in that review.`,
+      );
+    } else {
+      const baseMountPrice =
         tv.location === "fireplace"
-          ? pricingData.tvMounting.fireplace.name
-          : pricingData.tvMounting.standard.name,
-      price: baseMountPrice,
-      qty: 1,
-      lineTotal: baseMountPrice,
-    });
-    positiveSubtotal += baseMountPrice;
+          ? pricingData.tvMounting.fireplace.price
+          : pricingData.tvMounting.standard.price;
 
-    if (tv.wallType === "brick" && tv.location !== "fireplace") {
       items.push({
-        name: pricingData.tvMounting.nonDrywall.name,
-        price: pricingData.tvMounting.nonDrywall.price,
+        name:
+          tv.location === "fireplace"
+            ? pricingData.tvMounting.fireplace.name
+            : pricingData.tvMounting.standard.name,
+        price: baseMountPrice,
         qty: 1,
-        lineTotal: pricingData.tvMounting.nonDrywall.price,
+        lineTotal: baseMountPrice,
       });
-      positiveSubtotal += pricingData.tvMounting.nonDrywall.price;
-    }
+      positiveSubtotal += baseMountPrice;
 
-    if (tv.wallType === "highrise") {
-      items.push({
-        name: pricingData.tvMounting.highRise.name,
-        price: pricingData.tvMounting.highRise.price,
-        qty: 1,
-        lineTotal: pricingData.tvMounting.highRise.price,
-      });
-      positiveSubtotal += pricingData.tvMounting.highRise.price;
-    }
-
-    if (!tv.hasMount && tv.mountType) {
-      const mountPrice = getMountPrice(tv.size, tv.mountType);
-      items.push({
-        name: getMountLabel(tv.size, tv.mountType),
-        price: mountPrice,
-        qty: 1,
-        lineTotal: mountPrice,
-      });
-      positiveSubtotal += mountPrice;
-    }
-
-    if (tv.wireConcealment) {
-      if (tv.location === "fireplace") {
+      if (tv.wallType === "brick" && tv.location !== "fireplace") {
         items.push({
-          name: "Wire concealment assessment required",
-          price: 0,
+          name: pricingData.tvMounting.nonDrywall.name,
+          price: pricingData.tvMounting.nonDrywall.price,
           qty: 1,
-          lineTotal: 0,
+          lineTotal: pricingData.tvMounting.nonDrywall.price,
         });
-        flags.add("Wire concealment above fireplaces requires photos before we can confirm pricing.");
-      } else {
-        pricedWireJobs += 1;
+        positiveSubtotal += pricingData.tvMounting.nonDrywall.price;
+      }
+
+      if (tv.wallType === "highrise") {
         items.push({
-          name: pricingData.wireConcealment.standard.name,
-          price: pricingData.wireConcealment.standard.price,
+          name: pricingData.tvMounting.highRise.name,
+          price: pricingData.tvMounting.highRise.price,
           qty: 1,
-          lineTotal: pricingData.wireConcealment.standard.price,
+          lineTotal: pricingData.tvMounting.highRise.price,
         });
-        positiveSubtotal += pricingData.wireConcealment.standard.price;
-        if (tv.outletDistance === "far") {
-          flags.add(`TV ${index + 1} wire concealment may need extra outlet work because the nearest outlet is more than 1–2 feet from the TV location. We'll confirm final pricing before work begins.`);
-        } else if (tv.outletDistance === null) {
-          flags.add(`TV ${index + 1} wire concealment pricing assumes the nearest outlet is within 1–2 feet of the TV location. If not, we may need to confirm extra work.`);
+        positiveSubtotal += pricingData.tvMounting.highRise.price;
+      }
+
+      if (!tv.hasMount && tv.mountType) {
+        const mountPrice = getMountPrice(tv.size, tv.mountType);
+        items.push({
+          name: getMountLabel(tv.size, tv.mountType),
+          price: mountPrice,
+          qty: 1,
+          lineTotal: mountPrice,
+        });
+        positiveSubtotal += mountPrice;
+      }
+
+      if (tv.wireConcealment) {
+        if (tv.location === "fireplace") {
+          items.push({
+            name: "Wire concealment assessment required",
+            price: 0,
+            qty: 1,
+            lineTotal: 0,
+          });
+          flags.add("Wire concealment above fireplaces requires photos before we can confirm pricing.");
+        } else {
+          pricedWireJobs += 1;
+          items.push({
+            name: pricingData.wireConcealment.standard.name,
+            price: pricingData.wireConcealment.standard.price,
+            qty: 1,
+            lineTotal: pricingData.wireConcealment.standard.price,
+          });
+          positiveSubtotal += pricingData.wireConcealment.standard.price;
+          if (tv.outletDistance === "far") {
+            flags.add(`TV ${index + 1} wire concealment may need extra outlet work because the nearest outlet is more than 1–2 feet from the TV location. We'll confirm final pricing before work begins.`);
+          } else if (tv.outletDistance === null) {
+            flags.add(`TV ${index + 1} wire concealment pricing assumes the nearest outlet is within 1–2 feet of the TV location. If not, we may need to confirm extra work.`);
+          }
         }
+      }
+
+      if (masonryFireplace) {
+        // Owner rule S-2: brick/stone fireplaces START at the $200 fireplace price —
+        // no universal surcharge — but the total is a starting price, not a firm
+        // quote, until a photo review confirms the surface difficulty.
+        reviewReasons.push(
+          `TV ${index + 1}: brick/stone fireplace mounting starts at $200. The final price is confirmed after a quick photo review of the fireplace surface.`,
+        );
+        flags.add(
+          `TV ${index + 1}: brick/stone fireplace mounting starts at $200. Please have photos of the fireplace and wall ready — we'll confirm the final price after a quick photo review before booking.`,
+        );
       }
     }
 
@@ -461,6 +518,8 @@ export function calculateQuote(state: QuoteFormState): QuoteResult {
     discount: bundleDiscount,
     total: Math.max(0, positiveSubtotal - bundleDiscount),
     flags: Array.from(flags),
+    requiresReview: reviewReasons.length > 0,
+    reviewReasons,
     travelTier,
     travelFee,
     travelContext,

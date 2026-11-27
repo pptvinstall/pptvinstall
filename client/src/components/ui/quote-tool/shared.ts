@@ -73,6 +73,9 @@ export type FullAiQuoteResponse = {
   summary?: string;
   flags?: string[];
   followUp?: string;
+  /** Set by the server when it re-prices the AI-extracted scope deterministically (Issue #35 S-10). */
+  requiresReview?: boolean;
+  reviewReasons?: string[];
 };
 
 export const tvAccentClasses = [
@@ -468,6 +471,8 @@ export function normalizeAiQuote(response: FullAiQuoteResponse): DisplayQuote {
     flags: response.flags ?? [],
     summary: response.summary?.trim() || "Here is the estimate based on the details you shared.",
     followUp: response.followUp?.trim() || undefined,
+    requiresReview: response.requiresReview ?? false,
+    reviewReasons: response.reviewReasons ?? [],
     travelTier: 0,
     travelFee: 0,
     travelContext: getTravelContext("30332"),
@@ -577,6 +582,9 @@ export function buildLocalQuoteSummary(quote: QuoteResult, state: QuoteFormState
   return `This estimate covers ${serviceSummary}. ${travelSummary}`;
 }
 
+/** Owner rule S-9: every house visit is at least $100. Shared-visit add-ons on a job that already meets the minimum keep their ~$50 add-on price. */
+export const HOUSE_VISIT_MINIMUM = 100;
+
 export function buildAugmentedQuote(baseQuote: QuoteResult, standaloneServices: StandaloneServices): QuoteResult {
   const extraItems: QuoteLineItem[] = [];
   const flags = [...baseQuote.flags];
@@ -632,6 +640,25 @@ export function buildAugmentedQuote(baseQuote: QuoteResult, standaloneServices: 
       lineTotal,
     });
     extraSubtotal += lineTotal;
+  }
+
+  // Owner rule S-9: enforce the $100 per-visit minimum on the final priced total.
+  // Only a visit with a real priced total below the minimum is adjusted (e.g. a
+  // standalone $50 TV removal). $0 custom-quote-only requests get no invented
+  // price, and jobs already at/above the minimum — including ~$50 shared-visit
+  // add-ons — are untouched. Applies to new quote calculations only; accepted
+  // quotes are never repriced.
+  const rawTotal = baseQuote.total + extraSubtotal;
+  if (rawTotal > 0 && rawTotal < HOUSE_VISIT_MINIMUM) {
+    const adjustment = HOUSE_VISIT_MINIMUM - rawTotal;
+    extraItems.push({
+      name: `Per-visit minimum adjustment (visits start at ${formatPrice(HOUSE_VISIT_MINIMUM)})`,
+      price: adjustment,
+      qty: 1,
+      lineTotal: adjustment,
+    });
+    extraSubtotal += adjustment;
+    flags.push(`A ${formatPrice(HOUSE_VISIT_MINIMUM)} minimum applies per house visit, so this quote is adjusted to the minimum.`);
   }
 
   if (extraItems.length === 0) {
