@@ -64,7 +64,27 @@ export function useQuoteState() {
   const [mode, setMode] = useState<QuoteMode>("form");
 
   // ── Form data ─────────────────────────────────────────────────────────────
-  const [formState, setFormState] = useState<QuoteFormState>(createDefaultQuoteFormState);
+  const [formState, setFormState] = useState<QuoteFormState>(() => {
+    const base = createDefaultQuoteFormState();
+    // Deal handoff (Issue #35 S-13): /deals links here carrying ONLY product,
+    // model and source. Prefill the first TV's model and annotate the notes so
+    // the product context rides along with the quote request. No price is
+    // ever carried from a deal into the quote.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const product = params.get("product")?.trim();
+      const model = params.get("model")?.trim();
+      const source = params.get("source")?.trim();
+      if (product && model && source) {
+        return {
+          ...base,
+          notes: `Deal product: ${product} (model ${model}) via ${source}. Please confirm mount compatibility.`,
+          tvs: base.tvs.map((tv, i) => (i === 0 ? { ...tv, model } : tv)),
+        };
+      }
+    }
+    return base;
+  });
   const [standaloneServices, setStandaloneServices] = useState<StandaloneServices>(
     createDefaultStandaloneServices,
   );

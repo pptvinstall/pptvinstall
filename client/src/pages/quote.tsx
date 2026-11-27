@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { CheckCircle2, MessageSquare, Phone } from "lucide-react";
+import { lazy, Suspense, useMemo } from "react";
+import { CheckCircle2, MessageSquare, Phone, Tag } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -10,6 +10,18 @@ const PHONE_DISPLAY = "404-702-4748";
 const PHONE_HREF = "4047024748";
 
 export default function QuotePage() {
+  // Deal handoff (Issue #35 S-13): a /deals card links here carrying ONLY the
+  // product name, exact model and source retailer — never an install price.
+  const dealHandoff = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const product = params.get("product")?.trim();
+    const model = params.get("model")?.trim();
+    const source = params.get("source")?.trim();
+    if (!product || !model || !source) return null;
+    return { product, model, source };
+  }, []);
+
   const loadingCard = (
     <Card className="rounded-[28px] border-slate-200 shadow-sm">
       <CardContent className="space-y-4 p-8">
@@ -58,6 +70,17 @@ export default function QuotePage() {
       </header>
 
       <main className="mx-auto mt-10 max-w-6xl">
+        {dealHandoff ? (
+          <div className="mb-6 flex items-start gap-3 rounded-[28px] border border-blue-200 bg-blue-50 p-5 text-blue-900">
+            <Tag className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-bold">You&apos;re quoting installation for a deal product</p>
+              <p className="mt-1 text-sm leading-6">
+                {dealHandoff.product} (model {dealHandoff.model}) — found via {dealHandoff.source}. We&apos;ve prefilled the model in the form below so we can confirm mount compatibility. You buy the product from the retailer — we only quote the installation.
+              </p>
+            </div>
+          </div>
+        ) : null}
         <Suspense fallback={loadingCard}>
           <QuoteTool />
         </Suspense>
