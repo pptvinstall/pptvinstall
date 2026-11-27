@@ -6,12 +6,12 @@ export const pricingData = {
     standard: {
       name: "Standard TV Mounting (Customer's Mount)",
       price: 100,
-      description: "Mounting a TV on drywall with a customer-provided mount, any size."
+      description: "Mounting a TV on drywall with a customer-provided mount. TVs 86 inches and larger are custom-quoted after a compatibility review."
     },
     fireplace: {
       name: "Over Fireplace TV Mounting",
       price: 200,
-      description: "Mounting a TV above a fireplace (non-drywall)."
+      description: "Mounting a TV above a fireplace on drywall. Brick and stone fireplaces also start at $200; the final price is confirmed after a quick photo review of the surface."
     },
     nonDrywall: {
       name: "Non-Drywall (Brick, Masonry, etc.)",

@@ -9,8 +9,8 @@ const faqs = [
   {
     category: "Booking & Payments",
     items: [
-      { q: "How much does it cost to mount a TV in Atlanta?", a: "Standard TV mounting starts at $100 with your mount. Fireplace mounting starts at $200, and wire concealment or specialty walls can change the final estimate. Our quote tool gives the fastest exact pricing for Atlanta-area installs." },
-      { q: "How far in advance do I need to book?", a: "Same-day booking is available with 2 hours notice. We recommend 1-2 days ahead for best slot selection." },
+      { q: "How much does it cost to mount a TV in Atlanta?", a: "Standard TV mounting starts at $100 with your mount. Fireplace mounting starts at $200 on drywall (brick and stone fireplaces also start at $200, with the final price confirmed after a quick photo review), and wire concealment or specialty walls can change the final estimate. Our quote tool gives the fastest exact pricing for Atlanta-area installs." },
+      { q: "How far in advance do I need to book?", a: "Same-day appointments are sometimes available when the schedule allows, but they are never guaranteed. We recommend booking 1-2 days ahead for the best slot selection. Weekday appointments begin after 5:30 PM, and weekend availability is generally 11:00 AM to 7:00 PM." },
       { q: "Do I need to pay a deposit?", a: "No. There is no payment required until after the job is complete." },
       { q: "What payment methods do you accept?", a: "Cash, Zelle, Cash App, Venmo, and all major credit cards. Payment due after job is complete." },
     ],
@@ -38,7 +38,7 @@ const faqs = [
     category: "AV Help & Troubleshooting",
     items: [
       { q: "Do you help with TVs that are already mounted but having issues?", a: "Yes! We offer AV troubleshooting starting at $100/hr. Whether it's remote issues, HDMI problems, sound not working, or streaming setup, we can come diagnose and fix your existing setup." },
-      { q: "Can you just remove/unmount my TV without reinstalling it?", a: "Absolutely. TV unmounting is $50 per TV. We'll safely remove it from the wall. We can also patch the mount holes — just mention it when you book." },
+      { q: "Can you just remove/unmount my TV without reinstalling it?", a: "Absolutely. TV unmounting is $50 per TV, with a $100 minimum per visit — so a standalone removal visit starts at $100. We'll safely remove it from the wall. We can also patch the mount holes — just mention it when you book." },
       { q: "Do you set up new smart TVs or streaming devices?", a: "Yes — device setup and configuration is $75 flat. That covers smart TV initial setup, streaming apps, Alexa/Google Home linking, and network config." },
       { q: "What if I just need someone to figure out why my sound isn't working?", a: "That falls under our AV troubleshooting service ($100/hr). Most sound issues take 30-60 minutes to diagnose and fix." },
     ],
