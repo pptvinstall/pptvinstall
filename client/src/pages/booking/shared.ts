@@ -4,7 +4,9 @@ import { pricingData } from "@/data/pricing-data";
 
 export type QuoteItem = { name: string; lineTotal: number; qty?: number };
 export type QuoteGroup = { title: string; items: QuoteItem[] };
-export type PendingQuote = { total: number; summary: string; groups: QuoteGroup[]; flags?: string[]; followUp?: string; promoCode?: string; zipCode?: string; requiresReview?: boolean; reviewReasons?: string[] };
+import type { WebsiteQuoteSnapshot } from "@shared/pricing/websiteSnapshot";
+
+export type PendingQuote = { total: number; summary: string; groups: QuoteGroup[]; flags?: string[]; followUp?: string; promoCode?: string; zipCode?: string; requiresReview?: boolean; reviewReasons?: string[]; quoteSnapshot?: WebsiteQuoteSnapshot };
 export type Details = {
   firstName: string;
   lastName: string;

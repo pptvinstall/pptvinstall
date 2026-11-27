@@ -262,7 +262,7 @@ export function priceScope(scopeInput: JobScopeInput | JobScope, contextInput: J
     if (work.items.length) why.push(`Work items: ${work.items.map((i) => i.customerText).join("; ")}.`);
     if (siteCount > 1) why.push(`${siteCount} stops: travel covers the drive between sites and the return trip.`);
     if (premium.factors.length) {
-      why.push(`Complexity/risk premium +${pctText(premium.pct)} margin on the recommendation: ${premium.factors.map((f) => `${f.label.toLowerCase()} +${pctText(f.pct)} (${f.because})`).join("; ")}${premium.rawPct > premium.pct ? `; capped at ${pctText(premium.pct)}` : ""}.`);
+      why.push(`Complexity/risk premium +${pctText(premium.pct)} margin on the recommendation: ${premium.factors.map((f) => (f.countedInLaborMinutes ? `${f.label.toLowerCase()} counted in labor time, not charged again (${f.because})` : f.laborCountedShare > 0 ? `${f.label.toLowerCase()} +${pctText(f.appliedPct)} (${f.because}; ${pctText(f.laborCountedShare)} of its premium already paid in labor time — the rest prices specialized hardware and incremental risk)` : `${f.label.toLowerCase()} +${pctText(f.appliedPct)} (${f.because})`)).join("; ")}${premium.rawPct > premium.pct ? `; configured total ${pctText(premium.rawPct)} before de-stacking/cap` : ""}.`);
     }
     why.push(`Cost to serve ${formatDollarsShort(costToServeCents)}. Floor ${formatDollarsShort(floorCents)} keeps at least ${pctText(B.minimumMarginPct)} margin, ${formatDollarsShort(B.minimumTripEconomicsCents)} trip economics and the ${formatDollarsShort(B.minimumTicketCents)} minimum job. Recommended ${formatDollarsShort(recommendedCents)} targets ${pctText(B.desiredMarginPct + premium.pct)} margin.`);
 
@@ -272,7 +272,10 @@ export function priceScope(scopeInput: JobScopeInput | JobScope, contextInput: J
     priceDrivers.push({ key: "travel", label: "Travel", cents: travel.costCents, detail: `${travel.roundTripMiles} mi · ${travel.roundTripDriveMinutes} min` });
     if (overheadCents) priceDrivers.push({ key: "overhead", label: "Overhead", cents: overheadCents });
     if (schedule.extraCostCents) priceDrivers.push({ key: "schedule", label: "Schedule", cents: schedule.extraCostCents });
-    for (const f of premium.factors) priceDrivers.push({ key: `premium.${f.key}`, label: `${f.label} premium`, cents: safeCents(recommendedCents * f.pct), detail: `+${pctText(f.pct)} · ${f.because}` });
+    for (const f of premium.factors) {
+      if (f.appliedPct <= 0) continue; // counted in labor minutes (S-7) — no separate premium charge to show
+      priceDrivers.push({ key: `premium.${f.key}`, label: `${f.label} premium`, cents: safeCents(recommendedCents * f.appliedPct), detail: `+${pctText(f.appliedPct)} · ${f.because}` });
+    }
   }
 
   const inputHash = hashObject({ scope, context, configVersion: cfg.version, engine: ENGINE_VERSION });

@@ -34,6 +34,7 @@ import {
   type StandaloneServices,
 } from "@/components/ui/quote-tool/shared";
 import { applyPackageToFormState } from "@shared/pricing/formState";
+import { createWebsiteQuoteSnapshot } from "@shared/pricing/websiteSnapshot";
 import { engineDisplayQuote, fetchPriceSource, requestEnginePrice, type PriceSource } from "@/lib/engine-quote";
 import {
   calculateQuote,
@@ -574,6 +575,22 @@ export function useQuoteState() {
 
   function savePendingQuote(nextQuote: DisplayQuote) {
     if (typeof window === "undefined") return;
+    // Issue #35 S-11: freeze the quote exactly as the customer saw it. The
+    // snapshot travels with the saved quote and is embedded in the booking
+    // record, so a later pricing change can never rewrite this quote.
+    const quoteSnapshot = createWebsiteQuoteSnapshot({
+      form: formState,
+      groups: nextQuote.groups,
+      subtotal: nextQuote.subtotal,
+      discount: nextQuote.discount,
+      total: nextQuote.total,
+      flags: nextQuote.flags,
+      requiresReview: nextQuote.requiresReview ?? false,
+      reviewReasons: nextQuote.reviewReasons ?? [],
+      promoCode: promoCodeInput.trim() || null,
+      pricingSource: `${quoteSourceMode ?? "form"}:${priceSource}`,
+      createdAt: new Date().toISOString(),
+    });
     const payload: PendingQuoteStorage = {
       total: nextQuote.total,
       summary: nextQuote.summary,
@@ -583,6 +600,7 @@ export function useQuoteState() {
       promoCode: promoCodeInput.trim() || undefined,
       requiresReview: nextQuote.requiresReview ?? false,
       reviewReasons: nextQuote.reviewReasons ?? [],
+      quoteSnapshot,
     };
     window.localStorage.setItem(pendingQuoteStorageKey, JSON.stringify(payload));
   }

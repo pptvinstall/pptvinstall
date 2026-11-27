@@ -12,6 +12,7 @@ import {
   type WallType,
 } from "@/lib/quote-calculator";
 import { getTravelContext } from "@/lib/travel-pricing";
+import type { WebsiteQuoteSnapshot } from "@shared/pricing/websiteSnapshot";
 
 export type QuoteMode = "form" | "text" | "voice";
 
@@ -47,6 +48,8 @@ export type PendingQuoteStorage = {
   /** Issue #35: review state travels with the saved quote so the booking page can block a confirmed booking until review. */
   requiresReview?: boolean;
   reviewReasons?: string[];
+  /** Issue #35 S-11: immutable snapshot of the quote exactly as the customer saw it, attached to the booking. */
+  quoteSnapshot?: WebsiteQuoteSnapshot;
 };
 
 /**
