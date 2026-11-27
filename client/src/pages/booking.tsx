@@ -189,7 +189,7 @@ export default function Booking() {
 
     setIsSubmitting(true);
     const pricingBreakdown = pendingQuote
-      ? JSON.stringify({ source: "quote_generated", quoteSummary: pendingQuote.summary, quoteGroups: pendingQuote.groups, quoteFlags: pendingQuote.flags ?? [], promoCode: pendingQuote.promoCode, requiresReview: pendingQuote.requiresReview ?? false, reviewReasons: pendingQuote.reviewReasons ?? [] })
+      ? JSON.stringify({ source: "quote_generated", quoteSummary: pendingQuote.summary, quoteGroups: pendingQuote.groups, quoteFlags: pendingQuote.flags ?? [], promoCode: pendingQuote.promoCode, requiresReview: pendingQuote.requiresReview ?? false, reviewReasons: pendingQuote.reviewReasons ?? [], ...(pendingQuote.quoteSnapshot ? { quoteSnapshot: pendingQuote.quoteSnapshot } : {}) })
       : JSON.stringify({
           source: "direct_booking",
           entryMode,

@@ -57,6 +57,19 @@ export const riskPremiumSchema = z
     /** Cap on the sum of all applied factors. */
     maxTotalPct: z.number().min(0).max(0.3),
     factors: z.object(Object.fromEntries(PREMIUM_FACTORS.map((k) => [k, z.number().min(0).max(0.2)])) as Record<PremiumFactor, z.ZodNumber>).strict(),
+    /**
+     * Issue #35 S-7 (owner rule, 2026-11-27): for a factor whose difficulty is
+     * PARTIALLY compensated by labor minutes, the share (0..1) of its
+     * configured premium that duplicates those minutes and must not be
+     * charged again. The remaining share still applies: it prices specialized
+     * hardware, additional labor beyond the minute allowance, and genuine
+     * incremental risk. Factors absent here default to a share of 1 (fully
+     * counted in minutes — the original fireplace/masonry behaviour).
+     * steel_studs ships at 0.5: steel wall/surface minutes pay the extra
+     * hands-on time once; the retained half prices the hardware handling and
+     * risk the minutes do not capture.
+     */
+    laborCountedShare: z.record(z.string(), z.number().min(0).max(1)).default({}),
   })
   .strict();
 export type RiskPremiumConfig = z.infer<typeof riskPremiumSchema>;
@@ -91,7 +104,7 @@ export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
 };
 const zeroFactors = Object.fromEntries(PREMIUM_FACTORS.map((k) => [k, 0])) as Record<PremiumFactor, number>;
 /** Configs saved before risk premiums existed keep their old recommendation (premiums off). */
-const LEGACY_RISK_PREMIUM: RiskPremiumConfig = { enabled: false, maxTotalPct: 0, factors: zeroFactors };
+const LEGACY_RISK_PREMIUM: RiskPremiumConfig = { enabled: false, maxTotalPct: 0, factors: zeroFactors, laborCountedShare: {} };
 
 export const economicsConfigSchema = z
   .object({
@@ -313,6 +326,10 @@ export const DEFAULT_ECONOMICS_CONFIG: EconomicsConfig = {
         electrical: 0.03,
         difficult_access: 0.03,
       },
+      // S-7 owner rule (2026-11-27): half of the steel-stud premium duplicates
+      // the steel wall/surface labor minutes; the other half stays applied for
+      // specialized hardware, extra labor and genuine incremental risk.
+      laborCountedShare: { steel_studs: 0.5 },
     },
     tax: { enabled: false, rateBps: 0, label: "" },
   },

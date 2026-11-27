@@ -7,6 +7,7 @@ import { diagnoseBookingEmailConnection, sendBookingEmails, sendCancellationEmai
 import { crmContacts, insertBookingSchema, insertContactMessageSchema, promotions, smsMessages, smsOptOuts } from "@shared/schema";
 import { format } from "date-fns";
 import { addDateKeyDays, atlantaDateKey, atlantaSlotInstant, isValidDateKey } from "@shared/atlantaTime";
+import { verifyWebsiteQuoteSnapshot } from "@shared/pricing/websiteSnapshot";
 import { generateICS } from "./services/calendarService";
 import { monitoring } from "./monitoring";
 import { db } from "./db";
@@ -397,6 +398,20 @@ export function registerRoutes(app: Express): Server {
   // --- 3. CREATE BOOKING (With Bouncer) ---
   app.post("/api/bookings", async (req, res) => {
     try {
+      // Issue #35 S-11: when a booking carries a website quote snapshot, its
+      // seal must verify — a tampered or corrupted snapshot is rejected, and
+      // a valid one is stored verbatim (immutable) with the booking.
+      const rawBreakdown = (req.body as { pricingBreakdown?: unknown })?.pricingBreakdown;
+      if (typeof rawBreakdown === "string" && rawBreakdown.includes("quoteSnapshot")) {
+        try {
+          const parsedBreakdown = JSON.parse(rawBreakdown) as { quoteSnapshot?: unknown };
+          if (parsedBreakdown.quoteSnapshot !== undefined && !verifyWebsiteQuoteSnapshot(parsedBreakdown.quoteSnapshot)) {
+            return res.status(400).json({ message: "The quote attached to this booking failed verification. Please rebuild your quote and try again." });
+          }
+        } catch {
+          return res.status(400).json({ message: "The quote attached to this booking could not be verified. Please rebuild your quote and try again." });
+        }
+      }
       const data = insertBookingSchema.parse(req.body);
       if (!isValidDateKey(data.preferredDate)) {
         return res.status(400).json({ message: "Please select a valid appointment date." });
