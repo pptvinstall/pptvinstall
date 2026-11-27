@@ -202,7 +202,11 @@ export default function QuoteResults() {
         </div>
       ) : null}
 
-      {priceSource === "catalog" ? <QuotePackages /> : null}
+      {/* Packages present firm whole-project totals, so they render ONLY for
+          firm quotes. On a partial/review quote they would contradict the
+          review state above (e.g. a 98" custom-quote TV shown as a $100
+          "whole-project total") — found in browser testing, 2026-11-27. */}
+      {priceSource === "catalog" && displayState === "firm" ? <QuotePackages /> : null}
 
       <section aria-labelledby="itemized-estimate-heading" className="space-y-4">
         <div>
