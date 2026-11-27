@@ -92,6 +92,21 @@ export default function QuoteResults() {
         <p className="text-base leading-7 text-slate-700">{quote.summary}</p>
       </div>
 
+      {quote.requiresReview ? (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Part of this quote needs a quick review before it&apos;s final</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              {(quote.reviewReasons ?? []).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+            <p className="mt-2">The total below covers the priced items only. We&apos;ll confirm the reviewed items with you before any work is booked — nothing about them is charged until you approve it.</p>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {describeOutletFollowUpNeeded ? (
         <div className="rounded-[28px] border border-blue-200 bg-blue-50 p-5 shadow-sm">
           <div className="space-y-2">
@@ -133,7 +148,11 @@ export default function QuoteResults() {
         <div className="rounded-[28px] bg-slate-900 p-5 text-white shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Estimated Total</p>
           <p className="mt-3 text-4xl font-extrabold">{formatPrice(quote.total)}</p>
-          <p className="mt-2 text-sm text-slate-300">This is the whole-project estimate based on the work selected below.</p>
+          <p className="mt-2 text-sm text-slate-300">
+            {quote.requiresReview
+              ? "This total covers the priced items below. Reviewed items are confirmed separately before booking."
+              : "This is the whole-project estimate based on the work selected below."}
+          </p>
         </div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Travel / Route</p>

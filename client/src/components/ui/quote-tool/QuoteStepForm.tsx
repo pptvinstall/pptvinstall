@@ -228,6 +228,48 @@ export default function QuoteStepForm() {
                                   56"+
                                 </SelectorButton>
                               </div>
+                              {tv.size === "56+" ? (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-900">Exact size in inches (optional)</label>
+                                    <Input
+                                      value={tv.exactInches ?? ""}
+                                      inputMode="numeric"
+                                      placeholder='e.g. 65, 75, 85, 98'
+                                      className="h-12 rounded-xl bg-white"
+                                      onChange={(event) => {
+                                        const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
+                                        const inches = digits ? Number(digits) : null;
+                                        setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, exactInches: inches && inches >= 19 && inches <= 120 ? inches : null } : item)) }));
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-900">TV model (optional)</label>
+                                    <Input
+                                      value={tv.model ?? ""}
+                                      maxLength={120}
+                                      placeholder="e.g. Samsung QN90C 98&quot;"
+                                      className="h-12 rounded-xl bg-white"
+                                      onChange={(event) => {
+                                        const model = event.target.value;
+                                        setFormState((current) => ({ ...current, tvs: current.tvs.map((item) => (item.id === tv.id ? { ...item, model } : item)) }));
+                                      }}
+                                    />
+                                  </div>
+                                  {typeof tv.exactInches === "number" && tv.exactInches >= 86 ? (
+                                    <Alert className="border-amber-200 bg-amber-50 text-amber-900 sm:col-span-2">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <AlertTitle>Custom quote for 86&quot;+ TVs</AlertTitle>
+                                      <AlertDescription>
+                                        TVs 86 inches and larger are custom-quoted — we confirm the exact model, weight, VESA pattern, and mount compatibility before pricing, so there is no instant price for this TV.
+                                      </AlertDescription>
+                                    </Alert>
+                                  ) : (
+                                    <p className="text-xs text-slate-500 sm:col-span-2">Exact size helps us confirm mount compatibility. TVs 86&quot; and larger are custom-quoted after a quick review.</p>
+                                  )}
+                                </div>
+                              ) : null}
                             </section>
 
                             <section className="space-y-3">
@@ -271,6 +313,15 @@ export default function QuoteStepForm() {
                                   </SelectorButton>
                                 ))}
                               </div>
+                              {tv.location === "fireplace" && tv.wallType === "brick" ? (
+                                <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+                                  <AlertCircle className="h-4 w-4" />
+                                  <AlertTitle>Brick / stone fireplace — photo review</AlertTitle>
+                                  <AlertDescription>
+                                    Brick and stone fireplace mounting starts at {formatPrice(pricingData.tvMounting.fireplace.price)}. Please have photos of the fireplace and wall ready — we confirm the final price after a quick photo review before booking.
+                                  </AlertDescription>
+                                </Alert>
+                              ) : null}
                             </section>
 
                             <section className="space-y-3">
